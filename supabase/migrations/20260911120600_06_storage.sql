@@ -7,6 +7,9 @@
 -- contra Postgres puro (scripts/test-db.sh) este arquivo é ignorado.
 -- =====================================================================
 
+-- Extensões vivem em `extensions`, não em `public` (ver migration 00).
+set search_path = public, extensions;
+
 do $$
 begin
   if not exists (select 1 from information_schema.schemata where schema_name = 'storage') then

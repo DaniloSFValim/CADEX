@@ -8,6 +8,9 @@
 -- ele NÃO unifica os workflows nem seus status.
 -- =====================================================================
 
+-- Extensões vivem em `extensions`, não em `public` (ver migration 00).
+set search_path = public, extensions;
+
 create table intervention_types (
   id          uuid primary key default uuid_generate_v4(),
   kind        intervention_kind not null,
@@ -167,7 +170,7 @@ create table license_documents (
 
 -- §43 Regra 2 + §12: obra não inicia sem licença deferida.
 create or replace function cadex.start_intervention(p_intervention_id uuid)
-returns interventions language plpgsql security definer set search_path = public, cadex as $$
+returns interventions language plpgsql security definer set search_path = public, cadex, extensions as $$
 declare i interventions%rowtype; l licenses%rowtype;
 begin
   select * into i from interventions where id = p_intervention_id for update;
@@ -191,7 +194,7 @@ end;
 $$;
 
 create or replace function cadex.approve_license(p_license_id uuid, p_valid_until date, p_note text default null)
-returns licenses language plpgsql security definer set search_path = public, cadex as $$
+returns licenses language plpgsql security definer set search_path = public, cadex, extensions as $$
 declare l licenses%rowtype;
 begin
   if not cadex.has_any_role(array['admin','gestor_seconser']::user_role[]) then
@@ -354,7 +357,7 @@ create trigger trg_emergency_deadline
 
 -- Regularização exige protocolo CISP, escopo e imagens (§19).
 create or replace function cadex.regularize_emergency(p_emergency_id uuid)
-returns emergencies language plpgsql security definer set search_path = public, cadex as $$
+returns emergencies language plpgsql security definer set search_path = public, cadex, extensions as $$
 declare e emergencies%rowtype;
 begin
   select * into e from emergencies where id = p_emergency_id for update;

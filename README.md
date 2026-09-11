@@ -58,21 +58,47 @@ inteiro. A tabela abaixo é o estado verificado, não uma projeção.
 | Camada pública LGPD (views + RPC) | ✅ funciona | teste prova ausência de dado pessoal e bloqueio de `anon` nas tabelas |
 | Consulta espacial / mapa | ✅ funciona | `interventions_near` testada; MapLibre consome GeoJSON do PostGIS |
 | Portal público, painel admin, painel da empresa, telas de campo, CISP | ✅ compila e consulta dados reais | `tsc`, `vitest`, `vite build` verdes |
-| Storage privado + políticas | ⚠️ escrito, **não executado** | schema `storage` só existe em projeto Supabase real |
+| Storage privado + políticas | ✅ aplicado | 6 buckets privados, 5 políticas, verificados no projeto real |
 | Licenciamento: formulário de 6 etapas, desenho no mapa, import GeoJSON/KML | ❌ não implementado | back-end pronto; falta a UI |
 | Geração de PDF e QR Code (licença, OS, crachá) | ❌ não implementado | tokens e rotas de verificação existem e funcionam |
 | As Built (UI), equipes/veículos (UI), painel administrativo de parâmetros | ❌ não implementado | tabelas, regras e RLS prontas |
 | E2E (Playwright) | ❌ não implementado | — |
-| Deploy em produção | ❌ **não realizado** | ver "Por que não há URL de produção" |
+| Backend em produção (Supabase) | ✅ **no ar** | 10 migrations aplicadas; linter de segurança limpo das falhas reais |
+| Frontend em produção (Cloudflare) | ❌ **não publicado** | o conector não expõe deploy — ver abaixo |
 
-### Por que não há URL de produção
+### Estado do deploy
 
-Deploy real exige um projeto Supabase (URL + chaves + banco) e uma conta de
-hospedagem. Nenhuma credencial foi fornecida a esta sessão, e o conector
-Cloudflare disponível está **não autorizado** — a autorização OAuth precisa
-ser feita pela pessoa usuária, não pode ser feita a partir daqui. O caminho
-completo, comando a comando, está em [`DEPLOY.md`](DEPLOY.md); ele foi
-escrito para ser executado sem adaptação assim que as credenciais existirem.
+**Backend: no ar.** Projeto Supabase `cadex-niteroi` (região `sa-east-1`),
+com as 10 migrations aplicadas e verificadas: 37 tabelas, RLS habilitada
+e **forçada** em todas, 71 policies, 6 buckets privados, PostGIS com 439
+funções isoladas no schema `extensions`.
+
+**Frontend: não publicado.** O conector Cloudflare desta sessão expõe
+apenas leitura de Workers (`list`, `get`, `get_code`) e criação de
+D1/KV/R2 — **não há ferramenta de deploy ou upload de script**, e não há
+`wrangler` nem token de API no ambiente. Não é falta de permissão: a
+capacidade não existe. O repositório já traz `wrangler.toml` e
+`public/_redirects` prontos; publicar é `npm run build && npx wrangler
+deploy` na sua máquina, ou conectar o repositório ao Cloudflare Pages.
+Passo a passo em [`DEPLOY.md`](DEPLOY.md).
+
+### Três falhas de segurança que só o deploy real revelou
+
+A suíte local passava porque rodava como **superusuário**, que ignora RLS
+e ignora GRANT, e porque o Postgres local não reproduz os
+privilégios-padrão do Supabase:
+
+1. `work_orders` tinha RLS forçada e **nenhuma policy** — o módulo de
+   Ordem de Serviço estava inacessível a todos os papéis.
+2. `anon` podia executar **todas** as RPC: o PostgreSQL concede EXECUTE a
+   PUBLIC por padrão, e duas funções não checavam papel internamente.
+3. `anon` tinha SELECT em **todas** as tabelas, por privilégio-padrão do
+   Supabase. A RLS barrava as linhas, mas a defesa dependia de uma só
+   camada — e a documentação afirmava o contrário.
+
+Corrigidas nas migrations 09 e 10, com testes que travam o
+comportamento — incluindo um genérico que falha se qualquer tabela ficar
+com RLS sem policy. Detalhes em [`SECURITY.md`](SECURITY.md).
 
 Não há nenhum fallback para dados simulados: sem backend configurado, o app
 exibe uma tela dizendo isso e não finge funcionar.

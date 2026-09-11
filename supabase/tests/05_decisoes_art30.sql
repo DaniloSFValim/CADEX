@@ -4,6 +4,7 @@
 -- numa alteração futura.
 -- =====================================================================
 begin;
+set local search_path = public, extensions;
 
 create or replace function assert(p_cond boolean, p_msg text)
 returns void language plpgsql as $$

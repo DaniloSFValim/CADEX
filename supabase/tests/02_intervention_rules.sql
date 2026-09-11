@@ -3,6 +3,7 @@
 -- emergência, prazos e consulta pública (§12–§19, §29, §43, §45)
 -- =====================================================================
 begin;
+set local search_path = public, extensions;
 
 create or replace function assert(p_cond boolean, p_msg text)
 returns void language plpgsql as $$

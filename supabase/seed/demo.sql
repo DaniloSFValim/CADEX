@@ -7,6 +7,9 @@
 -- porque o banco valida CNPJ de verdade.
 -- =====================================================================
 
+-- Extensões vivem em `extensions`, não em `public` (ver migration 00).
+set search_path = public, extensions;
+
 do $$
 declare
   u_admin uuid := '00000000-0000-4000-8000-000000000001';

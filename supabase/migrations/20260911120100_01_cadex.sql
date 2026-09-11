@@ -6,6 +6,9 @@
 -- ---------------------------------------------------------------------
 -- §6 — Qualificações configuráveis (NÃO enum: a Resolução admite novas)
 -- ---------------------------------------------------------------------
+-- Extensões vivem em `extensions`, não em `public` (ver migration 00).
+set search_path = public, extensions;
+
 create table qualifications (
   id          uuid primary key default uuid_generate_v4(),
   code        text not null unique,
@@ -326,7 +329,7 @@ $$;
 create sequence cadex_number_seq;
 
 create or replace function cadex.approve_company(p_company_id uuid, p_note text default null)
-returns companies language plpgsql security definer set search_path = public, cadex as $$
+returns companies language plpgsql security definer set search_path = public, cadex, extensions as $$
 declare
   c companies%rowtype;
   v_months int := coalesce(cadex.param_int('cadex.validity_months'), 12);

@@ -6,6 +6,9 @@
 -- ---------------------------------------------------------------------
 -- Ativação de RLS em todas as tabelas de domínio
 -- ---------------------------------------------------------------------
+-- Extensões vivem em `extensions`, não em `public` (ver migration 00).
+set search_path = public, extensions;
+
 do $$
 declare t text;
 begin
@@ -142,7 +145,7 @@ create policy administrative_events_write on administrative_events for insert
 -- Intervenções e derivadas
 -- ---------------------------------------------------------------------
 create or replace function cadex.can_see_intervention(p_id uuid)
-returns boolean language sql stable security definer set search_path = public, cadex as $$
+returns boolean language sql stable security definer set search_path = public, cadex, extensions as $$
   select cadex.is_staff() or exists (
     select 1 from interventions i
     where i.id = p_id
@@ -339,7 +342,7 @@ grant select on public_companies, public_interventions to anon, authenticated;
 
 -- §14/§15 — verificação de autenticidade por QR Code, sem login.
 create or replace function public.verify_public_token(p_token text)
-returns jsonb language sql stable security definer set search_path = public, cadex as $$
+returns jsonb language sql stable security definer set search_path = public, cadex, extensions as $$
   select coalesce(
     (select to_jsonb(v) from public_interventions v where v.public_token = p_token),
     jsonb_build_object('found', false)
@@ -379,7 +382,7 @@ grant usage, select on all sequences in schema public to authenticated;
 -- §21 — validação de crachá pelo fiscal. Retorna o mínimo necessário à
 -- conferência em campo e exige papel de fiscalização (não é público).
 create or replace function public.verify_badge(p_token text)
-returns jsonb language plpgsql stable security definer set search_path = public, cadex as $$
+returns jsonb language plpgsql stable security definer set search_path = public, cadex, extensions as $$
 declare r jsonb;
 begin
   if not cadex.has_any_role(array['admin','fiscal_viario','guarda_civil']::user_role[]) then

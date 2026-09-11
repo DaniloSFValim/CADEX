@@ -4,6 +4,7 @@
 -- teste que roda como superusuário não prova absolutamente nada.
 -- =====================================================================
 begin;
+set local search_path = public, extensions;
 
 create or replace function assert(p_cond boolean, p_msg text)
 returns void language plpgsql as $$
@@ -169,6 +170,38 @@ begin
   insert into inspections (company_id, inspector_id) values (ca, f);
 end $$;
 
+-- --- Ordem de serviço sob RLS (art. 25) -------------------------------
+-- Este bloco existe porque a suíte antiga inseria em work_orders como
+-- SUPERUSUÁRIO, que ignora RLS: a tabela ficou com RLS forçada e sem
+-- policy alguma, e nenhum teste percebeu. Só o linter do Supabase, no
+-- primeiro deploy real, apontou.
+do $$
+declare ua uuid; ub uuid; ca uuid; iv uuid; n int; wo uuid;
+begin
+  select v into ua from fx where k='ua';
+  select v into ub from fx where k='ub';
+  select v into ca from fx where k='ca';
+  select v into iv from fx where k='iv';
+
+  perform set_config('cadex.test_user_id', ua::text, true);
+
+  insert into work_orders (intervention_id, executor_id, address, description,
+                           responsible_name, signed_by_name, signed_by_role)
+  values (iv, ca, 'Av. Ernani do Amaral Peixoto, 100', 'servico',
+          'Encarregado', 'Eng. RT', 'responsavel_tecnico')
+  returning id into wo;
+  perform assert(wo is not null,
+    'empresa executora nao conseguiu emitir a propria ordem de servico');
+
+  select count(*) into n from work_orders where id = wo;
+  perform assert(n = 1, 'empresa nao enxerga a propria ordem de servico');
+
+  -- A empresa B não pode ver a OS da empresa A.
+  perform set_config('cadex.test_user_id', ub::text, true);
+  select count(*) into n from work_orders where id = wo;
+  perform assert(n = 0, 'VAZAMENTO: empresa B enxergou ordem de servico da empresa A');
+end $$;
+
 -- --- Usuário anônimo não alcança as tabelas (§36) ---------------------
 reset role;
 set local role anon;
@@ -188,7 +221,59 @@ declare n int;
 begin
   select count(*) into n from public_companies;
   perform assert(n >= 0, 'consulta pública de empresas indisponível para anon');
+  perform public.verify_public_token('inexistente');
 end $$;
+
+-- --- anon NÃO executa as RPC administrativas -------------------------
+-- O PostgreSQL concede EXECUTE a PUBLIC por padrão: sem REVOKE explícito,
+-- `anon` alcançava todas as funções, inclusive as que mutam estado.
+do $$
+declare fn text;
+begin
+  foreach fn in array array[
+    'approve_company_rpc','approve_license_rpc','start_intervention_rpc',
+    'regularize_emergency_rpc','run_deadline_sweep_rpc','reinstate_company_rpc',
+    'disqualify_emergency_rpc','dashboard_metrics','verify_badge','transition_status'
+  ] loop
+    if has_function_privilege('anon',
+         (select p.oid from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+           where n.nspname='public' and p.proname = fn limit 1), 'EXECUTE') then
+      raise exception 'ASSERT FALHOU: anon pode executar public.%', fn;
+    end if;
+  end loop;
+end $$;
+
+-- As duas funções deliberadamente públicas continuam alcançáveis.
+do $$
+declare fn text;
+begin
+  foreach fn in array array['verify_public_token','interventions_near'] loop
+    if not has_function_privilege('anon',
+         (select p.oid from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+           where n.nspname='public' and p.proname = fn limit 1), 'EXECUTE') then
+      raise exception 'ASSERT FALHOU: anon deveria poder executar public.%', fn;
+    end if;
+  end loop;
+end $$;
+
+-- --- Toda tabela com RLS tem ao menos uma policy ---------------------
+-- Generaliza a falha do work_orders: RLS forçada sem policy é negação
+-- total silenciosa, não proteção.
+reset role;
+do $$
+declare v_sem_policy text;
+begin
+  select string_agg(c.relname, ', ') into v_sem_policy
+    from pg_class c
+    join pg_namespace n on n.oid = c.relnamespace
+   where n.nspname = 'public' and c.relkind = 'r' and c.relrowsecurity
+     and not exists (select 1 from pg_policies p
+                      where p.schemaname = 'public' and p.tablename = c.relname);
+  if v_sem_policy is not null then
+    raise exception 'ASSERT FALHOU: RLS habilitada sem policy em: %', v_sem_policy;
+  end if;
+end $$;
+set local role anon;
 
 reset role;
 rollback;

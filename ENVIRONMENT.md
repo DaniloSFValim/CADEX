@@ -14,6 +14,20 @@ Sem as duas primeiras, a aplicação exibe uma tela de "backend não
 configurado" e não opera. É deliberado: não há modo de demonstração com
 dados falsos.
 
+## Projeto provisionado
+
+| | |
+|---|---|
+| Projeto Supabase | `cadex-niteroi` |
+| Referência | `jqgcgaalqabmnevadqfy` |
+| Região | `sa-east-1` (São Paulo) |
+| `VITE_SUPABASE_URL` | `https://jqgcgaalqabmnevadqfy.supabase.co` |
+| `VITE_SUPABASE_ANON_KEY` | painel do Supabase → Project Settings → API Keys |
+
+A chave publicável não está versionada. Ela é pública por desenho — vai
+no bundle do navegador —, mas mantê-la fora do repositório permite
+rotacioná-la sem reescrever histórico.
+
 ## Segredos de servidor — nunca com prefixo `VITE_`
 
 Tudo que começa com `VITE_` é embutido no bundle e visível a qualquer

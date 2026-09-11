@@ -1,10 +1,22 @@
 # Deploy
 
-> **Este deploy não foi executado.** Nenhuma credencial de Supabase ou de
-> hospedagem foi fornecida a esta sessão, e o conector Cloudflare
-> disponível está não autorizado — a autorização OAuth precisa ser feita
-> pela pessoa usuária. O roteiro abaixo foi escrito para ser executado sem
-> adaptação assim que as credenciais existirem.
+## Estado
+
+**Backend: aplicado.** O projeto Supabase `cadex-niteroi`
+(`jqgcgaalqabmnevadqfy`, região `sa-east-1`) recebeu as 10 migrations e
+foi verificado: 37 tabelas, RLS habilitada e forçada em todas, 71
+policies, 6 buckets privados, PostGIS isolado no schema `extensions`, e o
+linter de segurança do Supabase sem nenhuma das falhas reais (os avisos
+remanescentes são as duas views públicas e as duas funções de verificação,
+ambas deliberadas e documentadas).
+
+**Frontend: pendente de publicação por você.** O conector Cloudflare da
+sessão de desenvolvimento expõe apenas leitura de Workers e criação de
+D1/KV/R2; não há ferramenta de deploy nem `wrangler` no ambiente. Os
+arquivos necessários já estão no repositório — ver a seção 5.
+
+O seed de demonstração **não** foi aplicado ao projeto: ele é de
+desenvolvimento.
 
 ## 1. Projeto Supabase
 
@@ -66,18 +78,33 @@ Opção B — Edge Function ou cron externo chamando a RPC com a
 A função é idempotente: rodar duas vezes no mesmo dia não duplica
 notificação.
 
-## 5. Frontend
+## 5. Frontend — Cloudflare
+
+O repositório já traz o que falta: `wrangler.toml` (com
+`not_found_handling = "single-page-application"`) e `public/_redirects`,
+que o Vite copia para `dist/`. Os dois existem pelo mesmo motivo: sem
+fallback de SPA, `/verificar/<token>` — a URL que o QR Code afixado no
+canteiro abre (art. 14) — responde 404 em vez da placa digital.
+
+**Opção A — Workers, pela sua máquina:**
 
 ```bash
-npm ci && npm run build     # gera dist/
+echo "VITE_SUPABASE_URL=https://jqgcgaalqabmnevadqfy.supabase.co"  > .env
+echo "VITE_SUPABASE_ANON_KEY=<chave publicavel do painel>"        >> .env
+npm ci && npm run build
+npx wrangler login
+npx wrangler deploy
 ```
 
-Publique `dist/` em qualquer host estático (Cloudflare Pages, Vercel,
-Nginx), com as variáveis de build definidas no painel do provedor.
+**Opção B — Pages, ligado ao GitHub** (recomendada: publica a cada push):
 
-Exige **fallback de SPA**: toda rota não encontrada serve `index.html`.
-Sem isso, `/verificar/<token>` — a URL do QR Code afixado em via pública —
-retorna 404.
+- Cloudflare → Workers & Pages → Create → Pages → Connect to Git
+- Repositório `DaniloSFValim/CADEX`, branch `main`
+- Build command: `npm run build` · Output directory: `dist`
+- Variáveis de ambiente: `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`
+
+Já existe um Worker chamado `cadex` na conta, criado em 30/07/2026. Não
+foi tocado: verifique se deve ser substituído ou se convém outro nome.
 
 ## 6. Validação pós-deploy
 

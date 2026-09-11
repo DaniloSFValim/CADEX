@@ -9,10 +9,23 @@
 -- Nenhum número de artigo foi inventado neste repositório.
 -- =====================================================================
 
-create extension if not exists "uuid-ossp";
-create extension if not exists postgis;
-create extension if not exists pg_trgm;
-create extension if not exists btree_gist;
+-- As extensões NÃO vão para o schema `public`.
+-- O `public` é exposto pelo PostgREST (config.toml); PostGIS instalado ali
+-- transformaria centenas de funções st_* em endpoints RPC alcançáveis por
+-- `anon`. Instalar em `extensions` é também a convenção do Supabase.
+create schema if not exists extensions;
+
+create extension if not exists "uuid-ossp" with schema extensions;
+create extension if not exists pgcrypto   with schema extensions;
+create extension if not exists postgis    with schema extensions;
+create extension if not exists pg_trgm    with schema extensions;
+create extension if not exists btree_gist with schema extensions;
+
+-- A partir daqui o DDL precisa enxergar os tipos e operadores das extensões
+-- (geometry, geography, gin_trgm_ops, gen_random_bytes). A resolução ocorre
+-- no momento do DDL e fica gravada por OID, então tabelas, índices e views
+-- continuam corretos independentemente do search_path de quem os usa depois.
+set search_path = public, extensions;
 
 create schema if not exists cadex;
 comment on schema cadex is 'Funções de domínio e utilitários do CADEX (não expostas via PostgREST).';
@@ -263,7 +276,7 @@ create table user_roles (
 -- SECURITY DEFINER: as policies de RLS consultam user_roles, que por sua vez
 -- tem RLS. Sem definer isso recursa.
 create or replace function cadex.has_role(p_role user_role)
-returns boolean language sql stable security definer set search_path = public, cadex as $$
+returns boolean language sql stable security definer set search_path = public, cadex, extensions as $$
   select exists (
     select 1 from user_roles ur
     where ur.user_id = auth.uid() and ur.role = p_role
@@ -271,7 +284,7 @@ returns boolean language sql stable security definer set search_path = public, c
 $$;
 
 create or replace function cadex.has_any_role(p_roles user_role[])
-returns boolean language sql stable security definer set search_path = public, cadex as $$
+returns boolean language sql stable security definer set search_path = public, cadex, extensions as $$
   select exists (
     select 1 from user_roles ur
     where ur.user_id = auth.uid() and ur.role = any(p_roles)
@@ -279,7 +292,7 @@ returns boolean language sql stable security definer set search_path = public, c
 $$;
 
 create or replace function cadex.is_staff()
-returns boolean language sql stable security definer set search_path = public, cadex as $$
+returns boolean language sql stable security definer set search_path = public, cadex, extensions as $$
   select cadex.has_any_role(array[
     'admin','gestor_seconser','analista_seconser','fiscal_viario','guarda_civil','cisp_seop'
   ]::user_role[]);
@@ -287,7 +300,7 @@ $$;
 
 -- Empresa do usuário logado (perfil 5.6).
 create or replace function cadex.current_company_id()
-returns uuid language sql stable security definer set search_path = public, cadex as $$
+returns uuid language sql stable security definer set search_path = public, cadex, extensions as $$
   select company_id from profiles where id = auth.uid();
 $$;
 
@@ -314,7 +327,7 @@ create index idx_audit_actor  on audit_logs (actor_id, occurred_at desc);
 
 -- Trigger genérico de auditoria, aplicado às tabelas sensíveis em 04.
 create or replace function cadex.audit_row()
-returns trigger language plpgsql security definer set search_path = public, cadex as $$
+returns trigger language plpgsql security definer set search_path = public, cadex, extensions as $$
 declare
   v_old jsonb; v_new jsonb; v_id text;
 begin

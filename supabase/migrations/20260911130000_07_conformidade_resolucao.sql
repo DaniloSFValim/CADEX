@@ -20,6 +20,9 @@
 -- Art. 20, parágrafo único — a intervenção pode ser desqualificada a
 -- posteriori se não se enquadrar nas hipóteses do art. 18.
 -- ---------------------------------------------------------------------
+-- Extensões vivem em `extensions`, não em `public` (ver migration 00).
+set search_path = public, extensions;
+
 alter type emergency_status add value if not exists 'nao_enquadrada';
 
 -- ---------------------------------------------------------------------
@@ -184,7 +187,7 @@ update emergencies e
 -- Art. 20 — a regularização exige os três elementos do caput e pressupõe
 -- atendimento concluído.
 create or replace function cadex.regularize_emergency(p_emergency_id uuid)
-returns emergencies language plpgsql security definer set search_path = public, cadex as $$
+returns emergencies language plpgsql security definer set search_path = public, cadex, extensions as $$
 declare e emergencies%rowtype;
 begin
   select * into e from emergencies where id = p_emergency_id for update;
@@ -218,7 +221,7 @@ $$;
 -- Art. 20, parágrafo único, parte final — desqualificação da emergência
 -- que não se enquadre no art. 18. Ato de análise, restrito à SECONSER.
 create or replace function cadex.disqualify_emergency(p_emergency_id uuid, p_reason text)
-returns emergencies language plpgsql security definer set search_path = public, cadex as $$
+returns emergencies language plpgsql security definer set search_path = public, cadex, extensions as $$
 declare e emergencies%rowtype;
 begin
   if not cadex.has_any_role(array['admin','gestor_seconser','analista_seconser']::user_role[]) then
@@ -488,7 +491,7 @@ comment on table team_members is
 -- colateral do recálculo automático.
 -- ---------------------------------------------------------------------
 create or replace function cadex.reinstate_company(p_company_id uuid, p_note text default null)
-returns companies language plpgsql security definer set search_path = public, cadex as $$
+returns companies language plpgsql security definer set search_path = public, cadex, extensions as $$
 declare c companies%rowtype; v_pending int;
 begin
   if not cadex.has_any_role(array['admin','gestor_seconser','analista_seconser']::user_role[]) then
@@ -522,12 +525,12 @@ end;
 $$;
 
 create or replace function public.reinstate_company_rpc(p_company_id uuid, p_note text default null)
-returns jsonb language sql security definer set search_path = public, cadex as $$
+returns jsonb language sql security definer set search_path = public, cadex, extensions as $$
   select to_jsonb(cadex.reinstate_company(p_company_id, p_note));
 $$;
 
 create or replace function public.disqualify_emergency_rpc(p_emergency_id uuid, p_reason text)
-returns jsonb language sql security definer set search_path = public, cadex as $$
+returns jsonb language sql security definer set search_path = public, cadex, extensions as $$
   select to_jsonb(cadex.disqualify_emergency(p_emergency_id, p_reason));
 $$;
 
@@ -556,7 +559,7 @@ comment on view public_interventions is
 -- Art. 29 — acompanhamento do prazo transitório.
 -- ---------------------------------------------------------------------
 create or replace function public.transition_status()
-returns jsonb language plpgsql stable security definer set search_path = public, cadex as $$
+returns jsonb language plpgsql stable security definer set search_path = public, cadex, extensions as $$
 declare v_deadline date;
 begin
   if not cadex.is_staff() then
@@ -638,7 +641,7 @@ grant select on public_interventions to anon, authenticated;
 
 -- Recriação das funções que dependiam da view (sem alteração de contrato).
 create or replace function public.verify_public_token(p_token text)
-returns jsonb language sql stable security definer set search_path = public, cadex as $$
+returns jsonb language sql stable security definer set search_path = public, cadex, extensions as $$
   select coalesce(
     (select to_jsonb(v) from public_interventions v where v.public_token = p_token),
     jsonb_build_object('found', false)
@@ -648,7 +651,7 @@ $$;
 create or replace function public.interventions_near(
   p_lng double precision, p_lat double precision, p_radius_m int default 500)
 returns setof public_interventions
-language sql stable security definer set search_path = public, cadex as $$
+language sql stable security definer set search_path = public, cadex, extensions as $$
   select v.* from public_interventions v
   join interventions i on i.public_token = v.public_token
   where st_dwithin(i.geom::geography,

@@ -8,6 +8,9 @@
 -- Resolução. Os valores abaixo vieram da especificação funcional, não do
 -- texto legal; ver COMPLIANCE-MATRIX.md.
 -- ---------------------------------------------------------------------
+-- Extensões vivem em `extensions`, não em `public` (ver migration 00).
+set search_path = public, extensions;
+
 insert into system_parameters (key, value, description, unit, legal_basis) values
   ('cadex.analysis_business_days', '{"value":15}',
    'Prazo de análise do requerimento CADEX', 'dias úteis', null),
@@ -74,7 +77,7 @@ create trigger trg_license_analysis_due
 create or replace function cadex.notify(
   p_company_id uuid, p_category text, p_severity text,
   p_title text, p_body text, p_entity text, p_entity_id text, p_dedupe text)
-returns void language plpgsql security definer set search_path = public, cadex as $$
+returns void language plpgsql security definer set search_path = public, cadex, extensions as $$
 begin
   insert into notifications (company_id, category, severity, title, body,
                              entity, entity_id, dedupe_key)
@@ -89,7 +92,7 @@ $$;
 -- Agendada via pg_cron (ver DEPLOY.md) ou por Edge Function/cron externo.
 -- ---------------------------------------------------------------------
 create or replace function cadex.run_deadline_sweep()
-returns jsonb language plpgsql security definer set search_path = public, cadex as $$
+returns jsonb language plpgsql security definer set search_path = public, cadex, extensions as $$
 declare
   r record;
   v_doc_warn int := coalesce(cadex.param_int('document.warning_days'), 30);
@@ -186,7 +189,7 @@ $$;
 -- §30 — Indicadores do painel executivo (uma chamada, não N queries)
 -- ---------------------------------------------------------------------
 create or replace function public.dashboard_metrics()
-returns jsonb language plpgsql stable security definer set search_path = public, cadex as $$
+returns jsonb language plpgsql stable security definer set search_path = public, cadex, extensions as $$
 begin
   if not cadex.is_staff() then
     raise exception 'Painel administrativo restrito (§5).';
@@ -233,7 +236,7 @@ $$;
 create or replace function public.interventions_near(
   p_lng double precision, p_lat double precision, p_radius_m int default 500)
 returns setof public_interventions
-language sql stable security definer set search_path = public, cadex as $$
+language sql stable security definer set search_path = public, cadex, extensions as $$
   select v.* from public_interventions v
   join interventions i on i.public_token = v.public_token
   where st_dwithin(i.geom::geography,
@@ -323,30 +326,30 @@ on conflict (code) do nothing;
 -- ---------------------------------------------------------------------
 
 create or replace function public.approve_company_rpc(p_company_id uuid, p_note text default null)
-returns jsonb language sql security definer set search_path = public, cadex as $$
+returns jsonb language sql security definer set search_path = public, cadex, extensions as $$
   select to_jsonb(cadex.approve_company(p_company_id, p_note));
 $$;
 
 create or replace function public.approve_license_rpc(
   p_license_id uuid, p_valid_until date, p_note text default null)
-returns jsonb language sql security definer set search_path = public, cadex as $$
+returns jsonb language sql security definer set search_path = public, cadex, extensions as $$
   select to_jsonb(cadex.approve_license(p_license_id, p_valid_until, p_note));
 $$;
 
 create or replace function public.start_intervention_rpc(p_intervention_id uuid)
-returns jsonb language sql security definer set search_path = public, cadex as $$
+returns jsonb language sql security definer set search_path = public, cadex, extensions as $$
   select to_jsonb(cadex.start_intervention(p_intervention_id));
 $$;
 
 create or replace function public.regularize_emergency_rpc(p_emergency_id uuid)
-returns jsonb language sql security definer set search_path = public, cadex as $$
+returns jsonb language sql security definer set search_path = public, cadex, extensions as $$
   select to_jsonb(cadex.regularize_emergency(p_emergency_id));
 $$;
 
 -- Varredura de prazos: restrita a admin quando disparada pela aplicação.
 -- O agendamento automático roda como service_role (ver DEPLOY.md).
 create or replace function public.run_deadline_sweep_rpc()
-returns jsonb language plpgsql security definer set search_path = public, cadex as $$
+returns jsonb language plpgsql security definer set search_path = public, cadex, extensions as $$
 begin
   if not cadex.has_role('admin') then
     raise exception 'Varredura de prazos restrita ao Administrador (§5.1).';

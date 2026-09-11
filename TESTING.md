@@ -48,13 +48,38 @@ seria desonesta:
    consequência: antecipava o termo final e podia fundamentar autuação
    indevida.
 
+## O que a suíte local NÃO pegava — e por quê
+
+Três falhas de segurança só apareceram no primeiro deploy num projeto
+Supabase real (ver `SECURITY.md`). A causa é metodológica e vale
+registrar: os testes inseriam em `work_orders` e chamavam as RPC **como
+superusuário**, e superusuário ignora RLS e ignora GRANT. Além disso, o
+Postgres local não reproduzia os privilégios-padrão que o Supabase
+concede ao papel `anon`.
+
+Duas correções na infraestrutura de teste:
+
+- `scripts/auth-shim.sql` passou a reproduzir o default privilege do
+  Supabase (`grant all on tables to anon, authenticated`), de modo que a
+  migration 10, que o revoga, seja efetivamente exercida.
+- `03_rls.sql` ganhou três blocos: ordem de serviço sob RLS como papel de
+  empresa, verificação de que `anon` não executa nenhuma RPC
+  administrativa, e uma assertiva genérica que falha se **qualquer**
+  tabela ficar com RLS habilitada e sem policy.
+
+O último foi verificado contra o bug original: derrubando as policies de
+`work_orders`, a assertiva falha com a mensagem correta.
+
 ## Lacunas conhecidas
 
 - **Sem testes de componente React.** A lógica pura (`src/lib/rules.ts`)
   está coberta; as telas não. Falta jsdom + Testing Library.
 - **Sem E2E.** Playwright está previsto e não implementado; exige um
   Supabase de staging.
-- **Storage não testado.** O schema `storage` não existe fora do Supabase;
-  a migration 06 se autodesativa e suas políticas nunca foram exercidas.
+- **Storage aplicado, mas sem teste automatizado.** A migration 06
+  finalmente rodou num projeto real: 6 buckets privados e 5 políticas
+  criadas e verificadas por consulta. Continua sem teste na suíte local,
+  porque o schema `storage` não existe fora do Supabase — a migration se
+  autodesativa ali.
 - **Sem teste de carga.** A consulta espacial tem índice GiST, mas o
   comportamento com dezenas de milhares de intervenções não foi medido.

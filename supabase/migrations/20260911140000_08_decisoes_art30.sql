@@ -10,6 +10,9 @@
 -- auditáveis e reversíveis por ato da mesma autoridade.
 -- =====================================================================
 
+-- Extensões vivem em `extensions`, não em `public` (ver migration 00).
+set search_path = public, extensions;
+
 create table if not exists normative_decisions (
   id             uuid primary key default uuid_generate_v4(),
   question       text not null,
@@ -161,7 +164,7 @@ comment on view public_interventions is
 grant select on public_interventions to anon, authenticated;
 
 create or replace function public.verify_public_token(p_token text)
-returns jsonb language sql stable security definer set search_path = public, cadex as $$
+returns jsonb language sql stable security definer set search_path = public, cadex, extensions as $$
   select coalesce(
     (select to_jsonb(v) from public_interventions v where v.public_token = p_token),
     jsonb_build_object('found', false)
@@ -171,7 +174,7 @@ $$;
 create or replace function public.interventions_near(
   p_lng double precision, p_lat double precision, p_radius_m int default 500)
 returns setof public_interventions
-language sql stable security definer set search_path = public, cadex as $$
+language sql stable security definer set search_path = public, cadex, extensions as $$
   select v.* from public_interventions v
   join interventions i on i.public_token = v.public_token
   where st_dwithin(i.geom::geography,
