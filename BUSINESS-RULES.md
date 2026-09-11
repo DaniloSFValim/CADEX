@@ -37,6 +37,20 @@ substitui a barreira do banco.
 | R24 — Prazos de 15 e 20 dias úteis (arts. 7º e 13) | `add_business_days` | — | `01`, `04` |
 | R25 — Varredura de prazos idempotente | `dedupe_key` único | — | `02` |
 
+## Decisões do art. 30 aplicadas como regra
+
+| Regra | Decisão | Onde é aplicada | Teste |
+|---|---|---|---|
+| R26 — O prazo de análise não se suspende por diligência | art. 30 (1) | trigger `freeze_analysis_due_date` em `companies` e `licenses` | `05` |
+| R27 — Inaptidão superveniente não suspende obra licenciada | art. 30 (2) | `start_intervention` verifica a licença, não a situação cadastral | `05` |
+| R28 — A situação cadastral corrente da executora é publicada | art. 7º, § 2º c/c art. 30 (2) | `public_interventions.executor_cadex_active` | `05` |
+| R29 — Substituição de poste é manutenção rotineira | art. 30 (3) | tipo `SUBST_POSTE`, sem licença | `05` |
+| R30 — Escavação ou nova fundação não é manutenção | art. 10 c/c art. 30 (3) | trigger `check_maintenance_scope` | `05` |
+
+As decisões ficam em `normative_decisions`, com questão, decisão,
+fundamento e efeito concreto no sistema. Alterá-las é ato administrativo
+registrado e auditado, não edição de código.
+
 ## Sanções
 
 A Resolução remete o descumprimento aos incisos III (art. 20, pú), IV

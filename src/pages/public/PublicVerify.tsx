@@ -91,6 +91,20 @@ function Details({ item }: { item: PublicIntervention }) {
         </dl>
       </Card>
 
+      {item.executor_cadex_active === false && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
+          <p className="text-sm font-medium text-amber-900">
+            A executora está atualmente sem inscrição ativa no CADEX
+            {item.executor_cadex_status ? ` (${item.executor_cadex_status.replace(/_/g, ' ')})` : ''}.
+          </p>
+          <p className="mt-1 text-xs text-amber-800">
+            A licença já deferida permanece válida e a intervenção não é suspensa
+            por esse fato. A informação é publicada nos termos do art. 7º, § 2º,
+            para conferência pelo agente municipal.
+          </p>
+        </div>
+      )}
+
       <Card title="Localização">
         <MapView items={[item]} className="h-[340px]" />
       </Card>

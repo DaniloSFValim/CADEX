@@ -137,7 +137,16 @@ export default function FieldInspection() {
         <Card title="Intervenção identificada" action={<StatusBadge status={target.data.status} />}>
           <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
             <Info k="Empresa executora" v={target.data.executor_name} />
-            <Info k="CADEX" v={target.data.executor_cadex} />
+            <Info
+              k="CADEX"
+              v={
+                target.data.executor_cadex
+                  ? `${target.data.executor_cadex}${
+                      target.data.executor_cadex_active === false ? ' — SEM INSCRIÇÃO ATIVA' : ''
+                    }`
+                  : null
+              }
+            />
             <Info k="Concessionária" v={target.data.concessionaire_name} />
             <Info k="Licença / autodeclaração" v={target.data.license_number ?? target.data.declaration_number} />
             <Info k="Escopo" v={target.data.scope ?? target.data.description} />

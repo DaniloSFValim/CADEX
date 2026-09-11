@@ -35,8 +35,11 @@ exigir coordenadas de início e fim (art. 2º, VII), a unificação de
 § 1º), a subscrição da ordem de serviço (art. 25) e a correção do
 município, que estava no Rio de Janeiro em vez de **Niterói**.
 
-Nove pontos continuam dependendo de decisão da SECONSER/SEOP (art. 30) e
-estão listados ao final da matriz. Não foram adivinhados.
+Três omissões já foram resolvidas por decisão administrativa (art. 30) e
+estão registradas na tabela `normative_decisions`, com fundamento e efeito
+concreto — auditáveis e reversíveis por ato da mesma autoridade, não por
+edição de código. Sete pontos seguem pendentes e estão listados ao final
+da matriz. Nenhum foi adivinhado.
 
 ## Estado real da entrega
 
@@ -48,8 +51,9 @@ inteiro. A tabela abaixo é o estado verificado, não uma projeção.
 |---|---|---|
 | Modelo de dados (36 tabelas, PostGIS) | ✅ funciona | migrations aplicam em Postgres 16 + PostGIS 3 |
 | Aderência ao articulado | ✅ conferida | `04_resolucao_001_2026.sql` — 14 blocos de assertiva |
+| Decisões do art. 30 | ✅ registradas e travadas | `normative_decisions` + `05_decisoes_art30.sql` |
 | RBAC + RLS (7 perfis) | ✅ funciona | `03_rls.sql` prova isolamento entre empresas e bloqueio de escalação |
-| Regras de negócio no banco | ✅ funciona | 4 suítes SQL, todas passando |
+| Regras de negócio no banco | ✅ funciona | 5 suítes SQL, todas passando |
 | Motor de prazos e notificações | ✅ funciona | varredura idempotente testada |
 | Camada pública LGPD (views + RPC) | ✅ funciona | teste prova ausência de dado pessoal e bloqueio de `anon` nas tabelas |
 | Consulta espacial / mapa | ✅ funciona | `interventions_near` testada; MapLibre consome GeoJSON do PostGIS |
@@ -129,10 +133,10 @@ supabase db reset         # aplica migrations + seed
 npm run typecheck   # tsc --noEmit
 npm test            # 14 testes de regra no cliente
 npm run build       # build de produção
-npm run db:test     # migrations + seed + 4 suítes SQL
+npm run db:test     # migrations + seed + 5 suítes SQL
 ```
 
-Resultado atual: tudo verde (4 suítes SQL, 14 testes de unidade, typecheck e build). Reproduza antes de confiar.
+Resultado atual: tudo verde (5 suítes SQL, 14 testes de unidade, typecheck e build). Reproduza antes de confiar.
 
 ## Documentação
 

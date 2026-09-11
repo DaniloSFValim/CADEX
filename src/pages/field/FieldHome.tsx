@@ -177,6 +177,11 @@ export default function FieldHome() {
                     <span className="font-medium">{i.executor_name}</span>
                     <span className="text-slate-600">{i.street}</span>
                     <StatusBadge status={i.status} />
+                    {i.executor_cadex_active === false && (
+                      <span className="rounded bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-900 ring-1 ring-amber-300">
+                        executora sem CADEX ativo
+                      </span>
+                    )}
                     <Link
                       to={`/campo/fiscalizacao/${i.public_token}`}
                       className="ml-auto text-gov-700 underline-offset-2 hover:underline"

@@ -6,7 +6,7 @@
 npm run typecheck   # tsc --noEmit — sem erros
 npm test            # 14 testes de regra no cliente — passando
 npm run build       # build de produção — sucesso
-npm run db:test     # migrations + seed + 4 suítes SQL — passando
+npm run db:test     # migrations + seed + 5 suítes SQL — passando
 ```
 
 ## Suíte de banco
@@ -25,6 +25,7 @@ Supabase já provê ambos.
 | `01_cadex_rules.sql` | CNPJ, ciclo de vida da inscrição, validade de 12 meses, documento vencido, saneamento, inaptidão, deferimento bloqueado, cadeia de subcontratação, ciclo, dias úteis com feriado, imutabilidade da auditoria |
 | `02_intervention_rules.sql` | habilitação de executora e subcontratada, snapshot dos papéis, licença prévia, licença vencida, prazo de análise, autodeclaração anterior ao deslocamento, prazo da emergência, requisitos de regularização, endereço da OS, consulta pública por token, ausência de dado pessoal nas views, consulta espacial, idempotência da varredura |
 | `03_rls.sql` | isolamento entre empresas, bloqueio de escalação de privilégio, auditoria invisível à empresa, `verify_badge` restrita, painel restrito, fiscal sem personificação, `anon` sem acesso a tabela |
+| `05_decisoes_art30.sql` | decisões administrativas: prazo que não se suspende por diligência, obra licenciada que prossegue apesar da inaptidão, publicação da situação cadastral corrente, substituição de poste como manutenção e escavação recusada como manutenção |
 | `04_resolucao_001_2026.sql` | aderência ao articulado: coordenadas do trecho (art. 2º, VII), unificação documental (art. 6º, II, "c"), prazos dos arts. 7º, 8º, 13, 20 e 29, termo inicial das 24h na conclusão (art. 20), acionamento e conteúdo da comunicação ao 153 (art. 19), desqualificação da falsa emergência (art. 20, pú), subscrição da OS (art. 25), restabelecimento após saneamento (art. 8º, § 3º), rol dos arts. 10 e 15, fundamento de todo item de checklist, elementos da placa (art. 14), publicação do art. 7º, § 2º |
 
 `03_rls.sql` roda como papel **não superusuário**. Um teste de RLS como

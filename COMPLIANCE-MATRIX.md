@@ -134,39 +134,68 @@ que fixa o comportamento (`04_resolucao_001_2026.sql`).
 
 ---
 
+## Decisões do art. 30 já tomadas
+
+Registradas na tabela `normative_decisions`, auditáveis e reversíveis por
+ato da mesma autoridade. Cada uma tem teste que trava o comportamento
+(`05_decisoes_art30.sql`).
+
+| # | Questão | Decisão | Efeito no sistema |
+|---|---|---|---|
+| 1 | Os prazos dos arts. 7º e 13 suspendem-se durante a diligência? | **Não.** Correm continuamente do protocolo. | `analysis_due_date` é calculada uma vez e congelada por trigger; diligência não a altera |
+| 2 | A inaptidão suspende obra já licenciada? | **Não.** A licença deferida permanece e a obra prossegue. | O bloqueio incide na criação e alteração de vínculos, não na execução. A situação cadastral corrente da executora passou a ser publicada |
+| 3 | Substituição de poste é obra ou manutenção? | **Manutenção rotineira**, salvo escavação ou nova fundação. | Novo tipo `SUBST_POSTE` sem licença; `requires_excavation = true` impede o registro como manutenção |
+
+### Ressalva técnica registrada na decisão 3
+
+O critério legal do art. 15 é a atividade **não modificar a estrutura da
+via**, e o art. 10 classifica como obra a escavação a céu aberto e a
+implantação de postes. Enquadrar toda substituição como manutenção, sem
+condição alguma, abriria via de evasão: bastaria rotular de
+"substituição" uma implantação que exige nova cava e nova fundação, e a
+licença do art. 11 seria dispensada por nomenclatura.
+
+A decisão foi implementada com um único condicionamento, extraído do
+próprio art. 10 — a substituição é manutenção **enquanto não houver
+escavação ou nova fundação**. Para afastá-lo, basta remover o trigger
+`cadex.check_maintenance_scope` e registrar nova decisão na tabela.
+
+### Contrapartida da decisão 2
+
+A obra licenciada prossegue, mas o fiscal em campo e o cidadão passam a
+enxergar que a executora está sem inscrição ativa
+(`executor_cadex_status` e `executor_cadex_active` em
+`public_interventions`). A informação é de publicação obrigatória pelo
+art. 7º, § 2º; não suspender a obra não é o mesmo que esconder o fato.
+
+---
+
 ## ⚖️ Pendências de definição administrativa
 
-Não implementadas por inferência. Dependem de ato da SECONSER/SEOP —
-art. 30.
+Sete pontos remanescentes. Não implementados por inferência: dependem de
+ato da SECONSER/SEOP (art. 30), como os três já resolvidos acima.
 
-1. **Suspensão do prazo de análise durante diligência.** Os arts. 7º e 13
-   fixam 15 e 20 dias úteis, sem disciplinar a interrupção. Hoje o prazo é
-   calculado uma vez no protocolo e não é recalculado após diligência.
-2. **Efeito da inaptidão sobre licença já deferida.** O art. 8º, § 2º
-   impede *requerer* licença e *registrar* autodeclaração. Não diz se a
-   obra já licenciada deve ser suspensa. O sistema bloqueia novas
-   vinculações e não suspende o que já está em curso.
-3. **Termo inicial dos 30 dias do art. 8º.** O texto conta da
+1. **Termo inicial dos 30 dias do art. 8º.** O texto conta da
    *notificação*. O sistema notifica na detecção automática, de modo que
    os prazos coincidem — mas se a notificação exigir ato formal diverso,
    o termo inicial muda.
-4. **Renovação (art. 7º, § 1º).** Se os novos 12 meses correm da data do
+2. **Renovação (art. 7º, § 1º).** Se os novos 12 meses correm da data do
    novo deferimento ou emendam ao fim da vigência anterior.
-5. **Art. 6º, IV e V — exigibilidade condicional.** Empresa sem
+3. **Art. 6º, IV e V — exigibilidade condicional.** Empresa sem
    infraestrutura própria ou sem contrato de compartilhamento não tem o
    que juntar. Estão marcados como não obrigatórios; se a SECONSER exigir
    declaração negativa, é ajuste de catálogo.
-6. **Fronteira entre os arts. 10 e 15.** O critério legal é *modificar a
-   estrutura da via*, e o rol do art. 15 é exemplificativo. Casos de
-   fronteira (substituição de poste existente, por exemplo) precisam de
-   enquadramento da SECONSER.
-7. **Quem abre a emergência no sistema.** O art. 19 impõe o acionamento
+4. **Demais casos de fronteira entre os arts. 10 e 15.** A substituição de
+   poste está decidida (ver acima). Outros casos — recomposição de
+   pavimento sobre vala de terceiro, por exemplo — seguem sem
+   enquadramento.
+5. **Quem abre a emergência no sistema.** O art. 19 impõe o acionamento
    pela empresa; o art. 20 impõe o registro a ela. Hoje o CISP registra o
    acionamento e a executora complementa. Se a executora deve poder abrir
    diretamente, é decisão de fluxo.
-8. **Anexo Único da Lei nº 3.988/2025.** A Resolução remete aos incisos
+6. **Anexo Único da Lei nº 3.988/2025.** A Resolução remete aos incisos
    III, IV e XXI. O Anexo não integra o texto fornecido: as referências
    estão gravadas como citação, sem que o sistema calcule penalidade.
-9. **Art. 14 — placa física.** O dispositivo admite "placa **ou** QR
+7. **Art. 14 — placa física.** O dispositivo admite "placa **ou** QR
    Code". O sistema entrega o QR Code e a página pública; a especificação
    gráfica da placa física, se exigida, não está definida.

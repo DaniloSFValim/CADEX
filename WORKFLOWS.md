@@ -18,6 +18,9 @@ RASCUNHO → PROTOCOLADO → EM ANÁLISE → ┬→ PENDENTE (diligência) ─�
   Decorrido o saneamento → INAPTO.
 - PENDENTE aberto por diligência (sem pendência documental) só sai por
   decisão do analista: a varredura automática não o move.
+- **A diligência não suspende o prazo de análise** (decisão art. 30 (1)):
+  os 15 dias úteis correm continuamente do protocolo. O mesmo vale para os
+  20 dias úteis da licença (art. 13).
 
 ## 2. Obra de infraestrutura
 

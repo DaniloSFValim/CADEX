@@ -50,6 +50,8 @@ export interface PublicIntervention {
   type_name: string | null;
   executor_name: string;
   executor_cadex: string | null;
+  executor_cadex_status: string | null;
+  executor_cadex_active: boolean | null;
   concessionaire_name: string | null;
   license_number: string | null;
   declaration_number: string | null;
