@@ -174,43 +174,62 @@ begin
   update declarations set dispatched_at = now() + interval '30 minutes' where id = d;
 end $$;
 
--- --- §18/§19/§43 Regra 5: emergência, prazo e regularização ----------
+-- --- Art. 18/19/20: emergência, prazo e regularização ----------------
 do $$
 declare ativa uuid; t uuid; iv uuid; e uuid; p uuid; due timestamptz; stt emergency_status;
+        v_concluded timestamptz;
 begin
   select v into ativa from fx where k='ativa';
   select id into t from intervention_types where code = 'EMERGENCIA';
 
   insert into cisp_protocols (protocol_number, called_at)
-  values ('CISP-TEST-1', now() - interval '1 hour') returning id into p;
+  values ('CISP-TEST-1', now() - interval '5 hours') returning id into p;
 
   insert into interventions (kind, type_id, executor_id, geom, description)
-  values ('emergencia', t, ativa, st_setsrid(st_makepoint(-43.175,-22.908),4326),'emerg')
+  values ('emergencia', t, ativa, st_setsrid(st_makepoint(-43.104,-22.884),4326),'emerg')
   returning id into iv;
 
-  insert into emergencies (intervention_id, cisp_protocol_id, risk_nature)
-  values (iv, p, 'cabo rompido') returning id into e;
+  insert into emergencies (intervention_id, cisp_protocol_id, risk_nature, risk_category,
+                           vehicle_kind, vehicle_plate, on_site_responsible_name,
+                           on_site_responsible_doc, on_site_responsible_phone)
+  values (iv, p, 'cabo rompido', 'risco_iminente', 'Utilitário', 'ABC1D23',
+          'Encarregado', '00.000.000-0', '(21) 0000-0000')
+  returning id into e;
 
+  -- Art. 20: enquanto o atendimento não é concluído, não há prazo em curso.
   select regularization_due_at into due from emergencies where id = e;
-  perform assert(due is not null, 'prazo de regularização não calculado');
-  perform assert(due = (now() - interval '1 hour') + interval '24 hours'
-                 or abs(extract(epoch from (due - ((now() - interval '1 hour') + interval '24 hours')))) < 5,
-                 'prazo de 24h não contado a partir do acionamento (§19)');
+  perform assert(due is null,
+    'prazo do art. 20 não pode correr antes da conclusão do atendimento');
+
+  begin
+    perform cadex.regularize_emergency(e);
+    raise exception 'ASSERT FALHOU: regularizou atendimento não concluído';
+  exception when others then
+    if position('conclusão do atendimento' in sqlerrm) = 0 then raise; end if;
+  end;
+
+  -- Conclui o atendimento: só então o prazo de 24h começa a correr.
+  v_concluded := now() - interval '1 hour';
+  update emergencies set concluded_at = v_concluded where id = e;
+  select regularization_due_at into due from emergencies where id = e;
+  perform assert(due is not null, 'prazo de regularização não calculado após a conclusão');
+  perform assert(abs(extract(epoch from (due - (v_concluded + interval '24 hours')))) < 5,
+    'art. 20: as 24h correm da CONCLUSÃO do atendimento, não do acionamento');
 
   -- Sem escopo/fotos, não regulariza
   begin
     perform cadex.regularize_emergency(e);
-    raise exception 'ASSERT FALHOU: regularizou sem descrição do serviço';
+    raise exception 'ASSERT FALHOU: regularizou sem escopo do serviço';
   exception when others then
-    if position('serviço executado' in sqlerrm) = 0 then raise; end if;
+    if position('escopo do serviço' in sqlerrm) = 0 then raise; end if;
   end;
 
   update emergencies set executed_service = 'reparo concluído' where id = e;
   begin
     perform cadex.regularize_emergency(e);
-    raise exception 'ASSERT FALHOU: regularizou sem fotografia';
+    raise exception 'ASSERT FALHOU: regularizou sem imagens';
   exception when others then
-    if position('fotográfico' in sqlerrm) = 0 then raise; end if;
+    if position('imagens' in sqlerrm) = 0 then raise; end if;
   end;
 
   insert into emergency_photos (emergency_id, storage_path) values (e, 'p/e1.jpg');
@@ -220,21 +239,22 @@ begin
 
   -- Fora do prazo é detectado, não silenciado
   update emergencies set regularized_at = null, status = 'em_atendimento',
-         regularization_due_at = now() - interval '1 hour' where id = e;
+         concluded_at = now() - interval '30 hours' where id = e;
   perform cadex.regularize_emergency(e);
   select status into stt from emergencies where id = e;
   perform assert(stt = 'fora_do_prazo', 'atraso deveria virar fora_do_prazo, veio ' || stt);
 end $$;
 
--- --- §23: OS não emergencial exige endereço --------------------------
+-- --- Art. 25, § 2º: só a OS de emergência dispensa endereço prévio --------------------------
 do $$
 declare ativa uuid; iv uuid;
 begin
   select v into ativa from fx where k='ativa';
   select v into iv from fx where k='obra';
   begin
-    insert into work_orders (intervention_id, executor_id, description)
-    values (iv, ativa, 'sem endereço');
+    insert into work_orders (intervention_id, executor_id, description,
+                             responsible_name, signed_by_name, signed_by_role)
+    values (iv, ativa, 'sem endereço', 'Encarregado', 'Eng. RT', 'responsavel_tecnico');
     raise exception 'ASSERT FALHOU: OS de obra aceita sem endereço';
   exception when others then
     if position('exige endereço' in sqlerrm) = 0 then raise; end if;

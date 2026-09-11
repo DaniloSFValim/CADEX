@@ -4,9 +4,17 @@ import { supabase } from '../lib/supabase';
 import { Button, Card, ErrorNote, Empty, Field, inputClass, StatusBadge, Spinner } from '../components/ui';
 
 /**
- * §5.7, §18, §19 — Interface do CISP/SEOP. Registra o acionamento pelo
- * 153, gera o protocolo e abre a emergência. Emergência NÃO passa por
- * licença nem por autodeclaração: é um workflow próprio.
+ * Interface do CISP/SEOP (art. 2º, VI).
+ *
+ * Art. 19: o atendimento de emergência independe de licença prévia e de
+ * autodeclaração, "sendo obrigatório o acionamento telefônico do número
+ * 153 (CISP) no momento do deslocamento da equipe".
+ *
+ * Art. 19, § 1º: a comunicação deve informar o número do CADEX da
+ * empresa, o endereço da ocorrência, a natureza do risco, o tipo e a
+ * placa do veículo utilizado, e o nome, a identidade e o telefone de
+ * contato do responsável presente no local. Todos esses campos são
+ * exigidos aqui e revalidados pelo banco.
  */
 export default function CispEmergency() {
   const qc = useQueryClient();
@@ -16,7 +24,13 @@ export default function CispEmergency() {
     caller_name: '',
     executor_id: '',
     concessionaire_id: '',
+    risk_category: 'risco_iminente',
     risk_nature: '',
+    vehicle_kind: '',
+    vehicle_plate: '',
+    responsible_name: '',
+    responsible_doc: '',
+    responsible_phone: '',
     description: '',
     address: '',
     lng: '',
@@ -51,8 +65,15 @@ export default function CispEmergency() {
 
   const create = useMutation({
     mutationFn: async () => {
-      if (!form.protocol_number.trim()) throw new Error('Informe o protocolo CISP.');
-      if (!form.executor_id) throw new Error('Selecione a empresa executora.');
+      // Art. 19, § 1º — conteúdo mínimo da comunicação ao 153.
+      if (!form.protocol_number.trim()) throw new Error('Informe o protocolo do CISP.');
+      if (!form.executor_id) throw new Error('Selecione a empresa executora (art. 19, § 1º).');
+      if (!form.address.trim()) throw new Error('Informe o endereço da ocorrência (art. 19, § 1º).');
+      if (!form.risk_nature.trim()) throw new Error('Informe a natureza do risco (art. 19, § 1º).');
+      if (!form.vehicle_kind.trim() || !form.vehicle_plate.trim())
+        throw new Error('Informe o tipo e a placa do veículo utilizado (art. 19, § 1º).');
+      if (!form.responsible_name.trim() || !form.responsible_doc.trim() || !form.responsible_phone.trim())
+        throw new Error('Informe nome, identidade e telefone do responsável presente no local (art. 19, § 1º).');
       if (!form.lng || !form.lat) throw new Error('Informe a localização da ocorrência.');
 
       const { data: proto, error: pe } = await supabase
@@ -91,13 +112,25 @@ export default function CispEmergency() {
         intervention_id: interv.id,
         cisp_protocol_id: proto.id,
         risk_nature: form.risk_nature,
+        risk_category: form.risk_category,
+        vehicle_kind: form.vehicle_kind,
+        vehicle_plate: form.vehicle_plate,
+        on_site_responsible_name: form.responsible_name,
+        on_site_responsible_doc: form.responsible_doc,
+        on_site_responsible_phone: form.responsible_phone,
         status: 'acionada',
+        // Art. 19: o acionamento ocorre no momento do deslocamento.
+        dispatched_at: new Date(form.called_at).toISOString(),
       });
       if (ee) throw ee;
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['open-emergencies'] });
-      setForm((f) => ({ ...f, protocol_number: '', risk_nature: '', description: '', address: '' }));
+      setForm((f) => ({
+        ...f, protocol_number: '', risk_nature: '', description: '', address: '',
+        vehicle_kind: '', vehicle_plate: '',
+        responsible_name: '', responsible_doc: '', responsible_phone: '',
+      }));
     },
   });
 
@@ -106,7 +139,7 @@ export default function CispEmergency() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-xl font-bold text-slate-900">CISP — atendimento emergencial</h1>
+      <h1 className="text-xl font-bold text-slate-900">CISP 153 — atendimento emergencial</h1>
 
       <Card title="Registrar acionamento (153)">
         <div className="grid gap-4 sm:grid-cols-2">
@@ -122,9 +155,40 @@ export default function CispEmergency() {
             <input className={inputClass} value={form.caller_name}
               onChange={(e) => setForm({ ...form, caller_name: e.target.value })} />
           </Field>
-          <Field label="Natureza do risco" required>
+          <Field label="Hipótese do art. 18" required>
+            <select className={inputClass} value={form.risk_category}
+              onChange={(e) => setForm({ ...form, risk_category: e.target.value })}>
+              <option value="risco_iminente">
+                I — risco iminente à vida, saúde, segurança ou patrimônio
+              </option>
+              <option value="servico_essencial">
+                II — restabelecimento de serviço essencial
+              </option>
+            </select>
+          </Field>
+          <Field label="Natureza do risco" required hint="Art. 19, § 1º.">
             <input className={inputClass} value={form.risk_nature}
               onChange={(e) => setForm({ ...form, risk_nature: e.target.value })} />
+          </Field>
+          <Field label="Tipo do veículo" required hint="Art. 19, § 1º.">
+            <input className={inputClass} value={form.vehicle_kind}
+              onChange={(e) => setForm({ ...form, vehicle_kind: e.target.value })} />
+          </Field>
+          <Field label="Placa do veículo" required hint="Art. 19, § 1º.">
+            <input className={inputClass} value={form.vehicle_plate}
+              onChange={(e) => setForm({ ...form, vehicle_plate: e.target.value.toUpperCase() })} />
+          </Field>
+          <Field label="Responsável presente no local" required hint="Art. 19, § 1º.">
+            <input className={inputClass} value={form.responsible_name}
+              onChange={(e) => setForm({ ...form, responsible_name: e.target.value })} />
+          </Field>
+          <Field label="Identidade do responsável" required hint="Art. 19, § 1º.">
+            <input className={inputClass} value={form.responsible_doc}
+              onChange={(e) => setForm({ ...form, responsible_doc: e.target.value })} />
+          </Field>
+          <Field label="Telefone de contato do responsável" required hint="Art. 19, § 1º.">
+            <input className={inputClass} value={form.responsible_phone}
+              onChange={(e) => setForm({ ...form, responsible_phone: e.target.value })} />
           </Field>
           <Field
             label="Empresa executora"
@@ -148,7 +212,7 @@ export default function CispEmergency() {
               ))}
             </select>
           </Field>
-          <Field label="Endereço">
+          <Field label="Endereço da ocorrência" required hint="Art. 19, § 1º.">
             <input className={inputClass} value={form.address}
               onChange={(e) => setForm({ ...form, address: e.target.value })} />
           </Field>
@@ -175,7 +239,9 @@ export default function CispEmergency() {
             {create.isPending ? 'Registrando…' : 'Registrar emergência'}
           </Button>
           <span className="text-xs text-slate-500">
-            O prazo de regularização é contado automaticamente a partir do acionamento.
+            Art. 20: o prazo de 24 horas para registro do protocolo, das imagens e do
+            escopo começa a correr da <strong>conclusão do atendimento</strong>, não
+            do acionamento.
           </span>
         </div>
         <div className="mt-3"><ErrorNote error={create.error} /></div>

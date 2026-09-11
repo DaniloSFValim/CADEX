@@ -7,8 +7,13 @@ import { Card, Spinner, ErrorNote, StatusBadge } from '../../components/ui';
 import type { PublicIntervention } from '../../lib/map';
 
 /**
- * §15 — Placa digital da obra. É a página que o QR Code afixado no local
- * abre, e serve de verificação de autenticidade (§14, §43 Regra 7).
+ * Art. 14 — "O canteiro de obra de infraestrutura deve exibir placa ou
+ * QR Code em local visível, com a razão social da empresa executora, o
+ * número da licença, o escopo da atividade e a data prevista de
+ * encerramento." Esta é a página que o QR Code afixado no local abre.
+ *
+ * Serve também à conferência de autenticidade pelo agente municipal
+ * (art. 7º, § 2º) e à consulta pública.
  */
 export default function PublicVerify() {
   const { token = '' } = useParams();
@@ -46,19 +51,20 @@ export default function PublicVerify() {
 }
 
 function Details({ item }: { item: PublicIntervention }) {
+  // Os quatro elementos do art. 14 vêm primeiro, na ordem do dispositivo.
   const rows: [string, string | null][] = [
-    ['Empresa executora', item.executor_name],
+    ['Razão social da empresa executora', item.executor_name],
     ['CADEX da executora', item.executor_cadex],
     ['Concessionária contratante', item.concessionaire_name],
     ['Número da licença', item.license_number],
+    ['Escopo da atividade', item.scope ?? item.description],
+    ['Data prevista de encerramento', fmtDate(item.ends_on)],
     ['Número da autodeclaração', item.declaration_number],
     ['Tipo', item.type_name],
-    ['Escopo', item.scope ?? item.description],
     ['Logradouro', item.street],
     ['Bairro', item.district],
     ['Trecho', [item.segment_from, item.segment_to].filter(Boolean).join(' até ') || null],
     ['Início previsto', fmtDate(item.starts_on)],
-    ['Encerramento previsto', fmtDate(item.ends_on)],
     ['Início efetivo', fmtDateTime(item.started_at)],
     ['Encerramento efetivo', fmtDateTime(item.finished_at)],
   ];
@@ -67,7 +73,7 @@ function Details({ item }: { item: PublicIntervention }) {
     <div className="space-y-5">
       <div className="rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-3">
         <p className="text-sm font-medium text-emerald-900">
-          Registro autêntico — consta nos sistemas do Município.
+          Registro autêntico — consta nos sistemas do Município de Niterói.
         </p>
       </div>
 
@@ -90,8 +96,10 @@ function Details({ item }: { item: PublicIntervention }) {
       </Card>
 
       <p className="text-xs text-slate-500">
-        Esta página apresenta apenas informações públicas da intervenção. Dados
-        pessoais de trabalhadores e responsáveis não são divulgados (LGPD, §36).
+        Placa digital do canteiro, nos termos do art. 14 da Resolução Conjunta
+        SECONSER/SEOP nº 001/2026. Esta página apresenta apenas informações
+        públicas da intervenção: dados pessoais de trabalhadores e responsáveis
+        não são divulgados, em observância à LGPD.
       </p>
     </div>
   );

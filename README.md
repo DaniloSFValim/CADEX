@@ -7,33 +7,36 @@ de campo e consulta pública georreferenciada.
 
 ---
 
-## ⚠️ Leia antes de tudo: o texto da Resolução não foi fornecido
+## Conformidade normativa
 
-O escopo deste sistema é a **Resolução Conjunta SECONSER/SEOP nº 001, de
-09/09/2026**, indicada como fonte normativa de verdade. **O arquivo não
-chegou a esta sessão de desenvolvimento** — a busca no repositório e no
-ambiente não localizou nenhum documento correspondente, e o repositório
-estava vazio.
+Fonte de verdade: **Resolução Conjunta SECONSER/SEOP nº 001, de 09 de
+setembro de 2026** — Município de Niterói, com fundamento na Lei
+Municipal nº 3.988/2025.
 
-Consequências práticas, declaradas abertamente em vez de disfarçadas:
+O articulado foi conferido dispositivo a dispositivo. A rastreabilidade
+está em [`COMPLIANCE-MATRIX.md`](COMPLIANCE-MATRIX.md), que hoje cita o
+artigo de cada regra — não há mais coluna em branco. Todo prazo e toda
+exigência documental carregam `legal_basis` no próprio banco, e há teste
+que falha se um catálogo ganhar item sem fundamento.
 
-1. **Nenhum número de artigo foi inventado.** Não há, em nenhum arquivo
-   deste repositório, uma citação do tipo "art. 12 da Resolução". Onde
-   um artigo deveria ser referenciado, o campo está nulo e marcado como
-   pendente em [`COMPLIANCE-MATRIX.md`](COMPLIANCE-MATRIX.md).
-2. **Todo prazo é parâmetro, não constante.** Os valores (15 dias úteis,
-   12 meses, 30 dias, 20 dias úteis, 24 horas, 60 dias) vieram da
-   especificação funcional recebida, **não do texto legal**, e estão na
-   tabela `system_parameters`, editáveis sem recompilar nem migrar. Ao
-   conferir o texto oficial, corrige-se o valor e preenche-se
-   `legal_basis` — nenhuma linha de código muda.
-3. **Regras que dependem de redação exata ficaram registradas como
-   pendentes**, não adivinhadas. A lista está na seção "Regras pendentes
-   de definição administrativa" da matriz de conformidade.
+### Divergência corrigida na conferência
 
-**Para destravar:** coloque o PDF/DOCX da Resolução em `docs/normativo/`
-e solicite a revisão. A matriz de conformidade é o artefato a ser
-preenchido artigo a artigo.
+**Art. 20 — as 24 horas correm da conclusão do atendimento, não do
+acionamento do CISP.** A primeira implementação contava do acionamento.
+Num atendimento de 10 horas, isso esgotaria o prazo 10 horas cedo demais
+e poderia gerar autuação indevida (Anexo Único, inciso III, da Lei nº
+3.988/2025). Corrigido na migration 07, com teste que fixa o
+comportamento.
+
+Outros oito ajustes decorreram da leitura — entre eles o trecho passar a
+exigir coordenadas de início e fim (art. 2º, VII), a unificação de
+"equipamentos e contingente de pessoal técnico" num só documento (art.
+6º, II, "c"), o conteúdo obrigatório da comunicação ao 153 (art. 19,
+§ 1º), a subscrição da ordem de serviço (art. 25) e a correção do
+município, que estava no Rio de Janeiro em vez de **Niterói**.
+
+Nove pontos continuam dependendo de decisão da SECONSER/SEOP (art. 30) e
+estão listados ao final da matriz. Não foram adivinhados.
 
 ## Estado real da entrega
 
@@ -44,8 +47,9 @@ inteiro. A tabela abaixo é o estado verificado, não uma projeção.
 | Área | Situação | Verificação |
 |---|---|---|
 | Modelo de dados (36 tabelas, PostGIS) | ✅ funciona | migrations aplicam em Postgres 16 + PostGIS 3 |
+| Aderência ao articulado | ✅ conferida | `04_resolucao_001_2026.sql` — 14 blocos de assertiva |
 | RBAC + RLS (7 perfis) | ✅ funciona | `03_rls.sql` prova isolamento entre empresas e bloqueio de escalação |
-| Regras de negócio no banco | ✅ funciona | 3 suítes SQL, todas passando |
+| Regras de negócio no banco | ✅ funciona | 4 suítes SQL, todas passando |
 | Motor de prazos e notificações | ✅ funciona | varredura idempotente testada |
 | Camada pública LGPD (views + RPC) | ✅ funciona | teste prova ausência de dado pessoal e bloqueio de `anon` nas tabelas |
 | Consulta espacial / mapa | ✅ funciona | `interventions_near` testada; MapLibre consome GeoJSON do PostGIS |
@@ -125,10 +129,10 @@ supabase db reset         # aplica migrations + seed
 npm run typecheck   # tsc --noEmit
 npm test            # 14 testes de regra no cliente
 npm run build       # build de produção
-npm run db:test     # migrations + seed + 3 suítes SQL
+npm run db:test     # migrations + seed + 4 suítes SQL
 ```
 
-Resultado atual: tudo verde. Reproduza antes de confiar.
+Resultado atual: tudo verde (4 suítes SQL, 14 testes de unidade, typecheck e build). Reproduza antes de confiar.
 
 ## Documentação
 

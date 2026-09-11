@@ -24,23 +24,24 @@ export const mapStyle = (): string | StyleSpecification =>
   import.meta.env.VITE_MAP_STYLE_URL || FALLBACK_STYLE;
 
 export const mapCenter = (): [number, number] => [
-  Number(import.meta.env.VITE_MAP_CENTER_LNG ?? -43.1729),
-  Number(import.meta.env.VITE_MAP_CENTER_LAT ?? -22.9068),
+  Number(import.meta.env.VITE_MAP_CENTER_LNG ?? -43.1036),
+  Number(import.meta.env.VITE_MAP_CENTER_LAT ?? -22.8832),
 ];
 
 export const mapZoom = (): number => Number(import.meta.env.VITE_MAP_ZOOM ?? 12);
 
-/** Cores por tipo de intervenção — usadas no mapa e nas legendas (§26). */
+/** Cores por tipo de intervenção — usadas no mapa e nas legendas. */
 export const KIND_COLOR: Record<string, string> = {
   obra: '#2b5687',
   manutencao: '#1f7a5a',
   emergencia: '#b3261e',
 };
 
+// Art. 9º: as três categorias de intervenção, com protocolos distintos.
 export const KIND_LABEL: Record<string, string> = {
-  obra: 'Obra licenciada',
-  manutencao: 'Manutenção rotineira',
-  emergencia: 'Emergência',
+  obra: 'Obra de infraestrutura (art. 10)',
+  manutencao: 'Manutenção rotineira (art. 15)',
+  emergencia: 'Atendimento de emergência (art. 18)',
 };
 
 export interface PublicIntervention {
@@ -58,6 +59,8 @@ export interface PublicIntervention {
   district: string | null;
   segment_from: string | null;
   segment_to: string | null;
+  segment_start: GeoJSON.Point | null;
+  segment_end: GeoJSON.Point | null;
   starts_on: string | null;
   ends_on: string | null;
   started_at: string | null;

@@ -76,7 +76,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
           <NavLink to="/" className="flex items-baseline gap-2">
             <span className="text-lg font-bold tracking-tight text-gov-800">CADEX</span>
             <span className="hidden text-xs text-slate-500 sm:inline">
-              Portal público de intervenções
+              Niterói · Portal público de intervenções
             </span>
           </NavLink>
           <nav className="flex items-center gap-4 text-sm">
@@ -93,7 +93,9 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
       <main>{children}</main>
       <footer className="mt-12 border-t border-slate-200 bg-white">
         <div className="mx-auto max-w-7xl px-4 py-6 text-xs text-slate-500">
-          Dados publicados conforme a Resolução Conjunta SECONSER/SEOP nº 001/2026.
+          Relação de empresas com CADEX ativo e intervenções publicadas nos termos do
+          art. 7º, § 2º, da Resolução Conjunta SECONSER/SEOP nº 001, de 09/09/2026, e do
+          art. 17, parágrafo único, da Lei Municipal nº 3.988/2025 — Município de Niterói.
           Informações pessoais são omitidas desta consulta em observância à LGPD.
         </div>
       </footer>

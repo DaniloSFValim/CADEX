@@ -4,24 +4,29 @@ Cada regra abaixo é aplicada **no banco**. A coluna "espelho no cliente"
 indica onde há validação adicional para feedback imediato — que nunca
 substitui a barreira do banco.
 
-| Regra | Onde é aplicada | Espelho no cliente | Teste |
-|---|---|---|---|
-| R1 — Sem CADEX ativo a empresa não executa nem é contratada | trigger `check_intervention_parties` | `isCadexActive` | `02` |
-| R2 — Obra exige licença prévia deferida e vigente | `cadex.start_intervention` | `canStartWork` | `02` |
-| R3 — Manutenção exige autodeclaração anterior ao deslocamento | trigger `check_declaration_order` | — | `02` |
-| R4 — Emergência segue protocolo CISP | FK obrigatória na regularização | — | `02` |
-| R5 — Emergência regularizada dentro do prazo | `regularize_emergency` + varredura | `isEmergencyLate` | `02` |
-| R6 — Subcontratada também precisa de CADEX ativo | mesmo trigger de R1 | `isCadexActive` | `02` |
-| R7 — Fiscal verifica autenticidade | `verify_public_token`, `verify_badge` | — | `02`, `03` |
-| R8 — CADEX inapto impede novo requerimento | `is_company_active` + policies | — | `01`, `02` |
+| Regra | Dispositivo | Onde é aplicada | Espelho no cliente | Teste |
+|---|---|---|---|---|
+| R1 — Sem CADEX ativo a empresa não executa nem é contratada | Art. 3º, caput | trigger `check_intervention_parties` | `isCadexActive` | `02` |
+| R2 — Obra exige licença prévia deferida e vigente | Arts. 5º e 11 | `cadex.start_intervention` | `canStartWork` | `02` |
+| R3 — Manutenção exige registro anterior ao deslocamento | Art. 17 | trigger `check_declaration_order` | — | `02` |
+| R4 — Emergência exige acionamento do 153 no deslocamento | Art. 19, caput | trigger `check_emergency_dispatch` | — | `04` |
+| R4b — Conteúdo mínimo da comunicação ao CISP | Art. 19, § 1º | mesmo trigger | validação no formulário | `04` |
+| R5 — 24 horas contadas da **conclusão** do atendimento | Art. 20, caput | `set_emergency_deadline` | `isEmergencyLate` | `02`, `04` |
+| R5b — Emergência que não se enquadra é desqualificada | Art. 20, pú | `cadex.disqualify_emergency` | — | `04` |
+| R6 — Subcontratada em qualquer grau precisa de CADEX ativo | Art. 3º, § 1º | mesmo trigger de R1 | `isCadexActive` | `02` |
+| R7 — Verificação de autenticidade em campo | Arts. 7º, § 2º, 14 e 19, § 2º | `verify_public_token`, `verify_badge` | — | `02`, `03` |
+| R8 — Inapta não requer licença nem registra autodeclaração | Art. 8º, § 2º | `is_company_active` + policies | — | `01`, `02` |
+| R8b — Habilitação restabelecida após saneamento | Art. 8º, § 3º | `cadex.reinstate_company` | — | `04` |
 | R9 — CNPJ válido | `check` + `is_valid_cnpj` | `isValidCnpj` | `01`, unidade |
-| R10 — Deferimento só com documentação regular | `approve_company` | — | `01` |
+| R10 — Deferimento só com documentação regular (art. 6º) | `approve_company` | — | `01` |
 | R11 — Deferimento restrito a admin/gestor | checagem de papel na função | rota + UI | `01`, `02` |
 | R12 — Documento vencido derruba a empresa para PENDENTE | `refresh_company_status` | `documentHealth` | `01` |
 | R13 — Saneamento decorrido leva a INAPTO | `refresh_company_status` | — | `01` |
-| R14 — Validade de 12 meses a partir do deferimento | `approve_company` | — | `01` |
-| R15 — Cadeia de subcontratação sem limite e sem ciclo | CTE recursiva + trigger | — | `01` |
-| R16 — OS não emergencial exige endereço | trigger `check_work_order_address` | — | `02` |
+| R14 — Validade de 12 meses (art. 7º, § 1º) | `approve_company` | — | `01` |
+| R15 — Subcontratação em qualquer grau (art. 2º, VIII), sem ciclo | CTE recursiva + trigger | — | `01` |
+| R16 — Só a OS de emergência dispensa endereço (art. 25, § 2º) | trigger `check_work_order_address` | — | `02` |
+| R16b — OS subscrita por RT ou preposto (art. 25) | trigger `check_work_order_signature` | — | `04` |
+| R16c — Trecho delimitado por coordenadas (art. 2º, VII) | trigger `check_segment_coordinates` | — | `04` |
 | R17 — Irregularidade derivada do checklist | trigger `sync_inspection_result` | — | — |
 | R18 — Fiscal não registra em nome de terceiro | policy de insert | — | `03` |
 | R19 — Empresa não vê dados de outra empresa | policies por `company_id` | — | `03` |
@@ -29,11 +34,20 @@ substitui a barreira do banco.
 | R21 — Auditoria imutável | trigger `block_mutation` | — | `01` |
 | R22 — Camada pública sem dado pessoal | views `public_*` | — | `02` |
 | R23 — `anon` sem acesso a tabela | grants restritos | — | `03` |
-| R24 — Prazos em dias úteis com feriado configurável | `add_business_days` | — | `01` |
+| R24 — Prazos de 15 e 20 dias úteis (arts. 7º e 13) | `add_business_days` | — | `01`, `04` |
 | R25 — Varredura de prazos idempotente | `dedupe_key` único | — | `02` |
+
+## Sanções
+
+A Resolução remete o descumprimento aos incisos III (art. 20, pú), IV
+(art. 17, pú) e XXI (art. 3º, § 2º) do Anexo Único da Lei Municipal nº
+3.988/2025. O Anexo não integra o texto da Resolução: o sistema **grava a
+referência** (`sanction_reference` em `system_parameters` e em
+`inspection_checklist_items`) e **não calcula penalidade**. Enquadrar e
+dosar a sanção continua sendo ato da autoridade.
 
 ## Regras ainda não modeladas
 
-Ver a seção "Regras pendentes de definição administrativa" em
-`COMPLIANCE-MATRIX.md`. Elas dependem do texto da Resolução ou de decisão
-da SECONSER e **não** foram implementadas por inferência.
+Ver "Pendências de definição administrativa" em `COMPLIANCE-MATRIX.md`:
+nove pontos que dependem de ato da SECONSER/SEOP (art. 30) e **não**
+foram implementados por inferência.

@@ -2,6 +2,7 @@
 -- CADEX — Seed de DEMONSTRAÇÃO (§46)
 -- Todos os registros são marcados com demo = true e nomes prefixados
 -- por [DEMO]. Nunca aplicar em produção (ver DEPLOY.md).
+-- Município: Niterói (art. 1º da Resolução).
 -- CNPJs abaixo são fictícios mas com dígitos verificadores VÁLIDOS,
 -- porque o banco valida CNPJ de verdade.
 -- =====================================================================
@@ -59,13 +60,13 @@ begin
                          valid_from, valid_until)
   values
     (c_conc, '34028316000103', '[DEMO] Concessionária Metropolitana S.A.',
-     '[DEMO] ConcessoMetro', 'contato@demo-conc.local', 'Rio de Janeiro','RJ',
+     '[DEMO] ConcessoMetro', 'contato@demo-conc.local', 'Niterói','RJ',
      true, true, 'ativo', 'DEMO-000001', current_date - 30, current_date + 335),
     (c_exec, '33000167000101', '[DEMO] Executora de Redes Ltda.',
-     '[DEMO] RedeExec', 'contato@demo-exec.local', 'Rio de Janeiro','RJ',
+     '[DEMO] RedeExec', 'contato@demo-exec.local', 'Niterói','RJ',
      false, true, 'ativo', 'DEMO-000002', current_date - 60, current_date + 305),
     (c_sub,  '60746948000112', '[DEMO] Subcontratada Obras Urbanas Ltda.',
-     '[DEMO] SubObras', 'contato@demo-sub.local', 'Rio de Janeiro','RJ',
+     '[DEMO] SubObras', 'contato@demo-sub.local', 'Niterói','RJ',
      false, true, 'ativo', 'DEMO-000003', current_date - 20, current_date + 345);
 
   update profiles set company_id = c_exec where id = u_empresa;
@@ -104,13 +105,21 @@ begin
                              description, scope, construction_method,
                              starts_on, ends_on, demo)
   values ('obra', t_vala, c_conc, c_exec, c_sub,
-          st_setsrid(st_makeline(st_makepoint(-43.1729,-22.9068),
-                                 st_makepoint(-43.1710,-22.9050)), 4326),
-          '[DEMO] Av. Rio Branco, trecho 100–300', 'Av. Rio Branco', 'Centro',
+          st_setsrid(st_makeline(st_makepoint(-43.1036,-22.8832),
+                                 st_makepoint(-43.1018,-22.8815)), 4326),
+          '[DEMO] Av. Ernani do Amaral Peixoto, trecho 100–300',
+          'Av. Ernani do Amaral Peixoto', 'Centro',
           '[DEMO] Abertura de vala para lançamento de rede',
           'Vala de 200 m', 'Céu aberto',
           current_date, current_date + 45, true)
   returning id into i_obra;
+
+  -- Art. 2º, VII: o trecho é delimitado por coordenadas de início e de fim.
+  update interventions
+     set segment_from = 'nº 100', segment_to = 'nº 300',
+         segment_start = st_setsrid(st_makepoint(-43.1036,-22.8832), 4326),
+         segment_end   = st_setsrid(st_makepoint(-43.1018,-22.8815), 4326)
+   where id = i_obra;
 
   insert into licenses (intervention_id, status, purpose)
   values (i_obra, 'rascunho', '[DEMO] Expansão de rede')
@@ -129,8 +138,8 @@ begin
   insert into interventions (kind, type_id, concessionaire_id, executor_id, geom,
                              address, street, district, description, starts_on, demo)
   values ('manutencao', t_emenda, c_conc, c_exec,
-          st_setsrid(st_makepoint(-43.1800,-22.9100), 4326),
-          '[DEMO] Rua da Assembleia, 50', 'Rua da Assembleia', 'Centro',
+          st_setsrid(st_makepoint(-43.1052,-22.8847), 4326),
+          '[DEMO] Rua Visconde do Rio Branco, 50', 'Rua Visconde do Rio Branco', 'Centro',
           '[DEMO] Emenda de fios em rede aérea', current_date, true)
   returning id into i_manut;
 
@@ -140,10 +149,10 @@ begin
 
   insert into declaration_routes (declaration_id, sequence, geom, address, scheduled_at)
   values
-    (d_id, 1, st_setsrid(st_makepoint(-43.1800,-22.9100),4326),
-     '[DEMO] Rua da Assembleia, 50', now() + interval '2 hours'),
-    (d_id, 2, st_setsrid(st_makepoint(-43.1815,-22.9112),4326),
-     '[DEMO] Rua do Ouvidor, 120', now() + interval '4 hours');
+    (d_id, 1, st_setsrid(st_makepoint(-43.1052,-22.8847),4326),
+     '[DEMO] Rua Visconde do Rio Branco, 50', now() + interval '2 hours'),
+    (d_id, 2, st_setsrid(st_makepoint(-43.1068,-22.8861),4326),
+     '[DEMO] Rua Coronel Gomes Machado, 120', now() + interval '4 hours');
 
   -- §18 — Emergência ---------------------------------------------------
   select id into t_emerg from intervention_types where code = 'EMERGENCIA';
@@ -155,24 +164,35 @@ begin
   insert into interventions (kind, type_id, concessionaire_id, executor_id, geom,
                              address, street, district, description, demo)
   values ('emergencia', t_emerg, c_conc, c_exec,
-          st_setsrid(st_makepoint(-43.1750,-22.9080), 4326),
-          '[DEMO] Rua Primeiro de Março, 10', 'Rua Primeiro de Março', 'Centro',
+          st_setsrid(st_makepoint(-43.1041,-22.8840), 4326),
+          '[DEMO] Rua Marquês de Caxias, 10', 'Rua Marquês de Caxias', 'Centro',
           '[DEMO] Cabo rompido com risco à circulação', true)
   returning id into i_emerg;
 
+  -- Art. 19, § 1º: a comunicação ao 153 informa CADEX, endereço, natureza do
+  -- risco, tipo e placa do veículo e nome, identidade e telefone do responsável.
   insert into emergencies (intervention_id, cisp_protocol_id, status, risk_nature,
-                           dispatched_at, arrived_at, on_site_responsible_name)
+                           risk_category, vehicle_kind, vehicle_plate,
+                           dispatched_at, arrived_at,
+                           on_site_responsible_name, on_site_responsible_doc,
+                           on_site_responsible_phone)
   values (i_emerg, p_id, 'em_atendimento', '[DEMO] Risco de queda de cabo',
+          'risco_iminente', 'Utilitário', 'ABC1D23',
           now() - interval '2 hours', now() - interval '90 minutes',
-          '[DEMO] Encarregado');
+          '[DEMO] Encarregado', '[DEMO] 00.000.000-0', '[DEMO] (21) 0000-0000');
 
   -- Ordem de serviço e vínculos ----------------------------------------
+  -- Art. 25: OS subscrita por responsável técnico ou preposto designado,
+  -- com identificação do responsável pela equipe (§ 1º).
   insert into work_orders (intervention_id, executor_id, subcontractor_id,
                            concessionaire_id, team_id, vehicle_id, address,
-                           description, demo)
+                           description, responsible_name,
+                           signed_by_name, signed_by_role, demo)
   values (i_obra, c_exec, c_sub, c_conc, team_id, veh_id,
-          '[DEMO] Av. Rio Branco, trecho 100–300',
-          '[DEMO] Execução de vala conforme licença', true);
+          '[DEMO] Av. Ernani do Amaral Peixoto, trecho 100–300',
+          '[DEMO] Execução de vala conforme licença',
+          '[DEMO] Encarregado de Equipe',
+          '[DEMO] Eng. Responsável', 'responsavel_tecnico', true);
 
   insert into intervention_assignments (intervention_id, team_id, vehicle_id)
   values (i_obra, team_id, veh_id);
@@ -181,8 +201,8 @@ begin
   insert into inspections (intervention_id, company_id, inspector_id, location,
                            address, findings, demo)
   values (i_obra, c_exec, u_fiscal,
-          st_setsrid(st_makepoint(-43.1720,-22.9060),4326)::geography,
-          '[DEMO] Av. Rio Branco, 200', '[DEMO] Vistoria de rotina', true);
+          st_setsrid(st_makepoint(-43.1030,-22.8826),4326)::geography,
+          '[DEMO] Av. Ernani do Amaral Peixoto, 200', '[DEMO] Vistoria de rotina', true);
 
   raise notice 'Seed de demonstração aplicado.';
 end $$;
