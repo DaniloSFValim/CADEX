@@ -39,15 +39,35 @@ desenvolvimento e marca tudo com `demo = true` e prefixo `[DEMO]`.
 
 ## 2. Primeiro administrador
 
+Autocadastro está desabilitado (`config.toml`): todas as contas nascem
+pela administração. São dois passos, ambos no painel do Supabase.
+
+**2.1 — Criar a conta.**
+https://supabase.com/dashboard/project/jqgcgaalqabmnevadqfy/auth/users
+
+Botão **Add user** → **Create new user**. Marque **Auto Confirm User**:
+sem isso a conta fica aguardando confirmação por e-mail, e não há
+provedor de e-mail configurado.
+
+**2.2 — Conceder o papel.**
+https://supabase.com/dashboard/project/jqgcgaalqabmnevadqfy/sql/new
+
 ```sql
--- após criar o usuário pelo painel de Auth:
 insert into profiles (id, full_name, email, org_unit)
-values ('<uuid-do-usuario>', 'Nome', 'email@municipio.gov.br', 'SECONSER');
-insert into user_roles (user_id, role) values ('<uuid-do-usuario>', 'admin');
+select id, 'Nome Completo', email, 'SECONSER'
+  from auth.users where email = 'pessoa@municipio.gov.br'
+on conflict (id) do nothing;
+
+insert into user_roles (user_id, role)
+select id, 'admin' from auth.users where email = 'pessoa@municipio.gov.br'
+on conflict do nothing;
 ```
 
-Autocadastro está desabilitado (`config.toml`); todas as contas nascem
-pela administração.
+A busca é por e-mail justamente para não depender de copiar UUID.
+
+Sem o segundo INSERT a conta autentica e não enxerga nada: as policies
+de RLS avaliam papéis, e usuário sem papel não satisfaz nenhuma delas.
+Isso não é falha — é o comportamento correto de negação por padrão.
 
 ## 3. Parâmetros normativos
 
@@ -86,25 +106,40 @@ que o Vite copia para `dist/`. Os dois existem pelo mesmo motivo: sem
 fallback de SPA, `/verificar/<token>` — a URL que o QR Code afixado no
 canteiro abre (art. 14) — responde 404 em vez da placa digital.
 
-**Opção A — Workers, pela sua máquina:**
+**Opção A — Workers, pela sua máquina.** `wrangler` é uma ferramenta de
+linha de comando: roda no seu computador, num clone do repositório. Não
+há equivalente no painel do Cloudflare.
 
 ```bash
-echo "VITE_SUPABASE_URL=https://jqgcgaalqabmnevadqfy.supabase.co"  > .env
-echo "VITE_SUPABASE_ANON_KEY=<chave publicavel do painel>"        >> .env
+git clone https://github.com/DaniloSFValim/CADEX.git && cd CADEX
+
+cat > .env <<'FIM'
+VITE_SUPABASE_URL=https://jqgcgaalqabmnevadqfy.supabase.co
+VITE_SUPABASE_ANON_KEY=<chave publicavel>
+FIM
+
 npm ci && npm run build
-npx wrangler login
+npx wrangler login     # abre o navegador para autorizar
 npx wrangler deploy
 ```
 
-**Opção B — Pages, ligado ao GitHub** (recomendada: publica a cada push):
+A chave publicável está no painel, em **Project Settings → API Keys**.
+Ela é pública por desenho — segue no bundle do navegador de qualquer
+modo; quem protege os dados é a RLS, não o sigilo da chave.
 
-- Cloudflare → Workers & Pages → Create → Pages → Connect to Git
+**Opção B — Pages, ligado ao GitHub** (recomendada: publica a cada push,
+e dispensa terminal):
+
+- https://dash.cloudflare.com → **Workers & Pages** → **Create** → aba
+  **Pages** → **Connect to Git**
 - Repositório `DaniloSFValim/CADEX`, branch `main`
 - Build command: `npm run build` · Output directory: `dist`
 - Variáveis de ambiente: `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`
 
-Já existe um Worker chamado `cadex` na conta, criado em 30/07/2026. Não
-foi tocado: verifique se deve ser substituído ou se convém outro nome.
+**Colisão de nome.** Já existe um Worker chamado `cadex` na conta, criado
+em 30/07/2026, que não foi tocado. O `wrangler.toml` usa exatamente esse
+nome e **sobrescreveria** aquele Worker. Se ele ainda serve para algo,
+altere o campo `name` antes de publicar.
 
 ## 6. Validação pós-deploy
 
