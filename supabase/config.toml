@@ -1,0 +1,31 @@
+# Configuração do projeto local do Supabase CLI.
+project_id = "cadex"
+
+[api]
+enabled = true
+port = 54321
+# O schema `cadex` NÃO é exposto: é lógica interna, alcançada apenas
+# pelos wrappers RPC declarados em public (ver migration 05).
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 16
+
+[studio]
+enabled = true
+port = 54323
+
+[auth]
+enabled = true
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:5173"]
+jwt_expiry = 3600
+enable_signup = false          # §35: contas são criadas pela administração
+minimum_password_length = 10
+
+[storage]
+enabled = true
+file_size_limit = "100MiB"
