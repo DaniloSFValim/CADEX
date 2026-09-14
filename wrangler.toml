@@ -1,0 +1,16 @@
+# Publicação do frontend no Cloudflare Workers (Static Assets).
+#
+# Este arquivo NÃO foi exercido: o conector Cloudflare disponível na
+# sessão de desenvolvimento expõe apenas leitura de Workers, sem
+# qualquer ferramenta de deploy. Ver DEPLOY.md.
+#
+#   npm run build && npx wrangler deploy
+#
+name = "cadex"
+compatibility_date = "2026-09-01"
+
+[assets]
+directory = "./dist"
+# Toda rota desconhecida serve o index.html: a aplicação é uma SPA e a
+# URL do QR Code (/verificar/<token>) precisa resolver (art. 14).
+not_found_handling = "single-page-application"

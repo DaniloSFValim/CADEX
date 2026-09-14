@@ -1,0 +1,4 @@
+# Fallback de SPA. Sem isto, /verificar/<token> — a URL que o QR Code
+# afixado no canteiro abre (art. 14) — responde 404 em vez da placa
+# digital. Lido pelo Cloudflare Pages e pela Netlify a partir de dist/.
+/*    /index.html   200
