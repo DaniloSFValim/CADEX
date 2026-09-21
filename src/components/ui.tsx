@@ -97,12 +97,42 @@ export function Empty({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * O erro do PostgREST não é uma `Error`: é um objeto com `message`,
+ * `details`, `hint` e `code`. A versão anterior caía em `String(error)` e
+ * escrevia "[object Object]" na tela — ou seja, toda recusa do banco (que
+ * é onde vivem as regras deste sistema) chegava ilegível ao usuário.
+ */
+export function errorMessage(error: unknown): string {
+  if (!error) return '';
+  if (typeof error === 'string') return error;
+  if (error instanceof Error && error.message) return error.message;
+
+  if (typeof error === 'object') {
+    const e = error as Record<string, unknown>;
+    const parts = ['message', 'details', 'hint']
+      .map((k) => (typeof e[k] === 'string' ? (e[k] as string).trim() : ''))
+      .filter(Boolean);
+    // `details` costuma repetir a `message`; não vale mostrar duas vezes.
+    const unique = parts.filter((p, i) => parts.indexOf(p) === i);
+    if (unique.length > 0) {
+      const code = typeof e.code === 'string' ? ` (${e.code})` : '';
+      return unique.join(' — ') + code;
+    }
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return 'Erro sem descrição.';
+    }
+  }
+  return String(error);
+}
+
 export function ErrorNote({ error }: { error: unknown }) {
   if (!error) return null;
-  const msg = error instanceof Error ? error.message : String(error);
   return (
     <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-inset ring-red-200">
-      {msg}
+      {errorMessage(error)}
     </p>
   );
 }

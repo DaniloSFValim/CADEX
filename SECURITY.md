@@ -105,6 +105,73 @@ Correções nas migrations 09 e 10. Três testes novos travam o
 comportamento, incluindo um genérico que falha se **qualquer** tabela
 ficar com RLS sem policy.
 
+## A falha de autoridade decisória (migration 11)
+
+As policies das migrations 04 concedem `for all` ao interessado sobre as
+linhas da própria intervenção. Isso está certo para o que ele declara e
+errado para o que registra a decisão da administração — e era a mesma
+policy nos dois casos.
+
+Reproduzido em banco real, com papel não superusuário e sob identidade de
+uma empresa com CADEX ativo:
+
+```sql
+update licenses
+   set status = 'deferida', license_number = 'LIC-FORJADA-0001',
+       valid_until = current_date + 365
+ where id = <licença da própria empresa>;
+-- aceito. Em seguida, start_intervention autorizava a obra.
+```
+
+`cadex.approve_license` checa o papel de quem a chama — mas ninguém é
+obrigado a chamá-la. O PostgREST expõe a tabela, e a tabela é a fonte da
+verdade. Uma empresa emitia a própria licença de obra em via pública.
+
+A mesma brecha permitia:
+
+- **retroagir `declarations.registered_at`**, que é justamente a prova de
+  que o registro antecedeu o deslocamento (art. 17);
+- **lançar `emergencies.concluded_at` no futuro**, empurrando para diante
+  o prazo de 24 horas do art. 20;
+- **declarar-se `regularizada`** sem protocolo CISP, sem descrição do
+  serviço e sem foto — os três requisitos que `regularize_emergency`
+  exige e que o UPDATE direto ignorava, inclusive escapando do
+  `fora_do_prazo`.
+
+**Princípio adotado:** o interessado escreve o que ele declara; quem lavra
+o que a administração decide é a administração. Onde o próprio
+interessado pratica o ato (iniciar a obra licenciada, regularizar a
+emergência), o registro é carimbado pelo servidor, não aceito do cliente.
+
+As transições que o requerente pratica por direito próprio são quatro, e
+só elas: `rascunho → protocolada`, `rascunho → cancelada`,
+`deferida → em_execucao` e `em_execucao → concluida`.
+
+`supabase/tests/06_autoridade_decisoria.sql` reproduz cada uma das quatro
+tentativas e exige que o banco recuse.
+
+## O inverso: regra que impedia o cumprimento (migration 14)
+
+`cadex.is_company_active` era função SQL comum — SECURITY INVOKER — e
+rodava sob a RLS de quem a chamasse. Como a policy de `companies` diz que
+uma empresa só enxerga a si própria, o trigger do art. 11 não achava a
+linha da concessionária e recusava a intervenção com "Concessionária
+contratante sem CADEX ativo", sobre empresa que estava ativa.
+
+Nenhuma empresa conseguia registrar intervenção nomeando contratante ou
+subcontratada — a hipótese que o art. 11 existe para disciplinar. As
+funções de decisão de acesso (`has_role`, `is_staff`,
+`current_company_id`, `can_see_intervention`) já eram SECURITY DEFINER
+pelo mesmo motivo; esta ficou de fora.
+
+Não há vazamento na correção: ela devolve um booleano sobre fato que o
+art. 7º, § 2º manda publicar. A relação de empresas com CADEX ativo já é
+pública em `public_companies`, inclusive para `anon`.
+
+Esta falha não apareceu em teste nenhum: a suíte inseria como
+superusuário. Apareceu ao percorrer o formulário de licenciamento como
+uma empresa de verdade.
+
 ## Pendências de segurança
 
 - Rate limiting nas funções públicas de verificação (hoje ausente; o token
@@ -112,3 +179,16 @@ ficar com RLS sem policy.
 - Rotina de backup e teste de restauração (depende do plano contratado).
 - Revisão de `search_path` por função `security definer` — todas já fixam
   `set search_path`, mas convém auditar a cada nova função.
+- **`maplibre-gl` ^4.7.1 está na faixa de um XSS crítico**
+  (GHSA — bypass do sanitizador em `DOM.sanitize()`, afeta `<= 6.4.0`;
+  correção em 6.10.0, salto de major). O código escapa manualmente o que
+  entrega a `setHTML` em `MapView`, e o editor de geometria não usa popup
+  — mas a defesa não deveria depender de uma camada só. Atualizar merece
+  ser mudança própria, com verificação visual, e não carona numa entrega
+  de funcionalidade. `react-router-dom` tem dois avisos moderados na
+  mesma situação. Reproduzir com `npm audit --omit=dev`.
+- Não há limite geográfico para a geometria submetida: o banco aceita
+  qualquer coordenada válida em SRID 4326, inclusive fora de Niterói. Um
+  `check` sobre o perímetro municipal depende da base oficial de limites,
+  que não está disponível neste repositório — e inventar um retângulo
+  seria pior do que não ter regra.

@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { homeFor, useAuth } from '../lib/auth';
 import { Button, ErrorNote, Field, inputClass } from '../components/ui';
 
 export default function Login() {
   const { session, roles, signIn, loading } = useAuth();
-  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<unknown>(null);
@@ -26,7 +25,10 @@ export default function Login() {
             setBusy(true); setError(null);
             try {
               await signIn(email.trim(), password);
-              navigate('/');
+              // Sem navegação explícita aqui: `navigate('/')` levava o
+              // usuário ao portal público e ninguém o tirava de lá. Quem
+              // redireciona é o <Navigate> acima, depois que os papéis
+              // chegam do banco — cada perfil tem sua rota inicial.
             } catch (err) {
               setError(err);
             } finally {

@@ -32,6 +32,22 @@ RASCUNHO → PROTOCOLADA → EM ANÁLISE → ┬→ EM DILIGÊNCIA
                                        └→ INDEFERIDA
 ```
 
+O pedido é montado no formulário de 6 etapas (`/empresa/licenciamento/nova`):
+identificação e partes do art. 11, localização com geometria e trecho
+delimitado por coordenadas (art. 2º, VII), escopo e método, cronograma,
+instrução do art. 12 e revisão. O rascunho fica no banco a partir da
+etapa 2 — sair e voltar retoma de onde parou.
+
+**Quem pratica cada ato.** O requerente move a licença apenas em
+`rascunho → protocolada`, `rascunho → cancelada`,
+`deferida → em_execucao` e `em_execucao → concluida`. Deferir, indeferir,
+abrir diligência, atribuir número e fixar vigência são atos da SECONSER,
+e o banco recusa que o requerente os pratique (migration 11).
+
+O protocolo é recusado sem planta de locação, cronograma físico e ART/RRT
+específica (art. 12), e o número de protocolo e o prazo de 20 dias úteis
+são atribuídos pelo sistema — não aceitos do cliente.
+
 `cadex.start_intervention` recusa iniciar obra sem licença deferida e
 vigente. Concluída a obra, abre-se o fluxo de As Built.
 
@@ -52,9 +68,15 @@ ACIONADA (153 → protocolo CISP) → EM DESLOCAMENTO → EM ATENDIMENTO
                                  └→ FORA DO PRAZO
 ```
 
-O prazo corre do **acionamento**, não do registro. A regularização exige
-protocolo CISP, descrição do serviço executado e ao menos uma imagem —
-sem os três, a função recusa. A varredura marca `fora_do_prazo` e notifica.
+O prazo de 24 horas corre da **conclusão do atendimento** (art. 20), não
+do acionamento nem do registro — ver a divergência corrigida no
+`README.md`. Enquanto não houver conclusão lançada, o prazo sequer começa
+a correr, e a conclusão não pode ser datada no futuro.
+
+A regularização exige protocolo CISP, descrição do serviço executado e ao
+menos uma imagem — sem os três, a função recusa. E só ela registra: por
+UPDATE direto o interessado não se declara `regularizada` nem escapa do
+`fora_do_prazo`. A varredura marca o atraso e notifica.
 
 ## 5. As Built
 
