@@ -100,6 +100,19 @@ begin
   insert into licenses (intervention_id, status) values (iv, 'rascunho') returning id into l;
   insert into fx values ('licenca', l);
 
+  -- Art. 12: sem instrução não há protocolo.
+  begin
+    update licenses set status = 'protocolada' where id = l;
+    raise exception 'ASSERT FALHOU: pedido protocolado sem os documentos do art. 12';
+  exception when others then
+    if position('art. 12' in sqlerrm) = 0 then raise; end if;
+  end;
+
+  insert into license_documents (license_id, kind, storage_path, file_name, file_size, mime_type)
+  values (l,'planta_locacao','t/p.pdf','p.pdf',10,'application/pdf'),
+         (l,'cronograma_fisico','t/c.pdf','c.pdf',10,'application/pdf'),
+         (l,'art_rrt','t/a.pdf','a.pdf',10,'application/pdf');
+
   update licenses set status = 'protocolada' where id = l;
   perform assert((select analysis_due_date from licenses where id = l) is not null,
                  'prazo de análise da licença não foi calculado no protocolo (§31)');

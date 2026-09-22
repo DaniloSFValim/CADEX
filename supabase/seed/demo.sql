@@ -128,6 +128,14 @@ begin
   values (i_obra, 'rascunho', '[DEMO] Expansão de rede')
   returning id into l_id;
 
+  -- Art. 12: o pedido só pode ser protocolado instruído com planta de
+  -- locação, cronograma físico e ART/RRT específica. O seed passa pela
+  -- mesma exigência do mundo real, em vez de contorná-la.
+  insert into license_documents (license_id, kind, storage_path, file_name, file_size, mime_type)
+  values (l_id, 'planta_locacao',    'demo/planta.pdf',     '[DEMO] planta-locacao.pdf',     1024, 'application/pdf'),
+         (l_id, 'cronograma_fisico', 'demo/cronograma.pdf', '[DEMO] cronograma-fisico.pdf',  1024, 'application/pdf'),
+         (l_id, 'art_rrt',           'demo/art.pdf',        '[DEMO] art-especifica.pdf',     1024, 'application/pdf');
+
   update licenses set status = 'protocolada' where id = l_id;
   update licenses set status = 'em_analise' where id = l_id;
 

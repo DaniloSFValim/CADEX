@@ -43,6 +43,12 @@ em ordem lexicográfica.
 - Deslocamento de equipe posterior ao registro da autodeclaração — trigger.
 - OS não emergencial com endereço — trigger.
 - `audit_logs` imutável — trigger que aborta UPDATE/DELETE.
+- Pedido de licença só é protocolado instruído com os três documentos do
+  art. 12 — trigger.
+- Transições de licença privativas da administração recusadas ao
+  requerente, e número/vigência/prazo atribuídos pelo sistema — trigger.
+- Conclusão de emergência nunca no futuro nem antes do deslocamento —
+  trigger.
 
 ## Funções de domínio (schema `cadex`)
 
@@ -52,7 +58,11 @@ em ordem lexicográfica.
 | `add_business_days`, `business_days_between` | dias úteis sobre `holidays` |
 | `param_int` | leitura de parâmetro normativo |
 | `has_role`, `has_any_role`, `is_staff`, `current_company_id` | RBAC para as policies (`security definer`, senão a RLS recursa) |
-| `is_company_active` | habilitação (Regras 1, 6, 8) |
+| `is_company_active` | habilitação (Regras 1, 6, 8). `security definer`: é consultada sobre terceiros que a RLS esconde de quem pergunta |
+| `acting_without_user` | distingue migration/seed/varredura de escrita vinda do interessado |
+| `enforce_license_authority`, `check_license_instruction` | arts. 12 e 13 — o que o requerente pode e não pode lavrar |
+| `enforce_emergency_authority`, `check_emergency_timeline` | art. 20 — termo inicial e prova da regularização |
+| `next_license_protocol_number` | numeração de protocolo atribuída pelo sistema |
 | `refresh_company_status` | situação cadastral derivada |
 | `approve_company`, `approve_license` | deferimento com checagem de papel |
 | `start_intervention` | Regra 2 |
@@ -60,6 +70,12 @@ em ordem lexicográfica.
 | `subcontracting_chain` | cadeia recursiva |
 | `run_deadline_sweep` | varredura idempotente de prazos |
 | `audit_row` | trilha genérica |
+
+Em `public`, além das RPC já existentes: `license_draft_rpc` (rascunho
+com geometria em GeoJSON, visibilidade por `can_see_intervention`) e
+`find_active_company_rpc` (resolve CNPJ de empresa habilitada em
+identificador, para nomear as partes do art. 11 — devolve apenas o que
+`public_companies` já publica).
 
 ## Índices que importam
 

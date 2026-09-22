@@ -12,6 +12,7 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import CompaniesList from './pages/admin/CompaniesList';
 import CompanyDetail from './pages/admin/CompanyDetail';
 import CompanyPanel from './pages/company/CompanyPanel';
+import LicenseRequest from './pages/company/LicenseRequest';
 import FieldHome from './pages/field/FieldHome';
 import FieldInspection from './pages/field/FieldInspection';
 import CispEmergency from './pages/CispEmergency';
@@ -53,6 +54,14 @@ export function App() {
           element={<Require roles={['admin', 'gestor_seconser', 'analista_seconser']}><CompanyDetail /></Require>}
         />
         <Route path="/empresa" element={<Require roles={['empresa']}><CompanyPanel /></Require>} />
+        <Route
+          path="/empresa/licenciamento/nova"
+          element={<Require roles={['empresa']}><LicenseRequest /></Require>}
+        />
+        <Route
+          path="/empresa/licenciamento/:id"
+          element={<Require roles={['empresa']}><LicenseRequest /></Require>}
+        />
         <Route path="/campo" element={<Require roles={['fiscal_viario', 'guarda_civil', 'admin']}><FieldHome /></Require>} />
         <Route
           path="/campo/fiscalizacao/:token?"

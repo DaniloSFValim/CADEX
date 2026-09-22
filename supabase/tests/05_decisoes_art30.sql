@@ -71,6 +71,11 @@ begin
   insert into licenses (intervention_id, status) values (iv,'rascunho') returning id into l;
   insert into fx values ('licenca', l);
 
+  insert into license_documents (license_id, kind, storage_path, file_name, file_size, mime_type)
+  values (l,'planta_locacao','t/p.pdf','p.pdf',10,'application/pdf'),
+         (l,'cronograma_fisico','t/c.pdf','c.pdf',10,'application/pdf'),
+         (l,'art_rrt','t/a.pdf','a.pdf',10,'application/pdf');
+
   update licenses set status='protocolada' where id = l;
   select analysis_due_date into d0 from licenses where id = l;
 

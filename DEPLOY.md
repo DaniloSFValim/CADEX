@@ -2,13 +2,41 @@
 
 ## Estado
 
-**Backend: aplicado.** O projeto Supabase `cadex-niteroi`
-(`jqgcgaalqabmnevadqfy`, região `sa-east-1`) recebeu as 10 migrations e
-foi verificado: 37 tabelas, RLS habilitada e forçada em todas, 71
-policies, 6 buckets privados, PostGIS isolado no schema `extensions`, e o
-linter de segurança do Supabase sem nenhuma das falhas reais (os avisos
-remanescentes são as duas views públicas e as duas funções de verificação,
-ambas deliberadas e documentadas).
+**Backend: aplicado até a migration 10.** O projeto Supabase
+`cadex-niteroi` (`jqgcgaalqabmnevadqfy`, região `sa-east-1`) recebeu as
+migrations 01 a 10 e foi verificado: 37 tabelas, RLS habilitada e forçada
+em todas, 71 policies, 6 buckets privados, PostGIS isolado no schema
+`extensions`, e o linter de segurança do Supabase sem nenhuma das falhas
+reais (os avisos remanescentes são as duas views públicas e as duas
+funções de verificação, ambas deliberadas e documentadas).
+
+> ### ⚠️ Passo 1.1 — aplicar as migrations 11 a 14
+>
+> Estão no repositório e **não** no projeto. São, em ordem:
+>
+> | Migration | O que faz | Consequência de não aplicar |
+> |---|---|---|
+> | `11_autoridade_decisoria` | impede que o requerente defira a própria licença, retroaja o registro da autodeclaração ou se declare regularizado; exige os documentos do art. 12 no protocolo | **uma empresa emite a própria licença de obra** |
+> | `12_storage_license_documents` | dá à empresa permissão de escrita no bucket `license-documents` | ela não consegue instruir o pedido (art. 12) |
+> | `13_license_draft_rpc` | devolve o rascunho com geometria em GeoJSON | o formulário não reabre rascunho salvo |
+> | `14_partes_intervencao` | `is_company_active` passa a SECURITY DEFINER | **nenhuma empresa consegue nomear contratante ou subcontratada** (art. 11) |
+>
+> `supabase db push` aplica as quatro em ordem. Alternativa sem CLI: colar
+> o conteúdo de cada arquivo no SQL Editor, na ordem numérica.
+>
+> Não há dado de produção a migrar — o usuário administrador ainda não foi
+> criado. Depois de aplicar, confira:
+>
+> ```sql
+> select count(*) from pg_trigger
+>  where tgname in ('trg_license_authority','trg_license_instruction',
+>                   'trg_emergency_authority','trg_emergency_timeline');
+> -- deve ser 4
+>
+> select prosecdef from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+>  where n.nspname = 'cadex' and p.proname = 'is_company_active';
+> -- deve ser true
+> ```
 
 **Frontend: pendente de publicação por você.** O conector Cloudflare da
 sessão de desenvolvimento expõe apenas leitura de Workers e criação de

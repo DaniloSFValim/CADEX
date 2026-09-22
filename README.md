@@ -49,29 +49,41 @@ inteiro. A tabela abaixo é o estado verificado, não uma projeção.
 
 | Área | Situação | Verificação |
 |---|---|---|
-| Modelo de dados (36 tabelas, PostGIS) | ✅ funciona | migrations aplicam em Postgres 16 + PostGIS 3 |
+| Modelo de dados (37 tabelas, PostGIS) | ✅ funciona | migrations aplicam em Postgres 16 + PostGIS 3 |
 | Aderência ao articulado | ✅ conferida | `04_resolucao_001_2026.sql` — 14 blocos de assertiva |
 | Decisões do art. 30 | ✅ registradas e travadas | `normative_decisions` + `05_decisoes_art30.sql` |
 | RBAC + RLS (7 perfis) | ✅ funciona | `03_rls.sql` prova isolamento entre empresas e bloqueio de escalação |
-| Regras de negócio no banco | ✅ funciona | 5 suítes SQL, todas passando |
+| Regras de negócio no banco | ✅ funciona | 6 suítes SQL, todas passando |
 | Motor de prazos e notificações | ✅ funciona | varredura idempotente testada |
 | Camada pública LGPD (views + RPC) | ✅ funciona | teste prova ausência de dado pessoal e bloqueio de `anon` nas tabelas |
 | Consulta espacial / mapa | ✅ funciona | `interventions_near` testada; MapLibre consome GeoJSON do PostGIS |
 | Portal público, painel admin, painel da empresa, telas de campo, CISP | ✅ compila e consulta dados reais | `tsc`, `vitest`, `vite build` verdes |
+| **Licenciamento: formulário de 6 etapas, desenho no mapa, import GeoJSON/KML** | ✅ funciona | percorrido de ponta a ponta num navegador, autenticado como empresa, contra banco real — até o protocolo |
+| Autoridade decisória (arts. 13, 17 e 20) | ✅ funciona | `06_autoridade_decisoria.sql` reproduz cada burla e exige recusa |
+| Instrução do pedido (art. 12) | ✅ funciona | trigger recusa protocolo sem os três documentos |
 | Storage privado + políticas | ✅ aplicado | 6 buckets privados, 5 políticas, verificados no projeto real |
-| Licenciamento: formulário de 6 etapas, desenho no mapa, import GeoJSON/KML | ❌ não implementado | back-end pronto; falta a UI |
 | Geração de PDF e QR Code (licença, OS, crachá) | ❌ não implementado | tokens e rotas de verificação existem e funcionam |
 | As Built (UI), equipes/veículos (UI), painel administrativo de parâmetros | ❌ não implementado | tabelas, regras e RLS prontas |
-| E2E (Playwright) | ❌ não implementado | — |
-| Backend em produção (Supabase) | ✅ **no ar** | 10 migrations aplicadas; linter de segurança limpo das falhas reais |
+| E2E (Playwright) na suíte | ❌ não implementado | a caminhada pelas 6 etapas foi feita com Playwright contra um shim local, fora do repositório |
+| Backend em produção (Supabase) | ⚠️ **no ar, desatualizado** | tem as migrations 01–10; as **11 a 14 ainda não foram aplicadas** — ver abaixo |
 | Frontend em produção (Cloudflare) | ❌ **não publicado** | o conector não expõe deploy — ver abaixo |
 
 ### Estado do deploy
 
-**Backend: no ar.** Projeto Supabase `cadex-niteroi` (região `sa-east-1`),
-com as 10 migrations aplicadas e verificadas: 37 tabelas, RLS habilitada
-e **forçada** em todas, 71 policies, 6 buckets privados, PostGIS com 439
-funções isoladas no schema `extensions`.
+**Backend: no ar, mas atrás do repositório.** O projeto Supabase
+`cadex-niteroi` (região `sa-east-1`) tem as migrations 01 a 10 aplicadas
+e verificadas: 37 tabelas, RLS habilitada e **forçada** em todas, 71
+policies, 6 buckets privados, PostGIS com 439 funções isoladas no schema
+`extensions`.
+
+> **As migrations 11 a 14 estão no repositório e não no projeto.**
+> Enquanto não forem aplicadas, a base em produção continua aceitando que
+> uma empresa defira a própria licença (ver abaixo), continua sem exigir
+> os documentos do art. 12 no protocolo, e continua impedindo que
+> qualquer empresa nomeie contratante ou subcontratada. Aplicá-las é
+> `supabase db push` com o projeto vinculado, ou colar cada arquivo no SQL
+> Editor na ordem numérica. Não há dado de produção a migrar: o usuário
+> administrador ainda não foi criado.
 
 **Frontend: não publicado.** O conector Cloudflare desta sessão expõe
 apenas leitura de Workers (`list`, `get`, `get_code`) e criação de
@@ -81,6 +93,44 @@ capacidade não existe. O repositório já traz `wrangler.toml` e
 `public/_redirects` prontos; publicar é `npm run build && npx wrangler
 deploy` na sua máquina, ou conectar o repositório ao Cloudflare Pages.
 Passo a passo em [`DEPLOY.md`](DEPLOY.md).
+
+### A empresa podia deferir a própria licença
+
+Depois do deploy, escrevendo o formulário de licenciamento, encontrei uma
+falha mais grave que as três anteriores — e da mesma família.
+
+As policies de RLS davam ao interessado `for all` sobre as linhas da
+própria intervenção. Isso está certo para o que ele declara e errado para
+o que registra a decisão da administração. Reproduzido em banco real, com
+papel não superusuário: **uma empresa com CADEX ativo deferiu a própria
+licença de obra por UPDATE direto**, atribuiu-lhe número e vigência, e em
+seguida iniciou a obra — `start_intervention` encontrou uma licença
+"deferida" e não tinha como saber que não havia ato administrativo algum
+por trás dela.
+
+`cadex.approve_license` checa o papel de quem a chama. Ninguém é obrigado
+a chamá-la: o PostgREST expõe a tabela, e a tabela é a fonte da verdade.
+
+A mesma brecha permitia retroagir o registro da autodeclaração (que é a
+prova do art. 17), adiar a conclusão da emergência para o futuro
+(empurrando o prazo do art. 20) e declarar-se regularizada sem protocolo
+CISP, sem descrição do serviço e sem foto — escapando inclusive do
+`fora_do_prazo`.
+
+Corrigido na migration 11. Detalhes e o SQL da reprodução em
+[`SECURITY.md`](SECURITY.md).
+
+### E o inverso: uma regra que impedia o cumprimento
+
+`cadex.is_company_active` rodava sob a RLS de quem a chamasse. Como uma
+empresa só enxerga a si própria, o trigger do art. 11 não achava a linha
+da concessionária e recusava a intervenção dizendo que ela estava sem
+CADEX ativo — sobre empresa ativa. **Nenhuma empresa conseguia nomear
+contratante ou subcontratada**, que é justamente a hipótese que o art. 11
+disciplina. Migration 14.
+
+Esta não apareceu em teste nenhum. Apareceu ao percorrer o formulário
+como uma empresa de verdade.
 
 ### Três falhas de segurança que só o deploy real revelou
 
@@ -99,6 +149,11 @@ privilégios-padrão do Supabase:
 Corrigidas nas migrations 09 e 10, com testes que travam o
 comportamento — incluindo um genérico que falha se qualquer tabela ficar
 com RLS sem policy. Detalhes em [`SECURITY.md`](SECURITY.md).
+
+A migration 12 fecha a mesma espécie de buraco no Storage: o bucket
+`license-documents` existia e a empresa não tinha permissão de escrever
+nele — sem isso, ela não conseguiria instruir o próprio pedido, como o
+art. 12 lhe impõe.
 
 Não há nenhum fallback para dados simulados: sem backend configurado, o app
 exibe uma tela dizendo isso e não finge funcionar.
@@ -162,7 +217,8 @@ npm run build       # build de produção
 npm run db:test     # migrations + seed + 5 suítes SQL
 ```
 
-Resultado atual: tudo verde (5 suítes SQL, 14 testes de unidade, typecheck e build). Reproduza antes de confiar.
+Resultado atual: tudo verde (6 suítes SQL, 63 testes de unidade, typecheck
+e build). Reproduza antes de confiar.
 
 ## Documentação
 

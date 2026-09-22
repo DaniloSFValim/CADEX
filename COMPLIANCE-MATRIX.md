@@ -53,19 +53,22 @@ Conferência feita contra o texto integral. Legenda:
 | Art. 9º | Três categorias, protocolos distintos | Três tabelas e três enums de status | ✅ |
 | Art. 10 | Rol das obras de infraestrutura | 5 `intervention_types` com `requires_license` | ✅ |
 | Art. 11 | Vedado iniciar sem licença, por trecho ou projeto | `start_intervention` | ✅ |
-| Art. 12 | Planta de locação, cronograma físico, ART/RRT específica | `license_documents.kind` | 🟡 |
-| Art. 13, caput | Decisão em 20 dias úteis | Trigger no protocolo | ✅ |
+| Art. 11 | Partes distintas: contratante, executora, subcontratada | `is_company_active` como SECURITY DEFINER — sem isso a RLS impedia nomear terceiros | ✅ |
+| Art. 12 | **Planta de locação, cronograma físico, ART/RRT específica** | Trigger `check_license_instruction` recusa protocolo sem os três + etapa 5 do formulário | ✅ |
+| Art. 13, caput | Decisão em 20 dias úteis | Trigger no protocolo; número e prazo atribuídos pelo sistema, não pelo requerente | ✅ |
+| Art. 13 | **O deferimento é ato da SECONSER** | Trigger `enforce_license_authority` — o requerente não move a licença para deferida nem lavra número e vigência | ✅ |
 | Art. 13, pú | Validade = prazo do cronograma aprovado | `approve_license(p_valid_until)` | ✅ |
 | Art. 14 | **Placa ou QR Code: razão social, nº da licença, escopo, encerramento previsto** | `PublicVerify` + `public_interventions` | ✅ |
 | Art. 15 | Manutenção rotineira — não modifica a estrutura da via | 6 `intervention_types`; rol exemplificativo | ✅ |
 | Art. 16 | Independe de licença prévia | `requires_license = false` | ✅ |
-| Art. 17 | **Registro do cronograma georreferenciado e do roteiro antes do deslocamento** | Trigger `check_declaration_order` + `declaration_routes` | ✅ |
+| Art. 17 | **Registro do cronograma georreferenciado e do roteiro antes do deslocamento** | Trigger `check_declaration_order` + `declaration_routes`; horário do registro carimbado pelo servidor, não aceito do cliente | ✅ |
 | Art. 17, pú | Sanção — inciso IV | `sanction_reference` | 🟡 |
 | Art. 18, I e II | Hipóteses de emergência | `emergencies.risk_category` com `check` | ✅ |
 | Art. 19, caput | **Acionamento do 153 no momento do deslocamento** | Trigger `check_emergency_dispatch` | ✅ |
 | Art. 19, § 1º | **Conteúdo da comunicação: CADEX, endereço, risco, tipo e placa do veículo, nome/identidade/telefone do responsável** | Colunas + trigger + formulário do CISP | ✅ |
 | Art. 19, § 2º | Protocolo portado e exibido de imediato | Item de checklist `PROTOCOLO_CISP` | 🟡 |
-| Art. 20, caput | **24 horas contadas da CONCLUSÃO do atendimento** | `set_emergency_deadline` sobre `concluded_at` | ✅ |
+| Art. 20, caput | **24 horas contadas da CONCLUSÃO do atendimento** | `set_emergency_deadline` sobre `concluded_at`; conclusão não pode ser lançada no futuro nem antes do deslocamento | ✅ |
+| Art. 20 | A regularização se prova pela função própria | Trigger `enforce_emergency_authority` — UPDATE direto não declara `regularizada` nem escapa do `fora_do_prazo` | ✅ |
 | Art. 20, pú | Sanção (inciso III) e desqualificação da falsa emergência | `cadex.disqualify_emergency` + status `nao_enquadrada` | ✅ |
 
 ## Capítulo IV — Identificação e controle

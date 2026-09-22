@@ -36,6 +36,13 @@ substitui a barreira do banco.
 | R23 — `anon` sem acesso a tabela | grants restritos | — | `03` |
 | R24 — Prazos de 15 e 20 dias úteis (arts. 7º e 13) | `add_business_days` | — | `01`, `04` |
 | R25 — Varredura de prazos idempotente | `dedupe_key` único | — | `02` |
+| R26 — Pedido de licença instruído com planta de locação, cronograma físico e ART/RRT específica | Art. 12 | trigger `check_license_instruction` | etapa 5 do formulário | `06` |
+| R27 — Deferir, indeferir, numerar e fixar vigência são atos da SECONSER | Art. 13 | trigger `enforce_license_authority` | — | `06` |
+| R28 — Número de protocolo e prazo de análise são atribuídos pelo sistema | Art. 13 | `set_license_analysis_due` | — | `06` |
+| R29 — Horário do registro da autodeclaração carimbado pelo servidor | Art. 17 | `check_declaration_order` | — | `06` |
+| R30 — Conclusão do atendimento não se lança no futuro nem antes do deslocamento | Art. 20 | trigger `check_emergency_timeline` | — | `06` |
+| R31 — Regularização só pela função própria, que decide se houve atraso | Art. 20 | trigger `enforce_emergency_authority` | — | `06` |
+| R32 — A executora pode nomear contratante e subcontratada que a RLS lhe esconde | Art. 11 | `is_company_active` como `security definer` | resolução por CNPJ na etapa 1 | `06` |
 
 ## Decisões do art. 30 aplicadas como regra
 
