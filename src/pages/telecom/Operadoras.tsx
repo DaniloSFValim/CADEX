@@ -1,22 +1,39 @@
-import { Card, Empty, StatusBadge } from '../../components/ui';
+import { useState } from 'react';
+import { Button, Card, Empty, StatusBadge } from '../../components/ui';
 import { formatCnpj } from '../../lib/rules';
-import { createOperator, type loadTelecom } from '../../lib/telecom';
-import { CompanyForm } from './CompanyForm';
+import { createOperator, updateCompany, type Company, type loadTelecom } from '../../lib/telecom';
+import { CompanyForm, toInput } from './CompanyForm';
 
 type Data = Awaited<ReturnType<typeof loadTelecom>>;
 
 export default function Operadoras({ data, onChanged }: { data: Data; onChanged: () => void }) {
+  const [editing, setEditing] = useState<Company | null>(null);
   const count = (id: string) =>
     data.links.filter((l) => l.parent_id === id && l.active).length;
 
   return (
     <div className="space-y-5">
-      <Card title="Nova operadora">
-        <CompanyForm
-          idPrefix="op"
-          submitLabel="Cadastrar operadora"
-          onSubmit={async (input) => { await createOperator(input); onChanged(); }}
-        />
+      <Card title={editing ? `Editar ${editing.trade_name || editing.legal_name}` : 'Nova operadora'}>
+        {editing ? (
+          <CompanyForm
+            key={editing.id}
+            idPrefix="op"
+            submitLabel="Salvar alterações"
+            initial={toInput(editing)}
+            onCancel={() => setEditing(null)}
+            onSubmit={async (input) => {
+              await updateCompany(editing.id, input);
+              setEditing(null);
+              onChanged();
+            }}
+          />
+        ) : (
+          <CompanyForm
+            idPrefix="op"
+            submitLabel="Cadastrar operadora"
+            onSubmit={async (input) => { await createOperator(input); onChanged(); }}
+          />
+        )}
       </Card>
 
       <Card title={`Operadoras (${data.operators.length})`}>
@@ -32,6 +49,7 @@ export default function Operadoras({ data, onChanged }: { data: Data; onChanged:
                   <th className="py-2 pr-4">Contato</th>
                   <th className="py-2 pr-4">Terceirizadas</th>
                   <th className="py-2 pr-4">Situação</th>
+                  <th className="py-2" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -47,6 +65,14 @@ export default function Operadoras({ data, onChanged }: { data: Data; onChanged:
                     </td>
                     <td className="py-2 pr-4 tabular-nums">{count(o.id)}</td>
                     <td className="py-2 pr-4"><StatusBadge status={o.status} /></td>
+                    <td className="py-2 text-right">
+                      <Button variant="secondary" onClick={() => {
+                        setEditing(o);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}>
+                        Editar
+                      </Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

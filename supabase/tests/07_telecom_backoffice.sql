@@ -93,6 +93,20 @@ begin
   select status::text into st from declarations where id = decl;
   perform assert(st = 'encerrada', 'serviço de rotina não chegou a encerrado: ' || st);
 
+  -- Edição: contato da empresa, dados da obra e agenda do serviço
+  update companies set email = 'novo@t.local', phone = '(21) 99999-0000' where id = op;
+  perform assert((select email from companies where id = op) = 'novo@t.local',
+    'servidor não conseguiu editar a operadora');
+
+  update interventions set description = 'Lançamento de fibra — trecho 2',
+         ends_on = current_date + 30 where id = obra;
+  perform assert((select ends_on from interventions where id = obra) = current_date + 30,
+    'servidor não conseguiu editar a obra');
+
+  update declarations set scheduled_start = now() + interval '3 days' where id = decl;
+  perform assert((select scheduled_start from declarations where id = decl) > now() + interval '2 days',
+    'servidor não conseguiu editar a agenda do serviço');
+
   -- Terceirizada não vinculada não aparece como terceirizada da operadora
   perform assert(
     (select count(*) from company_relationships

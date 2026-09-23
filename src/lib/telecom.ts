@@ -209,6 +209,17 @@ export async function createSubcontractor(operatorId: string, input: CompanyInpu
   }
 }
 
+/** Edita os dados de contato. O CNPJ não muda: é a identidade da empresa. */
+export async function updateCompany(id: string, input: CompanyInput): Promise<void> {
+  const { error } = await supabase.from('companies').update({
+    legal_name: input.legal_name.trim(),
+    trade_name: clean(input.trade_name),
+    email: input.email.trim(),
+    phone: clean(input.phone),
+  }).eq('id', id);
+  if (error) throw error;
+}
+
 export async function setLinkActive(linkId: string, active: boolean): Promise<void> {
   const { error } = await supabase.from('company_relationships')
     .update({ active, ends_on: active ? null : new Date().toISOString().slice(0, 10) })
@@ -257,6 +268,37 @@ export async function createIntervention(input: InterventionInput): Promise<void
       await supabase.from('interventions').delete().eq('id', id);
       throw de;
     }
+  }
+}
+
+/**
+ * Edita obra ou serviço. A operadora não muda — quem muda de operadora é
+ * outro registro. `geom` nulo mantém o local já gravado.
+ */
+export async function updateIntervention(
+  id: string,
+  input: Omit<InterventionInput, 'kind' | 'concessionaire_id' | 'geom'> & { geom: string | null },
+  declarationId?: string,
+): Promise<void> {
+  const patch: Record<string, unknown> = {
+    type_id: input.type_id,
+    executor_id: input.executor_id,
+    description: input.description.trim(),
+    address: clean(input.address),
+    district: clean(input.district),
+    starts_on: clean(input.starts_on),
+    ends_on: clean(input.ends_on),
+  };
+  if (input.geom) patch.geom = input.geom;
+  const { error } = await supabase.from('interventions').update(patch).eq('id', id);
+  if (error) throw error;
+
+  if (declarationId && input.starts_on) {
+    const { error: de } = await supabase.from('declarations').update({
+      scheduled_start: new Date(`${input.starts_on}T08:00:00`).toISOString(),
+      scheduled_end: input.ends_on ? new Date(`${input.ends_on}T18:00:00`).toISOString() : null,
+    }).eq('id', declarationId);
+    if (de) throw de;
   }
 }
 

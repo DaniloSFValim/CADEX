@@ -5,7 +5,8 @@ import { GeometryEditor } from '../../components/GeometryEditor';
 import { toEwkt } from '../../lib/geo';
 import {
   PHASE_LABEL, createIntervention, deleteIntervention, loadInterventions, loadTypes,
-  markObra, markServico, obraPhase, servicoPhase, type Intervention, type Phase, type loadTelecom,
+  markObra, markServico, obraPhase, servicoPhase, updateIntervention,
+  type Intervention, type Phase, type loadTelecom,
 } from '../../lib/telecom';
 
 type Data = Awaited<ReturnType<typeof loadTelecom>>;
@@ -32,6 +33,7 @@ export default function Intervencoes({ kind, data }: { kind: Kind; data: Data })
 
   const [filter, setFilter] = useState<Phase | 'todas'>('todas');
   const [error, setError] = useState<unknown>(null);
+  const [editing, setEditing] = useState<Intervention | null>(null);
 
   if (data.operators.length === 0) {
     return <Empty>Cadastre uma operadora antes de registrar {kind === 'obra' ? 'obras' : 'serviços'}.</Empty>;
@@ -53,11 +55,14 @@ export default function Intervencoes({ kind, data }: { kind: Kind; data: Data })
 
   return (
     <div className="space-y-5">
-      <NewIntervention
+      <InterventionForm
+        key={editing?.id ?? 'novo'}
         kind={kind}
         data={data}
         types={types.data ?? []}
-        onCreated={refresh}
+        editing={editing}
+        onDone={() => { setEditing(null); refresh(); }}
+        onCancel={() => setEditing(null)}
       />
 
       <Card
@@ -137,6 +142,12 @@ export default function Intervencoes({ kind, data }: { kind: Kind; data: Data })
                             </Button>
                           )}
                           <Button variant="secondary" onClick={() => {
+                            setEditing(i);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}>
+                            Editar
+                          </Button>
+                          <Button variant="secondary" onClick={() => {
                             if (window.confirm('Excluir este registro? A exclusão fica na trilha de auditoria.')) {
                               void act(() => deleteIntervention(i.id));
                             }
@@ -157,22 +168,27 @@ export default function Intervencoes({ kind, data }: { kind: Kind; data: Data })
   );
 }
 
-function NewIntervention({
-  kind, data, types, onCreated,
+/** Cadastra ou, com `editing`, altera uma obra ou serviço. */
+function InterventionForm({
+  kind, data, types, editing, onDone, onCancel,
 }: {
   kind: Kind;
   data: Data;
   types: { id: string; name: string }[];
-  onCreated: () => void;
+  editing: Intervention | null;
+  onDone: () => void;
+  onCancel: () => void;
 }) {
-  const [operatorId, setOperatorId] = useState(data.operators[0]?.id ?? '');
-  const [executorId, setExecutorId] = useState('');
-  const [typeId, setTypeId] = useState('');
-  const [description, setDescription] = useState('');
-  const [address, setAddress] = useState('');
-  const [district, setDistrict] = useState('');
-  const [startsOn, setStartsOn] = useState('');
-  const [endsOn, setEndsOn] = useState('');
+  const e0 = editing;
+  const [operatorId, setOperatorId] = useState(e0?.concessionaire_id ?? data.operators[0]?.id ?? '');
+  const [executorId, setExecutorId] = useState(
+    e0 && e0.executor_id !== e0.concessionaire_id ? e0.executor_id : '');
+  const [typeId, setTypeId] = useState(e0?.type_id ?? '');
+  const [description, setDescription] = useState(e0?.description ?? '');
+  const [address, setAddress] = useState(e0?.address ?? '');
+  const [district, setDistrict] = useState(e0?.district ?? '');
+  const [startsOn, setStartsOn] = useState(e0?.starts_on ?? '');
+  const [endsOn, setEndsOn] = useState(e0?.ends_on ?? '');
   const [geometry, setGeometry] = useState<GeoJSON.Geometry | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -182,33 +198,45 @@ function NewIntervention({
   const executors = useMemo(() => {
     const ids = [operatorId, ...data.links
       .filter((l) => l.parent_id === operatorId && l.active).map((l) => l.child_id)];
+    // Na edição, a executora atual continua na lista mesmo com vínculo encerrado.
+    if (e0 && !ids.includes(e0.executor_id)) ids.push(e0.executor_id);
     return ids.map((id) => data.companies.get(id)).filter(Boolean) as NonNullable<ReturnType<typeof data.companies.get>>[];
   }, [operatorId, data]);
 
   const label = kind === 'obra' ? 'obra' : 'serviço';
 
   return (
-    <Card title={kind === 'obra' ? 'Nova obra programada' : 'Novo serviço de rotina'}>
+    <Card title={editing
+      ? `Editar ${kind === 'obra' ? 'obra' : 'serviço'}: ${editing.description}`
+      : kind === 'obra' ? 'Nova obra programada' : 'Novo serviço de rotina'}>
       <form
         className="space-y-4"
         onSubmit={async (e) => {
           e.preventDefault();
           setError(null);
-          if (!geometry) { setError(new Error('Marque o local no mapa.')); return; }
+          if (!geometry && !editing) { setError(new Error('Marque o local no mapa.')); return; }
           if (endsOn && startsOn && endsOn < startsOn) {
             setError(new Error('A data de término não pode ser anterior à de início.'));
             return;
           }
           setBusy(true);
           try {
-            await createIntervention({
-              kind, type_id: typeId, concessionaire_id: operatorId,
-              executor_id: executorId || operatorId, description, address, district,
-              starts_on: startsOn, ends_on: endsOn, geom: toEwkt(geometry),
-            });
-            setDescription(''); setAddress(''); setDistrict('');
-            setStartsOn(''); setEndsOn(''); setGeometry(null); setMapKey((k) => k + 1);
-            onCreated();
+            if (editing) {
+              await updateIntervention(editing.id, {
+                type_id: typeId, executor_id: executorId || operatorId, description,
+                address, district, starts_on: startsOn, ends_on: endsOn,
+                geom: geometry ? toEwkt(geometry) : null,
+              }, editing.declarations[0]?.id);
+            } else {
+              await createIntervention({
+                kind, type_id: typeId, concessionaire_id: operatorId,
+                executor_id: executorId || operatorId, description, address, district,
+                starts_on: startsOn, ends_on: endsOn, geom: toEwkt(geometry!),
+              });
+              setDescription(''); setAddress(''); setDistrict('');
+              setStartsOn(''); setEndsOn(''); setGeometry(null); setMapKey((k) => k + 1);
+            }
+            onDone();
           } catch (err) {
             setError(err);
           } finally {
@@ -217,8 +245,9 @@ function NewIntervention({
         }}
       >
         <div className="grid gap-4 sm:grid-cols-3">
-          <Field label="Operadora" required>
-            <select id={`${kind}-op`} className={inputClass} value={operatorId} required
+          <Field label="Operadora" required hint={editing ? 'A operadora não muda na edição.' : undefined}>
+            <select id={`${kind}-op`} className={`${inputClass} disabled:bg-slate-100`} value={operatorId}
+                    required disabled={Boolean(editing)}
                     onChange={(e) => { setOperatorId(e.target.value); setExecutorId(''); }}>
               {data.operators.map((o) => (
                 <option key={o.id} value={o.id}>{o.trade_name || o.legal_name}</option>
@@ -271,14 +300,24 @@ function NewIntervention({
 
         <div>
           <p className="mb-2 text-sm font-medium text-slate-700">
-            Local <span className="text-red-600">*</span>
+            Local {!editing && <span className="text-red-600">*</span>}
           </p>
+          {editing && (
+            <p className="mb-2 text-xs text-slate-500">
+              Mantém o local já gravado. Marque um ponto no mapa só se quiser trocá-lo.
+            </p>
+          )}
           <GeometryEditor key={mapKey} kind="Point" geometry={geometry}
                           onGeometryChange={setGeometry} className="h-[300px]" />
         </div>
 
         <ErrorNote error={error} />
-        <Button type="submit" disabled={busy}>{busy ? 'Salvando…' : `Cadastrar ${label}`}</Button>
+        <div className="flex gap-2">
+          <Button type="submit" disabled={busy}>
+            {busy ? 'Salvando…' : editing ? 'Salvar alterações' : `Cadastrar ${label}`}
+          </Button>
+          {editing && <Button type="button" variant="secondary" onClick={onCancel}>Cancelar</Button>}
+        </div>
       </form>
     </Card>
   );

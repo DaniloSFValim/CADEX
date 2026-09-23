@@ -1,20 +1,34 @@
 import { useState } from 'react';
 import { Button, ErrorNote, Field, inputClass } from '../../components/ui';
-import { isValidCnpj } from '../../lib/rules';
-import type { CompanyInput } from '../../lib/telecom';
+import { formatCnpj, isValidCnpj } from '../../lib/rules';
+import type { Company, CompanyInput } from '../../lib/telecom';
 
 const EMPTY: CompanyInput = { cnpj: '', legal_name: '', trade_name: '', email: '', phone: '' };
 
-/** Formulário de empresa usado por operadora e terceirizada. */
+export const toInput = (c: Company): CompanyInput => ({
+  cnpj: formatCnpj(c.cnpj),
+  legal_name: c.legal_name,
+  trade_name: c.trade_name ?? '',
+  email: c.email,
+  phone: c.phone ?? '',
+});
+
+/**
+ * Formulário de empresa usado por operadora e terceirizada, para cadastrar
+ * e para editar. Na edição o CNPJ fica travado: é a identidade da empresa.
+ */
 export function CompanyForm({
-  idPrefix, submitLabel, onSubmit, children,
+  idPrefix, submitLabel, onSubmit, onCancel, initial, children,
 }: {
   idPrefix: string;
   submitLabel: string;
   onSubmit: (input: CompanyInput) => Promise<void>;
+  onCancel?: () => void;
+  initial?: CompanyInput;
   children?: React.ReactNode;
 }) {
-  const [v, setV] = useState<CompanyInput>(EMPTY);
+  const editing = Boolean(initial);
+  const [v, setV] = useState<CompanyInput>(initial ?? EMPTY);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const set = (k: keyof CompanyInput) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -29,11 +43,11 @@ export function CompanyForm({
       onSubmit={async (e) => {
         e.preventDefault();
         setError(null);
-        if (!isValidCnpj(cnpjDigits)) { setError(new Error('CNPJ inválido.')); return; }
+        if (!editing && !isValidCnpj(cnpjDigits)) { setError(new Error('CNPJ inválido.')); return; }
         setBusy(true);
         try {
           await onSubmit(v);
-          setV(EMPTY);
+          if (!editing) setV(EMPTY);
         } catch (err) {
           setError(err);
         } finally {
@@ -42,9 +56,10 @@ export function CompanyForm({
       }}
     >
       {children}
-      <Field label="CNPJ" required>
-        <input id={`${idPrefix}-cnpj`} className={inputClass} value={v.cnpj}
-               placeholder="00.000.000/0000-00" required onChange={set('cnpj')} />
+      <Field label="CNPJ" required hint={editing ? 'O CNPJ não pode ser alterado.' : undefined}>
+        <input id={`${idPrefix}-cnpj`} className={`${inputClass} disabled:bg-slate-100 disabled:text-slate-500`}
+               value={v.cnpj} placeholder="00.000.000/0000-00" required disabled={editing}
+               onChange={set('cnpj')} />
         {cnpjBad && <p className="mt-1 text-xs text-red-700">Dígito verificador não confere.</p>}
       </Field>
       <Field label="Razão social" required>
@@ -63,8 +78,9 @@ export function CompanyForm({
         <input id={`${idPrefix}-fone`} className={inputClass} value={v.phone}
                onChange={set('phone')} />
       </Field>
-      <div className="flex items-end">
+      <div className="flex items-end gap-2">
         <Button type="submit" disabled={busy}>{busy ? 'Salvando…' : submitLabel}</Button>
+        {onCancel && <Button type="button" variant="secondary" onClick={onCancel}>Cancelar</Button>}
       </div>
       <div className="sm:col-span-2"><ErrorNote error={error} /></div>
     </form>

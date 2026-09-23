@@ -1,14 +1,17 @@
 import { useState } from 'react';
 import { Button, Card, Empty, ErrorNote, Field, StatusBadge, inputClass } from '../../components/ui';
 import { formatCnpj } from '../../lib/rules';
-import { createSubcontractor, setLinkActive, type loadTelecom } from '../../lib/telecom';
-import { CompanyForm } from './CompanyForm';
+import {
+  createSubcontractor, setLinkActive, updateCompany, type Company, type loadTelecom,
+} from '../../lib/telecom';
+import { CompanyForm, toInput } from './CompanyForm';
 
 type Data = Awaited<ReturnType<typeof loadTelecom>>;
 
 export default function Terceirizadas({ data, onChanged }: { data: Data; onChanged: () => void }) {
   const [operatorId, setOperatorId] = useState(data.operators[0]?.id ?? '');
   const [error, setError] = useState<unknown>(null);
+  const [editing, setEditing] = useState<Company | null>(null);
 
   if (data.operators.length === 0) {
     return <Empty>Cadastre uma operadora antes de vincular terceirizadas.</Empty>;
@@ -21,7 +24,24 @@ export default function Terceirizadas({ data, onChanged }: { data: Data; onChang
 
   return (
     <div className="space-y-5">
-      <Card title="Nova terceirizada">
+      {editing && (
+        <Card title={`Editar ${editing.trade_name || editing.legal_name}`}>
+          <CompanyForm
+            key={editing.id}
+            idPrefix="terc-edit"
+            submitLabel="Salvar alterações"
+            initial={toInput(editing)}
+            onCancel={() => setEditing(null)}
+            onSubmit={async (input) => {
+              await updateCompany(editing.id, input);
+              setEditing(null);
+              onChanged();
+            }}
+          />
+        </Card>
+      )}
+
+      {!editing && <Card title="Nova terceirizada">
         <CompanyForm
           idPrefix="terc"
           submitLabel="Vincular terceirizada"
@@ -43,7 +63,7 @@ export default function Terceirizadas({ data, onChanged }: { data: Data; onChang
             </Field>
           </div>
         </CompanyForm>
-      </Card>
+      </Card>}
 
       <Card title={`Terceirizadas (${data.links.filter((l) => l.active).length} ativas)`}>
         <ErrorNote error={error} />
@@ -71,6 +91,15 @@ export default function Terceirizadas({ data, onChanged }: { data: Data; onChang
                       <td className="py-2 pr-4">{name(l.parent_id)}</td>
                       <td className="py-2 pr-4"><StatusBadge status={c?.status ?? null} /></td>
                       <td className="py-2 pr-4">
+                        <div className="flex flex-wrap gap-2">
+                        {c && (
+                          <Button variant="secondary" onClick={() => {
+                            setEditing(c);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}>
+                            Editar
+                          </Button>
+                        )}
                         <Button
                           variant="secondary"
                           onClick={async () => {
@@ -81,6 +110,7 @@ export default function Terceirizadas({ data, onChanged }: { data: Data; onChang
                         >
                           {l.active ? 'Encerrar vínculo' : 'Reativar'}
                         </Button>
+                        </div>
                       </td>
                     </tr>
                   );
