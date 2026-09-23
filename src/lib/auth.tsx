@@ -97,6 +97,7 @@ export function useAuth(): AuthState {
 
 /** Rota inicial de cada perfil (§40, §41). */
 export function homeFor(roles: Role[]): string {
+  if (roles.includes('admin') || roles.includes('gestor_seconser')) return '/telecom';
   if (roles.includes('fiscal_viario') || roles.includes('guarda_civil')) return '/campo';
   if (roles.includes('empresa')) return '/empresa';
   if (roles.includes('cisp_seop')) return '/cisp';
