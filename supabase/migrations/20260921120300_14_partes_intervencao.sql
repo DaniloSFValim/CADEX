@@ -52,3 +52,8 @@ comment on function cadex.is_company_active(uuid) is
 -- entrada por PostgREST, e não se abre uma.
 revoke execute on function cadex.is_company_active(uuid) from public;
 revoke execute on function cadex.is_company_active(uuid) from anon;
+
+-- O trigger roda com os privilégios de quem grava. Sem este GRANT, o
+-- REVOKE acima faria o cadastro de obras e serviços falhar com
+-- "permission denied" para todo usuário logado.
+grant  execute on function cadex.is_company_active(uuid) to authenticated;
