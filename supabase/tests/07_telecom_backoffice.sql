@@ -30,6 +30,11 @@ grant execute on all functions in schema cadex to cadex_test_app;
 grant execute on all functions in schema auth to cadex_test_app;
 grant select, insert on fx to cadex_test_app;
 
+-- O GRANT amplo acima esconderia a falta de permissão real: os triggers
+-- rodam como o usuário logado, que no Supabase é `authenticated`.
+select assert(has_function_privilege('authenticated', 'cadex.is_company_active(uuid)', 'execute'),
+  'authenticated sem EXECUTE em is_company_active — cadastro de obra falharia em produção');
+
 set local role cadex_test_app;
 
 do $$
