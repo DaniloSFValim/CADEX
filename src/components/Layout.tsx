@@ -4,6 +4,7 @@ import { ROLE_LABEL, useAuth, type Role } from '../lib/auth';
 interface NavItem { to: string; label: string; roles: Role[] }
 
 const NAV: NavItem[] = [
+  { to: '/telecom', label: 'Telecom', roles: ['admin', 'gestor_seconser'] },
   { to: '/admin', label: 'Painel', roles: ['admin', 'gestor_seconser', 'analista_seconser'] },
   { to: '/admin/empresas', label: 'CADEX', roles: ['admin', 'gestor_seconser', 'analista_seconser'] },
   { to: '/empresa', label: 'Meu painel', roles: ['empresa'] },

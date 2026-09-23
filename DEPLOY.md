@@ -1,5 +1,27 @@
 # Deploy
 
+## Publicar hoje — 4 passos
+
+1. **Banco:** aplicar as migrations pendentes (11 a 14) no projeto
+   `cadex-niteroi` — `supabase link --project-ref jqgcgaalqabmnevadqfy`
+   e `supabase db push`. Sem a CLI: colar cada arquivo de
+   `supabase/migrations/2026092112*` no SQL Editor, em ordem.
+2. **Usuário:** criar sua conta em Supabase → Authentication → Users →
+   *Add user* (marque *Auto Confirm User*) e rodar no SQL Editor:
+   ```sql
+   insert into profiles (id, full_name, email)
+   select id, 'SEU NOME', email from auth.users where email = 'SEU-EMAIL'
+   on conflict (id) do nothing;
+   insert into user_roles (user_id, role)
+   select id, 'admin' from auth.users where email = 'SEU-EMAIL';
+   ```
+3. **Chave:** copiar `.env.production.example` para `.env.production` e
+   colar a chave *anon public* (Project Settings → API).
+4. **Site:** `npm ci && npm run build && npx wrangler deploy`. O Worker se
+   chama `cadex-niteroi` — o `cadex` que já existe na conta não é tocado.
+
+Ao entrar, o administrador cai direto em **Telecom**.
+
 ## Estado
 
 **Backend: aplicado até a migration 10.** O projeto Supabase

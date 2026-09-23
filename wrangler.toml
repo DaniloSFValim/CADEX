@@ -1,12 +1,11 @@
 # Publicação do frontend no Cloudflare Workers (Static Assets).
 #
-# Este arquivo NÃO foi exercido: o conector Cloudflare disponível na
-# sessão de desenvolvimento expõe apenas leitura de Workers, sem
-# qualquer ferramenta de deploy. Ver DEPLOY.md.
-#
 #   npm run build && npx wrangler deploy
 #
-name = "cadex"
+# O nome NÃO é "cadex": já existe na conta um Worker "cadex", de
+# 30/07/2026, sem relação com este sistema — publicar com o mesmo nome
+# o sobrescreveria.
+name = "cadex-niteroi"
 compatibility_date = "2026-09-01"
 
 [assets]

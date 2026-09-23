@@ -16,6 +16,7 @@ import LicenseRequest from './pages/company/LicenseRequest';
 import FieldHome from './pages/field/FieldHome';
 import FieldInspection from './pages/field/FieldInspection';
 import CispEmergency from './pages/CispEmergency';
+import Telecom from './pages/telecom/Telecom';
 
 /** Guarda de rota (§35). A autorização real é a RLS; isto é navegação. */
 function Require({ roles, children }: { roles: Role[]; children: JSX.Element }) {
@@ -52,6 +53,10 @@ export function App() {
         <Route
           path="/admin/empresas/:id"
           element={<Require roles={['admin', 'gestor_seconser', 'analista_seconser']}><CompanyDetail /></Require>}
+        />
+        <Route
+          path="/telecom"
+          element={<Require roles={['admin', 'gestor_seconser']}><Telecom /></Require>}
         />
         <Route path="/empresa" element={<Require roles={['empresa']}><CompanyPanel /></Require>} />
         <Route

@@ -6,3 +6,4 @@ dist/
 /tmp/
 supabase/.temp/
 tsconfig.tsbuildinfo
+.env.production
