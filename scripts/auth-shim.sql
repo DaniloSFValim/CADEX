@@ -35,6 +35,9 @@ begin
   end if;
 end $$;
 
+-- Como no Supabase: os papéis do app enxergam os schemas auth e extensions.
+grant usage on schema auth, extensions to anon, authenticated;
+
 -- Helper usado pelos testes para trocar de usuário.
 create or replace function auth.login(p_user_id uuid)
 returns void language sql as $$
@@ -43,7 +46,6 @@ $$;
 
 -- Reproduz o comportamento do Supabase: por padrão, toda tabela criada no
 -- schema `public` nasce acessível a `anon` e `authenticated`. Sem isto, o
--- teste local valida um ambiente mais restritivo do que a produção — e a
--- migration 10, que retira esses GRANTs, não seria exercida por teste algum.
+-- teste local validaria um ambiente mais restritivo do que a produção.
 alter default privileges in schema public grant all on tables to anon, authenticated;
 alter default privileges in schema public grant all on sequences to anon, authenticated;
