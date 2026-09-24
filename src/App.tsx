@@ -1,94 +1,45 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { useAuth, homeFor, type Role } from './lib/auth';
+import { Layout } from './components/Layout';
+import { Button, Spinner } from './components/ui';
+import { useAuth } from './lib/auth';
 import { isConfigured } from './lib/supabase';
-import { Spinner } from './components/ui';
-import { AppShell } from './components/Layout';
-
-import PublicHome from './pages/public/PublicHome';
-import PublicVerify from './pages/public/PublicVerify';
-import PublicConsulta from './pages/public/PublicConsulta';
 import Login from './pages/Login';
-import AdminDashboard from './pages/admin/AdminDashboard';
-import CompaniesList from './pages/admin/CompaniesList';
-import CompanyDetail from './pages/admin/CompanyDetail';
-import CompanyPanel from './pages/company/CompanyPanel';
-import LicenseRequest from './pages/company/LicenseRequest';
-import FieldHome from './pages/field/FieldHome';
-import FieldInspection from './pages/field/FieldInspection';
-import CispEmergency from './pages/CispEmergency';
-import Telecom from './pages/telecom/Telecom';
-
-/** Guarda de rota (§35). A autorização real é a RLS; isto é navegação. */
-function Require({ roles, children }: { roles: Role[]; children: JSX.Element }) {
-  const { session, roles: mine, loading } = useAuth();
-  if (loading) return <Spinner />;
-  if (!session) return <Navigate to="/entrar" replace />;
-  if (roles.length > 0 && !roles.some((r) => mine.includes(r))) {
-    return <Navigate to={homeFor(mine)} replace />;
-  }
-  return children;
-}
+import Empresas from './pages/Empresas';
+import EmpresaPage from './pages/EmpresaPage';
 
 export function App() {
-  if (!isConfigured) return <NotConfigured />;
+  const { session, servidor, loading, signOut } = useAuth();
+
+  if (!isConfigured) {
+    return (
+      <p className="p-8 text-center text-sm text-red-800">
+        Sistema sem conexão com o banco: faltam VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.
+      </p>
+    );
+  }
+  if (loading) return <Spinner />;
+  if (!session) return <Login />;
+
+  if (!servidor) {
+    return (
+      <div className="mx-auto max-w-md p-8 text-center">
+        <p className="text-sm text-slate-700">
+          O usuário <strong>{session.user.email}</strong> entrou, mas não está autorizado
+          a usar o sistema. Peça ao administrador para incluí-lo como servidor.
+        </p>
+        <Button variant="secondary" className="mt-4" onClick={() => void signOut()}>Sair</Button>
+      </div>
+    );
+  }
 
   return (
     <Routes>
-      {/* §29 — portal público, sem login */}
-      <Route path="/" element={<PublicHome />} />
-      <Route path="/consulta" element={<PublicConsulta />} />
-      <Route path="/verificar/:token" element={<PublicVerify />} />
-      <Route path="/entrar" element={<Login />} />
-
-      {/* Área autenticada */}
-      <Route element={<AppShell />}>
-        <Route
-          path="/admin"
-          element={<Require roles={['admin', 'gestor_seconser', 'analista_seconser']}><AdminDashboard /></Require>}
-        />
-        <Route
-          path="/admin/empresas"
-          element={<Require roles={['admin', 'gestor_seconser', 'analista_seconser']}><CompaniesList /></Require>}
-        />
-        <Route
-          path="/admin/empresas/:id"
-          element={<Require roles={['admin', 'gestor_seconser', 'analista_seconser']}><CompanyDetail /></Require>}
-        />
-        <Route
-          path="/telecom"
-          element={<Require roles={['admin', 'gestor_seconser']}><Telecom /></Require>}
-        />
-        <Route path="/empresa" element={<Require roles={['empresa']}><CompanyPanel /></Require>} />
-        <Route
-          path="/empresa/licenciamento/nova"
-          element={<Require roles={['empresa']}><LicenseRequest /></Require>}
-        />
-        <Route
-          path="/empresa/licenciamento/:id"
-          element={<Require roles={['empresa']}><LicenseRequest /></Require>}
-        />
-        <Route path="/campo" element={<Require roles={['fiscal_viario', 'guarda_civil', 'admin']}><FieldHome /></Require>} />
-        <Route
-          path="/campo/fiscalizacao/:token?"
-          element={<Require roles={['fiscal_viario', 'guarda_civil', 'admin']}><FieldInspection /></Require>}
-        />
-        <Route path="/cisp" element={<Require roles={['cisp_seop', 'admin']}><CispEmergency /></Require>} />
+      <Route element={<Layout />}>
+        <Route index element={<Empresas />} />
+        <Route path="empresas/nova" element={<EmpresaPage />} />
+        <Route path="empresas/:id" element={<EmpresaPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
-
-      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
-  );
-}
-
-function NotConfigured() {
-  return (
-    <main className="mx-auto max-w-2xl p-8">
-      <h1 className="text-xl font-semibold text-slate-900">Backend não configurado</h1>
-      <p className="mt-3 text-sm text-slate-700">
-        O CADEX não opera com dados simulados. Defina <code>VITE_SUPABASE_URL</code> e{' '}
-        <code>VITE_SUPABASE_ANON_KEY</code> e recarregue. O passo a passo está em{' '}
-        <code>ENVIRONMENT.md</code>.
-      </p>
-    </main>
   );
 }

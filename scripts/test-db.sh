@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =====================================================================
-# Sobe um Postgres+PostGIS efêmero, aplica TODAS as migrations na ordem
+# Sobe um Postgres efêmero, aplica TODAS as migrations na ordem
 # e roda a suíte de testes de regras de negócio (supabase/tests/*.sql).
 # Não depende de Supabase nem de rede — é o teste que roda em CI.
 # =====================================================================
@@ -73,9 +73,6 @@ for f in "$ROOT"/supabase/migrations/*.sql; do
   echo "    $(basename "$f")"
   $PSQL -f "$f"
 done
-
-echo "==> seed de demonstração (§46)"
-$PSQL -f "$ROOT/supabase/seed/demo.sql"
 
 echo "==> testes"
 fail=0

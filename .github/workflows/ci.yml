@@ -29,11 +29,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Instalar PostgreSQL + PostGIS
+      - name: Instalar PostgreSQL
         run: |
           sudo apt-get update
-          sudo apt-get install -y postgresql-16 postgresql-16-postgis-3
-      - name: Migrations, seed e testes de regra de negócio
+          sudo apt-get install -y postgresql-16
+      - name: Migrations e testes do banco
         run: sudo -E bash scripts/test-db.sh
         env:
           PGBIN: /usr/lib/postgresql/16/bin
