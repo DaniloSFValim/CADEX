@@ -38,21 +38,85 @@ set local role cadex_test_app;
 select set_config('cadex.test_user_id', '00000000-0000-4000-8000-000000000001', true);
 
 do $$
-declare op uuid; te uuid; n int;
+declare op uuid; op2 uuid; te uuid; n int; cod text;
 begin
   insert into empresas (cnpj, razao_social, tipo, email)
   values ('11.222.333/0001-81', 'Operadora Teste S.A.', 'operadora', 'op@t.test')
-  returning id into op;
+  returning id, codigo_cadex into op, cod;
   perform pg_temp.assert((select cnpj from empresas where id = op) = '11222333000181',
     'CNPJ deveria ser gravado só com dígitos');
+  perform pg_temp.assert(cod = 'CADEX-OPE-' || extract(year from current_date) || '-0001',
+    'código da 1ª operadora deveria ser CADEX-OPE-<ano>-0001, veio ' || coalesce(cod, 'nulo'));
 
-  insert into empresas (cnpj, razao_social, tipo, operadora_id, email)
-  values ('22333444000181', 'Terceirizada Teste Ltda.', 'terceirizada', op, 'te@t.test')
-  returning id into te;
+  insert into empresas (cnpj, razao_social, tipo, email)
+  values ('55666777000181', 'Segunda Operadora S.A.', 'operadora', 'op2@t.test')
+  returning id, codigo_cadex into op2, cod;
+  perform pg_temp.assert(cod like 'CADEX-OPE-%-0002', 'numeração da operadora deveria seguir: ' || cod);
+
+  insert into empresas (cnpj, razao_social, tipo, email)
+  values ('22333444000181', 'Terceirizada Teste Ltda.', 'terceirizada', 'te@t.test')
+  returning id, codigo_cadex into te, cod;
+  perform pg_temp.assert(cod like 'CADEX-TER-%-0001',
+    'terceirizada tem numeração própria, começando em 0001: ' || cod);
+
+  -- A terceirizada atende as duas operadoras
+  insert into vinculos (operadora_id, terceirizada_id) values (op, te), (op2, te);
+  select count(*) into n from vinculos where terceirizada_id = te and fim is null;
+  perform pg_temp.assert(n = 2, 'terceirizada deveria ter dois vínculos ativos');
+
+  update vinculos set fim = current_date where operadora_id = op2 and terceirizada_id = te;
+  select count(*) into n from vinculos where terceirizada_id = te and fim is null;
+  perform pg_temp.assert(n = 1, 'encerrar vínculo deveria deixar um ativo');
+
+  -- Vínculo com os papéis trocados ou entre duas operadoras
+  begin
+    insert into vinculos (operadora_id, terceirizada_id) values (te, op);
+    raise exception 'ASSERT FALHOU: vínculo com papéis trocados foi aceito';
+  exception when raise_exception then
+    if sqlerrm like 'ASSERT%' then raise; end if;
+  end;
+  begin
+    insert into vinculos (operadora_id, terceirizada_id) values (op, op2);
+    raise exception 'ASSERT FALHOU: operadora vinculada como terceirizada';
+  exception when raise_exception then
+    if sqlerrm like 'ASSERT%' then raise; end if;
+  end;
 
   update empresas set telefone = '(21) 99999-0000', situacao = 'inativa' where id = te;
   perform pg_temp.assert((select situacao from empresas where id = te) = 'inativa',
     'servidor não conseguiu editar');
+
+  -- Código, tipo e CNPJ são permanentes
+  begin
+    update empresas set codigo_cadex = 'CADEX-OPE-1999-9999' where id = op;
+    raise exception 'ASSERT FALHOU: código CADEX foi alterado';
+  exception when raise_exception then
+    if sqlerrm like 'ASSERT%' then raise; end if;
+  end;
+  begin
+    update empresas set tipo = 'terceirizada' where id = op;
+    raise exception 'ASSERT FALHOU: tipo da empresa foi alterado';
+  exception when raise_exception then
+    if sqlerrm like 'ASSERT%' then raise; end if;
+  end;
+  begin
+    update empresas set cnpj = '33444555000181' where id = op;
+    raise exception 'ASSERT FALHOU: CNPJ foi alterado';
+  exception when raise_exception then
+    if sqlerrm like 'ASSERT%' then raise; end if;
+  end;
+
+  -- Numeração não pode ser chamada nem mexida por fora
+  begin
+    perform proximo_codigo_cadex('operadora');
+    raise exception 'ASSERT FALHOU: usuário gerou código CADEX por fora do cadastro';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    perform count(*) from sequencias_cadex;
+    raise exception 'ASSERT FALHOU: usuário leu a numeração';
+  exception when insufficient_privilege then null;
+  end;
 
   -- CNPJ inválido
   begin
@@ -68,24 +132,6 @@ begin
     values ('11222333000181', 'Duplicada', 'operadora', 'd@t.test');
     raise exception 'ASSERT FALHOU: CNPJ repetido foi aceito';
   exception when unique_violation then null;
-  end;
-
-  -- Terceirizada sem operadora
-  begin
-    insert into empresas (cnpj, razao_social, tipo, email)
-    values ('33444555000181', 'Solta', 'terceirizada', 's@t.test');
-    raise exception 'ASSERT FALHOU: terceirizada sem operadora foi aceita';
-  exception when raise_exception then
-    if sqlerrm like 'ASSERT%' then raise; end if;
-  end;
-
-  -- Terceirizada contratada por outra terceirizada
-  begin
-    insert into empresas (cnpj, razao_social, tipo, operadora_id, email)
-    values ('33444555000181', 'Cascata', 'terceirizada', te, 'c@t.test');
-    raise exception 'ASSERT FALHOU: terceirizada de terceirizada foi aceita';
-  exception when raise_exception then
-    if sqlerrm like 'ASSERT%' then raise; end if;
   end;
 
   -- Documento com validade exige a data
@@ -135,6 +181,8 @@ begin
     'VAZAMENTO: não servidor enxergou empresas');
   perform pg_temp.assert((select count(*) from documentos) = 0,
     'VAZAMENTO: não servidor enxergou documentos');
+  perform pg_temp.assert((select count(*) from vinculos) = 0,
+    'VAZAMENTO: não servidor enxergou vínculos');
 
   begin
     insert into empresas (cnpj, razao_social, tipo, email)
@@ -168,6 +216,11 @@ begin
   begin
     perform count(*) from documentos;
     raise exception 'ASSERT FALHOU: visitante leu documentos';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    perform count(*) from vinculos;
+    raise exception 'ASSERT FALHOU: visitante leu vínculos';
   exception when insufficient_privilege then null;
   end;
 end $$;

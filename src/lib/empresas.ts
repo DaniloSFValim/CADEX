@@ -6,11 +6,11 @@ export type Situacao = 'ativa' | 'inativa';
 
 export interface Empresa {
   id: string;
+  codigo_cadex: string;
   cnpj: string;
   razao_social: string;
   nome_fantasia: string | null;
   tipo: Tipo;
-  operadora_id: string | null;
   email: string;
   telefone: string | null;
   cep: string | null;
@@ -26,7 +26,16 @@ export interface Empresa {
   atualizado_em: string;
 }
 
-export type EmpresaInput = Omit<Empresa, 'id' | 'criado_em' | 'atualizado_em'>;
+export type EmpresaInput = Omit<Empresa, 'id' | 'codigo_cadex' | 'criado_em' | 'atualizado_em'>;
+
+/** Terceirizada atendendo uma operadora. Vínculo encerrado tem `fim`. */
+export interface Vinculo {
+  id: string;
+  operadora_id: string;
+  terceirizada_id: string;
+  inicio: string;
+  fim: string | null;
+}
 
 export interface TipoDocumento {
   codigo: string;
@@ -153,20 +162,44 @@ const limpar = (input: EmpresaInput) => {
     cidade: vazioViraNulo(input.cidade),
     uf: vazioViraNulo(input.uf)?.toUpperCase() ?? null,
     observacoes: vazioViraNulo(input.observacoes),
-    operadora_id: input.tipo === 'terceirizada' ? input.operadora_id : null,
   };
 };
 
-export async function criarEmpresa(input: EmpresaInput): Promise<string> {
+/** Cadastra a empresa e, se for terceirizada, os vínculos com as operadoras. */
+export async function criarEmpresa(input: EmpresaInput, operadoras: string[] = []): Promise<string> {
   const { data, error } = await supabase.from('empresas').insert(limpar(input)).select('id').single();
   if (error) throw error;
-  return (data as { id: string }).id;
+  const id = (data as { id: string }).id;
+  if (input.tipo === 'terceirizada' && operadoras.length > 0) {
+    const v = await supabase.from('vinculos')
+      .insert(operadoras.map((operadora_id) => ({ operadora_id, terceirizada_id: id })));
+    if (v.error) throw v.error;
+  }
+  return id;
 }
 
 export async function salvarEmpresa(id: string, input: EmpresaInput): Promise<void> {
-  // O CNPJ é a identidade da empresa: não muda depois do cadastro.
-  const { cnpj: _cnpj, ...resto } = limpar(input);
+  // CNPJ e tipo não mudam depois do cadastro: o tipo está no código CADEX.
+  const { cnpj: _cnpj, tipo: _tipo, ...resto } = limpar(input);
   const { error } = await supabase.from('empresas').update(resto).eq('id', id);
+  if (error) throw error;
+}
+
+export async function listarVinculos(): Promise<Vinculo[]> {
+  const { data, error } = await supabase.from('vinculos').select('*').order('inicio');
+  if (error) throw error;
+  return data as Vinculo[];
+}
+
+export async function criarVinculo(operadoraId: string, terceirizadaId: string): Promise<void> {
+  const { error } = await supabase.from('vinculos')
+    .insert({ operadora_id: operadoraId, terceirizada_id: terceirizadaId });
+  if (error) throw error;
+}
+
+/** Encerra (data de hoje) ou reabre um vínculo, sem apagar o histórico. */
+export async function definirFimVinculo(id: string, fim: string | null): Promise<void> {
+  const { error } = await supabase.from('vinculos').update({ fim }).eq('id', id);
   if (error) throw error;
 }
 

@@ -3,23 +3,25 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Badge, Button, Card, ErrorNote, Field, Spinner, inputClass, type Tom } from '../components/ui';
 import { formatCnpj, isValidCnpj, onlyDigits } from '../lib/cnpj';
 import {
-  ESTADO_LABEL, buscarEmpresa, criarEmpresa, enviarDocumento, estadoDocumento, hojeISO,
-  linkDocumento, listarDocumentos, listarEmpresas, listarTiposDocumento, nomeEmpresa,
-  removerDocumento, resumoDocumentos, salvarEmpresa, ultimoPorTipo,
+  ESTADO_LABEL, TIPO_LABEL, buscarEmpresa, criarEmpresa, criarVinculo, definirFimVinculo,
+  enviarDocumento, estadoDocumento, hojeISO, linkDocumento, listarDocumentos, listarEmpresas,
+  listarTiposDocumento, listarVinculos, nomeEmpresa, removerDocumento, resumoDocumentos,
+  salvarEmpresa, ultimoPorTipo,
   type Documento, type Empresa, type EmpresaInput, type EstadoDocumento, type TipoDocumento,
+  type Vinculo,
 } from '../lib/empresas';
 import { MAX_UPLOAD_BYTES } from '../lib/supabase';
 import { ResumoBadge } from './Empresas';
 
 const VAZIA: EmpresaInput = {
-  cnpj: '', razao_social: '', nome_fantasia: '', tipo: 'operadora', operadora_id: null,
+  cnpj: '', razao_social: '', nome_fantasia: '', tipo: 'operadora',
   email: '', telefone: '', cep: '', logradouro: '', numero: '', complemento: '',
   bairro: '', cidade: 'Niterói', uf: 'RJ', situacao: 'ativa', observacoes: '',
 };
 
 const paraInput = (e: Empresa): EmpresaInput => ({
   cnpj: formatCnpj(e.cnpj), razao_social: e.razao_social, nome_fantasia: e.nome_fantasia ?? '',
-  tipo: e.tipo, operadora_id: e.operadora_id, email: e.email, telefone: e.telefone ?? '',
+  tipo: e.tipo, email: e.email, telefone: e.telefone ?? '',
   cep: e.cep ?? '', logradouro: e.logradouro ?? '', numero: e.numero ?? '',
   complemento: e.complemento ?? '', bairro: e.bairro ?? '', cidade: e.cidade ?? '',
   uf: e.uf ?? '', situacao: e.situacao, observacoes: e.observacoes ?? '',
@@ -29,17 +31,14 @@ export default function EmpresaPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [empresa, setEmpresa] = useState<Empresa | null>(null);
-  const [operadoras, setOperadoras] = useState<Empresa[]>([]);
+  const [todas, setTodas] = useState<Empresa[]>([]);
   const [error, setError] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true); setError(null);
     Promise.all([id ? buscarEmpresa(id) : Promise.resolve(null), listarEmpresas()])
-      .then(([e, todas]) => {
-        setEmpresa(e);
-        setOperadoras(todas.filter((o) => o.tipo === 'operadora' && o.id !== id));
-      })
+      .then(([e, lista]) => { setEmpresa(e); setTodas(lista); })
       .catch(setError)
       .finally(() => setLoading(false));
   }, [id]);
@@ -50,27 +49,37 @@ export default function EmpresaPage() {
   return (
     <div className="space-y-5">
       <Link to="/" className="text-sm text-gov-700 hover:underline">← Empresas</Link>
-      <h1 className="text-xl font-semibold text-slate-900">
-        {empresa ? nomeEmpresa(empresa) : 'Nova empresa'}
-      </h1>
+      <div>
+        <h1 className="text-xl font-semibold text-slate-900">
+          {empresa ? nomeEmpresa(empresa) : 'Nova empresa'}
+        </h1>
+        {empresa && (
+          <p className="mt-1 text-sm text-slate-600">
+            <span className="font-mono font-semibold text-gov-800">{empresa.codigo_cadex}</span>
+            {' · '}{TIPO_LABEL[empresa.tipo]}
+          </p>
+        )}
+      </div>
 
       <Card title="Dados da empresa">
         <EmpresaForm
           key={empresa?.id ?? 'nova'}
           inicial={empresa ? paraInput(empresa) : VAZIA}
           editando={Boolean(empresa)}
-          operadoras={operadoras}
-          onSubmit={async (input) => {
+          operadoras={todas.filter((o) => o.tipo === 'operadora')}
+          onSubmit={async (input, contratantes) => {
             if (empresa) {
               await salvarEmpresa(empresa.id, input);
               setEmpresa(await buscarEmpresa(empresa.id));
             } else {
-              const novo = await criarEmpresa(input);
+              const novo = await criarEmpresa(input, contratantes);
               navigate(`/empresas/${novo}`, { replace: true });
             }
           }}
         />
       </Card>
+
+      {empresa && <Vinculos empresa={empresa} todas={todas} />}
 
       {empresa
         ? <Documentos empresa={empresa} />
@@ -85,9 +94,10 @@ function EmpresaForm({
   inicial: EmpresaInput;
   editando: boolean;
   operadoras: Empresa[];
-  onSubmit: (input: EmpresaInput) => Promise<void>;
+  onSubmit: (input: EmpresaInput, contratantes: string[]) => Promise<void>;
 }) {
   const [v, setV] = useState<EmpresaInput>(inicial);
+  const [contratantes, setContratantes] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [salvo, setSalvo] = useState(false);
@@ -111,11 +121,11 @@ function EmpresaForm({
         e.preventDefault();
         setError(null); setSalvo(false);
         if (!editando && !isValidCnpj(v.cnpj)) { setError('CNPJ inválido.'); return; }
-        if (v.tipo === 'terceirizada' && !v.operadora_id) {
-          setError('Escolha a operadora que contratou a terceirizada.'); return;
+        if (!editando && v.tipo === 'terceirizada' && contratantes.length === 0) {
+          setError('Marque ao menos uma operadora atendida pela terceirizada.'); return;
         }
         setBusy(true);
-        try { await onSubmit(v); setSalvo(true); }
+        try { await onSubmit(v, contratantes); setSalvo(true); }
         catch (err) { setError(err); }
         finally { setBusy(false); }
       }}
@@ -133,22 +143,34 @@ function EmpresaForm({
       <Field label="Nome fantasia" className="sm:col-span-3">
         <input id="fantasia" className={inputClass} {...text('nome_fantasia')} />
       </Field>
-      <Field label="Tipo" required className="sm:col-span-3">
-        <select id="tipo" className={inputClass} value={v.tipo}
+      <Field label="Tipo" required className="sm:col-span-3"
+             hint={editando ? 'O tipo faz parte do código CADEX e não pode ser alterado.' : undefined}>
+        <select id="tipo" className={inputClass} value={v.tipo} disabled={editando}
                 onChange={(e) => set('tipo', e.target.value as EmpresaInput['tipo'])}>
           <option value="operadora">Operadora de telecomunicações</option>
           <option value="terceirizada">Terceirizada</option>
         </select>
       </Field>
-      {v.tipo === 'terceirizada' && (
-        <Field label="Operadora contratante" required className="sm:col-span-6"
-               hint={operadoras.length === 0 ? 'Cadastre a operadora antes da terceirizada.' : undefined}>
-          <select id="operadora" className={inputClass} value={v.operadora_id ?? ''}
-                  onChange={(e) => set('operadora_id', e.target.value || null)}>
-            <option value="">Escolha…</option>
-            {operadoras.map((o) => <option key={o.id} value={o.id}>{nomeEmpresa(o)}</option>)}
-          </select>
-        </Field>
+      {!editando && v.tipo === 'terceirizada' && (
+        <fieldset className="sm:col-span-6">
+          <legend className="text-sm font-medium text-slate-700">
+            Operadoras atendidas<span className="ml-0.5 text-red-600" aria-hidden>*</span>
+          </legend>
+          {operadoras.length === 0
+            ? <p className="mt-1 text-xs text-slate-500">Cadastre a operadora antes da terceirizada.</p>
+            : (
+              <div className="mt-2 flex flex-wrap gap-x-5 gap-y-2">
+                {operadoras.map((o) => (
+                  <label key={o.id} className="flex items-center gap-2 text-sm text-slate-700">
+                    <input type="checkbox" checked={contratantes.includes(o.id)}
+                           onChange={(e) => setContratantes((c) =>
+                             e.target.checked ? [...c, o.id] : c.filter((x) => x !== o.id))} />
+                    {nomeEmpresa(o)}
+                  </label>
+                ))}
+              </div>
+            )}
+        </fieldset>
       )}
 
       <Field label="E-mail" required className="sm:col-span-3">
@@ -199,6 +221,88 @@ function EmpresaForm({
       </div>
       <div className="sm:col-span-6"><ErrorNote error={error} /></div>
     </form>
+  );
+}
+
+function Vinculos({ empresa, todas }: { empresa: Empresa; todas: Empresa[] }) {
+  const [vinculos, setVinculos] = useState<Vinculo[] | null>(null);
+  const [nova, setNova] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+
+  const ehTerceirizada = empresa.tipo === 'terceirizada';
+  const porId = new Map(todas.map((e) => [e.id, e]));
+
+  const recarregar = () =>
+    listarVinculos()
+      .then((v) => setVinculos(v.filter((x) =>
+        ehTerceirizada ? x.terceirizada_id === empresa.id : x.operadora_id === empresa.id)))
+      .catch(setError);
+
+  useEffect(() => { void recarregar(); }, [empresa.id]);
+
+  const agir = async (fn: () => Promise<void>) => {
+    setBusy(true); setError(null);
+    try { await fn(); await recarregar(); }
+    catch (err) { setError(err); }
+    finally { setBusy(false); }
+  };
+
+  const outra = (v: Vinculo) => porId.get(ehTerceirizada ? v.operadora_id : v.terceirizada_id);
+  const disponiveis = todas.filter((o) =>
+    o.tipo === 'operadora' && !(vinculos ?? []).some((v) => v.operadora_id === o.id));
+
+  return (
+    <Card title={ehTerceirizada ? 'Operadoras atendidas' : 'Terceirizadas que atendem esta operadora'}>
+      <ErrorNote error={error} />
+      {!vinculos ? <Spinner /> : vinculos.length === 0 ? (
+        <p className="text-sm text-slate-500">
+          {ehTerceirizada ? 'Nenhuma operadora vinculada.' : 'Nenhuma terceirizada vinculada.'}
+        </p>
+      ) : (
+        <ul className="divide-y divide-slate-100">
+          {vinculos.map((v) => {
+            const e = outra(v);
+            return (
+              <li key={v.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+                <div>
+                  {e ? (
+                    <Link to={`/empresas/${e.id}`} className="font-medium text-gov-700 hover:underline">
+                      {nomeEmpresa(e)}
+                    </Link>
+                  ) : '—'}
+                  {e && <span className="ml-2 font-mono text-xs text-slate-500">{e.codigo_cadex}</span>}
+                  <div className="text-xs text-slate-500">
+                    desde {dataBR(v.inicio)}{v.fim && ` · encerrado em ${dataBR(v.fim)}`}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge tom={v.fim ? 'neutro' : 'bom'}>{v.fim ? 'Encerrado' : 'Ativo'}</Badge>
+                  <Button variant="secondary" className="!px-2 !py-1 text-xs" disabled={busy}
+                          onClick={() => agir(() => definirFimVinculo(v.id, v.fim ? null : hojeISO()))}>
+                    {v.fim ? 'Reativar' : 'Encerrar'}
+                  </Button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {ehTerceirizada && disponiveis.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-end gap-2">
+          <select aria-label="Operadora a vincular" className={`${inputClass} !w-auto`} value={nova}
+                  onChange={(e) => setNova(e.target.value)}>
+            <option value="">Vincular a outra operadora…</option>
+            {disponiveis.map((o) => <option key={o.id} value={o.id}>{nomeEmpresa(o)}</option>)}
+          </select>
+          <Button variant="secondary" disabled={busy || !nova}
+                  onClick={() => agir(async () => { await criarVinculo(nova, empresa.id); setNova(''); })}>
+            Vincular
+          </Button>
+        </div>
+      )}
+    </Card>
   );
 }
 

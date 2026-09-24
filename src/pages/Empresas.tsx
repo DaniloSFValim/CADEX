@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom';
 import { Badge, Card, Empty, ErrorNote, Spinner, inputClass } from '../components/ui';
 import { formatCnpj, onlyDigits } from '../lib/cnpj';
 import {
-  TIPO_LABEL, hojeISO, listarDocumentos, listarEmpresas, listarTiposDocumento,
+  TIPO_LABEL, hojeISO, listarDocumentos, listarEmpresas, listarTiposDocumento, listarVinculos,
   nomeEmpresa, resumoDocumentos, type Documento, type Empresa, type Resumo, type TipoDocumento,
+  type Vinculo,
 } from '../lib/empresas';
 
 export function ResumoBadge({ r }: { r: Resumo }) {
@@ -18,14 +19,15 @@ export default function Empresas() {
   const [empresas, setEmpresas] = useState<Empresa[] | null>(null);
   const [tipos, setTipos] = useState<TipoDocumento[]>([]);
   const [docs, setDocs] = useState<Documento[]>([]);
+  const [vinculos, setVinculos] = useState<Vinculo[]>([]);
   const [error, setError] = useState<unknown>(null);
   const [busca, setBusca] = useState('');
   const [tipo, setTipo] = useState('');
   const [situacao, setSituacao] = useState('ativa');
 
   useEffect(() => {
-    Promise.all([listarEmpresas(), listarTiposDocumento(), listarDocumentos()])
-      .then(([e, t, d]) => { setEmpresas(e); setTipos(t); setDocs(d); })
+    Promise.all([listarEmpresas(), listarTiposDocumento(), listarDocumentos(), listarVinculos()])
+      .then(([e, t, d, v]) => { setEmpresas(e); setTipos(t); setDocs(d); setVinculos(v); })
       .catch(setError);
   }, []);
 
@@ -34,11 +36,13 @@ export default function Empresas() {
   const filtradas = useMemo(() => {
     const q = busca.trim().toLowerCase();
     const qDig = onlyDigits(busca);
+    const qCod = busca.trim().toUpperCase();
     return (empresas ?? []).filter((e) =>
       (!tipo || e.tipo === tipo)
       && (!situacao || e.situacao === situacao)
       && (!q || e.razao_social.toLowerCase().includes(q)
           || (e.nome_fantasia ?? '').toLowerCase().includes(q)
+          || e.codigo_cadex.includes(qCod)
           || (qDig.length >= 3 && e.cnpj.includes(qDig))));
   }, [empresas, busca, tipo, situacao]);
 
@@ -55,7 +59,7 @@ export default function Empresas() {
       }
     >
       <div className="mb-4 grid gap-3 sm:grid-cols-[1fr_auto_auto]">
-        <input className={inputClass} placeholder="Buscar por nome ou CNPJ" value={busca}
+        <input className={inputClass} placeholder="Buscar por nome, CNPJ ou código CADEX" value={busca}
                onChange={(e) => setBusca(e.target.value)} aria-label="Buscar" />
         <select className={inputClass} value={tipo} onChange={(e) => setTipo(e.target.value)} aria-label="Tipo">
           <option value="">Todos os tipos</option>
@@ -81,6 +85,7 @@ export default function Empresas() {
             <thead className="text-xs uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="py-2 pr-4">Empresa</th>
+                <th className="py-2 pr-4">Código CADEX</th>
                 <th className="py-2 pr-4">CNPJ</th>
                 <th className="py-2 pr-4">Tipo</th>
                 <th className="py-2 pr-4">Documentação</th>
@@ -89,7 +94,10 @@ export default function Empresas() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filtradas.map((e) => {
-                const contratante = e.operadora_id ? porId.get(e.operadora_id) : undefined;
+                const contratantes = vinculos
+                  .filter((v) => v.terceirizada_id === e.id && !v.fim)
+                  .map((v) => porId.get(v.operadora_id))
+                  .filter((o): o is Empresa => Boolean(o));
                 const r = resumoDocumentos(tipos, docs.filter((d) => d.empresa_id === e.id), hoje);
                 return (
                   <tr key={e.id} className="hover:bg-slate-50">
@@ -99,10 +107,15 @@ export default function Empresas() {
                       </Link>
                       {e.nome_fantasia && <div className="text-xs text-slate-500">{e.razao_social}</div>}
                     </td>
-                    <td className="py-2 pr-4 font-mono text-xs">{formatCnpj(e.cnpj)}</td>
+                    <td className="whitespace-nowrap py-2 pr-4 font-mono text-xs">{e.codigo_cadex}</td>
+                    <td className="whitespace-nowrap py-2 pr-4 font-mono text-xs">{formatCnpj(e.cnpj)}</td>
                     <td className="py-2 pr-4">
                       {TIPO_LABEL[e.tipo]}
-                      {contratante && <div className="text-xs text-slate-500">de {nomeEmpresa(contratante)}</div>}
+                      {contratantes.length > 0 && (
+                        <div className="text-xs text-slate-500">
+                          para {contratantes.map(nomeEmpresa).join(', ')}
+                        </div>
+                      )}
                     </td>
                     <td className="py-2 pr-4"><ResumoBadge r={r} /></td>
                     <td className="py-2">
