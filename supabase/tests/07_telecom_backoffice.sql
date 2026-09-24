@@ -133,5 +133,18 @@ begin
   end;
 end $$;
 
+-- O visitante sem login consulta o mapa público, e a view chama
+-- is_company_active por linha: sem EXECUTE para anon a página quebra.
+reset role;
+set local role anon;
+do $$
+declare n int;
+begin
+  select count(*) into n from public_interventions where executor_cadex_active;
+  if n = 0 then
+    raise exception 'ASSERT FALHOU: serviço encerrado da operadora ativa não aparece no mapa público';
+  end if;
+end $$;
+
 reset role;
 rollback;
