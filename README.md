@@ -28,9 +28,9 @@ guardada no ramo `legado`.
 
 React + Vite + Tailwind no navegador; Supabase (Postgres, login e
 arquivos) como banco. As regras ficam no banco: CNPJ válido e único,
-terceirizada sempre ligada a uma operadora, validade obrigatória nos
-documentos que vencem, código CADEX gerado pelo banco, vínculo só de
-terceirizada com operadora e acesso restrito a servidores (RLS).
+validade obrigatória nos documentos que vencem, código CADEX gerado pelo
+banco, vínculo só de terceirizada com operadora e acesso restrito a
+servidores (RLS).
 
 ## Liberar um servidor
 
