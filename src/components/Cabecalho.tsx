@@ -8,21 +8,23 @@ export interface ItemMenu { rotulo: string; para: string; fim?: boolean }
  * identificação e menu branco com itens separados por linhas verticais;
  * o item ativo em laranja, com traço laranja em cima.
  *
- * O logotipo da Prefeitura é marca oficial em imagem: entra aqui quando
- * o arquivo for fornecido. Até lá, a identificação é textual.
+ * O logotipo oficial (Prefeitura de Niterói | SECONSER) foi fornecido pela
+ * SECONSER: public/logo-prefeitura-seconser.png.
  */
 export function Cabecalho({ itens, direita }: { itens: ItemMenu[]; direita?: ReactNode }) {
   return (
     <header className="border-b border-slate-200 bg-white">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-4 py-5">
-        <div className="leading-tight">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.25em] text-marca-700">Prefeitura de</div>
-          <div className="text-2xl font-bold text-marca-600">Niterói</div>
-        </div>
-        <div className="hidden h-12 w-px bg-slate-300 sm:block" aria-hidden />
-        <div className="leading-tight">
-          <div className="text-sm font-bold tracking-wide text-slate-800">SECONSER</div>
-          <div className="text-xs text-slate-600">CADEX · Cadastro de Executores</div>
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4">
+        <img
+          src="/logo-prefeitura-seconser.png"
+          alt="Prefeitura de Niterói — SECONSER"
+          width={896}
+          height={273}
+          className="h-16 w-auto sm:h-24"
+        />
+        <div className="leading-tight sm:text-right">
+          <div className="text-sm font-bold tracking-wide text-slate-800">CADEX</div>
+          <div className="text-xs text-slate-600">Cadastro de Executores</div>
         </div>
       </div>
 
