@@ -3,59 +3,37 @@ import { Link } from 'react-router-dom';
 const SITE_SECONSER = 'https://www.seconser.niteroi.rj.gov.br/';
 
 /**
- * Rodapé no modelo do portal da SECONSER, com a autoria do sistema.
- * Os contatos são os publicados no próprio portal.
+ * Rodapé no modelo do portal da SECONSER, compacto: autoria e contatos
+ * (os publicados no próprio portal) em duas linhas, links à direita.
  */
 export function Rodape() {
+  const link = 'hover:text-white hover:underline';
   return (
-    <footer className="mt-12 text-slate-200">
+    <footer className="mt-12 text-xs text-slate-300">
       <div className="bg-rodape">
-        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 text-sm sm:grid-cols-3">
-          <section>
-            <h2 className="mb-3 text-lg font-medium text-white">CADEX</h2>
-            <p className="leading-relaxed">
-              Cadastro de Executores de intervenções nas vias públicas, no subsolo e no espaço
-              aéreo do Município, nos termos da Resolução Conjunta SECONSER/SEOP nº 001/2026.
+        <div className="mx-auto flex max-w-6xl flex-wrap items-start justify-between gap-x-8 gap-y-3 px-4 py-5">
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-white">Fiscalização de Serviços Concedidos – SECONSER</p>
+            <p>
+              Av. Visconde do Rio Branco, 11 – Ponta d'Areia, Niterói | RJ · (21) 4040-1650 ·
+              Disque-Luz (21) 4040-1640 ·{' '}
+              <a href="mailto:seconser@seconser.niteroi.rj.gov.br" className={link}>seconser@seconser.niteroi.rj.gov.br</a>
             </p>
-            <p className="mt-3 font-semibold text-white">Fiscalização de Serviços Concedidos – SECONSER</p>
-          </section>
-
-          <section>
-            <h2 className="mb-3 text-lg font-medium text-white">Links úteis</h2>
-            <ul className="space-y-2">
-              <li><Link to="/consulta" className="hover:text-white hover:underline">Consulta pública de empresas</Link></li>
-              <li><Link to="/" className="hover:text-white hover:underline">Área restrita</Link></li>
-              <li>
-                <a href={SITE_SECONSER} target="_blank" rel="noopener noreferrer" className="hover:text-white hover:underline">
-                  Portal da SECONSER
-                </a>
-              </li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="mb-3 text-lg font-medium text-white">Contatos</h2>
-            <address className="space-y-2 not-italic">
-              <p>Av. Visconde do Rio Branco, 11<br />Ponta d'Areia, Niterói | RJ</p>
-              <p>(21) 4040-1650</p>
-              <p>Disque-Luz (21) 4040-1640</p>
-              <p>
-                <a href="mailto:seconser@seconser.niteroi.rj.gov.br" className="hover:text-white hover:underline">
-                  seconser@seconser.niteroi.rj.gov.br
-                </a>
-              </p>
-              <p>
-                Atendimento virtualmente pelo COLAB ou pela Ouvidoria SECONSER
-                (<a href="mailto:ouvidoria.seconser@gmail.com" className="hover:text-white hover:underline">ouvidoria.seconser@gmail.com</a>)
-              </p>
-            </address>
-          </section>
+            <p>
+              Atendimento virtualmente pelo COLAB ou pela Ouvidoria SECONSER (
+              <a href="mailto:ouvidoria.seconser@gmail.com" className={link}>ouvidoria.seconser@gmail.com</a>)
+            </p>
+          </div>
+          <nav aria-label="Links do rodapé" className="flex flex-wrap gap-x-4 gap-y-1">
+            <Link to="/consulta" className={link}>Consulta pública</Link>
+            <Link to="/" className={link}>Área restrita</Link>
+            <a href={SITE_SECONSER} target="_blank" rel="noopener noreferrer" className={link}>Portal da SECONSER</a>
+          </nav>
         </div>
       </div>
       <div className="bg-rodape-escuro">
-        <div className="mx-auto max-w-6xl px-4 py-5 text-xs text-slate-300">
-          © {new Date().getFullYear()} | SECONSER - Secretaria de Conservação e Serviços Públicos
-          {' · '}Fiscalização de Serviços Concedidos · Prefeitura Municipal de Niterói
+        <div className="mx-auto max-w-6xl px-4 py-2.5">
+          © {new Date().getFullYear()} | SECONSER - Secretaria de Conservação e Serviços Públicos · Prefeitura Municipal de Niterói
         </div>
       </div>
     </footer>
