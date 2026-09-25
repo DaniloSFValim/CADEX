@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Badge, Card, Empty, ErrorNote, Spinner, inputClass } from '../components/ui';
+import { Badge, Button, Card, Empty, ErrorNote, Spinner, inputClass } from '../components/ui';
+import { ExportarRelacao } from '../components/ExportarRelacao';
 import { SituacaoBadge } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { formatCnpj, onlyDigits } from '../lib/cnpj';
@@ -27,6 +28,7 @@ export default function Empresas() {
   const [busca, setBusca] = useState('');
   const [tipo, setTipo] = useState('');
   const [situacao, setSituacao] = useState('');
+  const [exportando, setExportando] = useState(false);
 
   useEffect(() => {
     // O CISP não tem acesso a documentos: nem pede.
@@ -60,13 +62,35 @@ export default function Empresas() {
   return (
     <Card
       title={`Empresas${empresas ? ` (${filtradas.length})` : ''}`}
-      action={podeEditar && (
-        <Link to="/empresas/nova"
-              className="rounded-md bg-marca-700 px-3 py-2 text-sm font-medium text-white hover:bg-marca-800">
-          Nova empresa
-        </Link>
-      )}
+      action={
+        <div className="flex flex-wrap gap-2">
+          <Button variant="secondary" disabled={!empresas?.length} onClick={() => setExportando((x) => !x)}>
+            Exportar
+          </Button>
+          {podeEditar && (
+            <Link to="/empresas/nova"
+                  className="rounded-md bg-marca-700 px-3 py-2 text-sm font-medium text-white hover:bg-marca-800">
+              Nova empresa
+            </Link>
+          )}
+        </div>
+      }
     >
+      {exportando && empresas && (
+        <ExportarRelacao
+          empresas={empresas}
+          contexto={{
+            hoje, porId, vinculos,
+            resumoDocs: podeEditar
+              ? (e) => resumoDocumentos(tipos, docs.filter((d) => d.empresa_id === e.id), hoje)
+              : undefined,
+          }}
+          podeVerDocumentos={podeEditar}
+          tipoInicial={tipo}
+          situacaoInicial={situacao}
+          onFechar={() => setExportando(false)}
+        />
+      )}
       <div className="mb-4 grid gap-3 sm:grid-cols-[1fr_auto_auto]">
         <input className={inputClass} placeholder="Buscar por nome, CNPJ ou código CADEX" value={busca}
                onChange={(e) => setBusca(e.target.value)} aria-label="Buscar" />
