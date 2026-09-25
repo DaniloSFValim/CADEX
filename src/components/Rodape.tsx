@@ -19,10 +19,6 @@ export function Rodape() {
               Disque-Luz (21) 4040-1640 ·{' '}
               <a href="mailto:seconser@seconser.niteroi.rj.gov.br" className={link}>seconser@seconser.niteroi.rj.gov.br</a>
             </p>
-            <p>
-              Atendimento virtualmente pelo COLAB ou pela Ouvidoria SECONSER (
-              <a href="mailto:ouvidoria.seconser@gmail.com" className={link}>ouvidoria.seconser@gmail.com</a>)
-            </p>
           </div>
           <nav aria-label="Links do rodapé" className="flex flex-wrap gap-x-4 gap-y-1">
             <Link to="/consulta" className={link}>Consulta pública</Link>
