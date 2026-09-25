@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { Button, ErrorNote, Field, inputClass } from '../components/ui';
 
@@ -38,6 +39,12 @@ export default function Login() {
             {busy ? 'Entrando…' : 'Entrar'}
           </Button>
         </form>
+
+        <p className="mt-6 border-t border-slate-100 pt-4 text-center text-sm">
+          <Link to="/consulta" className="text-gov-700 hover:underline">
+            Consulta pública de empresas inscritas →
+          </Link>
+        </p>
       </div>
     </div>
   );

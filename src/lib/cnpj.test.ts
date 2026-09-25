@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatCnpj, isValidCnpj } from './cnpj';
+import { formatCnpj, formatCpf, isValidCnpj, isValidCpf, isValidPlaca } from './cnpj';
 
 describe('CNPJ', () => {
   it('aceita CNPJ válido com ou sem pontuação', () => {
@@ -20,5 +20,20 @@ describe('CNPJ', () => {
     expect(formatCnpj('112223330001')).toBe('11.222.333/0001');
     expect(formatCnpj('11222333000181')).toBe('11.222.333/0001-81');
     expect(formatCnpj('11.222.333/0001-819')).toBe('11.222.333/0001-81');
+  });
+});
+
+describe('CPF e placa', () => {
+  it('confere o dígito do CPF', () => {
+    expect(isValidCpf('529.982.247-25')).toBe(true);
+    expect(isValidCpf('52998224724')).toBe(false);
+    expect(isValidCpf('11111111111')).toBe(false);
+    expect(formatCpf('52998224725')).toBe('529.982.247-25');
+  });
+
+  it('aceita placa antiga e Mercosul', () => {
+    expect(isValidPlaca('ABC-1234')).toBe(true);
+    expect(isValidPlaca('abc1d23')).toBe(true);
+    expect(isValidPlaca('AB12345')).toBe(false);
   });
 });

@@ -19,7 +19,37 @@ Resolução Conjunta SECONSER/SEOP nº 001/2026.
   e 3 aplicáveis só a quem tem infraestrutura própria ou contrato de
   compartilhamento (incisos IV e V). Certidões e registros têm validade,
   com aviso 30 dias antes de vencer.
-- **Acesso:** só servidores da Prefeitura, com login. Nada é público.
+- **Inscrição no CADEX (arts. 7º e 8º):** situação (EM ANÁLISE, APTA,
+  APTA – EM SANEAMENTO, INAPTA, INDEFERIDA; VENCIDA quando passa a
+  validade), nº do processo, data do requerimento, **portaria (nº e data
+  de publicação)**, validade de 12 meses e data da notificação para
+  saneamento. O banco só aceita APTA com a portaria e INAPTA depois de 30
+  dias da notificação. Toda mudança fica no histórico.
+- **Identificação de pessoal e veículos:** responsáveis técnicos
+  (conselho, registro, ART/RRT — art. 6º, II), pessoal técnico com dados
+  do crachá (art. 23) e veículos/maquinário com placa e identificação
+  visual (arts. 19 e 21). Nada é apagado: desativar mantém o histórico.
+- **Perfis:** `gestor` (SECONSER) cadastra e altera; `cisp` só consulta
+  empresas, inscrição, vínculos, responsáveis, pessoal e veículos — não
+  vê os documentos, que têm dados pessoais de sócios e procuradores.
+- **Consulta pública** em `/consulta`, sem login (art. 7º, § 2º): código,
+  razão social, nome fantasia, CNPJ, tipo, situação, validade e portaria.
+  Nenhum contato, pessoa, veículo ou documento.
+
+## Regras pendentes de definição administrativa
+
+- **Termo inicial da validade:** o sistema conta os 12 meses da data de
+  publicação da portaria; a Resolução diz só "inscrição deferida".
+- **Inscrição vencida:** passados os 12 meses sem renovação, o sistema
+  mostra VENCIDA. A Resolução não nomeia esse estado nem diz se ele segue
+  o rito do art. 8º (notificação + 30 dias).
+- **Incisos IV e V do art. 6º:** tratados como "quando aplicável"; se a
+  SECONSER exigir declaração negativa, é ajuste de catálogo.
+- **Subcontratada da terceirizada** (arts. 2º, VIII, e 3º, § 1º): também
+  precisa de CADEX, mas o vínculo "terceirizada contrata terceirizada"
+  ainda não está no sistema.
+- **Veículo que atende várias operadoras:** o art. 21 pede o nome da
+  concessionária contratante na traseira; o sistema registra uma.
 
 A versão anterior, com licenciamento, fiscalização e emergências, está
 guardada no ramo `legado`.
@@ -35,11 +65,11 @@ servidores (RLS).
 ## Liberar um servidor
 
 1. Supabase → **Authentication → Users → Add user** (marque *Auto Confirm User*).
-2. Supabase → **SQL Editor**:
+2. Supabase → **SQL Editor** (`papel`: `'gestor'` para a SECONSER, `'cisp'` para consulta):
 
    ```sql
-   insert into servidores (user_id, nome)
-   select id, 'NOME DO SERVIDOR' from auth.users where email = 'EMAIL@niteroi.rj.gov.br';
+   insert into servidores (user_id, nome, papel)
+   select id, 'NOME DO SERVIDOR', 'gestor' from auth.users where email = 'EMAIL@niteroi.rj.gov.br';
    ```
 
 Para tirar o acesso: `delete from servidores where user_id = (select id from auth.users where email = '...');`
