@@ -57,14 +57,14 @@ export default function EmpresaPage() {
 
   return (
     <div className="space-y-5">
-      <Link to="/" className="text-sm text-gov-700 hover:underline">← Empresas</Link>
+      <Link to="/" className="text-sm text-marca-700 hover:underline">← Empresas</Link>
       <div>
         <h1 className="text-xl font-semibold text-slate-900">
           {empresa ? nomeEmpresa(empresa) : 'Nova empresa'}
         </h1>
         {empresa && (
           <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-600">
-            <span className="font-mono font-semibold text-gov-800">{empresa.codigo_cadex}</span>
+            <span className="font-mono font-semibold text-marca-800">{empresa.codigo_cadex}</span>
             <span>· {TIPO_LABEL[empresa.tipo]} ({TIPO_RESOLUCAO[empresa.tipo]})</span>
             <SituacaoBadge s={situacaoEfetiva(empresa, hojeISO())} />
           </p>
@@ -362,7 +362,7 @@ function LadoVinculo({
               <li key={v.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
                 <div>
                   {e ? (
-                    <Link to={`/empresas/${e.id}`} className="font-medium text-gov-700 hover:underline">
+                    <Link to={`/empresas/${e.id}`} className="font-medium text-marca-700 hover:underline">
                       {nomeEmpresa(e)}
                     </Link>
                   ) : '—'}
@@ -491,7 +491,7 @@ function LinhaDocumento({
 
       {doc && (
         <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
-          <button type="button" className="text-gov-700 underline hover:text-gov-900"
+          <button type="button" className="text-marca-700 underline hover:text-marca-900"
                   onClick={async () => {
                     setError(null);
                     try { window.open(await linkDocumento(doc), '_blank', 'noopener'); }

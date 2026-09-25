@@ -106,7 +106,7 @@ export function Operacional({
           const vencido = r.cracha_validade && String(r.cracha_validade) < hoje;
           return (
             <Linha
-              titulo={<>{String(r.nome)}{r.responsavel_equipe && <span className="ml-2 text-xs font-normal text-gov-700">responsável de equipe</span>}</>}
+              titulo={<>{String(r.nome)}{r.responsavel_equipe && <span className="ml-2 text-xs font-normal text-marca-700">responsável de equipe</span>}</>}
               detalhe={<>
                 {String(r.funcao)} · {String(r.documento_tipo)} {String(r.documento_numero)}
                 {' · crachá '}

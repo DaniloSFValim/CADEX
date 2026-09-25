@@ -3,13 +3,18 @@ export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Montserrat', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
+      },
       colors: {
-        // Paleta institucional sóbria (§39: "cores sem excesso").
-        gov: {
-          50: '#f2f6fa', 100: '#e3ecf5', 200: '#c2d6e9', 300: '#93b5d6',
-          400: '#5d8dbd', 500: '#3a6da2', 600: '#2b5687', 700: '#24466d',
-          800: '#1f3a5a', 900: '#1c314b',
+        // Laranja do portal da SECONSER. Nos textos usar 700+ (contraste AA).
+        marca: {
+          50: '#fdf3ec', 100: '#fbe3d2', 200: '#f6c4a2', 300: '#f09f6c',
+          400: '#eb8248', 500: '#e8712f', 600: '#d05d1f', 700: '#ad4a18',
+          800: '#8a3c18', 900: '#703317',
         },
+        // Rodapé cinza-escuro do portal.
+        rodape: { DEFAULT: '#4b4b4b', escuro: '#424242' },
       },
     },
   },
