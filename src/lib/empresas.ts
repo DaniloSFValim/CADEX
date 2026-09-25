@@ -1,4 +1,4 @@
-import { BUCKET, supabase } from './supabase';
+import { BUCKET, BUCKET_LOGOS, supabase } from './supabase';
 import { onlyDigits } from './cnpj';
 
 export type Tipo = 'operadora' | 'terceirizada';
@@ -31,6 +31,8 @@ export interface Empresa {
   portaria_data: string | null;
   validade_ate: string | null;
   notificacao_data: string | null;
+  /** Caminho do logo no bucket público `logos`. */
+  logo_arquivo: string | null;
   criado_em: string;
   atualizado_em: string;
 }
@@ -296,6 +298,38 @@ export async function linkDocumento(doc: Documento): Promise<string> {
 }
 
 // ---------------------------------------------------------------------
+// Logo (bucket público)
+// ---------------------------------------------------------------------
+
+export const TIPOS_LOGO = ['image/png', 'image/jpeg', 'image/webp'];
+export const MAX_LOGO_BYTES = 2 * 1024 * 1024;
+
+export const urlLogo = (caminho: string) =>
+  supabase.storage.from(BUCKET_LOGOS).getPublicUrl(caminho).data.publicUrl;
+
+/** Envia o logo novo e só depois apaga o anterior. Nome novo a cada troca: sem cache velho. */
+export async function enviarLogo(empresa: Pick<Empresa, 'id' | 'logo_arquivo'>, arquivo: File): Promise<void> {
+  if (!TIPOS_LOGO.includes(arquivo.type)) throw new Error('Use PNG, JPG ou WebP.');
+  if (arquivo.size > MAX_LOGO_BYTES) throw new Error('Logo acima de 2 MB.');
+  const ext = arquivo.type === 'image/png' ? 'png' : arquivo.type === 'image/webp' ? 'webp' : 'jpg';
+  const caminho = `${empresa.id}/logo-${Date.now()}.${ext}`;
+  const up = await supabase.storage.from(BUCKET_LOGOS).upload(caminho, arquivo, { contentType: arquivo.type });
+  if (up.error) throw up.error;
+  const { error } = await supabase.from('empresas').update({ logo_arquivo: caminho }).eq('id', empresa.id);
+  if (error) {
+    await supabase.storage.from(BUCKET_LOGOS).remove([caminho]);
+    throw error;
+  }
+  if (empresa.logo_arquivo) await supabase.storage.from(BUCKET_LOGOS).remove([empresa.logo_arquivo]);
+}
+
+export async function removerLogo(empresa: Pick<Empresa, 'id' | 'logo_arquivo'>): Promise<void> {
+  const { error } = await supabase.from('empresas').update({ logo_arquivo: null }).eq('id', empresa.id);
+  if (error) throw error;
+  if (empresa.logo_arquivo) await supabase.storage.from(BUCKET_LOGOS).remove([empresa.logo_arquivo]);
+}
+
+// ---------------------------------------------------------------------
 // Inscrição e histórico
 // ---------------------------------------------------------------------
 
@@ -366,6 +400,7 @@ export interface LinhaPublica {
   portaria_numero: string | null;
   portaria_data: string | null;
   contratantes: string[];
+  logo_arquivo: string | null;
 }
 
 export async function consultaPublica(): Promise<LinhaPublica[]> {

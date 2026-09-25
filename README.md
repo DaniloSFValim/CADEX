@@ -36,10 +36,16 @@ Resolução Conjunta SECONSER/SEOP nº 001/2026.
 - **Perfis:** `gestor` (SECONSER) cadastra e altera; `cisp` só consulta
   empresas, inscrição, vínculos, responsáveis, pessoal e veículos — não
   vê os documentos, que têm dados pessoais de sócios e procuradores.
-- **Consulta pública** em `/consulta`, sem login (art. 7º, § 2º): código,
-  razão social, nome fantasia, CNPJ, tipo, contratantes, situação,
+- **Consulta pública** em `/consulta`, sem login (art. 7º, § 2º): logo,
+  código, razão social, nome fantasia, CNPJ, tipo, contratantes, situação,
   validade e portaria.
   Nenhum contato, pessoa, veículo ou documento.
+- **Logo da empresa:** PNG, JPG ou WebP até 2 MB, enviado pelo gestor.
+  Fica no bucket público `logos` (os documentos seguem no bucket privado).
+- **Exportação:** relação de empresas em planilha (.csv que abre no
+  Excel), filtrando tipos, situações e as colunas; ficha da empresa pronta
+  para imprimir ou salvar em PDF, escolhendo as seções. O CISP exporta o
+  que já consulta — sem documentos.
 
 ## Regras pendentes de definição administrativa
 
