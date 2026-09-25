@@ -96,7 +96,7 @@ begin
   values ('22333444000181', 'Terceirizada Teste Ltda.', 'terceirizada', 'te@t.test')
   returning id into te;
   insert into ids values ('te', te);
-  insert into vinculos (operadora_id, terceirizada_id) values (op, te);
+  insert into vinculos (contratante_id, contratada_id) values (op, te);
   update empresas set situacao = 'indeferida' where id = te;
 
   -- Operadora com inscrição vencida
@@ -181,7 +181,7 @@ begin
     and r.portaria_numero = 'Portaria SECONSER nº 12/2026', 'operadora deveria aparecer APTA com a portaria');
 
   select * into r from consulta_publica() where cnpj = '22333444000181';
-  perform pg_temp.assert(r.situacao = 'indeferida' and r.operadoras = array['OpTeste'],
+  perform pg_temp.assert(r.situacao = 'indeferida' and r.contratantes = array['OpTeste'],
     'terceirizada deveria aparecer INDEFERIDA, atendendo a OpTeste');
 
   select * into r from consulta_publica() where cnpj = '55666777000181';

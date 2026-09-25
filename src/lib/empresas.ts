@@ -47,8 +47,10 @@ export type InscricaoInput = Pick<Empresa,
 /** Terceirizada atendendo uma operadora. Vínculo encerrado tem `fim`. */
 export interface Vinculo {
   id: string;
-  operadora_id: string;
-  terceirizada_id: string;
+  /** Operadora ou terceirizada que contrata. */
+  contratante_id: string;
+  /** Terceirizada contratada (subcontratada, se a contratante for terceirizada). */
+  contratada_id: string;
   inicio: string;
   fim: string | null;
 }
@@ -209,14 +211,14 @@ const limpar = (input: EmpresaInput) => {
   };
 };
 
-/** Cadastra a empresa e, se for terceirizada, os vínculos com as operadoras. */
-export async function criarEmpresa(input: EmpresaInput, operadoras: string[] = []): Promise<string> {
+/** Cadastra a empresa e, se for terceirizada, os vínculos com quem a contratou. */
+export async function criarEmpresa(input: EmpresaInput, contratantes: string[] = []): Promise<string> {
   const { data, error } = await supabase.from('empresas').insert(limpar(input)).select('id').single();
   if (error) throw error;
   const id = (data as { id: string }).id;
-  if (input.tipo === 'terceirizada' && operadoras.length > 0) {
+  if (input.tipo === 'terceirizada' && contratantes.length > 0) {
     const v = await supabase.from('vinculos')
-      .insert(operadoras.map((operadora_id) => ({ operadora_id, terceirizada_id: id })));
+      .insert(contratantes.map((contratante_id) => ({ contratante_id, contratada_id: id })));
     if (v.error) throw v.error;
   }
   return id;
@@ -235,9 +237,9 @@ export async function listarVinculos(): Promise<Vinculo[]> {
   return data as Vinculo[];
 }
 
-export async function criarVinculo(operadoraId: string, terceirizadaId: string): Promise<void> {
+export async function criarVinculo(contratanteId: string, contratadaId: string): Promise<void> {
   const { error } = await supabase.from('vinculos')
-    .insert({ operadora_id: operadoraId, terceirizada_id: terceirizadaId });
+    .insert({ contratante_id: contratanteId, contratada_id: contratadaId });
   if (error) throw error;
 }
 
@@ -363,7 +365,7 @@ export interface LinhaPublica {
   validade_ate: string | null;
   portaria_numero: string | null;
   portaria_data: string | null;
-  operadoras: string[];
+  contratantes: string[];
 }
 
 export async function consultaPublica(): Promise<LinhaPublica[]> {

@@ -13,8 +13,12 @@ Resolução Conjunta SECONSER/SEOP nº 001/2026.
   recomeçando a cada ano. Como o tipo está no código, ele não muda depois
   do cadastro. O formato é convenção da Prefeitura: a Resolução não
   define numeração.
-- **Vínculos:** uma terceirizada pode atender várias operadoras. Encerrar
-  um vínculo guarda a data de fim, sem apagar o histórico.
+- **Vínculos de contratação:** contratante → contratada. Operadoras
+  contratam terceirizadas, e uma terceirizada pode subcontratar outra em
+  qualquer grau (arts. 2º, VIII, e 3º, § 1º) — toda empresa da cadeia é
+  cadastrada e tem código CADEX. Uma terceirizada pode ter várias
+  contratantes. O banco recusa ciclos. Encerrar um vínculo guarda a data
+  de fim, sem apagar o histórico.
 - **Documentos do art. 6º:** 15 tipos; 12 obrigatórios (incisos I a III)
   e 3 aplicáveis só a quem tem infraestrutura própria ou contrato de
   compartilhamento (incisos IV e V). Certidões e registros têm validade,
@@ -33,7 +37,8 @@ Resolução Conjunta SECONSER/SEOP nº 001/2026.
   empresas, inscrição, vínculos, responsáveis, pessoal e veículos — não
   vê os documentos, que têm dados pessoais de sócios e procuradores.
 - **Consulta pública** em `/consulta`, sem login (art. 7º, § 2º): código,
-  razão social, nome fantasia, CNPJ, tipo, situação, validade e portaria.
+  razão social, nome fantasia, CNPJ, tipo, contratantes, situação,
+  validade e portaria.
   Nenhum contato, pessoa, veículo ou documento.
 
 ## Regras pendentes de definição administrativa
@@ -45,9 +50,6 @@ Resolução Conjunta SECONSER/SEOP nº 001/2026.
   o rito do art. 8º (notificação + 30 dias).
 - **Incisos IV e V do art. 6º:** tratados como "quando aplicável"; se a
   SECONSER exigir declaração negativa, é ajuste de catálogo.
-- **Subcontratada da terceirizada** (arts. 2º, VIII, e 3º, § 1º): também
-  precisa de CADEX, mas o vínculo "terceirizada contrata terceirizada"
-  ainda não está no sistema.
 - **Veículo que atende várias operadoras:** o art. 21 pede o nome da
   concessionária contratante na traseira; o sistema registra uma.
 
@@ -59,8 +61,8 @@ guardada no ramo `legado`.
 React + Vite + Tailwind no navegador; Supabase (Postgres, login e
 arquivos) como banco. As regras ficam no banco: CNPJ válido e único,
 validade obrigatória nos documentos que vencem, código CADEX gerado pelo
-banco, vínculo só de terceirizada com operadora e acesso restrito a
-servidores (RLS).
+banco, contratada sempre terceirizada e sem ciclos na cadeia, e acesso
+restrito a servidores (RLS).
 
 ## Liberar um servidor
 
