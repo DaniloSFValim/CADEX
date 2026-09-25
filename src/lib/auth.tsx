@@ -2,10 +2,21 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 
+export type Papel = 'gestor' | 'cisp';
+
+export const PAPEL_LABEL: Record<Papel, string> = {
+  gestor: 'SECONSER',
+  cisp: 'CISP — consulta',
+};
+
+export interface Servidor { nome: string; papel: Papel }
+
 interface AuthState {
   session: Session | null;
-  /** Nome do servidor, ou null se o usuário logado não for servidor. */
-  servidor: string | null;
+  /** Servidor logado, ou null se o usuário não for servidor. */
+  servidor: Servidor | null;
+  /** Só o gestor (SECONSER) cadastra e altera; o CISP consulta. */
+  podeEditar: boolean;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -15,21 +26,22 @@ const Ctx = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
-  const [servidor, setServidor] = useState<string | null>(null);
+  const [servidor, setServidor] = useState<Servidor | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
 
     const load = async (s: Session | null) => {
-      let nome: string | null = null;
+      let sv: Servidor | null = null;
       if (s) {
-        // Quem é servidor vem do banco, sob RLS — nunca do navegador.
+        // Quem é servidor, e com que perfil, vem do banco sob RLS — nunca do
+        // navegador. O banco aplica as mesmas regras em cada gravação.
         const { data } = await supabase
-          .from('servidores').select('nome').eq('user_id', s.user.id).maybeSingle();
-        nome = (data as { nome: string } | null)?.nome ?? null;
+          .from('servidores').select('nome, papel').eq('user_id', s.user.id).maybeSingle();
+        sv = (data as Servidor | null) ?? null;
       }
-      if (!cancelled) { setServidor(nome); setLoading(false); }
+      if (!cancelled) { setServidor(sv); setLoading(false); }
     };
 
     supabase.auth.getSession().then(({ data }) => {
@@ -47,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<AuthState>(() => ({
-    session, servidor, loading,
+    session, servidor, loading, podeEditar: servidor?.papel === 'gestor',
     signIn: async (email, password) => {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;

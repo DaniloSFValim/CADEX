@@ -1,5 +1,5 @@
 import { Link, Outlet } from 'react-router-dom';
-import { useAuth } from '../lib/auth';
+import { PAPEL_LABEL, useAuth } from '../lib/auth';
 import { Button } from './ui';
 
 export function Layout() {
@@ -11,8 +11,12 @@ export function Layout() {
           <Link to="/" className="font-bold tracking-tight">
             CADEX <span className="font-normal text-gov-200">· Cadastro de empresas</span>
           </Link>
-          <div className="flex items-center gap-3 text-sm">
-            <span className="text-gov-100">{servidor ?? session?.user.email}</span>
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <Link to="/consulta" className="text-gov-200 hover:text-white">Consulta pública</Link>
+            <span className="text-gov-100">
+              {servidor?.nome ?? session?.user.email}
+              {servidor && <span className="ml-1 text-gov-300">· {PAPEL_LABEL[servidor.papel]}</span>}
+            </span>
             <Button variant="secondary" onClick={() => void signOut()}>Sair</Button>
           </div>
         </div>

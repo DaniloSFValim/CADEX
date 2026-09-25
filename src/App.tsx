@@ -3,11 +3,22 @@ import { Layout } from './components/Layout';
 import { Button, Spinner } from './components/ui';
 import { useAuth } from './lib/auth';
 import { isConfigured } from './lib/supabase';
+import Consulta from './pages/Consulta';
 import Login from './pages/Login';
 import Empresas from './pages/Empresas';
 import EmpresaPage from './pages/EmpresaPage';
 
 export function App() {
+  return (
+    <Routes>
+      {/* Consulta pública: aberta, com ou sem login (art. 7º, § 2º). */}
+      <Route path="consulta" element={<Consulta />} />
+      <Route path="*" element={<AreaRestrita />} />
+    </Routes>
+  );
+}
+
+function AreaRestrita() {
   const { session, servidor, loading, signOut } = useAuth();
 
   if (!isConfigured) {

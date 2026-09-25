@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Badge, Card, Empty, ErrorNote, Spinner, inputClass } from '../components/ui';
+import { SituacaoBadge } from '../components/Situacao';
+import { useAuth } from '../lib/auth';
 import { formatCnpj, onlyDigits } from '../lib/cnpj';
 import {
-  TIPO_LABEL, hojeISO, listarDocumentos, listarEmpresas, listarTiposDocumento, listarVinculos,
+  SITUACAO_LABEL, TIPO_LABEL, hojeISO, situacaoEfetiva, listarDocumentos, listarEmpresas, listarTiposDocumento, listarVinculos,
   nomeEmpresa, resumoDocumentos, type Documento, type Empresa, type Resumo, type TipoDocumento,
   type Vinculo,
 } from '../lib/empresas';
@@ -16,6 +18,7 @@ export function ResumoBadge({ r }: { r: Resumo }) {
 }
 
 export default function Empresas() {
+  const { podeEditar } = useAuth();
   const [empresas, setEmpresas] = useState<Empresa[] | null>(null);
   const [tipos, setTipos] = useState<TipoDocumento[]>([]);
   const [docs, setDocs] = useState<Documento[]>([]);
@@ -23,13 +26,21 @@ export default function Empresas() {
   const [error, setError] = useState<unknown>(null);
   const [busca, setBusca] = useState('');
   const [tipo, setTipo] = useState('');
-  const [situacao, setSituacao] = useState('ativa');
+  const [situacao, setSituacao] = useState('');
 
   useEffect(() => {
-    Promise.all([listarEmpresas(), listarTiposDocumento(), listarDocumentos(), listarVinculos()])
+    // O CISP não tem acesso a documentos: nem pede.
+    Promise.all([
+      listarEmpresas(),
+      podeEditar ? listarTiposDocumento() : Promise.resolve([]),
+      podeEditar ? listarDocumentos() : Promise.resolve([]),
+      listarVinculos(),
+    ])
       .then(([e, t, d, v]) => { setEmpresas(e); setTipos(t); setDocs(d); setVinculos(v); })
       .catch(setError);
-  }, []);
+  }, [podeEditar]);
+
+  const hoje = hojeISO();
 
   const porId = useMemo(() => new Map((empresas ?? []).map((e) => [e.id, e])), [empresas]);
 
@@ -39,24 +50,22 @@ export default function Empresas() {
     const qCod = busca.trim().toUpperCase();
     return (empresas ?? []).filter((e) =>
       (!tipo || e.tipo === tipo)
-      && (!situacao || e.situacao === situacao)
+      && (!situacao || situacaoEfetiva(e, hoje) === situacao)
       && (!q || e.razao_social.toLowerCase().includes(q)
           || (e.nome_fantasia ?? '').toLowerCase().includes(q)
           || e.codigo_cadex.includes(qCod)
           || (qDig.length >= 3 && e.cnpj.includes(qDig))));
-  }, [empresas, busca, tipo, situacao]);
-
-  const hoje = hojeISO();
+  }, [empresas, busca, tipo, situacao, hoje]);
 
   return (
     <Card
       title={`Empresas${empresas ? ` (${filtradas.length})` : ''}`}
-      action={
+      action={podeEditar && (
         <Link to="/empresas/nova"
               className="rounded-md bg-gov-700 px-3 py-2 text-sm font-medium text-white hover:bg-gov-800">
           Nova empresa
         </Link>
-      }
+      )}
     >
       <div className="mb-4 grid gap-3 sm:grid-cols-[1fr_auto_auto]">
         <input className={inputClass} placeholder="Buscar por nome, CNPJ ou código CADEX" value={busca}
@@ -67,9 +76,8 @@ export default function Empresas() {
           <option value="terceirizada">Terceirizadas</option>
         </select>
         <select className={inputClass} value={situacao} onChange={(e) => setSituacao(e.target.value)} aria-label="Situação">
-          <option value="ativa">Ativas</option>
-          <option value="inativa">Inativas</option>
-          <option value="">Todas</option>
+          <option value="">Todas as situações</option>
+          {Object.entries(SITUACAO_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
       </div>
 
@@ -88,7 +96,7 @@ export default function Empresas() {
                 <th className="py-2 pr-4">Código CADEX</th>
                 <th className="py-2 pr-4">CNPJ</th>
                 <th className="py-2 pr-4">Tipo</th>
-                <th className="py-2 pr-4">Documentação</th>
+                {podeEditar && <th className="py-2 pr-4">Documentação</th>}
                 <th className="py-2">Situação</th>
               </tr>
             </thead>
@@ -117,12 +125,8 @@ export default function Empresas() {
                         </div>
                       )}
                     </td>
-                    <td className="py-2 pr-4"><ResumoBadge r={r} /></td>
-                    <td className="py-2">
-                      <Badge tom={e.situacao === 'ativa' ? 'bom' : 'neutro'}>
-                        {e.situacao === 'ativa' ? 'Ativa' : 'Inativa'}
-                      </Badge>
-                    </td>
+                    {podeEditar && <td className="py-2 pr-4"><ResumoBadge r={r} /></td>}
+                    <td className="py-2"><SituacaoBadge s={situacaoEfetiva(e, hoje)} /></td>
                   </tr>
                 );
               })}

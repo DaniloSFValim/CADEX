@@ -1,22 +1,26 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Badge, Button, Card, ErrorNote, Field, Spinner, inputClass, type Tom } from '../components/ui';
+import { SituacaoBadge } from '../components/Situacao';
+import { useAuth } from '../lib/auth';
 import { formatCnpj, isValidCnpj, onlyDigits } from '../lib/cnpj';
 import {
-  ESTADO_LABEL, TIPO_LABEL, buscarEmpresa, criarEmpresa, criarVinculo, definirFimVinculo,
+  ESTADO_LABEL, TIPO_LABEL, TIPO_RESOLUCAO, buscarEmpresa, criarEmpresa, criarVinculo, definirFimVinculo,
   enviarDocumento, estadoDocumento, hojeISO, linkDocumento, listarDocumentos, listarEmpresas,
   listarTiposDocumento, listarVinculos, nomeEmpresa, removerDocumento, resumoDocumentos,
-  salvarEmpresa, ultimoPorTipo,
+  salvarEmpresa, situacaoEfetiva, ultimoPorTipo,
   type Documento, type Empresa, type EmpresaInput, type EstadoDocumento, type TipoDocumento,
   type Vinculo,
 } from '../lib/empresas';
 import { MAX_UPLOAD_BYTES } from '../lib/supabase';
 import { ResumoBadge } from './Empresas';
+import { Inscricao } from './Inscricao';
+import { Operacional } from './Operacional';
 
 const VAZIA: EmpresaInput = {
   cnpj: '', razao_social: '', nome_fantasia: '', tipo: 'operadora',
   email: '', telefone: '', cep: '', logradouro: '', numero: '', complemento: '',
-  bairro: '', cidade: 'Niterói', uf: 'RJ', situacao: 'ativa', observacoes: '',
+  bairro: '', cidade: 'Niterói', uf: 'RJ', observacoes: '',
 };
 
 const paraInput = (e: Empresa): EmpresaInput => ({
@@ -24,12 +28,13 @@ const paraInput = (e: Empresa): EmpresaInput => ({
   tipo: e.tipo, email: e.email, telefone: e.telefone ?? '',
   cep: e.cep ?? '', logradouro: e.logradouro ?? '', numero: e.numero ?? '',
   complemento: e.complemento ?? '', bairro: e.bairro ?? '', cidade: e.cidade ?? '',
-  uf: e.uf ?? '', situacao: e.situacao, observacoes: e.observacoes ?? '',
+  uf: e.uf ?? '', observacoes: e.observacoes ?? '',
 });
 
 export default function EmpresaPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { podeEditar } = useAuth();
   const [empresa, setEmpresa] = useState<Empresa | null>(null);
   const [todas, setTodas] = useState<Empresa[]>([]);
   const [error, setError] = useState<unknown>(null);
@@ -45,6 +50,10 @@ export default function EmpresaPage() {
 
   if (loading) return <Spinner />;
   if (id && !empresa) return <ErrorNote error={error ?? 'Empresa não encontrada.'} />;
+  if (!id && !podeEditar) return <ErrorNote error="Seu perfil é só de consulta." />;
+
+  const recarregar = async () => { if (empresa) setEmpresa(await buscarEmpresa(empresa.id)); };
+  const operadoras = todas.filter((o) => o.tipo === 'operadora');
 
   return (
     <div className="space-y-5">
@@ -54,9 +63,10 @@ export default function EmpresaPage() {
           {empresa ? nomeEmpresa(empresa) : 'Nova empresa'}
         </h1>
         {empresa && (
-          <p className="mt-1 text-sm text-slate-600">
+          <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-600">
             <span className="font-mono font-semibold text-gov-800">{empresa.codigo_cadex}</span>
-            {' · '}{TIPO_LABEL[empresa.tipo]}
+            <span>· {TIPO_LABEL[empresa.tipo]} ({TIPO_RESOLUCAO[empresa.tipo]})</span>
+            <SituacaoBadge s={situacaoEfetiva(empresa, hojeISO())} />
           </p>
         )}
       </div>
@@ -66,7 +76,8 @@ export default function EmpresaPage() {
           key={empresa?.id ?? 'nova'}
           inicial={empresa ? paraInput(empresa) : VAZIA}
           editando={Boolean(empresa)}
-          operadoras={todas.filter((o) => o.tipo === 'operadora')}
+          somenteLeitura={!podeEditar}
+          operadoras={operadoras}
           onSubmit={async (input, contratantes) => {
             if (empresa) {
               await salvarEmpresa(empresa.id, input);
@@ -79,20 +90,30 @@ export default function EmpresaPage() {
         />
       </Card>
 
-      {empresa && <Vinculos empresa={empresa} todas={todas} />}
+      {empresa && <Inscricao empresa={empresa} podeEditar={podeEditar} onSalvo={recarregar} />}
 
-      {empresa
-        ? <Documentos empresa={empresa} />
-        : <p className="text-sm text-slate-500">Depois de salvar os dados, você poderá anexar os documentos do art. 6º.</p>}
+      {empresa && <Vinculos empresa={empresa} todas={todas} podeEditar={podeEditar} />}
+
+      {empresa && <Operacional empresa={empresa} operadoras={operadoras} podeEditar={podeEditar} />}
+
+      {/* Documentos têm dados pessoais de sócios e procuradores: só a SECONSER vê. */}
+      {empresa && podeEditar && <Documentos empresa={empresa} />}
+      {!empresa && (
+        <p className="text-sm text-slate-500">
+          Depois de salvar os dados, você poderá registrar a inscrição, os responsáveis técnicos,
+          o pessoal, os veículos e os documentos do art. 6º.
+        </p>
+      )}
     </div>
   );
 }
 
 function EmpresaForm({
-  inicial, editando, operadoras, onSubmit,
+  inicial, editando, somenteLeitura, operadoras, onSubmit,
 }: {
   inicial: EmpresaInput;
   editando: boolean;
+  somenteLeitura: boolean;
   operadoras: Empresa[];
   onSubmit: (input: EmpresaInput, contratantes: string[]) => Promise<void>;
 }) {
@@ -116,7 +137,7 @@ function EmpresaForm({
 
   return (
     <form
-      className="grid gap-4 sm:grid-cols-6"
+      className="contents"
       onSubmit={async (e) => {
         e.preventDefault();
         setError(null); setSalvo(false);
@@ -130,6 +151,7 @@ function EmpresaForm({
         finally { setBusy(false); }
       }}
     >
+      <fieldset disabled={somenteLeitura} className="grid gap-4 sm:grid-cols-6">
       <Field label="CNPJ" required className="sm:col-span-2"
              hint={editando ? 'O CNPJ não pode ser alterado.' : undefined}>
         <input id="cnpj" className={inputClass} required disabled={editando} inputMode="numeric"
@@ -147,8 +169,8 @@ function EmpresaForm({
              hint={editando ? 'O tipo faz parte do código CADEX e não pode ser alterado.' : undefined}>
         <select id="tipo" className={inputClass} value={v.tipo} disabled={editando}
                 onChange={(e) => set('tipo', e.target.value as EmpresaInput['tipo'])}>
-          <option value="operadora">Operadora de telecomunicações</option>
-          <option value="terceirizada">Terceirizada</option>
+          <option value="operadora">Operadora de telecomunicações (concessionária contratante)</option>
+          <option value="terceirizada">Terceirizada (empresa executora)</option>
         </select>
       </Field>
       {!editando && v.tipo === 'terceirizada' && (
@@ -202,29 +224,27 @@ function EmpresaForm({
         <input id="uf" className={inputClass} maxLength={2} {...text('uf')} />
       </Field>
 
-      <Field label="Situação" className="sm:col-span-2">
-        <select id="situacao" className={inputClass} value={v.situacao}
-                onChange={(e) => set('situacao', e.target.value as EmpresaInput['situacao'])}>
-          <option value="ativa">Ativa</option>
-          <option value="inativa">Inativa</option>
-        </select>
-      </Field>
-      <Field label="Observações" className="sm:col-span-4">
+      <Field label="Observações" className="sm:col-span-6">
         <textarea id="observacoes" rows={2} className={inputClass} {...text('observacoes')} />
       </Field>
 
-      <div className="flex flex-wrap items-center gap-3 sm:col-span-6">
-        <Button type="submit" disabled={busy}>
-          {busy ? 'Salvando…' : editando ? 'Salvar alterações' : 'Cadastrar empresa'}
-        </Button>
-        {salvo && editando && <span className="text-sm text-emerald-700">Alterações salvas.</span>}
-      </div>
+      {!somenteLeitura && (
+        <div className="flex flex-wrap items-center gap-3 sm:col-span-6">
+          <Button type="submit" disabled={busy}>
+            {busy ? 'Salvando…' : editando ? 'Salvar alterações' : 'Cadastrar empresa'}
+          </Button>
+          {salvo && editando && <span className="text-sm text-emerald-700">Alterações salvas.</span>}
+        </div>
+      )}
       <div className="sm:col-span-6"><ErrorNote error={error} /></div>
+      </fieldset>
     </form>
   );
 }
 
-function Vinculos({ empresa, todas }: { empresa: Empresa; todas: Empresa[] }) {
+function Vinculos({
+  empresa, todas, podeEditar,
+}: { empresa: Empresa; todas: Empresa[]; podeEditar: boolean }) {
   const [vinculos, setVinculos] = useState<Vinculo[] | null>(null);
   const [nova, setNova] = useState('');
   const [busy, setBusy] = useState(false);
@@ -278,10 +298,12 @@ function Vinculos({ empresa, todas }: { empresa: Empresa; todas: Empresa[] }) {
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge tom={v.fim ? 'neutro' : 'bom'}>{v.fim ? 'Encerrado' : 'Ativo'}</Badge>
-                  <Button variant="secondary" className="!px-2 !py-1 text-xs" disabled={busy}
-                          onClick={() => agir(() => definirFimVinculo(v.id, v.fim ? null : hojeISO()))}>
-                    {v.fim ? 'Reativar' : 'Encerrar'}
-                  </Button>
+                  {podeEditar && (
+                    <Button variant="secondary" className="!px-2 !py-1 text-xs" disabled={busy}
+                            onClick={() => agir(() => definirFimVinculo(v.id, v.fim ? null : hojeISO()))}>
+                      {v.fim ? 'Reativar' : 'Encerrar'}
+                    </Button>
+                  )}
                 </div>
               </li>
             );
@@ -289,7 +311,7 @@ function Vinculos({ empresa, todas }: { empresa: Empresa; todas: Empresa[] }) {
         </ul>
       )}
 
-      {ehTerceirizada && disponiveis.length > 0 && (
+      {podeEditar && ehTerceirizada && disponiveis.length > 0 && (
         <div className="mt-3 flex flex-wrap items-end gap-2">
           <select aria-label="Operadora a vincular" className={`${inputClass} !w-auto`} value={nova}
                   onChange={(e) => setNova(e.target.value)}>

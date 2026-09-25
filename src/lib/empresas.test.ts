@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  estadoDocumento, resumoDocumentos, somaDias, ultimoPorTipo,
+  estadoDocumento, podeAtuar, resumoDocumentos, situacaoEfetiva, somaDias, ultimoPorTipo,
   type Documento, type TipoDocumento,
 } from './empresas';
 
@@ -58,5 +58,21 @@ describe('ultimoPorTipo e resumoDocumentos', () => {
     ];
     const r = resumoDocumentos(tipos, [doc('B', '2026-01-01'), doc('C', '2026-10-01')], HOJE);
     expect(r).toEqual({ faltando: 1, vencidos: 1, vencendo: 1 });
+  });
+});
+
+describe('situacaoEfetiva', () => {
+  it('APTA fora da validade aparece VENCIDA; outras situações não mudam', () => {
+    expect(situacaoEfetiva({ situacao: 'apta', validade_ate: '2027-09-20' }, HOJE)).toBe('apta');
+    expect(situacaoEfetiva({ situacao: 'apta', validade_ate: '2026-09-23' }, HOJE)).toBe('vencida');
+    expect(situacaoEfetiva({ situacao: 'em_saneamento', validade_ate: '2026-09-23' }, HOJE)).toBe('vencida');
+    expect(situacaoEfetiva({ situacao: 'inapta', validade_ate: '2026-09-23' }, HOJE)).toBe('inapta');
+  });
+
+  it('só APTA e em saneamento podem atuar (arts. 3º e 8º)', () => {
+    expect(podeAtuar('apta')).toBe(true);
+    expect(podeAtuar('em_saneamento')).toBe(true);
+    expect(podeAtuar('em_analise')).toBe(false);
+    expect(podeAtuar('vencida')).toBe(false);
   });
 });

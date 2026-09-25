@@ -82,8 +82,8 @@ begin
     if sqlerrm like 'ASSERT%' then raise; end if;
   end;
 
-  update empresas set telefone = '(21) 99999-0000', situacao = 'inativa' where id = te;
-  perform pg_temp.assert((select situacao from empresas where id = te) = 'inativa',
+  update empresas set telefone = '(21) 99999-0000' where id = te;
+  perform pg_temp.assert((select telefone from empresas where id = te) = '(21) 99999-0000',
     'servidor não conseguiu editar');
 
   -- Código, tipo e CNPJ são permanentes
