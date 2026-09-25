@@ -37,7 +37,7 @@ export function Button({
   children, variant = 'primary', ...rest
 }: { variant?: 'primary' | 'secondary' | 'danger' } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   const styles = {
-    primary: 'bg-gov-700 text-white hover:bg-gov-800',
+    primary: 'bg-marca-700 text-white hover:bg-marca-800',
     secondary: 'bg-white text-slate-800 ring-1 ring-inset ring-slate-300 hover:bg-slate-50',
     danger: 'bg-white text-red-700 ring-1 ring-inset ring-red-300 hover:bg-red-50',
   }[variant];
@@ -70,7 +70,7 @@ export function Field({
 
 export const inputClass =
   'block w-full rounded-md border-0 px-3 py-2 text-slate-900 ring-1 ring-inset ring-slate-300 ' +
-  'placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-gov-600 sm:text-sm ' +
+  'placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-marca-600 sm:text-sm ' +
   'disabled:bg-slate-100 disabled:text-slate-500';
 
 export function Empty({ children }: { children: ReactNode }) {

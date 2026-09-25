@@ -1,6 +1,6 @@
+import { Cabecalho, MENU_PUBLICO } from '../components/Cabecalho';
 import { Rodape } from '../components/Rodape';
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { Empty, ErrorNote, Spinner, inputClass } from '../components/ui';
 import { SituacaoBadge, dataBR } from '../components/Situacao';
 import { formatCnpj, onlyDigits } from '../lib/cnpj';
@@ -31,18 +31,16 @@ export default function Consulta() {
   }, [linhas, busca, situacao]);
 
   return (
-    <div className="min-h-screen">
-      <header className="border-b border-gov-900 bg-gov-800 text-white">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-          <div>
-            <div className="font-bold tracking-tight">CADEX · Consulta pública</div>
-            <div className="text-xs text-gov-200">Prefeitura de Niterói — SECONSER</div>
-          </div>
-          <Link to="/" className="text-sm text-gov-100 hover:text-white">Acesso restrito →</Link>
+    <div className="flex min-h-screen flex-col">
+      <Cabecalho itens={MENU_PUBLICO} />
+      <section className="bg-rodape text-white">
+        <div className="mx-auto max-w-6xl px-4 py-8">
+          <h1 className="text-2xl font-medium sm:text-3xl">Consulta pública do CADEX</h1>
+          <p className="mt-1 text-sm text-slate-200">Empresas inscritas no Cadastro de Executores do Município de Niterói</p>
         </div>
-      </header>
+      </section>
 
-      <main className="mx-auto max-w-6xl space-y-4 px-4 py-6">
+      <main className="mx-auto w-full max-w-6xl flex-1 space-y-4 px-4 py-6">
         <p className="text-sm text-slate-600">
           Relação das empresas inscritas no Cadastro de Executores (CADEX), nos termos do
           art. 7º, § 2º, da Resolução Conjunta SECONSER/SEOP nº 001/2026. Somente empresas

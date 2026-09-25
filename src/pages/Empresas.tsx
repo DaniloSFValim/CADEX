@@ -62,7 +62,7 @@ export default function Empresas() {
       title={`Empresas${empresas ? ` (${filtradas.length})` : ''}`}
       action={podeEditar && (
         <Link to="/empresas/nova"
-              className="rounded-md bg-gov-700 px-3 py-2 text-sm font-medium text-white hover:bg-gov-800">
+              className="rounded-md bg-marca-700 px-3 py-2 text-sm font-medium text-white hover:bg-marca-800">
           Nova empresa
         </Link>
       )}
@@ -110,7 +110,7 @@ export default function Empresas() {
                 return (
                   <tr key={e.id} className="hover:bg-slate-50">
                     <td className="py-2 pr-4">
-                      <Link to={`/empresas/${e.id}`} className="font-medium text-gov-700 hover:underline">
+                      <Link to={`/empresas/${e.id}`} className="font-medium text-marca-700 hover:underline">
                         {nomeEmpresa(e)}
                       </Link>
                       {e.nome_fantasia && <div className="text-xs text-slate-500">{e.razao_social}</div>}
