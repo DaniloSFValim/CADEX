@@ -1,3 +1,4 @@
+import { Rodape } from '../components/Rodape';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Empty, ErrorNote, Spinner, inputClass } from '../components/ui';
@@ -105,6 +106,7 @@ export default function Consulta() {
           </div>
         )}
       </main>
+      <Rodape />
     </div>
   );
 }
