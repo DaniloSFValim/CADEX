@@ -38,7 +38,7 @@ set local role cadex_test_app;
 select set_config('cadex.test_user_id', '00000000-0000-4000-8000-000000000001', true);
 
 do $$
-declare op uuid; op2 uuid; te uuid; n int; cod text;
+declare op uuid; op2 uuid; te uuid; sub1 uuid; sub2 uuid; n int; cod text;
 begin
   insert into empresas (cnpj, razao_social, tipo, email)
   values ('11.222.333/0001-81', 'Operadora Teste S.A.', 'operadora', 'op@t.test')
@@ -60,26 +60,56 @@ begin
     'terceirizada tem numeração própria, começando em 0001: ' || cod);
 
   -- A terceirizada atende as duas operadoras
-  insert into vinculos (operadora_id, terceirizada_id) values (op, te), (op2, te);
-  select count(*) into n from vinculos where terceirizada_id = te and fim is null;
+  insert into vinculos (contratante_id, contratada_id) values (op, te), (op2, te);
+  select count(*) into n from vinculos where contratada_id = te and fim is null;
   perform pg_temp.assert(n = 2, 'terceirizada deveria ter dois vínculos ativos');
 
-  update vinculos set fim = current_date where operadora_id = op2 and terceirizada_id = te;
-  select count(*) into n from vinculos where terceirizada_id = te and fim is null;
+  update vinculos set fim = current_date where contratante_id = op2 and contratada_id = te;
+  select count(*) into n from vinculos where contratada_id = te and fim is null;
   perform pg_temp.assert(n = 1, 'encerrar vínculo deveria deixar um ativo');
 
-  -- Vínculo com os papéis trocados ou entre duas operadoras
+  -- Operadora não pode ser contratada; ninguém contrata a si mesmo
   begin
-    insert into vinculos (operadora_id, terceirizada_id) values (te, op);
+    insert into vinculos (contratante_id, contratada_id) values (te, op);
     raise exception 'ASSERT FALHOU: vínculo com papéis trocados foi aceito';
   exception when raise_exception then
     if sqlerrm like 'ASSERT%' then raise; end if;
   end;
   begin
-    insert into vinculos (operadora_id, terceirizada_id) values (op, op2);
+    insert into vinculos (contratante_id, contratada_id) values (op, op2);
     raise exception 'ASSERT FALHOU: operadora vinculada como terceirizada';
   exception when raise_exception then
     if sqlerrm like 'ASSERT%' then raise; end if;
+  end;
+
+  -- Subcontratação em qualquer grau (arts. 2º, VIII, e 3º, § 1º)
+  insert into empresas (cnpj, razao_social, tipo, email)
+  values ('66777888000181', 'Subcontratada 1º grau Ltda.', 'terceirizada', 's1@t.test')
+  returning id into sub1;
+  insert into empresas (cnpj, razao_social, tipo, email)
+  values ('77888999000181', 'Subcontratada 2º grau Ltda.', 'terceirizada', 's2@t.test')
+  returning id into sub2;
+  insert into vinculos (contratante_id, contratada_id) values (te, sub1), (sub1, sub2);
+  perform pg_temp.assert(
+    (select codigo_cadex from empresas where id = sub2) like 'CADEX-TER-%',
+    'subcontratada deveria ter código CADEX próprio');
+
+  begin
+    insert into vinculos (contratante_id, contratada_id) values (sub2, te);
+    raise exception 'ASSERT FALHOU: ciclo indireto (te → sub1 → sub2 → te) foi aceito';
+  exception when raise_exception then
+    if sqlerrm like 'ASSERT%' then raise; end if;
+  end;
+  begin
+    insert into vinculos (contratante_id, contratada_id) values (sub1, te);
+    raise exception 'ASSERT FALHOU: ciclo direto (te ↔ sub1) foi aceito';
+  exception when raise_exception then
+    if sqlerrm like 'ASSERT%' then raise; end if;
+  end;
+  begin
+    insert into vinculos (contratante_id, contratada_id) values (te, te);
+    raise exception 'ASSERT FALHOU: empresa contratou a si mesma';
+  exception when check_violation then null;
   end;
 
   update empresas set telefone = '(21) 99999-0000' where id = te;

@@ -1,3 +1,4 @@
+import { Rodape } from '../components/Rodape';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Empty, ErrorNote, Spinner, inputClass } from '../components/ui';
@@ -87,8 +88,8 @@ export default function Consulta() {
                     <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">{formatCnpj(l.cnpj)}</td>
                     <td className="px-3 py-2">
                       {TIPO_LABEL[l.tipo]}
-                      {l.operadoras.length > 0 && (
-                        <div className="text-xs text-slate-500">para {l.operadoras.join(', ')}</div>
+                      {l.contratantes.length > 0 && (
+                        <div className="text-xs text-slate-500">para {l.contratantes.join(', ')}</div>
                       )}
                     </td>
                     <td className="px-3 py-2"><SituacaoBadge s={l.situacao} /></td>
@@ -105,6 +106,7 @@ export default function Consulta() {
           </div>
         )}
       </main>
+      <Rodape />
     </div>
   );
 }

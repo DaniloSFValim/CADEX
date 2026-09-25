@@ -77,7 +77,7 @@ export default function EmpresaPage() {
           inicial={empresa ? paraInput(empresa) : VAZIA}
           editando={Boolean(empresa)}
           somenteLeitura={!podeEditar}
-          operadoras={operadoras}
+          empresas={todas}
           onSubmit={async (input, contratantes) => {
             if (empresa) {
               await salvarEmpresa(empresa.id, input);
@@ -109,12 +109,12 @@ export default function EmpresaPage() {
 }
 
 function EmpresaForm({
-  inicial, editando, somenteLeitura, operadoras, onSubmit,
+  inicial, editando, somenteLeitura, empresas, onSubmit,
 }: {
   inicial: EmpresaInput;
   editando: boolean;
   somenteLeitura: boolean;
-  operadoras: Empresa[];
+  empresas: Empresa[];
   onSubmit: (input: EmpresaInput, contratantes: string[]) => Promise<void>;
 }) {
   const [v, setV] = useState<EmpresaInput>(inicial);
@@ -143,7 +143,7 @@ function EmpresaForm({
         setError(null); setSalvo(false);
         if (!editando && !isValidCnpj(v.cnpj)) { setError('CNPJ inválido.'); return; }
         if (!editando && v.tipo === 'terceirizada' && contratantes.length === 0) {
-          setError('Marque ao menos uma operadora atendida pela terceirizada.'); return;
+          setError('Marque ao menos uma empresa que contrata a terceirizada.'); return;
         }
         setBusy(true);
         try { await onSubmit(v, contratantes); setSalvo(true); }
@@ -176,22 +176,34 @@ function EmpresaForm({
       {!editando && v.tipo === 'terceirizada' && (
         <fieldset className="sm:col-span-6">
           <legend className="text-sm font-medium text-slate-700">
-            Operadoras atendidas<span className="ml-0.5 text-red-600" aria-hidden>*</span>
+            Contratada por<span className="ml-0.5 text-red-600" aria-hidden>*</span>
           </legend>
-          {operadoras.length === 0
+          <p className="text-xs text-slate-500">
+            Marque as operadoras que a contratam e, se for subcontratada, as terceirizadas que a contrataram.
+          </p>
+          {empresas.length === 0
             ? <p className="mt-1 text-xs text-slate-500">Cadastre a operadora antes da terceirizada.</p>
-            : (
-              <div className="mt-2 flex flex-wrap gap-x-5 gap-y-2">
-                {operadoras.map((o) => (
-                  <label key={o.id} className="flex items-center gap-2 text-sm text-slate-700">
-                    <input type="checkbox" checked={contratantes.includes(o.id)}
-                           onChange={(e) => setContratantes((c) =>
-                             e.target.checked ? [...c, o.id] : c.filter((x) => x !== o.id))} />
-                    {nomeEmpresa(o)}
-                  </label>
-                ))}
-              </div>
-            )}
+            : (['operadora', 'terceirizada'] as const).map((t) => {
+                const grupo = empresas.filter((o) => o.tipo === t);
+                if (grupo.length === 0) return null;
+                return (
+                  <div key={t} className="mt-2">
+                    <div className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                      {t === 'operadora' ? 'Operadoras' : 'Terceirizadas (subcontratação)'}
+                    </div>
+                    <div className="mt-1 flex flex-wrap gap-x-5 gap-y-2">
+                      {grupo.map((o) => (
+                        <label key={o.id} className="flex items-center gap-2 text-sm text-slate-700">
+                          <input type="checkbox" checked={contratantes.includes(o.id)}
+                                 onChange={(e) => setContratantes((c) =>
+                                   e.target.checked ? [...c, o.id] : c.filter((x) => x !== o.id))} />
+                          {nomeEmpresa(o)}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
         </fieldset>
       )}
 
@@ -246,17 +258,12 @@ function Vinculos({
   empresa, todas, podeEditar,
 }: { empresa: Empresa; todas: Empresa[]; podeEditar: boolean }) {
   const [vinculos, setVinculos] = useState<Vinculo[] | null>(null);
-  const [nova, setNova] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
-  const ehTerceirizada = empresa.tipo === 'terceirizada';
-  const porId = new Map(todas.map((e) => [e.id, e]));
-
   const recarregar = () =>
     listarVinculos()
-      .then((v) => setVinculos(v.filter((x) =>
-        ehTerceirizada ? x.terceirizada_id === empresa.id : x.operadora_id === empresa.id)))
+      .then((v) => setVinculos(v.filter((x) => x.contratada_id === empresa.id || x.contratante_id === empresa.id)))
       .catch(setError);
 
   useEffect(() => { void recarregar(); }, [empresa.id]);
@@ -268,21 +275,89 @@ function Vinculos({
     finally { setBusy(false); }
   };
 
-  const outra = (v: Vinculo) => porId.get(ehTerceirizada ? v.operadora_id : v.terceirizada_id);
-  const disponiveis = todas.filter((o) =>
-    o.tipo === 'operadora' && !(vinculos ?? []).some((v) => v.operadora_id === o.id));
+  const ehTerceirizada = empresa.tipo === 'terceirizada';
+  const lista = vinculos ?? [];
+  const contratadaPor = lista.filter((v) => v.contratada_id === empresa.id);
+  const contrata = lista.filter((v) => v.contratante_id === empresa.id);
+
+  // Quem ainda pode entrar em cada lado (o banco recusa ciclos na cadeia).
+  const podemContratar = todas.filter((o) =>
+    o.id !== empresa.id && !contratadaPor.some((v) => v.contratante_id === o.id));
+  const podemSerContratadas = todas.filter((o) =>
+    o.tipo === 'terceirizada' && o.id !== empresa.id && !contrata.some((v) => v.contratada_id === o.id));
 
   return (
-    <Card title={ehTerceirizada ? 'Operadoras atendidas' : 'Terceirizadas que atendem esta operadora'}>
+    <Card title="Vínculos de contratação">
       <ErrorNote error={error} />
-      {!vinculos ? <Spinner /> : vinculos.length === 0 ? (
-        <p className="text-sm text-slate-500">
-          {ehTerceirizada ? 'Nenhuma operadora vinculada.' : 'Nenhuma terceirizada vinculada.'}
-        </p>
+      {!vinculos ? <Spinner /> : (
+        <div className="space-y-5">
+          {ehTerceirizada && (
+            <LadoVinculo
+              titulo="Contratada por"
+              dica="Operadoras e, no caso de subcontratação, terceirizadas (art. 2º, VIII)."
+              vinculos={contratadaPor}
+              outra={(v) => v.contratante_id}
+              todas={todas}
+              vazio="Nenhuma contratante vinculada."
+              podeEditar={podeEditar}
+              busy={busy}
+              opcoes={podemContratar}
+              rotuloIncluir="Vincular contratante…"
+              onIncluir={(id) => agir(() => criarVinculo(id, empresa.id))}
+              onFim={(v) => agir(() => definirFimVinculo(v.id, v.fim ? null : hojeISO()))}
+            />
+          )}
+          <LadoVinculo
+            titulo={ehTerceirizada ? 'Subcontratadas' : 'Terceirizadas contratadas'}
+            dica={ehTerceirizada
+              ? 'Toda subcontratada, em qualquer grau, precisa de inscrição no CADEX (art. 3º, § 1º).'
+              : undefined}
+            vinculos={contrata}
+            outra={(v) => v.contratada_id}
+            todas={todas}
+            vazio={ehTerceirizada ? 'Nenhuma subcontratada.' : 'Nenhuma terceirizada vinculada.'}
+            podeEditar={podeEditar}
+            busy={busy}
+            opcoes={podemSerContratadas}
+            rotuloIncluir={ehTerceirizada ? 'Vincular subcontratada…' : 'Vincular terceirizada…'}
+            onIncluir={(id) => agir(() => criarVinculo(empresa.id, id))}
+            onFim={(v) => agir(() => definirFimVinculo(v.id, v.fim ? null : hojeISO()))}
+          />
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function LadoVinculo({
+  titulo, dica, vinculos, outra, todas, vazio, podeEditar, busy, opcoes, rotuloIncluir, onIncluir, onFim,
+}: {
+  titulo: string;
+  dica?: string;
+  vinculos: Vinculo[];
+  outra: (v: Vinculo) => string;
+  todas: Empresa[];
+  vazio: string;
+  podeEditar: boolean;
+  busy: boolean;
+  opcoes: Empresa[];
+  rotuloIncluir: string;
+  onIncluir: (id: string) => Promise<void>;
+  onFim: (v: Vinculo) => Promise<void>;
+}) {
+  const [nova, setNova] = useState('');
+  const porId = new Map(todas.map((e) => [e.id, e]));
+
+  return (
+    <div>
+      <h3 className="text-sm font-semibold text-slate-700">{titulo}</h3>
+      {dica && <p className="text-xs text-slate-500">{dica}</p>}
+      {vinculos.length === 0 ? (
+        <p className="mt-2 text-sm text-slate-500">{vazio}</p>
       ) : (
-        <ul className="divide-y divide-slate-100">
+        <ul className="mt-1 divide-y divide-slate-100">
           {vinculos.map((v) => {
-            const e = outra(v);
+            const e = porId.get(outra(v));
             return (
               <li key={v.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
                 <div>
@@ -292,15 +367,17 @@ function Vinculos({
                     </Link>
                   ) : '—'}
                   {e && <span className="ml-2 font-mono text-xs text-slate-500">{e.codigo_cadex}</span>}
+                  {e && <span className="ml-2 text-xs text-slate-500">{TIPO_LABEL[e.tipo]}</span>}
                   <div className="text-xs text-slate-500">
                     desde {dataBR(v.inicio)}{v.fim && ` · encerrado em ${dataBR(v.fim)}`}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  {e && <SituacaoBadge s={situacaoEfetiva(e, hojeISO())} />}
                   <Badge tom={v.fim ? 'neutro' : 'bom'}>{v.fim ? 'Encerrado' : 'Ativo'}</Badge>
                   {podeEditar && (
                     <Button variant="secondary" className="!px-2 !py-1 text-xs" disabled={busy}
-                            onClick={() => agir(() => definirFimVinculo(v.id, v.fim ? null : hojeISO()))}>
+                            onClick={() => void onFim(v)}>
                       {v.fim ? 'Reativar' : 'Encerrar'}
                     </Button>
                   )}
@@ -310,21 +387,22 @@ function Vinculos({
           })}
         </ul>
       )}
-
-      {podeEditar && ehTerceirizada && disponiveis.length > 0 && (
-        <div className="mt-3 flex flex-wrap items-end gap-2">
-          <select aria-label="Operadora a vincular" className={`${inputClass} !w-auto`} value={nova}
+      {podeEditar && opcoes.length > 0 && (
+        <div className="mt-2 flex flex-wrap items-end gap-2">
+          <select aria-label={rotuloIncluir} className={`${inputClass} !w-auto`} value={nova}
                   onChange={(e) => setNova(e.target.value)}>
-            <option value="">Vincular a outra operadora…</option>
-            {disponiveis.map((o) => <option key={o.id} value={o.id}>{nomeEmpresa(o)}</option>)}
+            <option value="">{rotuloIncluir}</option>
+            {opcoes.map((o) => (
+              <option key={o.id} value={o.id}>{nomeEmpresa(o)} — {o.codigo_cadex}</option>
+            ))}
           </select>
           <Button variant="secondary" disabled={busy || !nova}
-                  onClick={() => agir(async () => { await criarVinculo(nova, empresa.id); setNova(''); })}>
+                  onClick={() => void onIncluir(nova).then(() => setNova(''))}>
             Vincular
           </Button>
         </div>
       )}
-    </Card>
+    </div>
   );
 }
 

@@ -1,3 +1,4 @@
+import { Rodape } from './Rodape';
 import { Link, Outlet } from 'react-router-dom';
 import { PAPEL_LABEL, useAuth } from '../lib/auth';
 import { Button } from './ui';
@@ -24,6 +25,7 @@ export function Layout() {
       <main className="mx-auto max-w-6xl px-4 py-6">
         <Outlet />
       </main>
+      <Rodape />
     </div>
   );
 }

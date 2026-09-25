@@ -103,8 +103,8 @@ export default function Empresas() {
             <tbody className="divide-y divide-slate-100">
               {filtradas.map((e) => {
                 const contratantes = vinculos
-                  .filter((v) => v.terceirizada_id === e.id && !v.fim)
-                  .map((v) => porId.get(v.operadora_id))
+                  .filter((v) => v.contratada_id === e.id && !v.fim)
+                  .map((v) => porId.get(v.contratante_id))
                   .filter((o): o is Empresa => Boolean(o));
                 const r = resumoDocumentos(tipos, docs.filter((d) => d.empresa_id === e.id), hoje);
                 return (

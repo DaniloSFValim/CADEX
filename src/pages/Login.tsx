@@ -1,3 +1,4 @@
+import { Rodape } from '../components/Rodape';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
@@ -11,7 +12,8 @@ export default function Login() {
   const [busy, setBusy] = useState(false);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
+    <div className="flex min-h-screen flex-col bg-slate-100">
+    <div className="flex flex-1 items-center justify-center px-4 py-10">
       <div className="w-full max-w-sm rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
         <h1 className="text-xl font-bold text-gov-800">CADEX</h1>
         <p className="mt-1 text-sm text-slate-600">Cadastro de empresas · Prefeitura de Niterói</p>
@@ -46,6 +48,8 @@ export default function Login() {
           </Link>
         </p>
       </div>
+    </div>
+    <Rodape />
     </div>
   );
 }
