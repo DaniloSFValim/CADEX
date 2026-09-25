@@ -5,8 +5,8 @@ Prefeitura de Niterói, com a documentação exigida pelo art. 6º da
 Resolução Conjunta SECONSER/SEOP nº 001/2026.
 
 - **Empresas:** código CADEX, CNPJ (validado), razão social, nome
-  fantasia, tipo (operadora ou terceirizada), contatos, endereço e
-  situação (ativa/inativa).
+  fantasia, tipo — operadora (concessionária contratante) ou terceirizada
+  (empresa executora), nos termos do art. 2º —, contatos e endereço.
 - **Código CADEX:** gerado no cadastro e permanente —
   `CADEX-OPE-2026-0001` para operadoras de telecomunicações e
   `CADEX-TER-2026-0001` para terceirizadas; numeração própria por tipo,
