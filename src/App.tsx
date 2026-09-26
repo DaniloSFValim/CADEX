@@ -7,6 +7,7 @@ import Consulta from './pages/Consulta';
 import Login from './pages/Login';
 import Empresas from './pages/Empresas';
 import EmpresaPage from './pages/EmpresaPage';
+import Ficha from './pages/Ficha';
 
 export function App() {
   return (
@@ -45,6 +46,8 @@ function AreaRestrita() {
 
   return (
     <Routes>
+      {/* Ficha para impressão: sem cabeçalho nem menu. */}
+      <Route path="empresas/:id/ficha" element={<Ficha />} />
       <Route element={<Layout />}>
         <Route index element={<Empresas />} />
         <Route path="empresas/nova" element={<EmpresaPage />} />

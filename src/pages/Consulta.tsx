@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Empty, ErrorNote, Spinner, inputClass } from '../components/ui';
 import { SituacaoBadge, dataBR } from '../components/Situacao';
 import { formatCnpj, onlyDigits } from '../lib/cnpj';
-import { SITUACAO_LABEL, TIPO_LABEL, consultaPublica, type LinhaPublica } from '../lib/empresas';
+import { SITUACAO_LABEL, TIPO_LABEL, consultaPublica, urlLogo, type LinhaPublica } from '../lib/empresas';
 
 /**
  * Consulta pública do CADEX (art. 7º, § 2º): aberta, sem login. Mostra só
@@ -79,8 +79,16 @@ export default function Consulta() {
                 {filtradas.map((l) => (
                   <tr key={l.codigo_cadex}>
                     <td className="px-3 py-2">
-                      <div className="font-medium text-slate-800">{l.razao_social}</div>
-                      {l.nome_fantasia && <div className="text-xs text-slate-500">{l.nome_fantasia}</div>}
+                      <div className="flex items-center gap-3">
+                        {l.logo_arquivo
+                          ? <img src={urlLogo(l.logo_arquivo)} alt="" loading="lazy"
+                                 className="h-9 w-9 flex-none rounded border border-slate-200 object-contain p-0.5" />
+                          : <span className="h-9 w-9 flex-none" aria-hidden />}
+                        <div>
+                          <div className="font-medium text-slate-800">{l.razao_social}</div>
+                          {l.nome_fantasia && <div className="text-xs text-slate-500">{l.nome_fantasia}</div>}
+                        </div>
+                      </div>
                     </td>
                     <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">{l.codigo_cadex}</td>
                     <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">{formatCnpj(l.cnpj)}</td>

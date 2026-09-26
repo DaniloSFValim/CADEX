@@ -129,6 +129,11 @@ begin
   perform pg_temp.recusa(format($q$insert into veiculos (empresa_id, tipo, placa, concessionaria_traseira_id)
     values (%L, 'Van', 'DEF1234', %L)$q$, te, te), 'terceirizada indicada como concessionária na traseira');
 
+  -- Logo: só dentro da pasta da própria empresa
+  update empresas set logo_arquivo = op || '/logo-1.png' where id = op;
+  perform pg_temp.recusa(format($q$update empresas set logo_arquivo = %L where id = %L$q$, te || '/logo.png', op),
+    'logo apontando para a pasta de outra empresa foi aceito');
+
   -- Um documento, para provar que o CISP não o vê
   insert into documentos (empresa_id, tipo, arquivo, nome_arquivo)
   values (op, 'CNPJ_CARD', op || '/cartao.pdf', 'cartao.pdf');
@@ -179,6 +184,7 @@ begin
   select * into r from consulta_publica() where cnpj = '11222333000181';
   perform pg_temp.assert(r.situacao = 'apta' and r.codigo_cadex like 'CADEX-OPE-%'
     and r.portaria_numero = 'Portaria SECONSER nº 12/2026', 'operadora deveria aparecer APTA com a portaria');
+  perform pg_temp.assert(r.logo_arquivo like '%/logo-1.png', 'consulta pública deveria trazer o logo');
 
   select * into r from consulta_publica() where cnpj = '22333444000181';
   perform pg_temp.assert(r.situacao = 'indeferida' and r.contratantes = array['OpTeste'],

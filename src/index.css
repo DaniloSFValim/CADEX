@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@page { size: A4; margin: 15mm; }
+
 @layer base {
   html { -webkit-text-size-adjust: 100%; }
   body { @apply bg-slate-50 text-slate-900 antialiased;  }

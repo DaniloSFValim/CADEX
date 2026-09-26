@@ -6,7 +6,7 @@ import { useAuth } from '../lib/auth';
 import { formatCnpj, isValidCnpj, onlyDigits } from '../lib/cnpj';
 import {
   ESTADO_LABEL, TIPO_LABEL, TIPO_RESOLUCAO, buscarEmpresa, criarEmpresa, criarVinculo, definirFimVinculo,
-  enviarDocumento, estadoDocumento, hojeISO, linkDocumento, listarDocumentos, listarEmpresas,
+  enviarDocumento, enviarLogo, estadoDocumento, removerLogo, urlLogo, MAX_LOGO_BYTES, TIPOS_LOGO, hojeISO, linkDocumento, listarDocumentos, listarEmpresas,
   listarTiposDocumento, listarVinculos, nomeEmpresa, removerDocumento, resumoDocumentos,
   salvarEmpresa, situacaoEfetiva, ultimoPorTipo,
   type Documento, type Empresa, type EmpresaInput, type EstadoDocumento, type TipoDocumento,
@@ -58,7 +58,12 @@ export default function EmpresaPage() {
   return (
     <div className="space-y-5">
       <Link to="/" className="text-sm text-marca-700 hover:underline">← Empresas</Link>
-      <div>
+      <div className="flex flex-wrap items-start gap-4">
+        {empresa?.logo_arquivo && (
+          <img src={urlLogo(empresa.logo_arquivo)} alt={`Logo de ${nomeEmpresa(empresa)}`}
+               className="h-14 w-14 flex-none rounded border border-slate-200 bg-white object-contain p-1" />
+        )}
+        <div className="flex-1">
         <h1 className="text-xl font-semibold text-slate-900">
           {empresa ? nomeEmpresa(empresa) : 'Nova empresa'}
         </h1>
@@ -69,9 +74,20 @@ export default function EmpresaPage() {
             <SituacaoBadge s={situacaoEfetiva(empresa, hojeISO())} />
           </p>
         )}
+        </div>
+        {empresa && (
+          <Link to={`/empresas/${empresa.id}/ficha`}
+                className="rounded-md bg-white px-3 py-2 text-sm font-medium text-slate-800 ring-1 ring-inset ring-slate-300 hover:bg-slate-50">
+            Exportar ficha
+          </Link>
+        )}
       </div>
 
       <Card title="Dados da empresa">
+        {empresa && (
+          <LogoEmpresa empresa={empresa} podeEditar={podeEditar}
+                       onChanged={async () => setEmpresa(await buscarEmpresa(empresa.id))} />
+        )}
         <EmpresaForm
           key={empresa?.id ?? 'nova'}
           inicial={empresa ? paraInput(empresa) : VAZIA}
@@ -251,6 +267,55 @@ function EmpresaForm({
       <div className="sm:col-span-6"><ErrorNote error={error} /></div>
       </fieldset>
     </form>
+  );
+}
+
+function LogoEmpresa({
+  empresa, podeEditar, onChanged,
+}: { empresa: Empresa; podeEditar: boolean; onChanged: () => Promise<void> }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  const [inputKey, setInputKey] = useState(0);
+
+  const agir = async (fn: () => Promise<void>) => {
+    setBusy(true); setError(null);
+    try { await fn(); await onChanged(); }
+    catch (err) { setError(err); }
+    finally { setBusy(false); setInputKey((k) => k + 1); }
+  };
+
+  return (
+    <div className="mb-5 flex flex-wrap items-center gap-4 border-b border-slate-100 pb-5">
+      <div className="flex h-20 w-20 flex-none items-center justify-center rounded border border-dashed border-slate-300 bg-slate-50">
+        {empresa.logo_arquivo
+          ? <img src={urlLogo(empresa.logo_arquivo)} alt="Logo da empresa" className="h-full w-full object-contain p-1" />
+          : <span className="text-xs text-slate-400">sem logo</span>}
+      </div>
+      <div className="space-y-2">
+        <div className="text-sm font-medium text-slate-700">Logo da empresa</div>
+        {podeEditar ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <input key={inputKey} type="file" aria-label="Logo da empresa" disabled={busy}
+                   accept={TIPOS_LOGO.join(',')}
+                   className="block max-w-full text-sm text-slate-600 file:mr-2 file:rounded file:border-0 file:bg-slate-100 file:px-2 file:py-1 file:text-sm"
+                   onChange={(e) => {
+                     const f = e.target.files?.[0];
+                     if (f) void agir(() => enviarLogo(empresa, f));
+                   }} />
+            {empresa.logo_arquivo && (
+              <Button variant="danger" className="!px-2 !py-1 text-xs" disabled={busy}
+                      onClick={() => { if (window.confirm('Remover o logo?')) void agir(() => removerLogo(empresa)); }}>
+                Remover
+              </Button>
+            )}
+          </div>
+        ) : null}
+        <p className="text-xs text-slate-500">
+          PNG, JPG ou WebP, até {MAX_LOGO_BYTES / 1024 / 1024} MB. Aparece na ficha e na consulta pública.
+        </p>
+        <ErrorNote error={error} />
+      </div>
+    </div>
   );
 }
 
