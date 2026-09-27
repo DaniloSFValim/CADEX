@@ -45,7 +45,7 @@ export function ExportarRelacao({
   return (
     <div className="mb-4 space-y-4 rounded-md border border-slate-200 bg-slate-50 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-slate-800">Exportar relação de empresas</h3>
+        <h3 className="text-sm font-semibold text-slate-800">Exportar relação</h3>
         <button type="button" className="text-sm text-slate-500 hover:text-slate-800" onClick={onFechar}>Fechar</button>
       </div>
 
@@ -97,7 +97,7 @@ export function ExportarRelacao({
                   `cadex-empresas-${contexto.hoje}.csv`,
                   relacaoCsv(selecionadas, colunas, contexto),
                 )}>
-          Baixar planilha (Excel)
+          Baixar planilha
         </Button>
         <span className="text-sm text-slate-600">
           {selecionadas.length} empresa{selecionadas.length === 1 ? '' : 's'} · {colunas.length} coluna{colunas.length === 1 ? '' : 's'}

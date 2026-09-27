@@ -42,10 +42,8 @@ export default function Consulta() {
 
       <main className="mx-auto w-full max-w-6xl flex-1 space-y-4 px-4 py-6">
         <p className="text-sm text-slate-600">
-          Relação das empresas inscritas no Cadastro de Executores (CADEX), nos termos do
-          art. 7º, § 2º, da Resolução Conjunta SECONSER/SEOP nº 001/2026. Somente empresas
-          <strong> APTAS</strong> (inclusive em saneamento) podem atuar nas vias públicas,
-          no subsolo e no espaço aéreo do Município (art. 3º).
+          Só podem executar obras e serviços nas vias públicas de Niterói as empresas com
+          inscrição <strong>APTA</strong>, conforme a Resolução Conjunta SECONSER/SEOP nº 001/2026.
         </p>
 
         <div className="grid gap-3 sm:grid-cols-[1fr_auto]">

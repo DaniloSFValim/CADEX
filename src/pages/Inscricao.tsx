@@ -17,11 +17,11 @@ const paraInput = (e: Empresa): InscricaoInput => ({
 
 /** O que cada situação exige, conforme a Resolução, para orientar quem preenche. */
 const AJUDA: Record<Situacao, string> = {
-  em_analise: 'Requerimento recebido; a SECONSER decide em 15 dias úteis (art. 7º).',
-  apta: 'Exige o número e a data de publicação da portaria. Validade de 12 meses (art. 7º, § 1º).',
-  em_saneamento: 'Empresa notificada por documento vencido; tem 30 dias para sanear e segue apta nesse prazo (art. 8º).',
-  inapta: 'Só depois de 30 dias da notificação sem saneamento (art. 8º, § 1º). Não pode atuar.',
-  indeferida: 'Requerimento em análise negado pela SECONSER (art. 7º).',
+  em_analise: 'Requerimento recebido. Prazo de análise: 15 dias úteis.',
+  apta: 'Informe a portaria e a data de publicação. Vale por 12 meses.',
+  em_saneamento: 'Notificada por pendência. Continua apta por 30 dias para regularizar.',
+  inapta: 'Após 30 dias da notificação sem regularização. Não pode atuar.',
+  indeferida: 'Requerimento negado.',
 };
 
 export function Inscricao({
@@ -62,7 +62,7 @@ export function Inscricao({
       </dl>
       {efetiva === 'vencida' && (
         <p className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-inset ring-red-200">
-          A validade de 12 meses terminou (art. 7º, § 1º). Registre a portaria de renovação para voltar a APTA.
+          Inscrição vencida. Registre a portaria de renovação.
         </p>
       )}
 
@@ -84,24 +84,24 @@ export function Inscricao({
               ))}
             </select>
           </Field>
-          <Field label="Nº do processo administrativo" className="sm:col-span-2">
+          <Field label="Nº do processo" className="sm:col-span-2">
             <input id="insc-processo" className={inputClass} value={v.processo_numero ?? ''} onChange={set('processo_numero')} />
           </Field>
           <Field label="Data do requerimento" className="sm:col-span-2">
             <input id="insc-requerimento" type="date" className={inputClass} value={v.data_requerimento ?? ''}
                    onChange={set('data_requerimento')} />
           </Field>
-          <Field label="Portaria (nº da publicação)" className="sm:col-span-2"
+          <Field label="Portaria" className="sm:col-span-2"
                  required={v.situacao === 'apta'}>
-            <input id="insc-portaria" className={inputClass} placeholder="Ex.: Portaria SECONSER nº 12/2026"
+            <input id="insc-portaria" className={inputClass} placeholder="Portaria SECONSER nº 12/2026"
                    value={v.portaria_numero ?? ''} onChange={set('portaria_numero')} />
           </Field>
           <Field label="Data de publicação" className="sm:col-span-2" required={v.situacao === 'apta'}
-                 hint="A validade de 12 meses conta desta data.">
+                 hint="A validade conta desta data.">
             <input id="insc-portaria-data" type="date" className={inputClass} value={v.portaria_data ?? ''}
                    onChange={set('portaria_data')} />
           </Field>
-          <Field label="Data da notificação (art. 8º)" className="sm:col-span-2"
+          <Field label="Data da notificação" className="sm:col-span-2"
                  required={v.situacao === 'em_saneamento' || v.situacao === 'inapta'}>
             <input id="insc-notificacao" type="date" className={inputClass} value={v.notificacao_data ?? ''}
                    onChange={set('notificacao_data')} />
@@ -120,7 +120,7 @@ export function Inscricao({
           <ul className="mt-2 space-y-1 text-slate-600">
             {historico.map((h) => (
               <li key={h.id}>
-                <span className="text-xs text-slate-500">{new Date(h.em).toLocaleString('pt-BR')}</span>{' — '}
+                <span className="mr-2 text-xs text-slate-500">{new Date(h.em).toLocaleString('pt-BR')}</span>
                 {h.de ? `${SITUACAO_LABEL[h.de]} → ` : ''}{SITUACAO_LABEL[h.para]}
                 {h.portaria_numero && ` · ${h.portaria_numero} (${dataBR(h.portaria_data)})`}
               </li>

@@ -5,7 +5,7 @@ import { SituacaoBadge } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { formatCnpj, isValidCnpj, onlyDigits } from '../lib/cnpj';
 import {
-  ESTADO_LABEL, TIPO_LABEL, TIPO_RESOLUCAO, buscarEmpresa, criarEmpresa, criarVinculo, definirFimVinculo,
+  ESTADO_LABEL, TIPO_LABEL, buscarEmpresa, criarEmpresa, criarVinculo, definirFimVinculo,
   enviarDocumento, enviarLogo, estadoDocumento, removerLogo, urlLogo, MAX_LOGO_BYTES, TIPOS_LOGO, hojeISO, linkDocumento, listarDocumentos, listarEmpresas,
   listarTiposDocumento, listarVinculos, nomeEmpresa, removerDocumento, resumoDocumentos,
   salvarEmpresa, situacaoEfetiva, ultimoPorTipo,
@@ -70,7 +70,7 @@ export default function EmpresaPage() {
         {empresa && (
           <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-600">
             <span className="font-mono font-semibold text-marca-800">{empresa.codigo_cadex}</span>
-            <span>· {TIPO_LABEL[empresa.tipo]} ({TIPO_RESOLUCAO[empresa.tipo]})</span>
+            <span>· {TIPO_LABEL[empresa.tipo]}</span>
             <SituacaoBadge s={situacaoEfetiva(empresa, hojeISO())} />
           </p>
         )}
@@ -116,8 +116,7 @@ export default function EmpresaPage() {
       {empresa && podeEditar && <Documentos empresa={empresa} />}
       {!empresa && (
         <p className="text-sm text-slate-500">
-          Depois de salvar os dados, você poderá registrar a inscrição, os responsáveis técnicos,
-          o pessoal, os veículos e os documentos do art. 6º.
+          Salve os dados para registrar inscrição, vínculos, pessoal, veículos e documentos.
         </p>
       )}
     </div>
@@ -169,7 +168,7 @@ function EmpresaForm({
     >
       <fieldset disabled={somenteLeitura} className="grid gap-4 sm:grid-cols-6">
       <Field label="CNPJ" required className="sm:col-span-2"
-             hint={editando ? 'O CNPJ não pode ser alterado.' : undefined}>
+             hint={editando ? 'Não pode ser alterado.' : undefined}>
         <input id="cnpj" className={inputClass} required disabled={editando} inputMode="numeric"
                placeholder="00.000.000/0000-00" value={v.cnpj}
                onChange={(e) => set('cnpj', formatCnpj(e.target.value))} />
@@ -182,11 +181,11 @@ function EmpresaForm({
         <input id="fantasia" className={inputClass} {...text('nome_fantasia')} />
       </Field>
       <Field label="Tipo" required className="sm:col-span-3"
-             hint={editando ? 'O tipo faz parte do código CADEX e não pode ser alterado.' : undefined}>
+             hint={editando ? 'Não pode ser alterado.' : undefined}>
         <select id="tipo" className={inputClass} value={v.tipo} disabled={editando}
                 onChange={(e) => set('tipo', e.target.value as EmpresaInput['tipo'])}>
-          <option value="operadora">Operadora de telecomunicações (concessionária contratante)</option>
-          <option value="terceirizada">Terceirizada (empresa executora)</option>
+          <option value="operadora">Operadora de telecomunicações</option>
+          <option value="terceirizada">Terceirizada</option>
         </select>
       </Field>
       {!editando && v.tipo === 'terceirizada' && (
@@ -195,10 +194,10 @@ function EmpresaForm({
             Contratada por<span className="ml-0.5 text-red-600" aria-hidden>*</span>
           </legend>
           <p className="text-xs text-slate-500">
-            Marque as operadoras que a contratam e, se for subcontratada, as terceirizadas que a contrataram.
+            Operadoras e, em caso de subcontratação, terceirizadas.
           </p>
           {empresas.length === 0
-            ? <p className="mt-1 text-xs text-slate-500">Cadastre a operadora antes da terceirizada.</p>
+            ? <p className="mt-1 text-xs text-slate-500">Nenhuma empresa cadastrada ainda. Cadastre a operadora primeiro.</p>
             : (['operadora', 'terceirizada'] as const).map((t) => {
                 const grupo = empresas.filter((o) => o.tipo === t);
                 if (grupo.length === 0) return null;
@@ -311,7 +310,7 @@ function LogoEmpresa({
           </div>
         ) : null}
         <p className="text-xs text-slate-500">
-          PNG, JPG ou WebP, até {MAX_LOGO_BYTES / 1024 / 1024} MB. Aparece na ficha e na consulta pública.
+          PNG, JPG ou WebP, até {MAX_LOGO_BYTES / 1024 / 1024} MB.
         </p>
         <ErrorNote error={error} />
       </div>
@@ -359,7 +358,7 @@ function Vinculos({
           {ehTerceirizada && (
             <LadoVinculo
               titulo="Contratada por"
-              dica="Operadoras e, no caso de subcontratação, terceirizadas (art. 2º, VIII)."
+              dica="Operadoras e, em caso de subcontratação, terceirizadas."
               vinculos={contratadaPor}
               outra={(v) => v.contratante_id}
               todas={todas}
@@ -375,7 +374,7 @@ function Vinculos({
           <LadoVinculo
             titulo={ehTerceirizada ? 'Subcontratadas' : 'Terceirizadas contratadas'}
             dica={ehTerceirizada
-              ? 'Toda subcontratada, em qualquer grau, precisa de inscrição no CADEX (art. 3º, § 1º).'
+              ? 'Subcontratadas também precisam de inscrição própria no CADEX.'
               : undefined}
             vinculos={contrata}
             outra={(v) => v.contratada_id}
@@ -458,7 +457,7 @@ function LadoVinculo({
                   onChange={(e) => setNova(e.target.value)}>
             <option value="">{rotuloIncluir}</option>
             {opcoes.map((o) => (
-              <option key={o.id} value={o.id}>{nomeEmpresa(o)} — {o.codigo_cadex}</option>
+              <option key={o.id} value={o.id}>{nomeEmpresa(o)} ({o.codigo_cadex})</option>
             ))}
           </select>
           <Button variant="secondary" disabled={busy || !nova}
@@ -496,7 +495,7 @@ function Documentos({ empresa }: { empresa: Empresa }) {
 
   return (
     <Card
-      title="Documentos — art. 6º da Resolução Conjunta SECONSER/SEOP nº 001/2026"
+      title="Documentos"
       action={!loading && <ResumoBadge r={resumoDocumentos(tipos, docs, hoje)} />}
     >
       <ErrorNote error={error} />
@@ -514,11 +513,6 @@ function Documentos({ empresa }: { empresa: Empresa }) {
           ))}
         </ul>
       )}
-      <p className="mt-4 text-xs text-slate-500">
-        Os incisos IV e V só se aplicam a quem tem infraestrutura própria ou contrato de
-        compartilhamento; por isso não são obrigatórios. Se a SECONSER exigir declaração
-        negativa de quem não os tem, é regra pendente de definição administrativa.
-      </p>
     </Card>
   );
 }

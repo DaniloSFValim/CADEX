@@ -5,7 +5,7 @@ import { dataBR } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { formatCnpj, formatCpf } from '../lib/cnpj';
 import {
-  ESTADO_LABEL, SITUACAO_LABEL, TIPO_LABEL, TIPO_RESOLUCAO, buscarEmpresa, estadoDocumento, hojeISO,
+  ESTADO_LABEL, SITUACAO_LABEL, TIPO_LABEL, buscarEmpresa, estadoDocumento, hojeISO,
   listarDaEmpresa, listarDocumentos, listarEmpresas, listarHistorico, listarTiposDocumento, listarVinculos,
   nomeEmpresa, situacaoEfetiva, ultimoPorTipo, urlLogo,
   type Documento, type Empresa, type Historico, type Registro, type TipoDocumento, type Vinculo,
@@ -119,7 +119,7 @@ export default function Ficha() {
           <Bloco titulo="Dados cadastrais">
             <Grade itens={[
               ['CNPJ', formatCnpj(e.cnpj)],
-              ['Tipo', `${TIPO_LABEL[e.tipo]} (${TIPO_RESOLUCAO[e.tipo]})`],
+              ['Tipo', TIPO_LABEL[e.tipo]],
               ['E-mail', e.email],
               ['Telefone', e.telefone],
               ['Endereço', [[e.logradouro, e.numero].filter(Boolean).join(', '), e.complemento, e.bairro,
@@ -130,7 +130,7 @@ export default function Ficha() {
         )}
 
         {ver('inscricao') && (
-          <Bloco titulo="Inscrição no CADEX (arts. 7º e 8º)">
+          <Bloco titulo="Inscrição no CADEX">
             <Grade itens={[
               ['Nº do processo', e.processo_numero],
               ['Data do requerimento', e.data_requerimento && dataBR(e.data_requerimento)],
@@ -159,7 +159,7 @@ export default function Ficha() {
         )}
 
         {ver('rt') && (
-          <Bloco titulo="Responsáveis técnicos (art. 6º, II)">
+          <Bloco titulo="Responsáveis técnicos">
             <Tabela vazio="Nenhum responsável técnico cadastrado." cab={['Nome', 'CPF', 'Registro', 'ART/RRT']}
                     linhas={d.rt.map((r) => [
                       txt(r.nome), formatCpf(txt(r.cpf)),
@@ -170,7 +170,7 @@ export default function Ficha() {
         )}
 
         {ver('pessoal') && (
-          <Bloco titulo="Pessoal técnico (arts. 23 e 25)">
+          <Bloco titulo="Pessoal técnico">
             <Tabela vazio="Nenhum funcionário cadastrado." cab={['Nome', 'Função', 'Documento', 'Crachá válido até']}
                     linhas={d.pessoal.map((r) => [
                       `${txt(r.nome)}${r.responsavel_equipe ? ' (responsável de equipe)' : ''}`, txt(r.funcao),
@@ -181,7 +181,7 @@ export default function Ficha() {
         )}
 
         {ver('veiculos') && (
-          <Bloco titulo="Veículos e maquinário (arts. 19 e 21)">
+          <Bloco titulo="Veículos e maquinário">
             <Tabela vazio="Nenhum veículo cadastrado." cab={['Placa', 'Tipo', 'Modelo', 'Identificação visual']}
                     linhas={d.veiculos.map((r) => {
                       const traseira = r.concessionaria_traseira_id ? porId.get(txt(r.concessionaria_traseira_id)) : undefined;
@@ -195,13 +195,13 @@ export default function Ficha() {
         )}
 
         {ver('documentos') && podeEditar && (
-          <Bloco titulo="Documentos do art. 6º — situação">
+          <Bloco titulo="Documentos">
             <Tabela cab={['Documento', 'Fundamento', 'Situação', 'Validade']} linhas={d.tipos.map((t) => {
               const doc = ultimos.get(t.codigo);
               const est = estadoDocumento(t, doc, hoje);
               return [
                 t.nome, t.fundamento,
-                est === 'pendente' ? (t.obrigatorio ? 'Pendente' : 'Não enviado (quando aplicável)') : ESTADO_LABEL[est],
+                est === 'pendente' ? (t.obrigatorio ? 'Pendente' : 'Não se aplica / não enviado') : ESTADO_LABEL[est],
                 doc?.validade ? dataBR(doc.validade) : '—',
               ];
             })} />
@@ -209,9 +209,8 @@ export default function Ficha() {
         )}
 
         <footer className="mt-8 border-t border-slate-200 pt-3 text-xs text-slate-500">
-          Emitida em {new Date().toLocaleString('pt-BR')}{servidor && ` por ${servidor.nome}`} · CADEX — Fiscalização
-          de Serviços Concedidos – SECONSER · Resolução Conjunta SECONSER/SEOP nº 001/2026.
-          Documento para uso interno; a situação oficial é a publicada em portaria.
+          Emitida em {new Date().toLocaleString('pt-BR')}{servidor && ` por ${servidor.nome}`}.
+          Fiscalização de Serviços Concedidos – SECONSER. Uso interno.
         </footer>
       </article>
     </div>

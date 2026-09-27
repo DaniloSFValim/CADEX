@@ -18,7 +18,7 @@ export default function Login() {
       <main className="flex flex-1 items-center justify-center px-4 py-12">
         <div className="w-full max-w-sm rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
           <h1 className="text-xl font-semibold text-slate-800">Área restrita</h1>
-          <p className="mt-1 text-sm text-slate-600">Acesso dos servidores da SECONSER e do CISP.</p>
+          <p className="mt-1 text-sm text-slate-600">Servidores da SECONSER e do CISP.</p>
 
           <form
             className="mt-6 space-y-4"
@@ -46,7 +46,7 @@ export default function Login() {
 
           <p className="mt-6 border-t border-slate-100 pt-4 text-center text-sm">
             <Link to="/consulta" className="text-marca-700 hover:underline">
-              Consulta pública de empresas inscritas →
+              Consultar empresas inscritas
             </Link>
           </p>
         </div>

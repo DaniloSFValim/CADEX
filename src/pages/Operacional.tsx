@@ -15,9 +15,9 @@ const camposRT: Campo[] = [
   { chave: 'conselho', rotulo: 'Conselho profissional', tipo: 'opcoes', obrigatorio: true,
     opcoes: ['CREA', 'CFT', 'CAU', 'CRT', 'Outro'].map((c) => ({ valor: c, rotulo: c })) },
   { chave: 'registro_numero', rotulo: 'Nº do registro no conselho', obrigatorio: true,
-    dica: 'Art. 6º, II, "a"' },
+},
   { chave: 'registro_uf', rotulo: 'UF do registro', tipo: 'opcoes', opcoes: UF_OPCOES },
-  { chave: 'art_rrt_numero', rotulo: 'Nº da ART/RRT de cargo ou função', dica: 'Art. 6º, II, "b"' },
+  { chave: 'art_rrt_numero', rotulo: 'ART/RRT de cargo ou função' },
   { chave: 'telefone', rotulo: 'Telefone' },
   { chave: 'email', rotulo: 'E-mail' },
 ];
@@ -26,15 +26,15 @@ const camposRT: Campo[] = [
 // Pessoal técnico e crachá — arts. 6º, II, "c", 23 e 25
 // ---------------------------------------------------------------------
 const camposPessoal: Campo[] = [
-  { chave: 'nome', rotulo: 'Nome completo', obrigatorio: true, largura: 2, dica: 'Art. 23, II' },
-  { chave: 'funcao', rotulo: 'Função ou cargo', obrigatorio: true, dica: 'Art. 23, III' },
+  { chave: 'nome', rotulo: 'Nome completo', obrigatorio: true, largura: 2 },
+  { chave: 'funcao', rotulo: 'Função ou cargo', obrigatorio: true },
   { chave: 'documento_tipo', rotulo: 'Documento oficial', tipo: 'opcoes', obrigatorio: true,
     opcoes: ['RG', 'CPF', 'CNH', 'Outro'].map((c) => ({ valor: c, rotulo: c })) },
   { chave: 'documento_numero', rotulo: 'Nº do documento', obrigatorio: true,
     validar: (v, t) => (t.documento_tipo === 'CPF' && !isValidCpf(v) ? 'CPF inválido.' : null) },
-  { chave: 'cracha_validade', rotulo: 'Validade do crachá', tipo: 'data', dica: 'Art. 23, V' },
-  { chave: 'telefone', rotulo: 'Telefone de contato', dica: 'Art. 19, § 1º' },
-  { chave: 'responsavel_equipe', rotulo: 'Responsável pela equipe em campo (art. 25, § 1º)', tipo: 'marcar', largura: 3 },
+  { chave: 'cracha_validade', rotulo: 'Validade do crachá', tipo: 'data' },
+  { chave: 'telefone', rotulo: 'Telefone' },
+  { chave: 'responsavel_equipe', rotulo: 'Responsável pela equipe em campo', tipo: 'marcar', largura: 3 },
 ];
 
 // ---------------------------------------------------------------------
@@ -43,14 +43,14 @@ const camposPessoal: Campo[] = [
 const camposVeiculo = (operadoras: Empresa[]): Campo[] => [
   { chave: 'categoria', rotulo: 'Categoria', tipo: 'opcoes', obrigatorio: true,
     opcoes: [{ valor: 'veiculo', rotulo: 'Veículo' }, { valor: 'maquinario', rotulo: 'Maquinário' }] },
-  { chave: 'tipo', rotulo: 'Tipo', obrigatorio: true, dica: 'Ex.: caminhão cesto aéreo, van, munck (art. 19, § 1º)' },
+  { chave: 'tipo', rotulo: 'Tipo', obrigatorio: true, dica: 'Caminhão cesto aéreo, van, munck…' },
   { chave: 'placa', rotulo: 'Placa', mascara: (v) => v.toUpperCase(),
     obrigatorio: (t) => t.categoria === 'veiculo',
     validar: (v) => (isValidPlaca(v) ? null : 'Placa inválida (ABC1234 ou ABC1D23).') },
   { chave: 'modelo', rotulo: 'Marca/modelo' },
-  { chave: 'identificacao_laterais', rotulo: 'Nome da empresa nas duas laterais (art. 21)', tipo: 'marcar', largura: 2 },
-  { chave: 'identificacao_traseira', rotulo: 'Nome da concessionária na traseira (art. 21)', tipo: 'marcar', largura: 2 },
-  { chave: 'concessionaria_traseira_id', rotulo: 'Concessionária na traseira', tipo: 'opcoes', largura: 2,
+  { chave: 'identificacao_laterais', rotulo: 'Nome da empresa nas laterais', tipo: 'marcar', largura: 2 },
+  { chave: 'identificacao_traseira', rotulo: 'Nome da operadora na traseira', tipo: 'marcar', largura: 2 },
+  { chave: 'concessionaria_traseira_id', rotulo: 'Operadora na traseira', tipo: 'opcoes', largura: 2,
     quando: (t) => Boolean(t.identificacao_traseira),
     opcoes: [{ valor: '', rotulo: '—' }, ...operadoras.map((o) => ({ valor: o.id, rotulo: nomeEmpresa(o) }))] },
 ];
@@ -84,7 +84,7 @@ export function Operacional({
             detalhe={<>
               CPF {formatCpf(String(r.cpf))} · {String(r.conselho)} {String(r.registro_numero)}
               {r.registro_uf ? `/${r.registro_uf}` : ''}
-              {r.art_rrt_numero ? ` · ART/RRT ${r.art_rrt_numero}` : ' · sem ART/RRT informada'}
+              {r.art_rrt_numero ? ` · ART/RRT ${r.art_rrt_numero}` : ' · sem ART/RRT'}
               {r.telefone ? ` · ${r.telefone}` : ''}
             </>}
           />
@@ -111,7 +111,7 @@ export function Operacional({
                 {String(r.funcao)} · {String(r.documento_tipo)} {String(r.documento_numero)}
                 {' · crachá '}
                 <span className={vencido ? 'font-medium text-red-700' : ''}>
-                  {r.cracha_validade ? `válido até ${dataBR(String(r.cracha_validade))}` : 'sem validade informada'}
+                  {r.cracha_validade ? `até ${dataBR(String(r.cracha_validade))}` : 'sem validade'}
                 </span>
                 {r.telefone ? ` · ${r.telefone}` : ''}
               </>}
@@ -143,7 +143,7 @@ export function Operacional({
               </>}
               detalhe={<>
                 {r.categoria === 'maquinario' ? 'Maquinário' : 'Veículo'}
-                {' · identificação visual: '}
+                {' · identificação: '}
                 <span className={semIdent ? 'font-medium text-amber-800' : ''}>
                   laterais {r.identificacao_laterais ? 'sim' : 'não'}, traseira {r.identificacao_traseira ? 'sim' : 'não'}
                 </span>
