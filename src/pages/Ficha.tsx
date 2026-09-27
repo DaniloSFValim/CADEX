@@ -73,13 +73,13 @@ export default function Ficha() {
   const ultimos = ultimoPorTipo(d.docs);
 
   return (
-    <div className="min-h-screen bg-slate-100 print:bg-white">
-      <div className="border-b border-slate-200 bg-white print:hidden">
+    <div className="min-h-screen bg-tinta-100 print:bg-white">
+      <div className="border-b border-tinta-200 bg-white print:hidden">
         <div className="mx-auto flex max-w-4xl flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3 text-sm">
           <Link to={`/empresas/${e.id}`} className="text-marca-700 hover:underline">← Voltar</Link>
-          <span className="font-medium text-slate-700">Incluir:</span>
+          <span className="font-medium text-tinta-700">Incluir:</span>
           {SECOES.filter((s) => podeEditar || !s.soGestor).map((s) => (
-            <label key={s.chave} className="flex items-center gap-1.5 text-slate-700">
+            <label key={s.chave} className="flex items-center gap-1.5 text-tinta-700">
               <input type="checkbox" checked={ver(s.chave)}
                      onChange={(ev) => setSecoes((l) => ev.target.checked ? [...l, s.chave] : l.filter((x) => x !== s.chave))} />
               {s.rotulo}
@@ -89,28 +89,28 @@ export default function Ficha() {
         </div>
       </div>
 
-      <article className="mx-auto my-6 max-w-4xl bg-white p-8 text-sm text-slate-800 shadow-sm print:my-0 print:max-w-none print:p-0 print:shadow-none">
+      <article className="mx-auto my-6 max-w-4xl bg-white p-8 text-sm text-tinta-800 print:my-0 print:max-w-none print:p-0 print:shadow-none">
         <header className="flex items-center justify-between gap-6 border-b-2 border-marca-600 pb-4">
           <img src="/logo-prefeitura-seconser.png" alt="Prefeitura de Niterói — SECONSER" className="h-16 w-auto" />
           <div className="text-right leading-tight">
             <div className="text-base font-bold tracking-wide">CADEX</div>
-            <div className="text-xs text-slate-600">Cadastro de Executores</div>
-            <div className="text-xs text-slate-600">Ficha da empresa</div>
+            <div className="text-xs text-tinta-600">Cadastro de Executores</div>
+            <div className="text-xs text-tinta-600">Ficha da empresa</div>
           </div>
         </header>
 
         <div className="mt-5 flex items-start gap-5">
           {e.logo_arquivo && (
             <img src={urlLogo(e.logo_arquivo)} alt={`Logo de ${nomeEmpresa(e)}`}
-                 className="h-20 w-20 flex-none rounded border border-slate-200 object-contain p-1" />
+                 className="h-20 w-20 flex-none rounded border border-tinta-200 object-contain p-1" />
           )}
           <div className="flex-1">
             <h1 className="text-xl font-semibold">{e.razao_social}</h1>
-            {e.nome_fantasia && <div className="text-slate-600">{e.nome_fantasia}</div>}
-            <div className="mt-1 font-mono font-semibold text-marca-800">{e.codigo_cadex}</div>
+            {e.nome_fantasia && <div className="text-tinta-600">{e.nome_fantasia}</div>}
+            <div className="tabular mt-1 font-semibold text-tinta-700">{e.codigo_cadex}</div>
           </div>
           <div className="text-right">
-            <div className="text-xs text-slate-500">Situação</div>
+            <div className="text-xs text-tinta-500">Situação</div>
             <div className="text-base font-bold">{SITUACAO_LABEL[situacaoEfetiva(e, hoje)]}</div>
           </div>
         </div>
@@ -208,7 +208,7 @@ export default function Ficha() {
           </Bloco>
         )}
 
-        <footer className="mt-8 border-t border-slate-200 pt-3 text-xs text-slate-500">
+        <footer className="mt-8 border-t border-tinta-200 pt-3 text-xs text-tinta-500">
           Emitida em {new Date().toLocaleString('pt-BR')}{servidor && ` por ${servidor.nome}`}.
           Fiscalização de Serviços Concedidos – SECONSER. Uso interno.
         </footer>
@@ -225,7 +225,7 @@ const nomesEmpresas = (l: (Empresa | undefined)[]) =>
 function Bloco({ titulo, children }: { titulo: string; children: ReactNode }) {
   return (
     <section className="mt-6 break-inside-avoid-page">
-      <h2 className="mb-2 border-b border-slate-200 pb-1 text-xs font-semibold uppercase tracking-wider text-marca-800">{titulo}</h2>
+      <h2 className="mb-2 border-b border-tinta-200 pb-1 text-xs font-semibold uppercase tracking-wider text-marca-800">{titulo}</h2>
       {children}
     </section>
   );
@@ -236,7 +236,7 @@ function Grade({ itens }: { itens: readonly (readonly [string, string | null | u
     <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-2 print:grid-cols-2">
       {itens.map(([k, v]) => (
         <div key={k}>
-          <dt className="text-xs text-slate-500">{k}</dt>
+          <dt className="text-xs text-tinta-500">{k}</dt>
           <dd>{v || '—'}</dd>
         </div>
       ))}
@@ -245,16 +245,16 @@ function Grade({ itens }: { itens: readonly (readonly [string, string | null | u
 }
 
 function Tabela({ cab, linhas, vazio }: { cab: string[]; linhas: string[][]; vazio?: string }) {
-  if (linhas.length === 0) return <p className="text-slate-500">{vazio ?? '—'}</p>;
+  if (linhas.length === 0) return <p className="text-tinta-500">{vazio ?? '—'}</p>;
   return (
     <table className="mt-2 w-full text-left text-xs">
-      <thead className="text-slate-500">
-        <tr>{cab.map((c) => <th key={c} className="border-b border-slate-200 py-1 pr-3 font-medium">{c}</th>)}</tr>
+      <thead className="text-tinta-500">
+        <tr>{cab.map((c) => <th key={c} className="border-b border-tinta-200 py-1 pr-3 font-medium">{c}</th>)}</tr>
       </thead>
       <tbody>
         {linhas.map((l, i) => (
           <tr key={i} className="break-inside-avoid">
-            {l.map((c, j) => <td key={j} className="border-b border-slate-100 py-1 pr-3 align-top">{c}</td>)}
+            {l.map((c, j) => <td key={j} className="border-b border-tinta-100 py-1 pr-3 align-top">{c}</td>)}
           </tr>
         ))}
       </tbody>

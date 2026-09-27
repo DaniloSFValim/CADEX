@@ -49,26 +49,26 @@ export function Inscricao({
   return (
     <Card title="Inscrição no CADEX" action={<SituacaoBadge s={efetiva} />}>
       <dl className="mb-4 grid gap-3 text-sm sm:grid-cols-4">
-        <div><dt className="text-xs text-slate-500">Portaria</dt><dd>{empresa.portaria_numero ?? '—'}</dd></div>
-        <div><dt className="text-xs text-slate-500">Publicada em</dt><dd>{dataBR(empresa.portaria_data)}</dd></div>
+        <div><dt className="text-xs text-tinta-500">Portaria</dt><dd>{empresa.portaria_numero ?? '—'}</dd></div>
+        <div><dt className="text-xs text-tinta-500">Publicada em</dt><dd>{dataBR(empresa.portaria_data)}</dd></div>
         <div>
-          <dt className="text-xs text-slate-500">Válida até</dt>
+          <dt className="text-xs text-tinta-500">Válida até</dt>
           <dd className={efetiva === 'vencida' ? 'font-medium text-red-700' : ''}>{dataBR(empresa.validade_ate)}</dd>
         </div>
         <div>
-          <dt className="text-xs text-slate-500">Fim do prazo de saneamento</dt>
+          <dt className="text-xs text-tinta-500">Fim do prazo de saneamento</dt>
           <dd>{empresa.situacao === 'em_saneamento' ? dataBR(fimSaneamento) : '—'}</dd>
         </div>
       </dl>
       {efetiva === 'vencida' && (
-        <p className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-inset ring-red-200">
+        <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-inset ring-red-200">
           Inscrição vencida. Registre a portaria de renovação.
         </p>
       )}
 
       {podeEditar && (
         <form
-          className="grid gap-4 border-t border-slate-100 pt-4 sm:grid-cols-6"
+          className="grid gap-4 border-t border-tinta-100 pt-4 sm:grid-cols-6"
           onSubmit={async (e) => {
             e.preventDefault();
             setBusy(true); setError(null); setSalvo(false);
@@ -115,12 +115,12 @@ export function Inscricao({
       )}
 
       {historico.length > 0 && (
-        <details className="mt-4 border-t border-slate-100 pt-3 text-sm">
-          <summary className="cursor-pointer text-slate-700">Histórico ({historico.length})</summary>
-          <ul className="mt-2 space-y-1 text-slate-600">
+        <details className="mt-4 border-t border-tinta-100 pt-3 text-sm">
+          <summary className="cursor-pointer text-tinta-700">Histórico ({historico.length})</summary>
+          <ul className="mt-2 space-y-1 text-tinta-600">
             {historico.map((h) => (
               <li key={h.id}>
-                <span className="mr-2 text-xs text-slate-500">{new Date(h.em).toLocaleString('pt-BR')}</span>
+                <span className="mr-2 text-xs text-tinta-500">{new Date(h.em).toLocaleString('pt-BR')}</span>
                 {h.de ? `${SITUACAO_LABEL[h.de]} → ` : ''}{SITUACAO_LABEL[h.para]}
                 {h.portaria_numero && ` · ${h.portaria_numero} (${dataBR(h.portaria_data)})`}
               </li>

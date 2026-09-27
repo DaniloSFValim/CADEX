@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Badge, Button, Card, ErrorNote, Field, Spinner, inputClass, type Tom } from '../components/ui';
+import { Badge, Button, Card, ErrorNote, Field, Spinner, Titulo, botaoLink, inputClass, type Tom } from '../components/ui';
 import { SituacaoBadge } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { formatCnpj, isValidCnpj, onlyDigits } from '../lib/cnpj';
@@ -56,32 +56,33 @@ export default function EmpresaPage() {
   const operadoras = todas.filter((o) => o.tipo === 'operadora');
 
   return (
-    <div className="space-y-5">
-      <Link to="/" className="text-sm text-marca-700 hover:underline">← Empresas</Link>
-      <div className="flex flex-wrap items-start gap-4">
-        {empresa?.logo_arquivo && (
-          <img src={urlLogo(empresa.logo_arquivo)} alt={`Logo de ${nomeEmpresa(empresa)}`}
-               className="h-14 w-14 flex-none rounded border border-slate-200 bg-white object-contain p-1" />
+    <div className="space-y-6">
+      <Titulo
+        trilha={<><Link to="/" className="hover:text-marca-700 hover:underline">Empresas</Link> / {empresa ? empresa.codigo_cadex : 'Nova'}</>}
+        titulo={
+          <span className="flex items-center gap-4">
+            {empresa?.logo_arquivo && (
+              <img src={urlLogo(empresa.logo_arquivo)} alt=""
+                   className="h-12 w-12 flex-none rounded border border-tinta-200 bg-white object-contain p-1" />
+            )}
+            {empresa ? nomeEmpresa(empresa) : 'Nova empresa'}
+          </span>
+        }
+        acoes={empresa && (
+          <Link to={`/empresas/${empresa.id}/ficha`} className={botaoLink.secondary}>Exportar ficha</Link>
         )}
-        <div className="flex-1">
-        <h1 className="text-xl font-semibold text-slate-900">
-          {empresa ? nomeEmpresa(empresa) : 'Nova empresa'}
-        </h1>
+      >
         {empresa && (
-          <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-600">
-            <span className="font-mono font-semibold text-marca-800">{empresa.codigo_cadex}</span>
-            <span>· {TIPO_LABEL[empresa.tipo]}</span>
+          <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-tinta-500">
+            <span className="tabular font-semibold text-tinta-800">{empresa.codigo_cadex}</span>
+            <span aria-hidden className="text-tinta-300">|</span>
+            <span>{TIPO_LABEL[empresa.tipo]}</span>
+            <span aria-hidden className="text-tinta-300">|</span>
+            <span className="tabular">CNPJ {formatCnpj(empresa.cnpj)}</span>
             <SituacaoBadge s={situacaoEfetiva(empresa, hojeISO())} />
           </p>
         )}
-        </div>
-        {empresa && (
-          <Link to={`/empresas/${empresa.id}/ficha`}
-                className="rounded-md bg-white px-3 py-2 text-sm font-medium text-slate-800 ring-1 ring-inset ring-slate-300 hover:bg-slate-50">
-            Exportar ficha
-          </Link>
-        )}
-      </div>
+      </Titulo>
 
       <Card title="Dados da empresa">
         {empresa && (
@@ -115,7 +116,7 @@ export default function EmpresaPage() {
       {/* Documentos têm dados pessoais de sócios e procuradores: só a SECONSER vê. */}
       {empresa && podeEditar && <Documentos empresa={empresa} />}
       {!empresa && (
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-tinta-500">
           Salve os dados para registrar inscrição, vínculos, pessoal, veículos e documentos.
         </p>
       )}
@@ -190,25 +191,25 @@ function EmpresaForm({
       </Field>
       {!editando && v.tipo === 'terceirizada' && (
         <fieldset className="sm:col-span-6">
-          <legend className="text-sm font-medium text-slate-700">
+          <legend className="text-sm font-medium text-tinta-700">
             Contratada por<span className="ml-0.5 text-red-600" aria-hidden>*</span>
           </legend>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-tinta-500">
             Operadoras e, em caso de subcontratação, terceirizadas.
           </p>
           {empresas.length === 0
-            ? <p className="mt-1 text-xs text-slate-500">Nenhuma empresa cadastrada ainda. Cadastre a operadora primeiro.</p>
+            ? <p className="mt-1 text-xs text-tinta-500">Nenhuma empresa cadastrada ainda. Cadastre a operadora primeiro.</p>
             : (['operadora', 'terceirizada'] as const).map((t) => {
                 const grupo = empresas.filter((o) => o.tipo === t);
                 if (grupo.length === 0) return null;
                 return (
                   <div key={t} className="mt-2">
-                    <div className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                    <div className="text-xs font-medium uppercase tracking-wide text-tinta-500">
                       {t === 'operadora' ? 'Operadoras' : 'Terceirizadas (subcontratação)'}
                     </div>
                     <div className="mt-1 flex flex-wrap gap-x-5 gap-y-2">
                       {grupo.map((o) => (
-                        <label key={o.id} className="flex items-center gap-2 text-sm text-slate-700">
+                        <label key={o.id} className="flex items-center gap-2 text-sm text-tinta-700">
                           <input type="checkbox" checked={contratantes.includes(o.id)}
                                  onChange={(e) => setContratantes((c) =>
                                    e.target.checked ? [...c, o.id] : c.filter((x) => x !== o.id))} />
@@ -284,19 +285,19 @@ function LogoEmpresa({
   };
 
   return (
-    <div className="mb-5 flex flex-wrap items-center gap-4 border-b border-slate-100 pb-5">
-      <div className="flex h-20 w-20 flex-none items-center justify-center rounded border border-dashed border-slate-300 bg-slate-50">
+    <div className="mb-5 flex flex-wrap items-center gap-4 border-b border-tinta-100 pb-5">
+      <div className="flex h-20 w-20 flex-none items-center justify-center rounded border border-dashed border-tinta-300 bg-tinta-50">
         {empresa.logo_arquivo
           ? <img src={urlLogo(empresa.logo_arquivo)} alt="Logo da empresa" className="h-full w-full object-contain p-1" />
-          : <span className="text-xs text-slate-400">sem logo</span>}
+          : <span className="text-xs text-tinta-400">sem logo</span>}
       </div>
       <div className="space-y-2">
-        <div className="text-sm font-medium text-slate-700">Logo da empresa</div>
+        <div className="text-sm font-medium text-tinta-700">Logo da empresa</div>
         {podeEditar ? (
           <div className="flex flex-wrap items-center gap-2">
             <input key={inputKey} type="file" aria-label="Logo da empresa" disabled={busy}
                    accept={TIPOS_LOGO.join(',')}
-                   className="block max-w-full text-sm text-slate-600 file:mr-2 file:rounded file:border-0 file:bg-slate-100 file:px-2 file:py-1 file:text-sm"
+                   className="block max-w-full text-sm text-tinta-600 file:mr-2 file:rounded file:border-0 file:bg-tinta-100 file:px-2 file:py-1 file:text-sm"
                    onChange={(e) => {
                      const f = e.target.files?.[0];
                      if (f) void agir(() => enviarLogo(empresa, f));
@@ -309,7 +310,7 @@ function LogoEmpresa({
             )}
           </div>
         ) : null}
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-tinta-500">
           PNG, JPG ou WebP, até {MAX_LOGO_BYTES / 1024 / 1024} MB.
         </p>
         <ErrorNote error={error} />
@@ -414,12 +415,12 @@ function LadoVinculo({
 
   return (
     <div>
-      <h3 className="text-sm font-semibold text-slate-700">{titulo}</h3>
-      {dica && <p className="text-xs text-slate-500">{dica}</p>}
+      <h3 className="text-sm font-semibold text-tinta-700">{titulo}</h3>
+      {dica && <p className="text-xs text-tinta-500">{dica}</p>}
       {vinculos.length === 0 ? (
-        <p className="mt-2 text-sm text-slate-500">{vazio}</p>
+        <p className="mt-2 text-sm text-tinta-500">{vazio}</p>
       ) : (
-        <ul className="mt-1 divide-y divide-slate-100">
+        <ul className="mt-1 divide-y divide-tinta-100">
           {vinculos.map((v) => {
             const e = porId.get(outra(v));
             return (
@@ -430,9 +431,9 @@ function LadoVinculo({
                       {nomeEmpresa(e)}
                     </Link>
                   ) : '—'}
-                  {e && <span className="ml-2 font-mono text-xs text-slate-500">{e.codigo_cadex}</span>}
-                  {e && <span className="ml-2 text-xs text-slate-500">{TIPO_LABEL[e.tipo]}</span>}
-                  <div className="text-xs text-slate-500">
+                  {e && <span className="tabular ml-2 text-xs text-tinta-500">{e.codigo_cadex}</span>}
+                  {e && <span className="ml-2 text-xs text-tinta-500">{TIPO_LABEL[e.tipo]}</span>}
+                  <div className="text-xs text-tinta-500">
                     desde {dataBR(v.inicio)}{v.fim && ` · encerrado em ${dataBR(v.fim)}`}
                   </div>
                 </div>
@@ -500,7 +501,7 @@ function Documentos({ empresa }: { empresa: Empresa }) {
     >
       <ErrorNote error={error} />
       {loading ? <Spinner /> : (
-        <ul className="divide-y divide-slate-100">
+        <ul className="divide-y divide-tinta-100">
           {tipos.map((t) => (
             <LinhaDocumento
               key={t.codigo}
@@ -538,8 +539,8 @@ function LinhaDocumento({
     <li className="py-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <div className="text-sm font-medium text-slate-800">{tipo.nome}</div>
-          <div className="text-xs text-slate-500">
+          <div className="text-sm font-medium text-tinta-800">{tipo.nome}</div>
+          <div className="text-xs text-tinta-500">
             {tipo.fundamento} · {tipo.obrigatorio ? 'obrigatório' : 'quando aplicável'}
           </div>
         </div>
@@ -558,8 +559,8 @@ function LinhaDocumento({
                   }}>
             {doc.nome_arquivo}
           </button>
-          {doc.validade && <span className="text-slate-600">válido até {dataBR(doc.validade)}</span>}
-          <span className="text-xs text-slate-400">enviado em {new Date(doc.enviado_em).toLocaleDateString('pt-BR')}</span>
+          {doc.validade && <span className="text-tinta-600">válido até {dataBR(doc.validade)}</span>}
+          <span className="text-xs text-tinta-400">enviado em {new Date(doc.enviado_em).toLocaleDateString('pt-BR')}</span>
           <Button variant="danger" className="!px-2 !py-1 text-xs" disabled={busy}
                   onClick={async () => {
                     if (!window.confirm(`Remover "${doc.nome_arquivo}"?`)) return;
@@ -592,10 +593,10 @@ function LinhaDocumento({
       >
         <input key={inputKey} type="file" aria-label={`Arquivo: ${tipo.nome}`}
                accept=".pdf,.jpg,.jpeg,.png,.zip,.kml,.kmz,.geojson"
-               className="block max-w-full text-sm text-slate-600 file:mr-2 file:rounded file:border-0 file:bg-slate-100 file:px-2 file:py-1 file:text-sm"
+               className="block max-w-full text-sm text-tinta-600 file:mr-2 file:rounded file:border-0 file:bg-tinta-100 file:px-2 file:py-1 file:text-sm"
                onChange={(e) => setArquivo(e.target.files?.[0] ?? null)} />
         {tipo.tem_validade && (
-          <label className="text-xs text-slate-600">
+          <label className="text-xs text-tinta-600">
             Validade
             <input type="date" className={`${inputClass} !py-1`} value={validade}
                    onChange={(e) => setValidade(e.target.value)} />

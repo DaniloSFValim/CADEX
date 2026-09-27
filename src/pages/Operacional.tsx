@@ -57,8 +57,8 @@ const camposVeiculo = (operadoras: Empresa[]): Campo[] => [
 
 const Linha = ({ titulo, detalhe }: { titulo: React.ReactNode; detalhe: React.ReactNode }) => (
   <>
-    <div className="font-medium text-slate-800">{titulo}</div>
-    <div className="text-xs text-slate-500">{detalhe}</div>
+    <div className="font-medium text-tinta-800">{titulo}</div>
+    <div className="text-xs text-tinta-500">{detalhe}</div>
   </>
 );
 
@@ -138,7 +138,7 @@ export function Operacional({
           return (
             <Linha
               titulo={<>
-                <span className="font-mono">{r.placa ? String(r.placa) : 'sem placa'}</span>
+                <span className="tabular font-semibold tracking-wide">{r.placa ? String(r.placa) : 'sem placa'}</span>
                 {' · '}{String(r.tipo)}{r.modelo ? ` (${r.modelo})` : ''}
               </>}
               detalhe={<>
