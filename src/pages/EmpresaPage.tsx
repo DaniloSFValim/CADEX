@@ -157,6 +157,9 @@ function EmpresaForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [salvo, setSalvo] = useState(false);
+  // Empresa já cadastrada abre só para leitura; "Editar dados" libera os campos.
+  const [aberto, setAberto] = useState(!editando);
+  const travado = somenteLeitura || !aberto;
 
   const set = <K extends keyof EmpresaInput>(k: K, val: EmpresaInput[K]) => {
     setSalvo(false);
@@ -181,12 +184,18 @@ function EmpresaForm({
           setError('Marque ao menos uma empresa que contrata a terceirizada.'); return;
         }
         setBusy(true);
-        try { await onSubmit(v, contratantes); setSalvo(true); }
+        try { await onSubmit(v, contratantes); setSalvo(true); if (editando) setAberto(false); }
         catch (err) { setError(err); }
         finally { setBusy(false); }
       }}
     >
-      <fieldset disabled={somenteLeitura} className="grid gap-4 sm:grid-cols-6">
+      {editando && !somenteLeitura && !aberto && (
+        <div className="mb-4 flex flex-wrap items-center justify-end gap-3">
+          {salvo && <span className="text-sm text-emerald-700">Alterações salvas.</span>}
+          <Button variant="secondary" onClick={() => { setSalvo(false); setAberto(true); }}>Editar dados</Button>
+        </div>
+      )}
+      <fieldset disabled={travado} className="grid gap-4 sm:grid-cols-6">
       <Field label="CNPJ" required className="sm:col-span-2"
              hint={editando ? 'Não pode ser alterado.' : undefined}>
         <input id="cnpj" className={inputClass} required disabled={editando} inputMode="numeric"
@@ -275,16 +284,21 @@ function EmpresaForm({
         <textarea id="observacoes" rows={2} className={inputClass} {...text('observacoes')} />
       </Field>
 
-      {!somenteLeitura && (
-        <div className="flex flex-wrap items-center gap-3 sm:col-span-6">
+      </fieldset>
+      {!travado && (
+        <div className="mt-5 flex flex-wrap items-center gap-3">
           <Button type="submit" disabled={busy}>
             {busy ? 'Salvando…' : editando ? 'Salvar alterações' : 'Cadastrar empresa'}
           </Button>
-          {salvo && editando && <span className="text-sm text-emerald-700">Alterações salvas.</span>}
+          {editando && (
+            <Button variant="secondary" disabled={busy}
+                    onClick={() => { setV(inicial); setError(null); setAberto(false); }}>
+              Cancelar
+            </Button>
+          )}
         </div>
       )}
-      <div className="sm:col-span-6"><ErrorNote error={error} /></div>
-      </fieldset>
+      <div className="mt-3"><ErrorNote error={error} /></div>
     </form>
   );
 }
