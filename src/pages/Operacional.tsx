@@ -110,7 +110,7 @@ export function Operacional({
               detalhe={<>
                 {String(r.funcao)}, {String(r.documento_tipo)} {String(r.documento_numero)}
                 {', crachá '}
-                <span className={vencido ? 'font-medium text-red-700' : ''}>
+                <span className={vencido ? 'font-medium text-baixa' : ''}>
                   {r.cracha_validade ? `até ${dataBR(String(r.cracha_validade))}` : 'sem validade'}
                 </span>
                 {r.telefone ? `, ${r.telefone}` : ''}
@@ -144,7 +144,7 @@ export function Operacional({
               detalhe={<>
                 {r.categoria === 'maquinario' ? 'Maquinário' : 'Veículo'}
                 {', identificação: '}
-                <span className={semIdent ? 'font-medium text-amber-800' : ''}>
+                <span className={semIdent ? 'font-medium text-atencao' : ''}>
                   laterais {r.identificacao_laterais ? 'sim' : 'não'}, traseira {r.identificacao_traseira ? 'sim' : 'não'}
                 </span>
                 {traseira && ` (${nomeEmpresa(traseira)})`}

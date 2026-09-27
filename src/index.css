@@ -6,9 +6,18 @@
 
 @layer base {
   html { -webkit-text-size-adjust: 100%; }
-  body { @apply bg-tinta-50 text-tinta-800 antialiased; }
-  :focus-visible { @apply outline-2 outline-offset-2 outline-marca-600; }
+  body { @apply bg-tinta-50 text-tinta-700 antialiased; }
+  h1, h2, h3 { text-wrap: balance; }
+  :focus-visible { @apply outline-2 outline-offset-2 outline-marca-500; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
   ::selection { @apply bg-marca-100 text-tinta-900; }
+}
+
+@layer components {
+  /* Superfície de dados: fundo branco e uma linha fina, sem sombra. */
+  .cartao { @apply rounded-md border border-tinta-200 bg-white; }
 }
 
 @layer utilities {

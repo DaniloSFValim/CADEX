@@ -95,7 +95,7 @@ export default function EmpresaPage() {
               {empresa.validade_ate && (
                 <div>
                   <dt className="text-xs text-tinta-500">Válida até</dt>
-                  <dd className={`tabular mt-0.5 ${s === 'vencida' ? 'font-medium text-red-700' : 'text-tinta-800'}`}>{dataBR(empresa.validade_ate)}</dd>
+                  <dd className={`tabular mt-0.5 ${s === 'vencida' ? 'font-medium text-baixa' : 'text-tinta-800'}`}>{dataBR(empresa.validade_ate)}</dd>
                 </div>
               )}
             </dl>
@@ -191,7 +191,7 @@ function EmpresaForm({
     >
       {editando && !somenteLeitura && !aberto && (
         <div className="mb-4 flex flex-wrap items-center justify-end gap-3">
-          {salvo && <span className="text-sm text-emerald-700">Alterações salvas.</span>}
+          {salvo && <span className="text-sm text-alta">Alterações salvas.</span>}
           <Button variant="secondary" onClick={() => { setSalvo(false); setAberto(true); }}>Editar dados</Button>
         </div>
       )}
@@ -201,7 +201,7 @@ function EmpresaForm({
         <input id="cnpj" className={inputClass} required disabled={editando} inputMode="numeric"
                placeholder="00.000.000/0000-00" value={v.cnpj}
                onChange={(e) => set('cnpj', formatCnpj(e.target.value))} />
-        {cnpjRuim && <p className="mt-1 text-xs text-red-700">Dígito verificador não confere.</p>}
+        {cnpjRuim && <p className="mt-1 text-xs text-baixa">Dígito verificador não confere.</p>}
       </Field>
       <Field label="Razão social" required className="sm:col-span-4">
         <input id="razao" className={inputClass} required {...text('razao_social')} />
@@ -220,7 +220,7 @@ function EmpresaForm({
       {!editando && v.tipo === 'terceirizada' && (
         <fieldset className="sm:col-span-6">
           <legend className="text-sm font-medium text-tinta-700">
-            Contratada por<span className="ml-0.5 text-red-600" aria-hidden>*</span>
+            Contratada por<span className="ml-0.5 text-baixa" aria-hidden>*</span>
           </legend>
           <p className="text-xs text-tinta-500">
             Operadoras e, em caso de subcontratação, terceirizadas.

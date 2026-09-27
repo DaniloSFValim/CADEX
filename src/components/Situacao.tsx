@@ -17,11 +17,11 @@ export function SituacaoBadge({ s }: { s: SituacaoEfetiva }) {
 /** Filete à esquerda na cor da situação: o selo de cada registro. */
 export const BARRA: Record<SituacaoEfetiva, string> = {
   em_analise: 'border-l-tinta-300',
-  apta: 'border-l-emerald-600',
-  em_saneamento: 'border-l-amber-500',
-  inapta: 'border-l-red-600',
-  indeferida: 'border-l-red-600',
-  vencida: 'border-l-red-600',
+  apta: 'border-l-alta',
+  em_saneamento: 'border-l-atencao',
+  inapta: 'border-l-baixa',
+  indeferida: 'border-l-baixa',
+  vencida: 'border-l-baixa',
 };
 
 export const dataBR = (iso: string | null) => (iso ? iso.split('-').reverse().join('/') : '—');
