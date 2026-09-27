@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Badge, Button, Empty, ErrorNote, Spinner, Titulo, botaoLink, inputClass, tabela } from '../components/ui';
 import { ExportarRelacao } from '../components/ExportarRelacao';
-import { SituacaoBadge } from '../components/Situacao';
+import { BARRA, SituacaoBadge } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { formatCnpj, onlyDigits } from '../lib/cnpj';
 import {
@@ -66,7 +66,7 @@ export default function Empresas() {
         descricao="Operadoras de telecomunicações e terceirizadas cadastradas no CADEX."
         acoes={<>
           <Button variant="secondary" disabled={!empresas?.length} onClick={() => setExportando((x) => !x)}>
-            Exportar
+            Exportar planilha
           </Button>
           {podeEditar && <Link to="/empresas/nova" className={botaoLink.primary}>Nova empresa</Link>}
         </>}
@@ -106,7 +106,7 @@ export default function Empresas() {
         <ErrorNote error={error} />
         {!empresas && !error && <Spinner />}
         {empresas && filtradas.length === 0 && (
-          <Empty>{empresas.length === 0 ? 'Nenhuma empresa cadastrada ainda.' : 'Nenhuma empresa encontrada.'}</Empty>
+          <Empty>{empresas.length === 0 ? 'Nenhuma empresa cadastrada. Use Nova empresa para cadastrar a primeira.' : 'Nenhuma empresa corresponde à busca.'}</Empty>
         )}
 
         {filtradas.length > 0 && (
@@ -114,7 +114,7 @@ export default function Empresas() {
             <table className={tabela.tabela}>
               <thead className={tabela.cabeca}>
                 <tr>
-                  <th className={tabela.th}>Empresa</th>
+                  <th className={`${tabela.th} border-l-4 border-l-transparent`}>Empresa</th>
                   <th className={tabela.th}>Código CADEX</th>
                   <th className={tabela.th}>CNPJ</th>
                   <th className={tabela.th}>Tipo</th>
@@ -131,7 +131,7 @@ export default function Empresas() {
                   const r = resumoDocumentos(tipos, docs.filter((d) => d.empresa_id === e.id), hoje);
                   return (
                     <tr key={e.id} className={tabela.linha}>
-                      <td className={tabela.td}>
+                      <td className={`${tabela.td} border-l-4 ${BARRA[situacaoEfetiva(e, hoje)]}`}>
                         <Link to={`/empresas/${e.id}`} className="font-medium text-tinta-900 hover:text-marca-700 hover:underline">
                           {nomeEmpresa(e)}
                         </Link>

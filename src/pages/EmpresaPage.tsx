@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Badge, Button, Card, ErrorNote, Field, Spinner, Titulo, botaoLink, inputClass, type Tom } from '../components/ui';
-import { SituacaoBadge } from '../components/Situacao';
+import { BARRA, SituacaoBadge } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { formatCnpj, isValidCnpj, onlyDigits } from '../lib/cnpj';
 import {
@@ -69,19 +69,38 @@ export default function EmpresaPage() {
           </span>
         }
         acoes={empresa && (
-          <Link to={`/empresas/${empresa.id}/ficha`} className={botaoLink.secondary}>Exportar ficha</Link>
+          <Link to={`/empresas/${empresa.id}/ficha`} className={botaoLink.secondary}>Imprimir ficha</Link>
         )}
       >
-        {empresa && (
-          <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-tinta-500">
-            <span className="tabular font-semibold text-tinta-800">{empresa.codigo_cadex}</span>
-            <span aria-hidden className="text-tinta-300">|</span>
-            <span>{TIPO_LABEL[empresa.tipo]}</span>
-            <span aria-hidden className="text-tinta-300">|</span>
-            <span className="tabular">CNPJ {formatCnpj(empresa.cnpj)}</span>
-            <SituacaoBadge s={situacaoEfetiva(empresa, hojeISO())} />
-          </p>
-        )}
+        {empresa && (() => {
+          const s = situacaoEfetiva(empresa, hojeISO());
+          return (
+            <dl className="mt-4 grid grid-cols-2 gap-x-8 gap-y-3 text-sm sm:flex sm:flex-wrap">
+              <div className={`border-l-4 pl-3 ${BARRA[s]}`}>
+                <dt className="text-xs text-tinta-500">Situação</dt>
+                <dd className="mt-0.5"><SituacaoBadge s={s} /></dd>
+              </div>
+              <div>
+                <dt className="text-xs text-tinta-500">Código CADEX</dt>
+                <dd className="tabular mt-0.5 font-semibold text-tinta-900">{empresa.codigo_cadex}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-tinta-500">CNPJ</dt>
+                <dd className="tabular mt-0.5 text-tinta-800">{formatCnpj(empresa.cnpj)}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-tinta-500">Tipo</dt>
+                <dd className="mt-0.5 text-tinta-800">{TIPO_LABEL[empresa.tipo]}</dd>
+              </div>
+              {empresa.validade_ate && (
+                <div>
+                  <dt className="text-xs text-tinta-500">Válida até</dt>
+                  <dd className={`tabular mt-0.5 ${s === 'vencida' ? 'font-medium text-red-700' : 'text-tinta-800'}`}>{dataBR(empresa.validade_ate)}</dd>
+                </div>
+              )}
+            </dl>
+          );
+        })()}
       </Titulo>
 
       <Card title="Dados da empresa">
@@ -434,7 +453,7 @@ function LadoVinculo({
                   {e && <span className="tabular ml-2 text-xs text-tinta-500">{e.codigo_cadex}</span>}
                   {e && <span className="ml-2 text-xs text-tinta-500">{TIPO_LABEL[e.tipo]}</span>}
                   <div className="text-xs text-tinta-500">
-                    desde {dataBR(v.inicio)}{v.fim && ` · encerrado em ${dataBR(v.fim)}`}
+                    desde {dataBR(v.inicio)}{v.fim && `, encerrado em ${dataBR(v.fim)}`}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -541,7 +560,7 @@ function LinhaDocumento({
         <div>
           <div className="text-sm font-medium text-tinta-800">{tipo.nome}</div>
           <div className="text-xs text-tinta-500">
-            {tipo.fundamento} · {tipo.obrigatorio ? 'obrigatório' : 'quando aplicável'}
+            {tipo.obrigatorio ? 'Obrigatório' : 'Quando aplicável'} ({tipo.fundamento.replace(/^Art\./, 'art.')})
           </div>
         </div>
         {exibirEstado

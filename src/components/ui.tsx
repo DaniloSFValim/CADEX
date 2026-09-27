@@ -101,7 +101,7 @@ export const inputClass =
 export const tabela = {
   moldura: 'overflow-x-auto',
   tabela: 'w-full text-left text-sm',
-  cabeca: 'border-b border-tinta-200 bg-tinta-50 text-2xs font-semibold uppercase tracking-wider text-tinta-500',
+  cabeca: 'border-b border-tinta-200 bg-tinta-50 text-xs font-semibold text-tinta-600',
   th: 'px-4 py-2.5 font-semibold',
   linha: 'border-b border-tinta-100 last:border-0 hover:bg-tinta-50/60',
   td: 'px-4 py-3 align-middle',

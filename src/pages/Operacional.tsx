@@ -82,10 +82,10 @@ export function Operacional({
           <Linha
             titulo={r.nome as string}
             detalhe={<>
-              CPF {formatCpf(String(r.cpf))} · {String(r.conselho)} {String(r.registro_numero)}
+              CPF {formatCpf(String(r.cpf))}, {String(r.conselho)} {String(r.registro_numero)}
               {r.registro_uf ? `/${r.registro_uf}` : ''}
-              {r.art_rrt_numero ? ` · ART/RRT ${r.art_rrt_numero}` : ' · sem ART/RRT'}
-              {r.telefone ? ` · ${r.telefone}` : ''}
+              {r.art_rrt_numero ? `, ART/RRT ${r.art_rrt_numero}` : ', sem ART/RRT'}
+              {r.telefone ? `, ${r.telefone}` : ''}
             </>}
           />
         )}
@@ -108,12 +108,12 @@ export function Operacional({
             <Linha
               titulo={<>{String(r.nome)}{r.responsavel_equipe && <span className="ml-2 text-xs font-normal text-marca-700">responsável de equipe</span>}</>}
               detalhe={<>
-                {String(r.funcao)} · {String(r.documento_tipo)} {String(r.documento_numero)}
-                {' · crachá '}
+                {String(r.funcao)}, {String(r.documento_tipo)} {String(r.documento_numero)}
+                {', crachá '}
                 <span className={vencido ? 'font-medium text-red-700' : ''}>
                   {r.cracha_validade ? `até ${dataBR(String(r.cracha_validade))}` : 'sem validade'}
                 </span>
-                {r.telefone ? ` · ${r.telefone}` : ''}
+                {r.telefone ? `, ${r.telefone}` : ''}
               </>}
             />
           );
@@ -139,11 +139,11 @@ export function Operacional({
             <Linha
               titulo={<>
                 <span className="tabular font-semibold tracking-wide">{r.placa ? String(r.placa) : 'sem placa'}</span>
-                {' · '}{String(r.tipo)}{r.modelo ? ` (${r.modelo})` : ''}
+                {', '}{String(r.tipo)}{r.modelo ? ` (${r.modelo})` : ''}
               </>}
               detalhe={<>
                 {r.categoria === 'maquinario' ? 'Maquinário' : 'Veículo'}
-                {' · identificação: '}
+                {', identificação: '}
                 <span className={semIdent ? 'font-medium text-amber-800' : ''}>
                   laterais {r.identificacao_laterais ? 'sim' : 'não'}, traseira {r.identificacao_traseira ? 'sim' : 'não'}
                 </span>

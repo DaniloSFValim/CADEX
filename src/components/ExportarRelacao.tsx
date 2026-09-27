@@ -45,7 +45,7 @@ export function ExportarRelacao({
   return (
     <div className="mb-4 space-y-4 rounded border border-tinta-200 bg-tinta-50 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-tinta-800">Exportar relação</h3>
+        <h3 className="text-sm font-semibold text-tinta-800">Exportar planilha</h3>
         <button type="button" className="text-sm text-tinta-500 hover:text-tinta-800" onClick={onFechar}>Fechar</button>
       </div>
 
@@ -100,7 +100,7 @@ export function ExportarRelacao({
           Baixar planilha
         </Button>
         <span className="text-sm text-tinta-600">
-          {selecionadas.length} empresa{selecionadas.length === 1 ? '' : 's'} · {colunas.length} coluna{colunas.length === 1 ? '' : 's'}
+          {selecionadas.length} empresa{selecionadas.length === 1 ? '' : 's'}, {colunas.length} coluna{colunas.length === 1 ? '' : 's'}
         </span>
       </div>
     </div>
