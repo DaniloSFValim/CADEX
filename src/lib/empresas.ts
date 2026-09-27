@@ -81,12 +81,6 @@ export const TIPO_LABEL: Record<Tipo, string> = {
   terceirizada: 'Terceirizada',
 };
 
-/** Termos da Resolução (art. 2º), para quem precisa da correspondência. */
-export const TIPO_RESOLUCAO: Record<Tipo, string> = {
-  operadora: 'concessionária contratante',
-  terceirizada: 'empresa executora',
-};
-
 export const SITUACAO_LABEL: Record<SituacaoEfetiva, string> = {
   em_analise: 'EM ANÁLISE',
   apta: 'APTA',

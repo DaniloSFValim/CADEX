@@ -93,7 +93,7 @@ export const COLUNAS: Coluna[] = [
   { chave: 'contratantes', rotulo: 'Contratada por', grupo: 'Vínculos', valor: (e, c) => nomes(contratantes(e, c)) },
   { chave: 'contratadas', rotulo: 'Terceirizadas/subcontratadas', grupo: 'Vínculos', valor: (e, c) => nomes(contratadas(e, c)) },
 
-  { chave: 'documentacao', rotulo: 'Documentação (art. 6º)', grupo: 'Documentação', soGestor: true,
+  { chave: 'documentacao', rotulo: 'Documentação', grupo: 'Documentação', soGestor: true,
     valor: (e, c) => {
       const r = c.resumoDocs?.(e);
       if (!r) return '';

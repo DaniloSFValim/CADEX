@@ -6,7 +6,7 @@ export type Papel = 'gestor' | 'cisp';
 
 export const PAPEL_LABEL: Record<Papel, string> = {
   gestor: 'SECONSER',
-  cisp: 'CISP — consulta',
+  cisp: 'CISP',
 };
 
 export interface Servidor { nome: string; papel: Papel }
