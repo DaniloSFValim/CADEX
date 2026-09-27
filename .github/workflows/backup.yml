@@ -1,0 +1,83 @@
+name: Backup
+
+# Cópia diária de todo o banco (esquemas public, auth e storage) e de todos
+# os arquivos do Storage, criptografada com a senha BACKUP_PASSPHRASE e
+# guardada como artefato por 90 dias. Tabelas e buckets novos entram
+# automaticamente. Restauração: docs/BACKUP.md.
+
+on:
+  schedule:
+    - cron: '17 5 * * *'   # 02:17 em Brasília
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency: backup
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SUPABASE_URL: https://jqgcgaalqabmnevadqfy.supabase.co
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Conferir segredos
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          falta=0
+          for v in SUPABASE_DB_URL SUPABASE_SERVICE_ROLE_KEY BACKUP_PASSPHRASE; do
+            if [ -z "${!v}" ]; then echo "::error::Falta o segredo $v (Settings > Secrets and variables > Actions)"; falta=1; fi
+          done
+          if [ "${#BACKUP_PASSPHRASE}" -lt 20 ]; then echo "::error::BACKUP_PASSPHRASE precisa de pelo menos 20 caracteres"; falta=1; fi
+          exit $falta
+
+      - name: Banco de dados
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          mkdir -p out
+          # pg_dump na mesma versão do servidor (Postgres 17).
+          docker run --rm -e PGURL="$SUPABASE_DB_URL" -v "$PWD/out:/out" postgres:17 sh -ec '
+            pg_dump "$PGURL" --format=custom --no-owner --no-privileges \
+              --schema=public --schema=auth --schema=storage --file=/out/banco.dump
+            pg_restore --list /out/banco.dump > /out/banco-conteudo.txt'
+          echo "Tabelas com dados no dump: $(grep -c 'TABLE DATA' out/banco-conteudo.txt)"
+
+      - name: Arquivos do Storage
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/backup-storage.mjs out/arquivos
+
+      - name: Empacotar e criptografar
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          nome="cadex-backup-$(date -u +%Y-%m-%d)"
+          (cd out && find . -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
+          tar -czf "$nome.tar.gz" -C out .
+          printf '%s' "$BACKUP_PASSPHRASE" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+            --symmetric --cipher-algo AES256 --output "$nome.tar.gz.gpg" "$nome.tar.gz"
+          rm -rf out "$nome.tar.gz"
+          echo "NOME=$nome" >> "$GITHUB_ENV"
+          {
+            echo "### $nome"
+            echo "Tamanho criptografado: $(du -h "$nome.tar.gz.gpg" | cut -f1)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.NOME }}
+          path: ${{ env.NOME }}.tar.gz.gpg
+          retention-days: 90
+          if-no-files-found: error
+          compression-level: 0
