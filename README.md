@@ -97,6 +97,12 @@ npm test          # regras do frontend (CNPJ, vencimento dos documentos)
 npm run db:test   # banco: migrations + regras e acesso, num Postgres local
 ```
 
+## Backup
+
+Cópia diária automática do banco e de todos os arquivos, criptografada,
+guardada por 90 dias no GitHub Actions. Configuração e restauração:
+[docs/BACKUP.md](docs/BACKUP.md).
+
 ## Publicação
 
 - **Banco:** aplicar `supabase/migrations/*.sql` no projeto Supabase.
