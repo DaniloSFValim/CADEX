@@ -85,7 +85,7 @@ export default function Ficha() {
               {s.rotulo}
             </label>
           ))}
-          <Button className="ml-auto" onClick={() => window.print()}>Imprimir / salvar PDF</Button>
+          <Button className="ml-auto" onClick={() => window.print()}>Imprimir ou salvar em PDF</Button>
         </div>
       </div>
 

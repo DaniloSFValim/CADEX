@@ -122,7 +122,7 @@ export function Inscricao({
               <li key={h.id}>
                 <span className="mr-2 text-xs text-tinta-500">{new Date(h.em).toLocaleString('pt-BR')}</span>
                 {h.de ? `${SITUACAO_LABEL[h.de]} → ` : ''}{SITUACAO_LABEL[h.para]}
-                {h.portaria_numero && ` · ${h.portaria_numero} (${dataBR(h.portaria_data)})`}
+                {h.portaria_numero && `, ${h.portaria_numero} (${dataBR(h.portaria_data)})`}
               </li>
             ))}
           </ul>

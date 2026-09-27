@@ -4,7 +4,9 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['"Inter Variable"', 'Inter', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
+        // Public Sans: desenhada para interfaces de serviço público; algarismos
+        // tabulares para CNPJ, códigos e datas.
+        sans: ['"Public Sans Variable"', 'Public Sans', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
       },
       colors: {
         // Laranja institucional de Niterói: só como destaque (botão principal,

@@ -1,15 +1,18 @@
 import { Cabecalho, MENU_PUBLICO } from '../components/Cabecalho';
 import { Rodape } from '../components/Rodape';
 import { useEffect, useMemo, useState } from 'react';
-import { Empty, ErrorNote, Spinner, Titulo, inputClass, tabela } from '../components/ui';
-import { SituacaoBadge, dataBR } from '../components/Situacao';
+import { Empty, ErrorNote, Spinner, inputClass } from '../components/ui';
+import { BARRA, SituacaoBadge, dataBR } from '../components/Situacao';
 import { formatCnpj, onlyDigits } from '../lib/cnpj';
-import { SITUACAO_LABEL, TIPO_LABEL, consultaPublica, podeAtuar, urlLogo, type LinhaPublica } from '../lib/empresas';
+import { SITUACAO_LABEL, consultaPublica, urlLogo, type LinhaPublica } from '../lib/empresas';
 
 /**
  * Consulta pública do CADEX (art. 7º, § 2º): aberta, sem login. Mostra só
  * dados da pessoa jurídica e da inscrição — nenhum contato, pessoa,
  * veículo ou documento.
+ *
+ * A pergunta da página é "esta empresa pode atuar?": cada registro abre
+ * pela situação, marcada com um filete na cor dela.
  */
 export default function Consulta() {
   const [linhas, setLinhas] = useState<LinhaPublica[] | null>(null);
@@ -31,134 +34,98 @@ export default function Consulta() {
   }, [linhas, busca, situacao]);
 
   const temLogo = filtradas.some((l) => l.logo_arquivo);
-  const aptas = (linhas ?? []).filter((l) => podeAtuar(l.situacao)).length;
 
   return (
     <div className="flex min-h-screen flex-col">
       <Cabecalho itens={MENU_PUBLICO} />
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
-        <Titulo
-          trilha="Início / Consulta pública"
-          titulo="Consulta pública de empresas inscritas"
-          descricao={<>
-            Só podem executar obras e serviços nas vias públicas de Niterói as empresas com
-            inscrição APTA, conforme a Resolução Conjunta SECONSER/SEOP nº 001/2026.
-          </>}
-        />
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-10">
+        <h1 className="text-[2rem] font-bold leading-tight tracking-tight text-tinta-900">
+          Consultar empresa executora
+        </h1>
+        <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-tinta-600">
+          Antes de uma obra ou serviço na via pública de Niterói, confira se a empresa está
+          com inscrição APTA no Cadastro de Executores, conforme a Resolução Conjunta
+          SECONSER/SEOP nº&nbsp;001/2026.
+        </p>
 
-        {linhas && (
-          <dl className="mb-6 grid grid-cols-2 gap-px overflow-hidden rounded border border-tinta-200 bg-tinta-200 sm:max-w-md">
-            <div className="bg-white px-4 py-3">
-              <dt className="text-2xs font-semibold uppercase tracking-wider text-tinta-500">Empresas inscritas</dt>
-              <dd className="tabular mt-0.5 text-xl font-semibold text-tinta-900">{linhas.length}</dd>
-            </div>
-            <div className="bg-white px-4 py-3">
-              <dt className="text-2xs font-semibold uppercase tracking-wider text-tinta-500">Aptas a atuar</dt>
-              <dd className="tabular mt-0.5 text-xl font-semibold text-emerald-700">{aptas}</dd>
-            </div>
-          </dl>
-        )}
+        <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_240px]">
+          <input className={`${inputClass} !py-3 !text-base`}
+                 placeholder="Nome da empresa, CNPJ ou código CADEX"
+                 value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar empresa" />
+          <select className={`${inputClass} !py-3 !text-base`} value={situacao}
+                  onChange={(e) => setSituacao(e.target.value)} aria-label="Situação">
+            <option value="">Qualquer situação</option>
+            {Object.entries(SITUACAO_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </select>
+        </div>
 
-        <section className="rounded border border-tinta-200 bg-white">
-          <div className="grid gap-3 border-b border-tinta-200 p-4 sm:grid-cols-[1fr_220px]">
-            <input className={inputClass} placeholder="Buscar por razão social, nome fantasia, CNPJ ou código CADEX"
-                   value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar" />
-            <select className={inputClass} value={situacao} onChange={(e) => setSituacao(e.target.value)} aria-label="Situação">
-              <option value="">Todas as situações</option>
-              {Object.entries(SITUACAO_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-            </select>
-          </div>
-
+        <section className="mt-8" aria-live="polite">
           <ErrorNote error={error} />
           {!linhas && !error && <Spinner />}
+          {linhas && (
+            <p className="mb-3 text-sm text-tinta-500">
+              {filtradas.length === linhas.length
+                ? `${linhas.length} empresa${linhas.length === 1 ? '' : 's'} no cadastro`
+                : `${filtradas.length} de ${linhas.length} empresas`}
+            </p>
+          )}
           {linhas && filtradas.length === 0 && (
-            <Empty>{linhas.length === 0 ? 'Nenhuma empresa inscrita até o momento.' : 'Nenhuma empresa encontrada para a busca.'}</Empty>
+            <div className="rounded-md border border-tinta-200 bg-white">
+              <Empty>
+                {linhas.length === 0
+                  ? 'Nenhuma empresa inscrita até o momento.'
+                  : 'Nenhuma empresa corresponde à busca. Confira o CNPJ ou o código CADEX.'}
+              </Empty>
+            </div>
           )}
 
           {filtradas.length > 0 && (
-            <ul className="divide-y divide-tinta-100 md:hidden">
+            <ul className="divide-y divide-tinta-200 overflow-hidden rounded-md border border-tinta-200 bg-white">
               {filtradas.map((l) => (
-                <li key={l.codigo_cadex} className="flex gap-3 px-4 py-3">
-                  {temLogo && <Logo l={l} />}
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="font-medium text-tinta-900">{l.razao_social}</div>
-                      <SituacaoBadge s={l.situacao} />
+                <li key={l.codigo_cadex}
+                    className={`grid gap-x-6 gap-y-2 border-l-4 px-5 py-4 md:grid-cols-[170px_1fr_190px_220px] ${BARRA[l.situacao]}`}>
+                  <div>
+                    <SituacaoBadge s={l.situacao} />
+                    <div className={`tabular mt-1.5 text-xs ${l.situacao === 'vencida' ? 'font-medium text-red-700' : 'text-tinta-500'}`}>
+                      {l.validade_ate ? `Válida até ${dataBR(l.validade_ate)}` : 'Sem validade em curso'}
                     </div>
-                    <div className="tabular text-xs text-tinta-600">{l.codigo_cadex} · CNPJ {formatCnpj(l.cnpj)}</div>
-                    <div className="text-xs text-tinta-500">
-                      {TIPO_LABEL[l.tipo]}{l.contratantes.length > 0 && ` para ${l.contratantes.join(', ')}`}
-                      {l.validade_ate && ` · válida até ${dataBR(l.validade_ate)}`}
+                  </div>
+
+                  <div className="flex min-w-0 gap-3">
+                    {temLogo && (l.logo_arquivo
+                      ? <img src={urlLogo(l.logo_arquivo)} alt="" loading="lazy"
+                             className="h-10 w-10 flex-none rounded border border-tinta-200 bg-white object-contain p-0.5" />
+                      : <span className="h-10 w-10 flex-none" aria-hidden />)}
+                    <div className="min-w-0">
+                      <div className="font-semibold text-tinta-900">{l.razao_social}</div>
+                      {l.nome_fantasia && <div className="text-sm text-tinta-600">{l.nome_fantasia}</div>}
+                      <div className="mt-0.5 text-sm text-tinta-500">
+                        {l.tipo === 'operadora' ? 'Operadora de telecomunicações' : 'Terceirizada'}
+                        {l.contratantes.length > 0 && `, contratada por ${l.contratantes.join(', ')}`}
+                      </div>
                     </div>
+                  </div>
+
+                  <dl className="tabular text-sm">
+                    <dt className="sr-only">Código CADEX</dt>
+                    <dd className="font-semibold text-tinta-800">{l.codigo_cadex}</dd>
+                    <dt className="sr-only">CNPJ</dt>
+                    <dd className="text-tinta-600">{formatCnpj(l.cnpj)}</dd>
+                  </dl>
+
+                  <div className="text-sm text-tinta-600">
+                    {l.portaria_numero
+                      ? <>{l.portaria_numero}<div className="text-xs text-tinta-500">publicada em {dataBR(l.portaria_data)}</div></>
+                      : <span className="text-tinta-400">Sem portaria publicada</span>}
                   </div>
                 </li>
               ))}
             </ul>
-          )}
-
-          {filtradas.length > 0 && (
-            <div className={`${tabela.moldura} hidden md:block`}>
-              <table className={tabela.tabela}>
-                <thead className={tabela.cabeca}>
-                  <tr>
-                    <th className={tabela.th}>Empresa</th>
-                    <th className={tabela.th}>Código CADEX</th>
-                    <th className={tabela.th}>CNPJ</th>
-                    <th className={tabela.th}>Tipo</th>
-                    <th className={tabela.th}>Situação</th>
-                    <th className={tabela.th}>Validade</th>
-                    <th className={tabela.th}>Portaria</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtradas.map((l) => (
-                    <tr key={l.codigo_cadex} className={tabela.linha}>
-                      <td className={tabela.td}>
-                        <div className="flex items-center gap-3">
-                          {temLogo && <Logo l={l} />}
-                          <div>
-                            <div className="font-medium text-tinta-900">{l.razao_social}</div>
-                            {l.nome_fantasia && <div className="text-xs text-tinta-500">{l.nome_fantasia}</div>}
-                          </div>
-                        </div>
-                      </td>
-                      <td className={`${tabela.td} tabular whitespace-nowrap text-xs text-tinta-700`}>{l.codigo_cadex}</td>
-                      <td className={`${tabela.td} tabular whitespace-nowrap text-xs text-tinta-700`}>{formatCnpj(l.cnpj)}</td>
-                      <td className={tabela.td}>
-                        {TIPO_LABEL[l.tipo]}
-                        {l.contratantes.length > 0 && (
-                          <div className="text-xs text-tinta-500">para {l.contratantes.join(', ')}</div>
-                        )}
-                      </td>
-                      <td className={tabela.td}><SituacaoBadge s={l.situacao} /></td>
-                      <td className={`${tabela.td} tabular whitespace-nowrap ${l.situacao === 'vencida' ? 'font-medium text-red-700' : ''}`}>{dataBR(l.validade_ate)}</td>
-                      <td className={`${tabela.td} min-w-[200px] text-xs text-tinta-600`}>
-                        {l.portaria_numero
-                          ? <>{l.portaria_numero}<div className="text-tinta-400">publicada em {dataBR(l.portaria_data)}</div></>
-                          : '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          {linhas && linhas.length > 0 && (
-            <div className="border-t border-tinta-200 px-4 py-2.5 text-xs text-tinta-500">
-              {filtradas.length} de {linhas.length} empresa{linhas.length === 1 ? '' : 's'}
-            </div>
           )}
         </section>
       </main>
       <Rodape />
     </div>
   );
-}
-
-function Logo({ l }: { l: LinhaPublica }) {
-  return l.logo_arquivo
-    ? <img src={urlLogo(l.logo_arquivo)} alt="" loading="lazy"
-           className="h-9 w-9 flex-none rounded border border-tinta-200 bg-white object-contain p-0.5" />
-    : <span className="h-9 w-9 flex-none" aria-hidden />;
 }

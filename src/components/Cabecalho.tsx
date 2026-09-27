@@ -14,10 +14,7 @@ export function Cabecalho({ itens, direita }: { itens: ItemMenu[]; direita?: Rea
     <header>
       <div className="bg-tinta-900 text-2xs text-tinta-300">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-1.5">
-          <span>
-            Prefeitura Municipal de Niterói
-            <span className="hidden sm:inline"> · Secretaria de Conservação e Serviços Públicos</span>
-          </span>
+          <span>Prefeitura Municipal de Niterói</span>
           <a href={SITE_SECONSER} target="_blank" rel="noopener noreferrer"
              className="hidden shrink-0 hover:text-white sm:inline">
             Portal da SECONSER
