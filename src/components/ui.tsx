@@ -95,7 +95,7 @@ export function Field({
 export const inputClass =
   'block w-full rounded border border-tinta-300 bg-white px-3 py-2 text-sm text-tinta-900 ' +
   'placeholder:text-tinta-400 focus:border-marca-600 focus:outline-none focus:ring-2 focus:ring-marca-600/15 ' +
-  'disabled:bg-tinta-50 disabled:text-tinta-500';
+  'disabled:cursor-default disabled:bg-tinta-50 disabled:text-tinta-800';
 
 /** Tabelas de listagem. */
 export const tabela = {
