@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Badge, Button, Card, Empty, ErrorNote, Spinner, inputClass } from '../components/ui';
+import { Badge, Button, Empty, ErrorNote, Spinner, Titulo, botaoLink, inputClass, tabela } from '../components/ui';
 import { ExportarRelacao } from '../components/ExportarRelacao';
 import { SituacaoBadge } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
@@ -60,22 +60,18 @@ export default function Empresas() {
   }, [empresas, busca, tipo, situacao, hoje]);
 
   return (
-    <Card
-      title={`Empresas${empresas ? ` (${filtradas.length})` : ''}`}
-      action={
-        <div className="flex flex-wrap gap-2">
+    <>
+      <Titulo
+        titulo="Empresas"
+        descricao="Operadoras de telecomunicações e terceirizadas cadastradas no CADEX."
+        acoes={<>
           <Button variant="secondary" disabled={!empresas?.length} onClick={() => setExportando((x) => !x)}>
             Exportar
           </Button>
-          {podeEditar && (
-            <Link to="/empresas/nova"
-                  className="rounded-md bg-marca-700 px-3 py-2 text-sm font-medium text-white hover:bg-marca-800">
-              Nova empresa
-            </Link>
-          )}
-        </div>
-      }
-    >
+          {podeEditar && <Link to="/empresas/nova" className={botaoLink.primary}>Nova empresa</Link>}
+        </>}
+      />
+
       {exportando && empresas && (
         <ExportarRelacao
           empresas={empresas}
@@ -91,73 +87,79 @@ export default function Empresas() {
           onFechar={() => setExportando(false)}
         />
       )}
-      <div className="mb-4 grid gap-3 sm:grid-cols-[1fr_auto_auto]">
-        <input className={inputClass} placeholder="Buscar por nome, CNPJ ou código CADEX" value={busca}
-               onChange={(e) => setBusca(e.target.value)} aria-label="Buscar" />
-        <select className={inputClass} value={tipo} onChange={(e) => setTipo(e.target.value)} aria-label="Tipo">
-          <option value="">Todos os tipos</option>
-          <option value="operadora">Operadoras</option>
-          <option value="terceirizada">Terceirizadas</option>
-        </select>
-        <select className={inputClass} value={situacao} onChange={(e) => setSituacao(e.target.value)} aria-label="Situação">
-          <option value="">Todas as situações</option>
-          {Object.entries(SITUACAO_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-        </select>
-      </div>
 
-      <ErrorNote error={error} />
-      {!empresas && !error && <Spinner />}
-      {empresas && filtradas.length === 0 && (
-        <Empty>{empresas.length === 0 ? 'Nenhuma empresa cadastrada ainda.' : 'Nenhuma empresa encontrada.'}</Empty>
-      )}
-
-      {filtradas.length > 0 && (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="text-xs uppercase tracking-wide text-slate-500">
-              <tr>
-                <th className="py-2 pr-4">Empresa</th>
-                <th className="py-2 pr-4">Código CADEX</th>
-                <th className="py-2 pr-4">CNPJ</th>
-                <th className="py-2 pr-4">Tipo</th>
-                {podeEditar && <th className="py-2 pr-4">Documentação</th>}
-                <th className="py-2">Situação</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filtradas.map((e) => {
-                const contratantes = vinculos
-                  .filter((v) => v.contratada_id === e.id && !v.fim)
-                  .map((v) => porId.get(v.contratante_id))
-                  .filter((o): o is Empresa => Boolean(o));
-                const r = resumoDocumentos(tipos, docs.filter((d) => d.empresa_id === e.id), hoje);
-                return (
-                  <tr key={e.id} className="hover:bg-slate-50">
-                    <td className="py-2 pr-4">
-                      <Link to={`/empresas/${e.id}`} className="font-medium text-marca-700 hover:underline">
-                        {nomeEmpresa(e)}
-                      </Link>
-                      {e.nome_fantasia && <div className="text-xs text-slate-500">{e.razao_social}</div>}
-                    </td>
-                    <td className="whitespace-nowrap py-2 pr-4 font-mono text-xs">{e.codigo_cadex}</td>
-                    <td className="whitespace-nowrap py-2 pr-4 font-mono text-xs">{formatCnpj(e.cnpj)}</td>
-                    <td className="py-2 pr-4">
-                      {TIPO_LABEL[e.tipo]}
-                      {contratantes.length > 0 && (
-                        <div className="text-xs text-slate-500">
-                          para {contratantes.map(nomeEmpresa).join(', ')}
-                        </div>
-                      )}
-                    </td>
-                    {podeEditar && <td className="py-2 pr-4"><ResumoBadge r={r} /></td>}
-                    <td className="py-2"><SituacaoBadge s={situacaoEfetiva(e, hoje)} /></td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+      <section className="rounded border border-tinta-200 bg-white">
+        <div className="grid gap-3 border-b border-tinta-200 p-4 sm:grid-cols-[1fr_200px_220px]">
+          <input className={inputClass} placeholder="Buscar por nome, CNPJ ou código CADEX" value={busca}
+                 onChange={(e) => setBusca(e.target.value)} aria-label="Buscar" />
+          <select className={inputClass} value={tipo} onChange={(e) => setTipo(e.target.value)} aria-label="Tipo">
+            <option value="">Todos os tipos</option>
+            <option value="operadora">Operadoras</option>
+            <option value="terceirizada">Terceirizadas</option>
+          </select>
+          <select className={inputClass} value={situacao} onChange={(e) => setSituacao(e.target.value)} aria-label="Situação">
+            <option value="">Todas as situações</option>
+            {Object.entries(SITUACAO_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </select>
         </div>
-      )}
-    </Card>
+
+        <ErrorNote error={error} />
+        {!empresas && !error && <Spinner />}
+        {empresas && filtradas.length === 0 && (
+          <Empty>{empresas.length === 0 ? 'Nenhuma empresa cadastrada ainda.' : 'Nenhuma empresa encontrada.'}</Empty>
+        )}
+
+        {filtradas.length > 0 && (
+          <div className={tabela.moldura}>
+            <table className={tabela.tabela}>
+              <thead className={tabela.cabeca}>
+                <tr>
+                  <th className={tabela.th}>Empresa</th>
+                  <th className={tabela.th}>Código CADEX</th>
+                  <th className={tabela.th}>CNPJ</th>
+                  <th className={tabela.th}>Tipo</th>
+                  {podeEditar && <th className={tabela.th}>Documentação</th>}
+                  <th className={tabela.th}>Situação</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtradas.map((e) => {
+                  const contratantes = vinculos
+                    .filter((v) => v.contratada_id === e.id && !v.fim)
+                    .map((v) => porId.get(v.contratante_id))
+                    .filter((o): o is Empresa => Boolean(o));
+                  const r = resumoDocumentos(tipos, docs.filter((d) => d.empresa_id === e.id), hoje);
+                  return (
+                    <tr key={e.id} className={tabela.linha}>
+                      <td className={tabela.td}>
+                        <Link to={`/empresas/${e.id}`} className="font-medium text-tinta-900 hover:text-marca-700 hover:underline">
+                          {nomeEmpresa(e)}
+                        </Link>
+                        {e.nome_fantasia && <div className="text-xs text-tinta-500">{e.razao_social}</div>}
+                      </td>
+                      <td className={`${tabela.td} tabular whitespace-nowrap text-xs text-tinta-700`}>{e.codigo_cadex}</td>
+                      <td className={`${tabela.td} tabular whitespace-nowrap text-xs text-tinta-700`}>{formatCnpj(e.cnpj)}</td>
+                      <td className={tabela.td}>
+                        {TIPO_LABEL[e.tipo]}
+                        {contratantes.length > 0 && (
+                          <div className="text-xs text-tinta-500">para {contratantes.map(nomeEmpresa).join(', ')}</div>
+                        )}
+                      </td>
+                      {podeEditar && <td className={tabela.td}><ResumoBadge r={r} /></td>}
+                      <td className={tabela.td}><SituacaoBadge s={situacaoEfetiva(e, hoje)} /></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {empresas && empresas.length > 0 && (
+          <div className="border-t border-tinta-200 px-4 py-2.5 text-xs text-tinta-500">
+            {filtradas.length} de {empresas.length} empresa{empresas.length === 1 ? '' : 's'}
+          </div>
+        )}
+      </section>
+    </>
   );
 }

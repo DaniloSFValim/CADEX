@@ -35,7 +35,7 @@ function AreaRestrita() {
   if (!servidor) {
     return (
       <div className="mx-auto max-w-md p-8 text-center">
-        <p className="text-sm text-slate-700">
+        <p className="text-sm text-tinta-700">
           O usuário <strong>{session.user.email}</strong> entrou, mas não está autorizado
           a usar o sistema. Peça ao administrador para incluí-lo como servidor.
         </p>

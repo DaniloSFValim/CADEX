@@ -6,6 +6,11 @@
 
 @layer base {
   html { -webkit-text-size-adjust: 100%; }
-  body { @apply bg-slate-50 text-slate-900 antialiased;  }
+  body { @apply bg-tinta-50 text-tinta-800 antialiased; font-feature-settings: 'cv11', 'ss01'; }
   :focus-visible { @apply outline-2 outline-offset-2 outline-marca-600; }
+  ::selection { @apply bg-marca-100 text-tinta-900; }
+}
+
+@layer utilities {
+  .tabular { font-variant-numeric: tabular-nums; }
 }
