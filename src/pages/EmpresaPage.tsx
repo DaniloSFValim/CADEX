@@ -504,7 +504,11 @@ function LadoVinculo({
 }
 
 const TOM_ESTADO: Record<EstadoDocumento, Tom> = {
-  pendente: 'alerta', ok: 'bom', vence_em_breve: 'alerta', vencido: 'ruim',
+  pendente: 'ruim', ok: 'bom', vence_em_breve: 'alerta', vencido: 'ruim',
+};
+
+const TOM_STATUS: Record<'pendente' | 'entregue', Tom> = {
+  pendente: 'ruim', entregue: 'bom',
 };
 
 const dataBR = (iso: string) => iso.split('-').reverse().join('/');
@@ -648,9 +652,9 @@ function LinhaDocumento({
             </div>
           )}
         </div>
-        {exibirEstado
+        {tipo.tem_validade && exibirEstado
           ? <Badge tom={TOM_ESTADO[exibirEstado]}>{ESTADO_LABEL[exibirEstado]}</Badge>
-          : <Badge>{status === 'entregue' ? 'Entregue' : 'Pendente'}</Badge>}
+          : <Badge tom={TOM_STATUS[status]}>{status === 'entregue' ? 'Entregue' : 'Pendente'}</Badge>}
       </div>
     </li>
   );
