@@ -6,7 +6,7 @@ import { useAuth } from '../lib/auth';
 import { formatCnpj, isValidCnpj, onlyDigits } from '../lib/cnpj';
 import {
   ESTADO_LABEL, TIPO_LABEL, buscarEmpresa, criarEmpresa, criarVinculo, definirFimVinculo,
-  enviarLogo, estadoDocumento, registrarValidadeDocumento, removerLogo, urlLogo, MAX_LOGO_BYTES, TIPOS_LOGO, hojeISO, listarDocumentos, listarEmpresas,
+  enviarLogo, estadoDocumento, registrarValidadeDocumento, registrarStatusDocumento, removerLogo, urlLogo, MAX_LOGO_BYTES, TIPOS_LOGO, hojeISO, listarDocumentos, listarEmpresas,
   listarTiposDocumento, listarVinculos, nomeEmpresa, resumoDocumentos,
   salvarEmpresa, situacaoEfetiva, ultimoPorTipo,
   type Documento, type Empresa, type EmpresaInput, type EstadoDocumento, type TipoDocumento,
@@ -560,6 +560,7 @@ function LinhaDocumento({
   onChanged: () => Promise<void>;
 }) {
   const [validade, setValidade] = useState(doc?.validade ?? '');
+  const [status, setStatus] = useState(doc?.status ?? 'pendente');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown | null>(null);
   const exibirEstado = estado === 'pendente' && !tipo.obrigatorio ? null : estado;
@@ -578,13 +579,29 @@ function LinhaDocumento({
     }
   };
 
+  const salvarStatus = async (novoStatus: 'pendente' | 'entregue') => {
+    if (tipo.tem_validade) return;
+    setStatus(novoStatus);
+    setBusy(true);
+    setError(null);
+    try {
+      await registrarStatusDocumento(empresaId, tipo.codigo, novoStatus);
+      await onChanged();
+    } catch (err) {
+      setError(err as unknown);
+      setStatus(status);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <li className="py-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="flex-1">
           <div className="text-sm font-medium text-tinta-800">{tipo.nome}</div>
           <div className="text-xs text-tinta-500">
-            {tipo.obrigatorio ? 'Obrigatório' : 'Quando aplicável'} ({tipo.fundamento.replace(/^Art\./, 'art.')})
+            {tipo.obrigatorio ? 'Obrigatório' : 'Quando aplicável'}
           </div>
           {tipo.tem_validade && (
             <div className="mt-2 flex flex-wrap items-end gap-2">
@@ -603,15 +620,32 @@ function LinhaDocumento({
               <ErrorNote error={error} />
             </div>
           )}
+          {!tipo.tem_validade && (
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <label className="flex items-center gap-2 text-sm text-tinta-700">
+                <input type="radio" name={`status-${tipo.codigo}`} value="pendente"
+                       checked={status === 'pendente'} disabled={busy}
+                       onChange={() => void salvarStatus('pendente')} />
+                Pendente
+              </label>
+              <label className="flex items-center gap-2 text-sm text-tinta-700">
+                <input type="radio" name={`status-${tipo.codigo}`} value="entregue"
+                       checked={status === 'entregue'} disabled={busy}
+                       onChange={() => void salvarStatus('entregue')} />
+                Entregue
+              </label>
+              <ErrorNote error={error} />
+            </div>
+          )}
           {doc?.validade && (
             <div className="mt-1 text-xs text-tinta-600">
-              {tipo.tem_validade ? 'Registrado:' : 'Válido até'} {dataBR(doc.validade)}
+              Registrado: {dataBR(doc.validade)}
             </div>
           )}
         </div>
         {exibirEstado
           ? <Badge tom={TOM_ESTADO[exibirEstado]}>{ESTADO_LABEL[exibirEstado]}</Badge>
-          : <Badge>Não enviado</Badge>}
+          : <Badge>{status === 'entregue' ? 'Entregue' : 'Pendente'}</Badge>}
       </div>
     </li>
   );
