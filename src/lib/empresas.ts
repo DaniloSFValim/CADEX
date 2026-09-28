@@ -73,6 +73,7 @@ export interface Documento {
   arquivo: string;
   nome_arquivo: string;
   validade: string | null;
+  status: 'pendente' | 'entregue';
   enviado_em: string;
 }
 
@@ -290,6 +291,18 @@ export async function registrarValidadeDocumento(
 ): Promise<void> {
   const { error } = await supabase.from('documentos')
     .update({ validade })
+    .eq('empresa_id', empresaId)
+    .eq('tipo', tipo)
+    .order('enviado_em', { ascending: false })
+    .limit(1);
+  if (error) throw error;
+}
+
+export async function registrarStatusDocumento(
+  empresaId: string, tipo: string, status: 'pendente' | 'entregue',
+): Promise<void> {
+  const { error } = await supabase.from('documentos')
+    .update({ status })
     .eq('empresa_id', empresaId)
     .eq('tipo', tipo)
     .order('enviado_em', { ascending: false })
