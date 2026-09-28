@@ -13,9 +13,8 @@ vêm de lá e valem para as próximas mudanças.
   `atencao` (#8f5b00) só para situação. O laranja fica no logotipo oficial.
 - **Tipografia:** Public Sans servida pelo próprio site; números tabulares
   em CNPJ, códigos, datas e contagens.
-- **Abertura em frase com números:** a página pública abre com uma frase
-  que contém os dados ("3 empresas no Cadastro de Executores, 1 apta…"),
-  não com blocos de estatística.
+- **Abertura da consulta pública:** título direto ("Consultar empresa
+  executora") e a busca logo abaixo; sem frase com contagens.
 - **Superfícies:** `.cartao` (fundo branco, linha fina, sem sombra). Títulos
   de seção ficam fora do cartão, em 20 px.
 - **Números em destaque (área restrita):** `Kpi` com traço grosso em cima.

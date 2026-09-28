@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Empty, ErrorNote, Spinner, inputClass } from '../components/ui';
 import { BARRA, SituacaoBadge, dataBR } from '../components/Situacao';
 import { formatCnpj, onlyDigits } from '../lib/cnpj';
-import { SITUACAO_LABEL, consultaPublica, podeAtuar, urlLogo, type LinhaPublica } from '../lib/empresas';
+import { SITUACAO_LABEL, consultaPublica, urlLogo, type LinhaPublica } from '../lib/empresas';
 
 /**
  * Consulta pública do CADEX (art. 7º, § 2º): aberta, sem login. Mostra só
@@ -34,7 +34,6 @@ export default function Consulta() {
   }, [linhas, busca, situacao]);
 
   const temLogo = filtradas.some((l) => l.logo_arquivo);
-  const aptas = (linhas ?? []).filter((l) => podeAtuar(l.situacao)).length;
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -46,11 +45,7 @@ export default function Consulta() {
             Consulta pública, Resolução Conjunta SECONSER/SEOP nº&nbsp;001/2026
           </p>
           <h1 className="mt-3 text-3xl font-semibold leading-[1.15] tracking-[-0.02em] text-tinta-900 sm:text-4xl md:text-[3rem]">
-            {linhas
-              ? <><span className="tabular">{linhas.length}</span> empresa{linhas.length === 1 ? '' : 's'} no
-                  Cadastro de Executores, <span className="tabular">{aptas}</span> apta{aptas === 1 ? '' : 's'} a
-                  trabalhar nas vias de Niterói.</>
-              : 'Cadastro de Executores de Niterói.'}
+            Consultar empresa executora
           </h1>
           <p className="mt-5 max-w-2xl text-lg leading-relaxed text-tinta-500">
             Antes de uma obra ou serviço na via pública, no subsolo ou na rede aérea, confira se a
