@@ -5,6 +5,7 @@ import { useAuth } from './lib/auth';
 import { isConfigured } from './lib/supabase';
 import Consulta from './pages/Consulta';
 import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
 import Empresas from './pages/Empresas';
 import EmpresaPage from './pages/EmpresaPage';
 import Ficha from './pages/Ficha';
@@ -50,6 +51,7 @@ function AreaRestrita() {
       <Route path="empresas/:id/ficha" element={<Ficha />} />
       <Route element={<Layout />}>
         <Route index element={<Empresas />} />
+        <Route path="dashboard" element={<Dashboard />} />
         <Route path="empresas/nova" element={<EmpresaPage />} />
         <Route path="empresas/:id" element={<EmpresaPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />

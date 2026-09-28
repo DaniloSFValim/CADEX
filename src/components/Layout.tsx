@@ -6,10 +6,12 @@ import { Button } from './ui';
 
 export function Layout() {
   const { servidor, session, signOut } = useAuth();
+  const isGestor = servidor?.papel === 'gestor';
   return (
     <div className="flex min-h-screen flex-col">
       <Cabecalho
         itens={[
+          ...(isGestor ? [{ rotulo: 'Dashboard', para: '/dashboard' }] : []),
           { rotulo: 'Empresas', para: '/', fim: true },
           { rotulo: 'Consulta pública', para: '/consulta' },
         ]}
