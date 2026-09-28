@@ -90,7 +90,7 @@ export default function Ficha() {
       </div>
 
       <article className="mx-auto my-6 max-w-4xl bg-white p-8 text-sm text-tinta-800 print:my-0 print:max-w-none print:p-0 print:shadow-none">
-        <header className="flex items-center justify-between gap-6 border-b-2 border-marca-600 pb-4">
+        <header className="flex items-center justify-between gap-6 border-b-2 border-tinta-900 pb-4">
           <img src="/logo-prefeitura-seconser.png" alt="Prefeitura de Niterói — SECONSER" className="h-16 w-auto" />
           <div className="text-right leading-tight">
             <div className="text-base font-bold tracking-wide">CADEX</div>
@@ -225,7 +225,7 @@ const nomesEmpresas = (l: (Empresa | undefined)[]) =>
 function Bloco({ titulo, children }: { titulo: string; children: ReactNode }) {
   return (
     <section className="mt-6 break-inside-avoid-page">
-      <h2 className="mb-2 border-b border-tinta-200 pb-1 text-xs font-semibold uppercase tracking-wider text-marca-800">{titulo}</h2>
+      <h2 className="mb-2 border-b border-tinta-200 pb-1 text-sm font-semibold text-tinta-900">{titulo}</h2>
       {children}
     </section>
   );

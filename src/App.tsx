@@ -24,7 +24,7 @@ function AreaRestrita() {
 
   if (!isConfigured) {
     return (
-      <p className="p-8 text-center text-sm text-red-800">
+      <p className="p-8 text-center text-sm text-baixa">
         Sistema sem conexão com o banco: faltam VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.
       </p>
     );

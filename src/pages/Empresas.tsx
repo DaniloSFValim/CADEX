@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Badge, Button, Empty, ErrorNote, Spinner, Titulo, botaoLink, inputClass, tabela } from '../components/ui';
+import { Badge, Button, Empty, ErrorNote, Kpi, Spinner, Titulo, botaoLink, inputClass, tabela } from '../components/ui';
 import { ExportarRelacao } from '../components/ExportarRelacao';
 import { BARRA, SituacaoBadge } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { formatCnpj, onlyDigits } from '../lib/cnpj';
 import {
   SITUACAO_LABEL, TIPO_LABEL, hojeISO, situacaoEfetiva, listarDocumentos, listarEmpresas, listarTiposDocumento, listarVinculos,
-  nomeEmpresa, resumoDocumentos, type Documento, type Empresa, type Resumo, type TipoDocumento,
+  nomeEmpresa, resumoDocumentos, type Documento, type Empresa, type Resumo, type SituacaoEfetiva, type TipoDocumento,
   type Vinculo,
 } from '../lib/empresas';
 
@@ -72,6 +72,27 @@ export default function Empresas() {
         </>}
       />
 
+      {empresas && empresas.length > 0 && (() => {
+        const sit = empresas.map((e) => situacaoEfetiva(e, hoje));
+        const n = (f: (x: SituacaoEfetiva) => boolean) => sit.filter(f).length;
+        const terceirizadas = empresas.filter((e) => e.tipo === 'terceirizada').length;
+        const saneamento = n((x) => x === 'em_saneamento');
+        const pendentes = podeEditar
+          ? empresas.filter((e) => resumoDocumentos(tipos, docs.filter((d) => d.empresa_id === e.id), hoje).faltando > 0).length
+          : null;
+        return (
+          <div className="mb-10 grid grid-cols-2 gap-x-8 gap-y-6 md:grid-cols-4">
+            <Kpi rotulo="Cadastradas" valor={empresas.length}
+                 detalhe={`${empresas.length - terceirizadas} operadora${empresas.length - terceirizadas === 1 ? '' : 's'}, ${terceirizadas} terceirizada${terceirizadas === 1 ? '' : 's'}`} />
+            <Kpi rotulo="Aptas" valor={n((x) => x === 'apta' || x === 'em_saneamento')} tom="alta"
+                 detalhe={saneamento ? `${saneamento} em saneamento` : 'podem atuar'} />
+            <Kpi rotulo="Em análise" valor={n((x) => x === 'em_analise')} detalhe="aguardando decisão" />
+            <Kpi rotulo="Impedidas" valor={n((x) => x === 'inapta' || x === 'vencida' || x === 'indeferida')} tom="baixa"
+                 detalhe={pendentes !== null ? `${pendentes} com documentos pendentes` : 'inaptas, vencidas ou indeferidas'} />
+          </div>
+        );
+      })()}
+
       {exportando && empresas && (
         <ExportarRelacao
           empresas={empresas}
@@ -88,7 +109,7 @@ export default function Empresas() {
         />
       )}
 
-      <section className="rounded border border-tinta-200 bg-white">
+      <section className="cartao">
         <div className="grid gap-3 border-b border-tinta-200 p-4 sm:grid-cols-[1fr_200px_220px]">
           <input className={inputClass} placeholder="Buscar por nome, CNPJ ou código CADEX" value={busca}
                  onChange={(e) => setBusca(e.target.value)} aria-label="Buscar" />

@@ -4,9 +4,9 @@ export type Tom = 'neutro' | 'bom' | 'alerta' | 'ruim';
 
 const TOM: Record<Tom, { caixa: string; ponto: string }> = {
   neutro: { caixa: 'bg-tinta-100 text-tinta-700', ponto: 'bg-tinta-400' },
-  bom: { caixa: 'bg-emerald-50 text-emerald-800', ponto: 'bg-emerald-600' },
-  alerta: { caixa: 'bg-amber-50 text-amber-900', ponto: 'bg-amber-500' },
-  ruim: { caixa: 'bg-red-50 text-red-800', ponto: 'bg-red-600' },
+  bom: { caixa: 'bg-alta/10 text-alta', ponto: 'bg-alta' },
+  alerta: { caixa: 'bg-atencao/10 text-atencao', ponto: 'bg-atencao/100' },
+  ruim: { caixa: 'bg-baixa/10 text-baixa', ponto: 'bg-baixa' },
 };
 
 export function Badge({ tom = 'neutro', children }: { tom?: Tom; children: ReactNode }) {
@@ -22,14 +22,14 @@ export function Card({
   title, action, children, semPadding = false,
 }: { title?: ReactNode; action?: ReactNode; children: ReactNode; semPadding?: boolean }) {
   return (
-    <section className="rounded-md border border-tinta-200 bg-white">
+    <section>
       {(title || action) && (
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-tinta-200 px-5 py-3">
-          <h2 className="text-[15px] font-semibold text-tinta-900">{title}</h2>
+        <header className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+          <h2 className="text-xl font-semibold tracking-[-0.01em] text-tinta-900">{title}</h2>
           {action}
         </header>
       )}
-      <div className={semPadding ? '' : 'p-5'}>{children}</div>
+      <div className={`cartao ${semPadding ? '' : 'p-5'}`}>{children}</div>
     </section>
   );
 }
@@ -39,11 +39,11 @@ export function Titulo({
   trilha, titulo, descricao, acoes, children,
 }: { trilha?: ReactNode; titulo: ReactNode; descricao?: ReactNode; acoes?: ReactNode; children?: ReactNode }) {
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+    <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0">
-        {trilha && <div className="mb-1.5 text-xs text-tinta-500">{trilha}</div>}
-        <h1 className="text-2xl font-semibold tracking-tight text-tinta-900">{titulo}</h1>
-        {descricao && <div className="mt-1 text-sm text-tinta-500">{descricao}</div>}
+        {trilha && <div className="mb-2 text-sm text-tinta-400">{trilha}</div>}
+        <h1 className="text-3xl font-semibold leading-tight tracking-[-0.02em] text-tinta-900">{titulo}</h1>
+        {descricao && <div className="mt-2 max-w-2xl text-base text-tinta-500">{descricao}</div>}
         {children}
       </div>
       {acoes && <div className="flex flex-wrap items-center gap-2">{acoes}</div>}
@@ -55,9 +55,9 @@ export function Button({
   children, variant = 'primary', ...rest
 }: { variant?: 'primary' | 'secondary' | 'danger' } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   const styles = {
-    primary: 'bg-marca-700 text-white hover:bg-marca-800',
+    primary: 'bg-marca-500 text-white hover:bg-marca-700',
     secondary: 'bg-white text-tinta-700 ring-1 ring-inset ring-tinta-300 hover:bg-tinta-50',
-    danger: 'bg-white text-red-700 ring-1 ring-inset ring-red-200 hover:bg-red-50',
+    danger: 'bg-white text-baixa ring-1 ring-inset ring-baixa/30 hover:bg-baixa/10',
   }[variant];
   return (
     <button
@@ -73,7 +73,7 @@ export function Button({
 
 /** Mesmo visual dos botões, para links (react-router). */
 export const botaoLink = {
-  primary: 'inline-flex items-center justify-center gap-2 rounded bg-marca-700 px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-marca-800',
+  primary: 'inline-flex items-center justify-center gap-2 rounded bg-marca-500 px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-marca-700',
   secondary: 'inline-flex items-center justify-center gap-2 rounded bg-white px-3.5 py-2 text-sm font-medium text-tinta-700 ring-1 ring-inset ring-tinta-300 transition-colors hover:bg-tinta-50',
 };
 
@@ -84,7 +84,7 @@ export function Field({
     <label className={`block ${className}`}>
       <span className="block text-[13px] font-medium text-tinta-700">
         {label}
-        {required && <span className="ml-0.5 text-red-600" aria-hidden>*</span>}
+        {required && <span className="ml-0.5 text-baixa" aria-hidden>*</span>}
       </span>
       <div className="mt-1.5">{children}</div>
       {hint && <span className="mt-1 block text-xs text-tinta-500">{hint}</span>}
@@ -101,11 +101,29 @@ export const inputClass =
 export const tabela = {
   moldura: 'overflow-x-auto',
   tabela: 'w-full text-left text-sm',
-  cabeca: 'border-b border-tinta-200 bg-tinta-50 text-xs font-semibold text-tinta-600',
-  th: 'px-4 py-2.5 font-semibold',
-  linha: 'border-b border-tinta-100 last:border-0 hover:bg-tinta-50/60',
+  cabeca: 'border-b border-tinta-200 text-left text-sm',
+  th: 'px-4 py-2.5 font-medium text-tinta-400',
+  linha: 'border-b border-tinta-100 last:border-0 hover:bg-tinta-50 focus-within:bg-tinta-50',
   td: 'px-4 py-3 align-middle',
 };
+
+/** Número de destaque com traço grosso em cima (mesmo padrão do NETRANK). */
+export function Kpi({ rotulo, valor, detalhe, tom }: {
+  rotulo: string; valor: ReactNode; detalhe?: ReactNode; tom?: 'alta' | 'baixa' | 'atencao';
+}) {
+  const cor = tom ? { alta: 'text-alta', baixa: 'text-baixa', atencao: 'text-atencao' }[tom] : 'text-tinta-900';
+  return (
+    <div className="border-t-2 border-tinta-900 pt-3">
+      <div className="text-sm font-medium text-tinta-600">{rotulo}</div>
+      <div className={`tabular mt-1 text-3xl font-semibold tracking-[-0.02em] ${cor}`}>{valor}</div>
+      {detalhe && <div className="mt-1 text-sm text-tinta-400">{detalhe}</div>}
+    </div>
+  );
+}
+
+/** Link de texto sublinhado, como os atalhos do NETRANK. */
+export const linkTexto =
+  'font-semibold text-marca-600 underline decoration-marca-200 decoration-2 underline-offset-4 hover:decoration-marca-500';
 
 export function Empty({ children }: { children: ReactNode }) {
   return <p className="px-4 py-10 text-center text-sm text-tinta-500">{children}</p>;
@@ -130,7 +148,7 @@ export function errorMessage(error: unknown): string {
 export function ErrorNote({ error }: { error: unknown }) {
   if (!error) return null;
   return (
-    <p role="alert" className="rounded border-l-4 border-red-600 bg-red-50 px-3 py-2 text-sm text-red-800">
+    <p role="alert" className="rounded border-l-4 border-baixa bg-baixa/10 px-3 py-2 text-sm text-baixa">
       {errorMessage(error)}
     </p>
   );

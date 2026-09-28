@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Empty, ErrorNote, Spinner, inputClass } from '../components/ui';
 import { BARRA, SituacaoBadge, dataBR } from '../components/Situacao';
 import { formatCnpj, onlyDigits } from '../lib/cnpj';
-import { SITUACAO_LABEL, consultaPublica, urlLogo, type LinhaPublica } from '../lib/empresas';
+import { SITUACAO_LABEL, consultaPublica, podeAtuar, urlLogo, type LinhaPublica } from '../lib/empresas';
 
 /**
  * Consulta pública do CADEX (art. 7º, § 2º): aberta, sem login. Mostra só
@@ -34,22 +34,31 @@ export default function Consulta() {
   }, [linhas, busca, situacao]);
 
   const temLogo = filtradas.some((l) => l.logo_arquivo);
+  const aptas = (linhas ?? []).filter((l) => podeAtuar(l.situacao)).length;
 
   return (
     <div className="flex min-h-screen flex-col">
       <Cabecalho itens={MENU_PUBLICO} />
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-10">
-        <h1 className="text-[2rem] font-bold leading-tight tracking-tight text-tinta-900">
-          Consultar empresa executora
-        </h1>
-        <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-tinta-600">
-          Antes de uma obra ou serviço na via pública de Niterói, confira se a empresa está
-          com inscrição APTA no Cadastro de Executores, conforme a Resolução Conjunta
-          SECONSER/SEOP nº&nbsp;001/2026.
-        </p>
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-12">
+        <header className="max-w-4xl pt-2">
+          <p className="text-sm text-tinta-400">
+            Consulta pública, Resolução Conjunta SECONSER/SEOP nº&nbsp;001/2026
+          </p>
+          <h1 className="mt-3 text-3xl font-semibold leading-[1.15] tracking-[-0.02em] text-tinta-900 sm:text-4xl md:text-[3rem]">
+            {linhas
+              ? <><span className="tabular">{linhas.length}</span> empresa{linhas.length === 1 ? '' : 's'} no
+                  Cadastro de Executores, <span className="tabular">{aptas}</span> apta{aptas === 1 ? '' : 's'} a
+                  trabalhar nas vias de Niterói.</>
+              : 'Cadastro de Executores de Niterói.'}
+          </h1>
+          <p className="mt-5 max-w-2xl text-lg leading-relaxed text-tinta-500">
+            Antes de uma obra ou serviço na via pública, no subsolo ou na rede aérea, confira se a
+            empresa responsável está com a inscrição APTA.
+          </p>
+        </header>
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_240px]">
+        <div className="mt-8 grid gap-3 sm:grid-cols-[1fr_240px]">
           <input className={`${inputClass} !py-3 !text-base`}
                  placeholder="Nome da empresa, CNPJ ou código CADEX"
                  value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar empresa" />
@@ -71,7 +80,7 @@ export default function Consulta() {
             </p>
           )}
           {linhas && filtradas.length === 0 && (
-            <div className="rounded-md border border-tinta-200 bg-white">
+            <div className="cartao">
               <Empty>
                 {linhas.length === 0
                   ? 'Nenhuma empresa inscrita até o momento.'
@@ -81,13 +90,13 @@ export default function Consulta() {
           )}
 
           {filtradas.length > 0 && (
-            <ul className="divide-y divide-tinta-200 overflow-hidden rounded-md border border-tinta-200 bg-white">
+            <ul className="cartao divide-y divide-tinta-100 overflow-hidden">
               {filtradas.map((l) => (
                 <li key={l.codigo_cadex}
                     className={`grid gap-x-6 gap-y-2 border-l-4 px-5 py-4 md:grid-cols-[170px_1fr_190px_220px] ${BARRA[l.situacao]}`}>
                   <div>
                     <SituacaoBadge s={l.situacao} />
-                    <div className={`tabular mt-1.5 text-xs ${l.situacao === 'vencida' ? 'font-medium text-red-700' : 'text-tinta-500'}`}>
+                    <div className={`tabular mt-1.5 text-xs ${l.situacao === 'vencida' ? 'font-medium text-baixa' : 'text-tinta-500'}`}>
                       {l.validade_ate ? `Válida até ${dataBR(l.validade_ate)}` : 'Sem validade em curso'}
                     </div>
                   </div>

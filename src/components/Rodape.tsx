@@ -2,30 +2,45 @@ import { Link } from 'react-router-dom';
 
 const SITE_SECONSER = 'https://www.seconser.niteroi.rj.gov.br/';
 
-/** Rodapé: contatos da Fiscalização de Serviços Concedidos (texto da SECONSER) e links. */
+/** Rodapé institucional: contatos da Fiscalização de Serviços Concedidos (texto da SECONSER) e links. */
 export function Rodape() {
-  const link = 'hover:text-white';
+  const link = 'text-marca-600 underline-offset-4 hover:underline';
   return (
-    <footer className="mt-16 bg-tinta-900 text-[13px] text-tinta-300">
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-8 sm:grid-cols-[1fr_auto]">
-        <address className="space-y-1 not-italic">
-          <p className="mb-2 font-semibold text-white">Fiscalização de Serviços Concedidos – SECONSER</p>
+    <footer className="mt-20 border-t border-tinta-200 bg-white">
+      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 text-sm md:grid-cols-[2fr_1.4fr_1fr]">
+        <div className="max-w-md space-y-2 text-tinta-400">
+          <p className="font-semibold text-tinta-900">Fiscalização de Serviços Concedidos – SECONSER</p>
+          <p>
+            Cadastro de Executores (CADEX) da Prefeitura Municipal de Niterói, previsto na
+            Resolução Conjunta SECONSER/SEOP nº&nbsp;001/2026.
+          </p>
           <p>Av. Visconde do Rio Branco, 11 – Ponta d'Areia, Niterói – RJ</p>
-          <p>Telefone: (21) 4040-1650</p>
-          <p>Disque-Luz: (21) 4040-1640</p>
-          <p><a href="mailto:fiscalizacao@seconser.niteroi.rj.gov.br" className={link}>fiscalizacao@seconser.niteroi.rj.gov.br</a></p>
-          <p><a href="mailto:seconser@seconser.niteroi.rj.gov.br" className={link}>seconser@seconser.niteroi.rj.gov.br</a></p>
-        </address>
-        <nav aria-label="Links do rodapé" className="flex flex-col gap-1.5 sm:items-end">
-          <Link to="/consulta" className={link}>Consulta pública</Link>
-          <Link to="/" className={link}>Área restrita</Link>
-          <a href={SITE_SECONSER} target="_blank" rel="noopener noreferrer" className={link}>Portal da SECONSER</a>
-        </nav>
-      </div>
-      <div className="border-t border-white/10">
-        <div className="mx-auto max-w-6xl px-4 py-3 text-2xs text-tinta-400">
-          © {new Date().getFullYear()} Prefeitura Municipal de Niterói. Secretaria de Conservação e Serviços Públicos.
         </div>
+        <dl className="space-y-3">
+          <div>
+            <dt className="text-tinta-400">Telefone</dt>
+            <dd className="tabular text-tinta-700">(21) 4040-1650</dd>
+          </div>
+          <div>
+            <dt className="text-tinta-400">Disque-Luz</dt>
+            <dd className="tabular text-tinta-700">(21) 4040-1640</dd>
+          </div>
+          <div>
+            <dt className="text-tinta-400">E-mail</dt>
+            <dd><a href="mailto:fiscalizacao@seconser.niteroi.rj.gov.br" className={link}>fiscalizacao@seconser.niteroi.rj.gov.br</a></dd>
+            <dd><a href="mailto:seconser@seconser.niteroi.rj.gov.br" className={link}>seconser@seconser.niteroi.rj.gov.br</a></dd>
+          </div>
+        </dl>
+        <ul className="space-y-2">
+          <li><Link to="/consulta" className={link}>Consulta pública</Link></li>
+          <li><Link to="/" className={link}>Área restrita</Link></li>
+          <li><a href={SITE_SECONSER} target="_blank" rel="noopener noreferrer" className={link}>Portal da SECONSER</a></li>
+        </ul>
+      </div>
+      <div className="border-t border-tinta-100">
+        <p className="mx-auto max-w-6xl px-4 py-4 text-xs text-tinta-400">
+          © {new Date().getFullYear()} Prefeitura Municipal de Niterói. Secretaria de Conservação e Serviços Públicos.
+        </p>
       </div>
     </footer>
   );

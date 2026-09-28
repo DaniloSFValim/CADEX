@@ -53,7 +53,7 @@ export function Inscricao({
         <div><dt className="text-xs text-tinta-500">Publicada em</dt><dd>{dataBR(empresa.portaria_data)}</dd></div>
         <div>
           <dt className="text-xs text-tinta-500">Válida até</dt>
-          <dd className={efetiva === 'vencida' ? 'font-medium text-red-700' : ''}>{dataBR(empresa.validade_ate)}</dd>
+          <dd className={efetiva === 'vencida' ? 'font-medium text-baixa' : ''}>{dataBR(empresa.validade_ate)}</dd>
         </div>
         <div>
           <dt className="text-xs text-tinta-500">Fim do prazo de saneamento</dt>
@@ -61,7 +61,7 @@ export function Inscricao({
         </div>
       </dl>
       {efetiva === 'vencida' && (
-        <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-inset ring-red-200">
+        <p className="mb-4 rounded bg-baixa/10 px-3 py-2 text-sm text-baixa ring-1 ring-inset ring-baixa/30">
           Inscrição vencida. Registre a portaria de renovação.
         </p>
       )}
@@ -108,7 +108,7 @@ export function Inscricao({
           </Field>
           <div className="flex flex-wrap items-center gap-3 sm:col-span-6">
             <Button type="submit" disabled={busy}>{busy ? 'Salvando…' : 'Salvar inscrição'}</Button>
-            {salvo && <span className="text-sm text-emerald-700">Inscrição salva.</span>}
+            {salvo && <span className="text-sm text-alta">Inscrição salva.</span>}
           </div>
           <div className="sm:col-span-6"><ErrorNote error={error} /></div>
         </form>
