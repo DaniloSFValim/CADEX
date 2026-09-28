@@ -120,7 +120,7 @@ export default function Dashboard() {
 
       {/* Análises Pendentes */}
       <section>
-        <h2 className="mb-4 text-lg font-semibold">Análises Pendentes (>15 dias)</h2>
+        <h2 className="mb-4 text-lg font-semibold">Análises Pendentes (mais de 15 dias)</h2>
         {analises.length === 0 ? (
           <Empty mensagem="Nenhuma análise pendente há mais de 15 dias." />
         ) : (
@@ -156,7 +156,7 @@ export default function Dashboard() {
 
       {/* Saneamentos Vencendo */}
       <section>
-        <h2 className="mb-4 text-lg font-semibold">Saneamentos a Vencer (≤7 dias)</h2>
+        <h2 className="mb-4 text-lg font-semibold">Saneamentos a Vencer (até 7 dias)</h2>
         {saneamentos.length === 0 ? (
           <Empty mensagem="Nenhum saneamento vencendo nos próximos 7 dias." />
         ) : (
@@ -194,7 +194,7 @@ export default function Dashboard() {
 
       {/* Inscrições Vencendo */}
       <section>
-        <h2 className="mb-4 text-lg font-semibold">Inscrições a Vencer (≤30 dias)</h2>
+        <h2 className="mb-4 text-lg font-semibold">Inscrições a Vencer (até 30 dias)</h2>
         {inscricoes.length === 0 ? (
           <Empty mensagem="Nenhuma inscrição vencendo nos próximos 30 dias." />
         ) : (
