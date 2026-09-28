@@ -7,3 +7,4 @@ dist/
 supabase/.temp/
 tsconfig.tsbuildinfo
 .env.production
+.vite/
