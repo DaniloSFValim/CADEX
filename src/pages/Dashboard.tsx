@@ -86,11 +86,11 @@ export default function Dashboard() {
   }, [podeEditar]);
 
   if (!podeEditar) {
-    return <Empty titulo="Acesso negado" mensagem="Apenas o gestor tem acesso ao dashboard." />;
+    return <Empty>Acesso negado: apenas o gestor tem acesso ao dashboard.</Empty>;
   }
 
   if (loading) return <Spinner />;
-  if (error) return <ErrorNote erro={error} />;
+  if (error) return <ErrorNote error={error} />;
 
   return (
     <div className="flex flex-col gap-6">
@@ -99,22 +99,22 @@ export default function Dashboard() {
       {/* KPIs */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Kpi
-          titulo="Análises Pendentes"
+          rotulo="Análises Pendentes"
           valor={sumario?.analises_pendentes || 0}
-          descricao="Mais de 15 dias pendentes"
-          tom={sumario?.analises_pendentes ? 'alerta' : 'bom'}
+          detalhe="Mais de 15 dias pendentes"
+          tom={sumario?.analises_pendentes ? 'atencao' : 'baixa'}
         />
         <Kpi
-          titulo="Saneamentos Vencendo"
+          rotulo="Saneamentos Vencendo"
           valor={sumario?.saneamentos_vencendo || 0}
-          descricao="Prazo em até 7 dias"
-          tom={sumario?.saneamentos_vencendo ? 'alerta' : 'bom'}
+          detalhe="Prazo em até 7 dias"
+          tom={sumario?.saneamentos_vencendo ? 'atencao' : 'baixa'}
         />
         <Kpi
-          titulo="Inscrições Vencendo"
+          rotulo="Inscrições Vencendo"
           valor={sumario?.inscricoes_vencendo || 0}
-          descricao="Validade em até 30 dias"
-          tom={sumario?.inscricoes_vencendo ? 'alerta' : 'bom'}
+          detalhe="Validade em até 30 dias"
+          tom={sumario?.inscricoes_vencendo ? 'atencao' : 'baixa'}
         />
       </div>
 
@@ -122,7 +122,7 @@ export default function Dashboard() {
       <section>
         <h2 className="mb-4 text-lg font-semibold">Análises Pendentes (mais de 15 dias)</h2>
         {analises.length === 0 ? (
-          <Empty mensagem="Nenhuma análise pendente há mais de 15 dias." />
+          <Empty>Nenhuma análise pendente há mais de 15 dias.</Empty>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -158,7 +158,7 @@ export default function Dashboard() {
       <section>
         <h2 className="mb-4 text-lg font-semibold">Saneamentos a Vencer (até 7 dias)</h2>
         {saneamentos.length === 0 ? (
-          <Empty mensagem="Nenhum saneamento vencendo nos próximos 7 dias." />
+          <Empty>Nenhum saneamento vencendo nos próximos 7 dias.</Empty>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -196,7 +196,7 @@ export default function Dashboard() {
       <section>
         <h2 className="mb-4 text-lg font-semibold">Inscrições a Vencer (até 30 dias)</h2>
         {inscricoes.length === 0 ? (
-          <Empty mensagem="Nenhuma inscrição vencendo nos próximos 30 dias." />
+          <Empty>Nenhuma inscrição vencendo nos próximos 30 dias.</Empty>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -218,7 +218,7 @@ export default function Dashboard() {
                     </td>
                     <td className="px-4 py-2 font-mono text-sm">{formatCnpj(i.cnpj)}</td>
                     <td className="px-4 py-2">
-                      <SituacaoBadge situacao={i.situacao_efetiva as any} />
+                      <SituacaoBadge s={i.situacao_efetiva as any} />
                     </td>
                     <td className="px-4 py-2 text-sm font-semibold">{i.validade_ate}</td>
                     <td className="px-4 py-2 text-right">
