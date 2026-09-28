@@ -285,6 +285,18 @@ export async function removerDocumento(doc: Documento): Promise<void> {
   await supabase.storage.from(BUCKET).remove([doc.arquivo]);
 }
 
+export async function registrarValidadeDocumento(
+  empresaId: string, tipo: string, validade: string,
+): Promise<void> {
+  const { error } = await supabase.from('documentos')
+    .update({ validade })
+    .eq('empresa_id', empresaId)
+    .eq('tipo', tipo)
+    .order('enviado_em', { ascending: false })
+    .limit(1);
+  if (error) throw error;
+}
+
 export async function linkDocumento(doc: Documento): Promise<string> {
   const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(doc.arquivo, 120);
   if (error) throw error;

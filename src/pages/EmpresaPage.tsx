@@ -6,7 +6,7 @@ import { useAuth } from '../lib/auth';
 import { formatCnpj, isValidCnpj, onlyDigits } from '../lib/cnpj';
 import {
   ESTADO_LABEL, TIPO_LABEL, buscarEmpresa, criarEmpresa, criarVinculo, definirFimVinculo,
-  enviarLogo, estadoDocumento, removerLogo, urlLogo, MAX_LOGO_BYTES, TIPOS_LOGO, hojeISO, listarDocumentos, listarEmpresas,
+  enviarLogo, estadoDocumento, registrarValidadeDocumento, removerLogo, urlLogo, MAX_LOGO_BYTES, TIPOS_LOGO, hojeISO, listarDocumentos, listarEmpresas,
   listarTiposDocumento, listarVinculos, nomeEmpresa, resumoDocumentos,
   salvarEmpresa, situacaoEfetiva, ultimoPorTipo,
   type Documento, type Empresa, type EmpresaInput, type EstadoDocumento, type TipoDocumento,
@@ -537,9 +537,11 @@ function Documentos({ empresa }: { empresa: Empresa }) {
           {tipos.map((t) => (
             <LinhaDocumento
               key={t.codigo}
+              empresaId={empresa.id}
               tipo={t}
               doc={ultimos.get(t.codigo)}
               estado={estadoDocumento(t, ultimos.get(t.codigo), hoje)}
+              onChanged={recarregar}
             />
           ))}
         </ul>
@@ -549,24 +551,62 @@ function Documentos({ empresa }: { empresa: Empresa }) {
 }
 
 function LinhaDocumento({
-  tipo, doc, estado,
+  empresaId, tipo, doc, estado, onChanged,
 }: {
+  empresaId: string;
   tipo: TipoDocumento;
   doc: Documento | undefined;
   estado: EstadoDocumento;
+  onChanged: () => Promise<void>;
 }) {
+  const [validade, setValidade] = useState(doc?.validade ?? '');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown | null>(null);
   const exibirEstado = estado === 'pendente' && !tipo.obrigatorio ? null : estado;
+
+  const salvarValidade = async () => {
+    if (!tipo.tem_validade || !validade) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await registrarValidadeDocumento(empresaId, tipo.codigo, validade);
+      await onChanged();
+    } catch (err) {
+      setError(err as unknown);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <li className="py-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
+        <div className="flex-1">
           <div className="text-sm font-medium text-tinta-800">{tipo.nome}</div>
           <div className="text-xs text-tinta-500">
             {tipo.obrigatorio ? 'Obrigatório' : 'Quando aplicável'} ({tipo.fundamento.replace(/^Art\./, 'art.')})
           </div>
+          {tipo.tem_validade && (
+            <div className="mt-2 flex flex-wrap items-end gap-2">
+              <label className="text-xs text-tinta-600">
+                Validade
+                <input type="date" className={`${inputClass} !py-1 ml-1`} value={validade}
+                       onChange={(e) => { setValidade(e.target.value); setError(null); }}
+                       disabled={busy} />
+              </label>
+              {validade !== (doc?.validade ?? '') && (
+                <Button variant="secondary" className="!py-1 text-xs" disabled={busy || !validade}
+                        onClick={salvarValidade}>
+                  {busy ? 'Salvando…' : 'Salvar'}
+                </Button>
+              )}
+              <ErrorNote error={error} />
+            </div>
+          )}
           {doc?.validade && (
-            <div className="mt-1 text-xs text-tinta-600">Válido até {dataBR(doc.validade)}</div>
+            <div className="mt-1 text-xs text-tinta-600">
+              {tipo.tem_validade ? 'Registrado:' : 'Válido até'} {dataBR(doc.validade)}
+            </div>
           )}
         </div>
         {exibirEstado
