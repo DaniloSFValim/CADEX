@@ -25,6 +25,14 @@ returns uuid language sql stable as $$
   select nullif(current_setting('cadex.test_user_id', true), '')::uuid;
 $$;
 
+-- Em produção auth.jwt() devolve o token. No shim, só o nível de
+-- autenticação (aal): aal2 por padrão (gestor que confirmou o código do
+-- aplicativo); os testes trocam para aal1 com o GUC cadex.test_aal.
+create or replace function auth.jwt()
+returns jsonb language sql stable as $$
+  select jsonb_build_object('aal', coalesce(nullif(current_setting('cadex.test_aal', true), ''), 'aal2'));
+$$;
+
 do $$
 begin
   if not exists (select 1 from pg_roles where rolname = 'anon') then
