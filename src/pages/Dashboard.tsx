@@ -117,10 +117,10 @@ export default function Dashboard() {
       {/* KPIs */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard
-          label="Empresas Ativas"
-          value={156}
-          meta="Status: APTA"
-          variant="success"
+          label="Registros em Gestão"
+          value={inscricoes.length}
+          meta="Total sob responsabilidade"
+          variant="default"
         />
         <KpiCard
           label="Documentos Vencendo"
@@ -129,9 +129,9 @@ export default function Dashboard() {
           variant="warning"
         />
         <KpiCard
-          label="Inscrições Vencidas"
+          label="Saneamentos a Vencer"
           value={sumario?.saneamentos_vencendo || 0}
-          meta="Ação necessária"
+          meta="Próximos 7 dias"
           variant="critical"
         />
         <KpiCard
@@ -145,16 +145,18 @@ export default function Dashboard() {
       {/* Filtros */}
       <div className="flex flex-wrap gap-3 rounded border border-tinta-200 bg-white p-4">
         <div className="flex flex-col gap-1">
-          <label className="text-2xs font-bold uppercase tracking-wider text-tinta-400">Buscar</label>
+          <label htmlFor="search-input" className="text-2xs font-bold uppercase tracking-wider text-tinta-400">Buscar</label>
           <input
+            id="search-input"
+            name="search"
             type="text"
             placeholder="CNPJ, razão social..."
             className="w-full rounded border border-tinta-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-2xs font-bold uppercase tracking-wider text-tinta-400">Situação</label>
-          <select className="rounded border border-tinta-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none">
+          <label htmlFor="situacao-select" className="text-2xs font-bold uppercase tracking-wider text-tinta-400">Situação</label>
+          <select id="situacao-select" name="situacao" className="rounded border border-tinta-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none">
             <option>Todas</option>
             <option>APTA</option>
             <option>EM ANÁLISE</option>
@@ -164,8 +166,8 @@ export default function Dashboard() {
           </select>
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-2xs font-bold uppercase tracking-wider text-tinta-400">Tipo</label>
-          <select className="rounded border border-tinta-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none">
+          <label htmlFor="tipo-select" className="text-2xs font-bold uppercase tracking-wider text-tinta-400">Tipo</label>
+          <select id="tipo-select" name="tipo" className="rounded border border-tinta-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none">
             <option>Todas</option>
             <option>Operadora</option>
             <option>Terceirizada</option>
