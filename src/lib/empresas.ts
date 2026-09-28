@@ -73,7 +73,7 @@ export interface Documento {
   arquivo: string;
   nome_arquivo: string;
   validade: string | null;
-  status: 'pendente' | 'entregue';
+  status?: 'pendente' | 'entregue';
   enviado_em: string;
 }
 

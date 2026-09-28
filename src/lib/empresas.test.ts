@@ -10,7 +10,7 @@ const tipo = (codigo: string, obrigatorio: boolean, tem_validade: boolean): Tipo
   ({ codigo, nome: codigo, fundamento: '', obrigatorio, tem_validade, ordem: 0 });
 
 const doc = (tipo: string, validade: string | null, enviado_em = '2026-09-01T00:00:00Z'): Documento =>
-  ({ id: tipo + enviado_em, empresa_id: 'e', tipo, arquivo: '', nome_arquivo: '', validade, status: 'pendente', enviado_em });
+  ({ id: tipo + enviado_em, empresa_id: 'e', tipo, arquivo: '', nome_arquivo: '', validade, enviado_em });
 
 describe('estadoDocumento', () => {
   const certidao = tipo('CND', true, true);
