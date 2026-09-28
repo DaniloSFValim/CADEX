@@ -45,7 +45,7 @@ export default function Login() {
           </form>
 
           <p className="mt-6 border-t border-tinta-100 pt-5 text-center text-sm">
-            <Link to="/" className="font-medium text-primary-600 hover:underline">
+            <Link to="/consulta" className="font-medium text-primary-600 hover:underline">
               Voltar à consulta pública
             </Link>
           </p>

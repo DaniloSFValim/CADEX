@@ -56,6 +56,6 @@ export function Cabecalho({ itens, direita }: { itens: ItemMenu[]; direita?: Rea
 
 /** Menu das páginas abertas ao público. */
 export const MENU_PUBLICO: ItemMenu[] = [
-  { rotulo: 'Consulta pública', para: '/', fim: true },
-  { rotulo: 'Área restrita', para: '/login' },
+  { rotulo: 'Consulta pública', para: '/consulta' },
+  { rotulo: 'Área restrita', para: '/', fim: true },
 ];

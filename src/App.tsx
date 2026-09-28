@@ -13,9 +13,8 @@ import Ficha from './pages/Ficha';
 export function App() {
   return (
     <Routes>
-      {/* Consulta pública é a página inicial */}
-      <Route path="/" element={<Consulta />} />
-      <Route path="login" element={<Login />} />
+      {/* Consulta pública: aberta, com ou sem login (art. 7º, § 2º). */}
+      <Route path="consulta" element={<Consulta />} />
       <Route path="*" element={<AreaRestrita />} />
     </Routes>
   );
@@ -32,7 +31,7 @@ function AreaRestrita() {
     );
   }
   if (loading) return <Spinner />;
-  if (!session) return <Navigate to="/login" replace />;
+  if (!session) return <Login />;
 
   if (!servidor) {
     return (
