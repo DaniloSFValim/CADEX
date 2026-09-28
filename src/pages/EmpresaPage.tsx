@@ -6,13 +6,12 @@ import { useAuth } from '../lib/auth';
 import { formatCnpj, isValidCnpj, onlyDigits } from '../lib/cnpj';
 import {
   ESTADO_LABEL, TIPO_LABEL, buscarEmpresa, criarEmpresa, criarVinculo, definirFimVinculo,
-  enviarDocumento, enviarLogo, estadoDocumento, removerLogo, urlLogo, MAX_LOGO_BYTES, TIPOS_LOGO, hojeISO, linkDocumento, listarDocumentos, listarEmpresas,
-  listarTiposDocumento, listarVinculos, nomeEmpresa, removerDocumento, resumoDocumentos,
+  enviarLogo, estadoDocumento, removerLogo, urlLogo, MAX_LOGO_BYTES, TIPOS_LOGO, hojeISO, listarDocumentos, listarEmpresas,
+  listarTiposDocumento, listarVinculos, nomeEmpresa, resumoDocumentos,
   salvarEmpresa, situacaoEfetiva, ultimoPorTipo,
   type Documento, type Empresa, type EmpresaInput, type EstadoDocumento, type TipoDocumento,
   type Vinculo,
 } from '../lib/empresas';
-import { MAX_UPLOAD_BYTES } from '../lib/supabase';
 import { ResumoBadge } from './Empresas';
 import { Inscricao } from './Inscricao';
 import { Operacional } from './Operacional';
@@ -538,11 +537,9 @@ function Documentos({ empresa }: { empresa: Empresa }) {
           {tipos.map((t) => (
             <LinhaDocumento
               key={t.codigo}
-              empresaId={empresa.id}
               tipo={t}
               doc={ultimos.get(t.codigo)}
               estado={estadoDocumento(t, ultimos.get(t.codigo), hoje)}
-              onChanged={recarregar}
             />
           ))}
         </ul>
@@ -552,20 +549,12 @@ function Documentos({ empresa }: { empresa: Empresa }) {
 }
 
 function LinhaDocumento({
-  empresaId, tipo, doc, estado, onChanged,
+  tipo, doc, estado,
 }: {
-  empresaId: string;
   tipo: TipoDocumento;
   doc: Documento | undefined;
   estado: EstadoDocumento;
-  onChanged: () => Promise<void>;
 }) {
-  const [arquivo, setArquivo] = useState<File | null>(null);
-  const [validade, setValidade] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<unknown>(null);
-  const [inputKey, setInputKey] = useState(0);
-
   const exibirEstado = estado === 'pendente' && !tipo.obrigatorio ? null : estado;
 
   return (
@@ -576,70 +565,14 @@ function LinhaDocumento({
           <div className="text-xs text-tinta-500">
             {tipo.obrigatorio ? 'Obrigatório' : 'Quando aplicável'} ({tipo.fundamento.replace(/^Art\./, 'art.')})
           </div>
+          {doc?.validade && (
+            <div className="mt-1 text-xs text-tinta-600">Válido até {dataBR(doc.validade)}</div>
+          )}
         </div>
         {exibirEstado
           ? <Badge tom={TOM_ESTADO[exibirEstado]}>{ESTADO_LABEL[exibirEstado]}</Badge>
           : <Badge>Não enviado</Badge>}
       </div>
-
-      {doc && (
-        <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
-          <button type="button" className="text-marca-700 underline hover:text-marca-900"
-                  onClick={async () => {
-                    setError(null);
-                    try { window.open(await linkDocumento(doc), '_blank', 'noopener'); }
-                    catch (err) { setError(err); }
-                  }}>
-            {doc.nome_arquivo}
-          </button>
-          {doc.validade && <span className="text-tinta-600">válido até {dataBR(doc.validade)}</span>}
-          <span className="text-xs text-tinta-400">enviado em {new Date(doc.enviado_em).toLocaleDateString('pt-BR')}</span>
-          <Button variant="danger" className="!px-2 !py-1 text-xs" disabled={busy}
-                  onClick={async () => {
-                    if (!window.confirm(`Remover "${doc.nome_arquivo}"?`)) return;
-                    setBusy(true); setError(null);
-                    try { await removerDocumento(doc); await onChanged(); }
-                    catch (err) { setError(err); }
-                    finally { setBusy(false); }
-                  }}>
-            Remover
-          </Button>
-        </div>
-      )}
-
-      <form
-        className="mt-2 flex flex-wrap items-end gap-2"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          setError(null);
-          if (!arquivo) { setError('Escolha o arquivo.'); return; }
-          if (arquivo.size > MAX_UPLOAD_BYTES) { setError('Arquivo acima de 25 MB.'); return; }
-          if (tipo.tem_validade && !validade) { setError('Informe a data de validade.'); return; }
-          setBusy(true);
-          try {
-            await enviarDocumento(empresaId, tipo.codigo, arquivo, tipo.tem_validade ? validade : null);
-            setArquivo(null); setValidade(''); setInputKey((k) => k + 1);
-            await onChanged();
-          } catch (err) { setError(err); }
-          finally { setBusy(false); }
-        }}
-      >
-        <input key={inputKey} type="file" aria-label={`Arquivo: ${tipo.nome}`}
-               accept=".pdf,.jpg,.jpeg,.png,.zip,.kml,.kmz,.geojson"
-               className="block max-w-full text-sm text-tinta-600 file:mr-2 file:rounded file:border-0 file:bg-tinta-100 file:px-2 file:py-1 file:text-sm"
-               onChange={(e) => setArquivo(e.target.files?.[0] ?? null)} />
-        {tipo.tem_validade && (
-          <label className="text-xs text-tinta-600">
-            Validade
-            <input type="date" className={`${inputClass} !py-1`} value={validade}
-                   onChange={(e) => setValidade(e.target.value)} />
-          </label>
-        )}
-        <Button type="submit" variant="secondary" className="!py-1" disabled={busy || !arquivo}>
-          {busy ? 'Enviando…' : doc ? 'Substituir' : 'Enviar'}
-        </Button>
-      </form>
-      <div className="mt-2"><ErrorNote error={error} /></div>
     </li>
   );
 }
