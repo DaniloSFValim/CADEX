@@ -38,7 +38,7 @@ export function Cabecalho({ itens, direita }: { itens: ItemMenu[]; direita?: Rea
                   className={({ isActive }) =>
                     `inline-flex min-h-10 items-center rounded px-3 text-sm transition-colors ${
                       isActive
-                        ? 'bg-marca-50 font-semibold text-marca-700'
+                        ? 'bg-primary-50 font-semibold text-primary-600'
                         : 'text-tinta-500 hover:bg-tinta-50 hover:text-tinta-900'}`}
                 >
                   {i.rotulo}
@@ -56,6 +56,6 @@ export function Cabecalho({ itens, direita }: { itens: ItemMenu[]; direita?: Rea
 
 /** Menu das páginas abertas ao público. */
 export const MENU_PUBLICO: ItemMenu[] = [
-  { rotulo: 'Consulta pública', para: '/consulta' },
-  { rotulo: 'Área restrita', para: '/', fim: true },
+  { rotulo: 'Consulta pública', para: '/', fim: true },
+  { rotulo: 'Área restrita', para: '/login' },
 ];
