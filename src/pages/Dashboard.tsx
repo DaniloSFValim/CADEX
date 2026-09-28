@@ -101,7 +101,7 @@ export default function Dashboard() {
         <Kpi
           titulo="Análises Pendentes"
           valor={sumario?.analises_pendentes || 0}
-          descricao="Pendentes há >15 dias"
+          descricao="Mais de 15 dias pendentes"
           tom={sumario?.analises_pendentes ? 'alerta' : 'bom'}
         />
         <Kpi
