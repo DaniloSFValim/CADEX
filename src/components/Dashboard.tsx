@@ -118,13 +118,13 @@ export function PageHeader({
   subtitle,
   actions,
 }: {
-  title: string;
+  title: ReactNode;
   subtitle?: string;
   actions?: ReactNode;
 }) {
   return (
     <div className="flex items-start justify-between gap-4">
-      <div>
+      <div className="min-w-0">
         <h1 className="font-serif text-3xl font-bold text-primary-500">{title}</h1>
         {subtitle && <p className="mt-1 text-sm text-tinta-500">{subtitle}</p>}
       </div>
