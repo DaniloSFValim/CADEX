@@ -51,7 +51,6 @@ function AreaRestrita() {
       <Route path="empresas/:id/ficha" element={<Ficha />} />
       <Route element={<Layout />}>
         <Route index element={<Empresas />} />
-        <Route path="empresas" element={<Empresas />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="empresas/nova" element={<EmpresaPage />} />
         <Route path="empresas/:id" element={<EmpresaPage />} />
