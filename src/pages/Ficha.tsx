@@ -76,7 +76,7 @@ export default function Ficha() {
     <div className="min-h-screen bg-tinta-100 print:bg-white">
       <div className="border-b border-tinta-200 bg-white print:hidden">
         <div className="mx-auto flex max-w-4xl flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3 text-sm">
-          <Link to={`/empresas/${e.id}`} className="text-marca-700 hover:underline">← Voltar</Link>
+          <Link to={`/empresas/${e.id}`} className="text-primary-600 hover:underline">← Voltar</Link>
           <span className="font-medium text-tinta-700">Incluir:</span>
           {SECOES.filter((s) => podeEditar || !s.soGestor).map((s) => (
             <label key={s.chave} className="flex items-center gap-1.5 text-tinta-700">
