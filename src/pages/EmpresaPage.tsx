@@ -537,11 +537,9 @@ function Documentos({ empresa }: { empresa: Empresa }) {
           {tipos.map((t) => (
             <LinhaDocumento
               key={t.codigo}
-              empresaId={empresa.id}
               tipo={t}
               doc={ultimos.get(t.codigo)}
               estado={estadoDocumento(t, ultimos.get(t.codigo), hoje)}
-              onChanged={recarregar}
             />
           ))}
         </ul>
@@ -551,13 +549,11 @@ function Documentos({ empresa }: { empresa: Empresa }) {
 }
 
 function LinhaDocumento({
-  empresaId, tipo, doc, estado, onChanged,
+  tipo, doc, estado,
 }: {
-  empresaId: string;
   tipo: TipoDocumento;
   doc: Documento | undefined;
   estado: EstadoDocumento;
-  onChanged: () => Promise<void>;
 }) {
   const exibirEstado = estado === 'pendente' && !tipo.obrigatorio ? null : estado;
 
