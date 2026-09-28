@@ -565,6 +565,11 @@ function LinhaDocumento({
   const [error, setError] = useState<unknown | null>(null);
   const exibirEstado = estado === 'pendente' && !tipo.obrigatorio ? null : estado;
 
+  useEffect(() => {
+    setValidade(doc?.validade ?? '');
+    setStatus(doc?.status ?? 'pendente');
+  }, [doc]);
+
   const salvarValidade = async () => {
     if (!tipo.tem_validade || !validade) return;
     setBusy(true);
