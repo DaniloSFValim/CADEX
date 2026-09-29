@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  estadoDocumento, podeAtuar, resumoDocumentos, situacaoEfetiva, somaDias, ultimoPorTipo,
+  estadoDocumento, podeAtuar, resumoDocumentos, situacaoEfetiva, situacoesDoFiltro, somaDias, ultimoPorTipo,
   type Documento, type TipoDocumento,
 } from './empresas';
 
@@ -74,5 +74,17 @@ describe('situacaoEfetiva', () => {
     expect(podeAtuar('em_saneamento')).toBe(true);
     expect(podeAtuar('em_analise')).toBe(false);
     expect(podeAtuar('vencida')).toBe(false);
+  });
+});
+
+describe('situacoesDoFiltro', () => {
+  it('APTA inclui as empresas em saneamento', () => {
+    expect(situacoesDoFiltro('apta')).toEqual(['apta', 'em_saneamento']);
+  });
+  it('vazio abrange todas as situações, inclusive inapta e indeferida', () => {
+    expect(situacoesDoFiltro('')).toEqual(expect.arrayContaining(['inapta', 'indeferida', 'vencida']));
+  });
+  it('valor desconhecido não abrange nada', () => {
+    expect(situacoesDoFiltro('inapta')).toEqual([]);
   });
 });
