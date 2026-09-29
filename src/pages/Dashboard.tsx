@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Badge, Empty, ErrorNote, Spinner } from '../components/ui';
 import { SituacaoBadge } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
@@ -107,7 +106,7 @@ export default function Dashboard() {
           <p className="mt-1 text-sm text-tinta-500">Gestão centralizada de inscrições e documentação</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => navigate('/empresas/nova')} className="rounded bg-primary-500 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-600 transition-colors">
+          <button className="rounded bg-primary-500 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-600 transition-colors">
             + Nova inscrição
           </button>
           <button className="rounded border border-primary-500 px-4 py-2 text-sm font-semibold text-primary-500 hover:bg-primary-50 transition-colors">

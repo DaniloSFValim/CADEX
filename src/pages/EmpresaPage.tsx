@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Badge, Button, Card, ErrorNote, Field, Spinner, Titulo, botaoLink, inputClass, type Tom } from '../components/ui';
+import { Badge, Button, Card, ErrorNote, Field, Spinner, inputClass, type Tom } from '../components/ui';
+import { PageHeader } from '../components/Dashboard';
 import { BARRA, SituacaoBadge } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { formatCnpj, isValidCnpj, onlyDigits } from '../lib/cnpj';
@@ -55,10 +56,9 @@ export default function EmpresaPage() {
   const operadoras = todas.filter((o) => o.tipo === 'operadora');
 
   return (
-    <div className="space-y-6">
-      <Titulo
-        trilha={<><Link to="/" className="hover:text-marca-700 hover:underline">Empresas</Link> / {empresa ? empresa.codigo_cadex : 'Nova'}</>}
-        titulo={
+    <div className="flex flex-col gap-8">
+      <PageHeader
+        title={
           <span className="flex items-center gap-4">
             {empresa?.logo_arquivo && (
               <img src={urlLogo(empresa.logo_arquivo)} alt=""
@@ -67,40 +67,40 @@ export default function EmpresaPage() {
             {empresa ? nomeEmpresa(empresa) : 'Nova empresa'}
           </span>
         }
-        acoes={empresa && (
-          <Link to={`/empresas/${empresa.id}/ficha`} className={botaoLink.secondary}>Imprimir ficha</Link>
+        subtitle={empresa ? `Código CADEX: ${empresa.codigo_cadex}` : undefined}
+        actions={empresa && (
+          <Link to={`/empresas/${empresa.id}/ficha`}
+            className="rounded border border-primary-500 px-4 py-2 text-sm font-semibold text-primary-500 hover:bg-primary-50 transition-colors">
+            Imprimir ficha
+          </Link>
         )}
-      >
-        {empresa && (() => {
-          const s = situacaoEfetiva(empresa, hojeISO());
-          return (
-            <dl className="mt-4 grid grid-cols-2 gap-x-8 gap-y-3 text-sm sm:flex sm:flex-wrap">
-              <div className={`border-l-4 pl-3 ${BARRA[s]}`}>
-                <dt className="text-xs text-tinta-500">Situação</dt>
-                <dd className="mt-0.5"><SituacaoBadge s={s} /></dd>
-              </div>
+      />
+
+      {empresa && (() => {
+        const s = situacaoEfetiva(empresa, hojeISO());
+        return (
+          <dl className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm sm:flex sm:flex-wrap">
+            <div className={`border-l-4 pl-3 ${BARRA[s]}`}>
+              <dt className="text-xs text-tinta-500">Situação</dt>
+              <dd className="mt-0.5"><SituacaoBadge s={s} /></dd>
+            </div>
+            <div>
+              <dt className="text-xs text-tinta-500">CNPJ</dt>
+              <dd className="tabular mt-0.5 text-tinta-800">{formatCnpj(empresa.cnpj)}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-tinta-500">Tipo</dt>
+              <dd className="mt-0.5 text-tinta-800">{TIPO_LABEL[empresa.tipo]}</dd>
+            </div>
+            {empresa.validade_ate && (
               <div>
-                <dt className="text-xs text-tinta-500">Código CADEX</dt>
-                <dd className="tabular mt-0.5 font-semibold text-tinta-900">{empresa.codigo_cadex}</dd>
+                <dt className="text-xs text-tinta-500">Válida até</dt>
+                <dd className={`tabular mt-0.5 ${s === 'vencida' ? 'font-medium text-baixa' : 'text-tinta-800'}`}>{dataBR(empresa.validade_ate)}</dd>
               </div>
-              <div>
-                <dt className="text-xs text-tinta-500">CNPJ</dt>
-                <dd className="tabular mt-0.5 text-tinta-800">{formatCnpj(empresa.cnpj)}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-tinta-500">Tipo</dt>
-                <dd className="mt-0.5 text-tinta-800">{TIPO_LABEL[empresa.tipo]}</dd>
-              </div>
-              {empresa.validade_ate && (
-                <div>
-                  <dt className="text-xs text-tinta-500">Válida até</dt>
-                  <dd className={`tabular mt-0.5 ${s === 'vencida' ? 'font-medium text-baixa' : 'text-tinta-800'}`}>{dataBR(empresa.validade_ate)}</dd>
-                </div>
-              )}
-            </dl>
-          );
-        })()}
-      </Titulo>
+            )}
+          </dl>
+        );
+      })()}
 
       <Card title="Dados da empresa">
         {empresa && (

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Badge, Button, Empty, ErrorNote, Kpi, Spinner, Titulo, botaoLink, inputClass, tabela } from '../components/ui';
+import { Badge, Empty, ErrorNote, Spinner } from '../components/ui';
+import { KpiCard, PageHeader } from '../components/Dashboard';
 import { ExportarRelacao } from '../components/ExportarRelacao';
 import { BARRA, SituacaoBadge } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
@@ -60,15 +61,19 @@ export default function Empresas() {
   }, [empresas, busca, tipo, situacao, hoje]);
 
   return (
-    <>
-      <Titulo
-        titulo="Empresas"
-        descricao="Operadoras de telecomunicações e terceirizadas cadastradas no CADEX."
-        acoes={<>
-          <Button variant="secondary" disabled={!empresas?.length} onClick={() => setExportando((x) => !x)}>
+    <div className="flex flex-col gap-8">
+      <PageHeader
+        title="Empresas"
+        subtitle="Operadoras de telecomunicações e terceirizadas cadastradas no CADEX."
+        actions={<>
+          <button disabled={!empresas?.length} onClick={() => setExportando((x) => !x)}
+            className="rounded border border-primary-500 px-4 py-2 text-sm font-semibold text-primary-500 hover:bg-primary-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
             Exportar planilha
-          </Button>
-          {podeEditar && <Link to="/empresas/nova" className={botaoLink.primary}>Nova empresa</Link>}
+          </button>
+          {podeEditar && <Link to="/empresas/nova"
+            className="rounded bg-primary-500 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-600 transition-colors">
+            + Nova empresa
+          </Link>}
         </>}
       />
 
@@ -81,14 +86,14 @@ export default function Empresas() {
           ? empresas.filter((e) => resumoDocumentos(tipos, docs.filter((d) => d.empresa_id === e.id), hoje).faltando > 0).length
           : null;
         return (
-          <div className="mb-10 grid grid-cols-2 gap-x-8 gap-y-6 md:grid-cols-4">
-            <Kpi rotulo="Cadastradas" valor={empresas.length}
-                 detalhe={`${empresas.length - terceirizadas} operadora${empresas.length - terceirizadas === 1 ? '' : 's'}, ${terceirizadas} terceirizada${terceirizadas === 1 ? '' : 's'}`} />
-            <Kpi rotulo="Aptas" valor={n((x) => x === 'apta' || x === 'em_saneamento')} tom="alta"
-                 detalhe={saneamento ? `${saneamento} em saneamento` : 'podem atuar'} />
-            <Kpi rotulo="Em análise" valor={n((x) => x === 'em_analise')} detalhe="aguardando decisão" />
-            <Kpi rotulo="Impedidas" valor={n((x) => x === 'inapta' || x === 'vencida' || x === 'indeferida')} tom="baixa"
-                 detalhe={pendentes !== null ? `${pendentes} com documentos pendentes` : 'inaptas, vencidas ou indeferidas'} />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <KpiCard label="Cadastradas" value={empresas.length}
+                 meta={`${empresas.length - terceirizadas} operadora${empresas.length - terceirizadas === 1 ? '' : 's'}, ${terceirizadas} terceirizada${terceirizadas === 1 ? '' : 's'}`} />
+            <KpiCard label="Aptas" value={n((x) => x === 'apta' || x === 'em_saneamento')} variant="success"
+                 meta={saneamento ? `${saneamento} em saneamento` : 'podem atuar'} />
+            <KpiCard label="Em análise" value={n((x) => x === 'em_analise')} meta="aguardando decisão" />
+            <KpiCard label="Impedidas" value={n((x) => x === 'inapta' || x === 'vencida' || x === 'indeferida')} variant="critical"
+                 meta={pendentes !== null ? `${pendentes} com documentos pendentes` : 'inaptas, vencidas ou indeferidas'} />
           </div>
         );
       })()}
@@ -109,19 +114,31 @@ export default function Empresas() {
         />
       )}
 
-      <section className="cartao">
-        <div className="grid gap-3 border-b border-tinta-200 p-4 sm:grid-cols-[1fr_200px_220px]">
-          <input className={inputClass} placeholder="Buscar por nome, CNPJ ou código CADEX" value={busca}
-                 onChange={(e) => setBusca(e.target.value)} aria-label="Buscar" />
-          <select className={inputClass} value={tipo} onChange={(e) => setTipo(e.target.value)} aria-label="Tipo">
-            <option value="">Todos os tipos</option>
-            <option value="operadora">Operadoras</option>
-            <option value="terceirizada">Terceirizadas</option>
-          </select>
-          <select className={inputClass} value={situacao} onChange={(e) => setSituacao(e.target.value)} aria-label="Situação">
-            <option value="">Todas as situações</option>
-            {Object.entries(SITUACAO_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-          </select>
+      <section>
+        <div className="flex flex-wrap gap-3 rounded border border-tinta-200 bg-white p-4">
+          <div className="flex flex-col gap-1 flex-1 min-w-[200px]">
+            <label className="text-2xs font-bold uppercase tracking-wider text-tinta-400">Buscar</label>
+            <input className="rounded border border-tinta-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+              placeholder="Nome, CNPJ ou código CADEX" value={busca}
+              onChange={(e) => setBusca(e.target.value)} aria-label="Buscar" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-2xs font-bold uppercase tracking-wider text-tinta-400">Tipo</label>
+            <select className="rounded border border-tinta-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+              value={tipo} onChange={(e) => setTipo(e.target.value)} aria-label="Tipo">
+              <option value="">Todos os tipos</option>
+              <option value="operadora">Operadoras</option>
+              <option value="terceirizada">Terceirizadas</option>
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-2xs font-bold uppercase tracking-wider text-tinta-400">Situação</label>
+            <select className="rounded border border-tinta-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+              value={situacao} onChange={(e) => setSituacao(e.target.value)} aria-label="Situação">
+              <option value="">Todas as situações</option>
+              {Object.entries(SITUACAO_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+          </div>
         </div>
 
         <ErrorNote error={error} />
@@ -131,16 +148,16 @@ export default function Empresas() {
         )}
 
         {filtradas.length > 0 && (
-          <div className={tabela.moldura}>
-            <table className={tabela.tabela}>
-              <thead className={tabela.cabeca}>
+          <div className="overflow-x-auto rounded border border-tinta-200 mt-4">
+            <table className="w-full text-sm">
+              <thead className="border-b-2 border-tinta-200 bg-tinta-50">
                 <tr>
-                  <th className={`${tabela.th} border-l-4 border-l-transparent`}>Empresa</th>
-                  <th className={tabela.th}>Código CADEX</th>
-                  <th className={tabela.th}>CNPJ</th>
-                  <th className={tabela.th}>Tipo</th>
-                  {podeEditar && <th className={tabela.th}>Documentação</th>}
-                  <th className={tabela.th}>Situação</th>
+                  <th className="px-4 py-3 text-left font-serif text-2xs font-bold uppercase tracking-wider text-tinta-500 border-l-4 border-l-transparent">Empresa</th>
+                  <th className="px-4 py-3 text-left font-serif text-2xs font-bold uppercase tracking-wider text-tinta-500">Código CADEX</th>
+                  <th className="px-4 py-3 text-left font-serif text-2xs font-bold uppercase tracking-wider text-tinta-500">CNPJ</th>
+                  <th className="px-4 py-3 text-left font-serif text-2xs font-bold uppercase tracking-wider text-tinta-500">Tipo</th>
+                  {podeEditar && <th className="px-4 py-3 text-left font-serif text-2xs font-bold uppercase tracking-wider text-tinta-500">Documentação</th>}
+                  <th className="px-4 py-3 text-left font-serif text-2xs font-bold uppercase tracking-wider text-tinta-500">Situação</th>
                 </tr>
               </thead>
               <tbody>
@@ -151,23 +168,23 @@ export default function Empresas() {
                     .filter((o): o is Empresa => Boolean(o));
                   const r = resumoDocumentos(tipos, docs.filter((d) => d.empresa_id === e.id), hoje);
                   return (
-                    <tr key={e.id} className={tabela.linha}>
-                      <td className={`${tabela.td} border-l-4 ${BARRA[situacaoEfetiva(e, hoje)]}`}>
-                        <Link to={`/empresas/${e.id}`} className="font-medium text-tinta-900 hover:text-marca-700 hover:underline">
+                    <tr key={e.id} className="border-b border-tinta-200 hover:bg-tinta-50 transition-colors">
+                      <td className={`px-4 py-3 border-l-4 ${BARRA[situacaoEfetiva(e, hoje)]}`}>
+                        <Link to={`/empresas/${e.id}`} className="font-medium text-tinta-900 hover:text-primary-600 hover:underline">
                           {nomeEmpresa(e)}
                         </Link>
                         {e.nome_fantasia && <div className="text-xs text-tinta-500">{e.razao_social}</div>}
                       </td>
-                      <td className={`${tabela.td} tabular whitespace-nowrap text-xs text-tinta-700`}>{e.codigo_cadex}</td>
-                      <td className={`${tabela.td} tabular whitespace-nowrap text-xs text-tinta-700`}>{formatCnpj(e.cnpj)}</td>
-                      <td className={tabela.td}>
+                      <td className="px-4 py-3 tabular whitespace-nowrap text-xs text-tinta-700">{e.codigo_cadex}</td>
+                      <td className="px-4 py-3 tabular whitespace-nowrap text-xs text-tinta-700">{formatCnpj(e.cnpj)}</td>
+                      <td className="px-4 py-3">
                         {TIPO_LABEL[e.tipo]}
                         {contratantes.length > 0 && (
                           <div className="text-xs text-tinta-500">para {contratantes.map(nomeEmpresa).join(', ')}</div>
                         )}
                       </td>
-                      {podeEditar && <td className={tabela.td}><ResumoBadge r={r} /></td>}
-                      <td className={tabela.td}><SituacaoBadge s={situacaoEfetiva(e, hoje)} /></td>
+                      {podeEditar && <td className="px-4 py-3"><ResumoBadge r={r} /></td>}
+                      <td className="px-4 py-3"><SituacaoBadge s={situacaoEfetiva(e, hoje)} /></td>
                     </tr>
                   );
                 })}
@@ -176,11 +193,11 @@ export default function Empresas() {
           </div>
         )}
         {empresas && empresas.length > 0 && (
-          <div className="border-t border-tinta-200 px-4 py-2.5 text-xs text-tinta-500">
+          <div className="border-t border-tinta-200 px-4 py-2.5 text-xs text-tinta-500 mt-4">
             {filtradas.length} de {empresas.length} empresa{empresas.length === 1 ? '' : 's'}
           </div>
         )}
       </section>
-    </>
+    </div>
   );
 }

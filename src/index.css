@@ -5,21 +5,61 @@
 @page { size: A4; margin: 15mm; }
 
 @layer base {
-  html { -webkit-text-size-adjust: 100%; }
-  body { @apply bg-tinta-50 text-tinta-700 antialiased; }
-  h1, h2, h3 { text-wrap: balance; }
-  :focus-visible { @apply outline-2 outline-offset-2 outline-marca-500; }
-  @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after { animation: none !important; transition: none !important; }
+  html {
+    -webkit-text-size-adjust: 100%;
+    color-scheme: light;
   }
-  ::selection { @apply bg-marca-100 text-tinta-900; }
+
+  body {
+    @apply bg-tinta-50 text-tinta-700 antialiased;
+  }
+
+  h1, h2, h3 {
+    text-wrap: balance;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-primary-500;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+
+  ::selection {
+    @apply bg-primary-100 text-primary-900;
+  }
+
+  /* Explicit dark theme attribute - only apply when explicitly set */
+  [data-theme="dark"] {
+    color-scheme: dark;
+  }
+
+  [data-theme="dark"] body {
+    @apply bg-tinta-900 text-tinta-100;
+  }
+
+  [data-theme="dark"] ::selection {
+    @apply bg-primary-900 text-primary-100;
+  }
 }
 
 @layer components {
   /* Superfície de dados: fundo branco e uma linha fina, sem sombra. */
-  .cartao { @apply rounded-md border border-tinta-200 bg-white; }
+  .cartao {
+    @apply rounded-md border border-tinta-200 bg-white;
+  }
+
+  [data-theme="dark"] .cartao {
+    @apply bg-tinta-800 border-tinta-700;
+  }
 }
 
 @layer utilities {
-  .tabular { font-variant-numeric: tabular-nums; }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
 }

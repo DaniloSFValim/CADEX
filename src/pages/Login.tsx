@@ -17,7 +17,7 @@ export default function Login() {
       <Cabecalho itens={MENU_PUBLICO} />
       <main className="flex flex-1 items-start justify-center px-4 py-16">
         <div className="cartao w-full max-w-sm p-8">
-          <h1 className="text-xl font-semibold tracking-tight text-tinta-900">Área restrita</h1>
+          <h1 className="font-serif text-xl font-bold tracking-tight text-primary-500">Área restrita</h1>
           <p className="mt-1 text-sm text-tinta-500">Acesso para servidores da SECONSER e do CISP.</p>
 
           <form
@@ -46,7 +46,7 @@ export default function Login() {
 
           <p className="mt-6 border-t border-tinta-100 pt-5 text-center text-sm">
             <Link to="/consulta" className="font-medium text-primary-600 hover:underline">
-              Voltar à consulta pública
+              Consultar empresas inscritas
             </Link>
           </p>
         </div>
