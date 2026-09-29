@@ -38,7 +38,7 @@ export function Cabecalho({ itens, direita }: { itens: ItemMenu[]; direita?: Rea
                   className={({ isActive }) =>
                     `inline-flex min-h-10 items-center rounded px-3 text-sm transition-colors ${
                       isActive
-                        ? 'bg-primary-50 font-semibold text-primary-600'
+                        ? 'bg-marca-50 font-semibold text-marca-700'
                         : 'text-tinta-500 hover:bg-tinta-50 hover:text-tinta-900'}`}
                 >
                   {i.rotulo}
