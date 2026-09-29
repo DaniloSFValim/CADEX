@@ -1,7 +1,7 @@
 import { Cabecalho, MENU_PUBLICO } from '../components/Cabecalho';
 import { Rodape } from '../components/Rodape';
 import { useEffect, useMemo, useState } from 'react';
-import { Empty, ErrorNote, Spinner } from '../components/ui';
+import { Empty, ErrorNote, Spinner, inputClass } from '../components/ui';
 import { BARRA, SituacaoBadge, dataBR } from '../components/Situacao';
 import { formatCnpj, onlyDigits } from '../lib/cnpj';
 import { SITUACAO_LABEL, consultaPublica, urlLogo, type LinhaPublica } from '../lib/empresas';
@@ -40,35 +40,28 @@ export default function Consulta() {
       <Cabecalho itens={MENU_PUBLICO} />
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-12">
-        <div className="flex flex-col gap-8">
-          <header>
-            <p className="text-sm text-tinta-400">
-              Consulta pública, Resolução Conjunta SECONSER/SEOP nº&nbsp;001/2026
-            </p>
-            <h1 className="mt-3 font-serif text-3xl font-bold leading-[1.15] tracking-[-0.02em] text-primary-500 sm:text-4xl md:text-[3rem]">
-              Consultar empresa executora
-            </h1>
-            <p className="mt-5 max-w-2xl text-lg leading-relaxed text-tinta-500">
-              Antes de uma obra ou serviço na via pública, no subsolo ou na rede aérea, confira se a
-              empresa responsável está com a inscrição APTA.
-            </p>
-          </header>
+        <header className="max-w-4xl pt-2">
+          <p className="text-sm text-tinta-400">
+            Consulta pública, Resolução Conjunta SECONSER/SEOP nº&nbsp;001/2026
+          </p>
+          <h1 className="mt-3 text-3xl font-semibold leading-[1.15] tracking-[-0.02em] text-tinta-900 sm:text-4xl md:text-[3rem]">
+            Consultar empresa executora
+          </h1>
+          <p className="mt-5 max-w-2xl text-lg leading-relaxed text-tinta-500">
+            Antes de uma obra ou serviço na via pública, no subsolo ou na rede aérea, confira se a
+            empresa responsável está com a inscrição APTA.
+          </p>
+        </header>
 
-          <div className="flex flex-wrap gap-3 rounded border border-tinta-200 bg-white p-4">
-            <div className="flex-1 min-w-[200px]">
-              <input className="w-full rounded border border-tinta-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
-                     placeholder="Nome da empresa, CNPJ ou código CADEX"
-                     value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar empresa" />
-            </div>
-            <div>
-              <select className="rounded border border-tinta-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
-                value={situacao}
-                onChange={(e) => setSituacao(e.target.value)} aria-label="Situação">
-                <option value="">Qualquer situação</option>
-                {Object.entries(SITUACAO_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-              </select>
-            </div>
-          </div>
+        <div className="mt-8 grid gap-3 sm:grid-cols-[1fr_240px]">
+          <input className={`${inputClass} !py-3 !text-base`}
+                 placeholder="Nome da empresa, CNPJ ou código CADEX"
+                 value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar empresa" />
+          <select className={`${inputClass} !py-3 !text-base`} value={situacao}
+                  onChange={(e) => setSituacao(e.target.value)} aria-label="Situação">
+            <option value="">Qualquer situação</option>
+            {Object.entries(SITUACAO_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </select>
         </div>
 
         <section className="mt-8" aria-live="polite">

@@ -3,7 +3,6 @@ import { Layout } from './components/Layout';
 import { Button, Spinner } from './components/ui';
 import { useAuth } from './lib/auth';
 import { isConfigured } from './lib/supabase';
-import Landing from './pages/Landing';
 import Consulta from './pages/Consulta';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -14,36 +13,11 @@ import Ficha from './pages/Ficha';
 export function App() {
   return (
     <Routes>
-      {/* Landing page pública */}
-      <Route path="/" element={<PublicArea />} />
       {/* Consulta pública: aberta, com ou sem login (art. 7º, § 2º). */}
       <Route path="consulta" element={<Consulta />} />
-      <Route path="login" element={<Login />} />
       <Route path="*" element={<AreaRestrita />} />
     </Routes>
   );
-}
-
-function PublicArea() {
-  const { session, loading } = useAuth();
-
-  if (!isConfigured) {
-    return (
-      <p className="p-8 text-center text-sm text-baixa">
-        Sistema sem conexão com o banco: faltam VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.
-      </p>
-    );
-  }
-
-  if (loading) return <Spinner />;
-
-  // Se usuário está autenticado, redireciona para a área restrita
-  if (session) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  // Caso contrário, mostra a landing page
-  return <Landing />;
 }
 
 function AreaRestrita() {
@@ -57,7 +31,7 @@ function AreaRestrita() {
     );
   }
   if (loading) return <Spinner />;
-  if (!session) return <Navigate to="/login" replace />;
+  if (!session) return <Login />;
 
   if (!servidor) {
     return (
@@ -80,7 +54,7 @@ function AreaRestrita() {
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="empresas/nova" element={<EmpresaPage />} />
         <Route path="empresas/:id" element={<EmpresaPage />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
   );
