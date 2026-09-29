@@ -10,7 +10,7 @@ export interface ItemMenu { rotulo: string; para: string; fim?: boolean }
  */
 export function Cabecalho({ itens, direita }: { itens: ItemMenu[]; direita?: ReactNode }) {
   return (
-    <header className="sticky top-0 z-30 border-b border-tinta-200 bg-white/95 shadow-[0_1px_3px_rgb(20_29_38/0.05)] backdrop-blur supports-[backdrop-filter]:bg-white/90">
+    <header className="sticky top-0 z-30 border-b border-tinta-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/90">
       <div className="bg-marca-900 text-xs text-white/80">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-1.5">
           <span>

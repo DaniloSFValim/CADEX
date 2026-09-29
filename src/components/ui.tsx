@@ -2,17 +2,17 @@ import type { ReactNode } from 'react';
 
 export type Tom = 'neutro' | 'bom' | 'alerta' | 'ruim';
 
-const TOM: Record<Tom, { caixa: string; ponto: string }> = {
-  neutro: { caixa: 'bg-tinta-100 text-tinta-700', ponto: 'bg-tinta-400' },
-  bom: { caixa: 'bg-alta/10 text-alta', ponto: 'bg-alta' },
-  alerta: { caixa: 'bg-atencao/10 text-atencao', ponto: 'bg-atencao/100' },
-  ruim: { caixa: 'bg-baixa/10 text-baixa', ponto: 'bg-baixa' },
+// Selo como carimbo de registro: contorno na cor da situação, sem preenchimento forte.
+const TOM: Record<Tom, string> = {
+  neutro: 'border-tinta-300 bg-white text-tinta-600',
+  bom: 'border-alta/60 bg-alta/[0.04] text-alta',
+  alerta: 'border-atencao/60 bg-atencao/[0.04] text-atencao',
+  ruim: 'border-baixa/60 bg-baixa/[0.04] text-baixa',
 };
 
 export function Badge({ tom = 'neutro', children }: { tom?: Tom; children: ReactNode }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded px-2 py-0.5 text-2xs font-semibold tracking-wide ${TOM[tom].caixa}`}>
-      <span className={`h-1.5 w-1.5 rounded-full ${TOM[tom].ponto}`} aria-hidden />
+    <span className={`inline-block whitespace-nowrap rounded-sm border px-1.5 py-px text-xs font-semibold ${TOM[tom]}`}>
       {children}
     </span>
   );
@@ -55,15 +55,15 @@ export function Button({
   children, variant = 'primary', ...rest
 }: { variant?: 'primary' | 'secondary' | 'danger' } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   const styles = {
-    primary: 'bg-marca-600 text-white shadow-sm hover:bg-marca-800 active:bg-marca-900',
-    secondary: 'bg-white text-tinta-800 shadow-sm ring-1 ring-inset ring-tinta-300 hover:bg-tinta-50 hover:ring-tinta-400',
+    primary: 'bg-marca-600 text-white hover:bg-marca-800 active:bg-marca-900',
+    secondary: 'bg-white text-tinta-800 ring-1 ring-inset ring-tinta-300 hover:bg-tinta-50 hover:ring-tinta-400',
     danger: 'bg-white text-baixa ring-1 ring-inset ring-baixa/30 hover:bg-baixa/10',
   }[variant];
   return (
     <button
       type="button"
       {...rest}
-      className={`inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold
+      className={`inline-flex items-center justify-center gap-2 rounded px-4 py-2 text-sm font-semibold
         transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${styles} ${rest.className ?? ''}`}
     >
       {children}
@@ -73,8 +73,8 @@ export function Button({
 
 /** Mesmo visual dos botões, para links (react-router). */
 export const botaoLink = {
-  primary: 'inline-flex items-center justify-center gap-2 rounded-md bg-marca-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-marca-800 active:bg-marca-900',
-  secondary: 'inline-flex items-center justify-center gap-2 rounded-md bg-white px-4 py-2 text-sm font-semibold text-tinta-800 shadow-sm ring-1 ring-inset ring-tinta-300 transition-colors hover:bg-tinta-50 hover:ring-tinta-400',
+  primary: 'inline-flex items-center justify-center gap-2 rounded bg-marca-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-marca-800 active:bg-marca-900',
+  secondary: 'inline-flex items-center justify-center gap-2 rounded bg-white px-4 py-2 text-sm font-semibold text-tinta-800 ring-1 ring-inset ring-tinta-300 transition-colors hover:bg-tinta-50 hover:ring-tinta-400',
 };
 
 export function Field({
@@ -93,7 +93,7 @@ export function Field({
 }
 
 export const inputClass =
-  'block w-full rounded-md border border-tinta-300 bg-white px-3 py-2 text-sm text-tinta-900 shadow-[inset_0_1px_1px_rgb(20_29_38/0.04)] ' +
+  'block w-full rounded border border-tinta-300 bg-white px-3 py-2 text-sm text-tinta-900 ' +
   'placeholder:text-tinta-400 hover:border-tinta-400 focus:border-marca-600 focus:outline-none focus:ring-4 focus:ring-marca-500/15 ' +
   'disabled:cursor-default disabled:bg-tinta-50 disabled:text-tinta-800';
 
@@ -107,16 +107,18 @@ export const tabela = {
   td: 'px-4 py-3 align-middle',
 };
 
-/** Número de destaque com traço grosso em cima (mesmo padrão do NETRANK). */
+/** Linha do quadro-resumo: número e rótulo na mesma linha de base, colunas separadas por fio. */
 export function Kpi({ rotulo, valor, detalhe, tom }: {
   rotulo: string; valor: ReactNode; detalhe?: ReactNode; tom?: 'alta' | 'baixa' | 'atencao';
 }) {
   const cor = tom ? { alta: 'text-alta', baixa: 'text-baixa', atencao: 'text-atencao' }[tom] : 'text-tinta-900';
   return (
-    <div className="border-t-[3px] border-tinta-900 pt-3">
-      <div className="text-sm font-medium text-tinta-600">{rotulo}</div>
-      <div className={`tabular mt-1 text-4xl font-bold tracking-[-0.03em] ${cor}`}>{valor}</div>
-      {detalhe && <div className="mt-1 text-sm text-tinta-400">{detalhe}</div>}
+    <div className="border-l border-tinta-300 pl-4">
+      <div className="flex items-baseline gap-2">
+        <span className={`tabular text-3xl font-semibold tracking-[-0.02em] ${cor}`}>{valor}</span>
+        <span className="text-base font-medium text-tinta-800">{rotulo.toLowerCase()}</span>
+      </div>
+      {detalhe && <div className="mt-1 text-sm text-tinta-500">{detalhe}</div>}
     </div>
   );
 }

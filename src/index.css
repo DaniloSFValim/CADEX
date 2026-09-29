@@ -17,10 +17,7 @@
 
 @layer components {
   /* Superfície de dados: fundo branco e uma linha fina, sem sombra. */
-  .cartao {
-    @apply rounded-lg border border-tinta-200 bg-white;
-    box-shadow: 0 1px 2px rgb(20 29 38 / 0.04), 0 4px 12px -6px rgb(20 29 38 / 0.06);
-  }
+  .cartao { @apply rounded-md border border-tinta-200 bg-white; }
 }
 
 @layer utilities {

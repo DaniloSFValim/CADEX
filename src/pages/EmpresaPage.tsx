@@ -231,7 +231,7 @@ function EmpresaForm({
                 if (grupo.length === 0) return null;
                 return (
                   <div key={t} className="mt-2">
-                    <div className="text-xs font-medium uppercase tracking-wide text-tinta-500">
+                    <div className="text-sm font-semibold text-tinta-700">
                       {t === 'operadora' ? 'Operadoras' : 'Terceirizadas (subcontratação)'}
                     </div>
                     <div className="mt-1 flex flex-wrap gap-x-5 gap-y-2">

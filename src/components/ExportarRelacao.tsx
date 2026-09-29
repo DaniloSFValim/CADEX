@@ -51,7 +51,7 @@ export function ExportarRelacao({
 
       <div className="grid gap-4 sm:grid-cols-[auto_1fr]">
         <fieldset>
-          <legend className="text-xs font-medium uppercase tracking-wide text-tinta-500">Tipos</legend>
+          <legend className="text-sm font-semibold text-tinta-700">Tipos</legend>
           <div className="mt-1 space-y-1">
             {TIPOS.map((t) => (
               <Opcao key={t} rotulo={TIPO_LABEL[t]} marcado={tipos.includes(t)}
@@ -60,7 +60,7 @@ export function ExportarRelacao({
           </div>
         </fieldset>
         <fieldset>
-          <legend className="text-xs font-medium uppercase tracking-wide text-tinta-500">Situações</legend>
+          <legend className="text-sm font-semibold text-tinta-700">Situações</legend>
           <div className="mt-1 flex flex-wrap gap-x-5 gap-y-1">
             {SITUACOES.map((s) => (
               <Opcao key={s} rotulo={SITUACAO_LABEL[s]} marcado={situacoes.includes(s)}
@@ -71,7 +71,7 @@ export function ExportarRelacao({
       </div>
 
       <fieldset>
-        <legend className="text-xs font-medium uppercase tracking-wide text-tinta-500">
+        <legend className="text-sm font-semibold text-tinta-700">
           Dados a exportar
           <button type="button" className="ml-3 normal-case tracking-normal text-marca-700 hover:underline"
                   onClick={() => setColunas(disponiveis.map((c) => c.chave))}>todos</button>
