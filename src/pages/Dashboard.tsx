@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Badge, Empty, ErrorNote, Kpi, Spinner, Titulo } from '../components/ui';
-import { SituacaoBadge } from '../components/Situacao';
+import { SituacaoBadge, dataBR } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { formatCnpj } from '../lib/cnpj';
 import { supabase } from '../lib/supabase';
@@ -94,55 +94,55 @@ export default function Dashboard() {
 
   return (
     <div className="flex flex-col gap-6">
-      <Titulo titulo="Dashboard" />
+      <Titulo titulo="Painel da gestão" descricao="Prazos da SECONSER que pedem atenção agora." />
 
       {/* KPIs */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Kpi
-          rotulo="Análises Pendentes"
+          rotulo="análises atrasadas"
           valor={sumario?.analises_pendentes || 0}
-          detalhe="Mais de 15 dias pendentes"
+          detalhe="requeridas há mais de 15 dias"
           tom={sumario?.analises_pendentes ? 'atencao' : 'baixa'}
         />
         <Kpi
-          rotulo="Saneamentos Vencendo"
+          rotulo="saneamentos no fim do prazo"
           valor={sumario?.saneamentos_vencendo || 0}
-          detalhe="Prazo em até 7 dias"
+          detalhe="vencem em até 7 dias"
           tom={sumario?.saneamentos_vencendo ? 'atencao' : 'baixa'}
         />
         <Kpi
-          rotulo="Inscrições Vencendo"
+          rotulo="inscrições por vencer"
           valor={sumario?.inscricoes_vencendo || 0}
-          detalhe="Validade em até 30 dias"
+          detalhe="validade termina em até 30 dias"
           tom={sumario?.inscricoes_vencendo ? 'atencao' : 'baixa'}
         />
       </div>
 
       {/* Análises Pendentes */}
       <section>
-        <h2 className="mb-4 text-lg font-semibold">Análises Pendentes (mais de 15 dias)</h2>
+        <h2 className="mb-4 text-lg font-semibold">Análises requeridas há mais de 15 dias</h2>
         {analises.length === 0 ? (
           <Empty>Nenhuma análise pendente há mais de 15 dias.</Empty>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="border-b bg-gray-50">
+              <thead className="border-b border-tinta-200 bg-tinta-50 text-[13px] text-tinta-500">
                 <tr>
                   <th className="px-4 py-2 text-left font-semibold">Empresa</th>
                   <th className="px-4 py-2 text-left font-semibold">CNPJ</th>
                   <th className="px-4 py-2 text-left font-semibold">Requerida em</th>
-                  <th className="px-4 py-2 text-right font-semibold">Dias Pendentes</th>
+                  <th className="px-4 py-2 text-right font-semibold">Dias em análise</th>
                 </tr>
               </thead>
               <tbody>
                 {analises.map((a) => (
-                  <tr key={a.id} className="border-b hover:bg-gray-50">
+                  <tr key={a.id} className="border-b border-tinta-100 hover:bg-marca-50/40">
                     <td className="px-4 py-2">
                       <div className="font-medium">{a.nome_fantasia || a.razao_social}</div>
-                      <div className="text-xs text-gray-600">{a.razao_social}</div>
+                      <div className="text-xs text-tinta-500">{a.razao_social}</div>
                     </td>
-                    <td className="px-4 py-2 font-mono text-sm">{formatCnpj(a.cnpj)}</td>
-                    <td className="px-4 py-2 text-sm">{a.data_requerimento}</td>
+                    <td className="px-4 py-2 tabular text-sm">{formatCnpj(a.cnpj)}</td>
+                    <td className="px-4 py-2 text-sm">{dataBR(a.data_requerimento)}</td>
                     <td className="px-4 py-2 text-right">
                       <Badge tom={a.dias_pendentes > 30 ? 'ruim' : 'alerta'}>{a.dias_pendentes} dias</Badge>
                     </td>
@@ -156,31 +156,31 @@ export default function Dashboard() {
 
       {/* Saneamentos Vencendo */}
       <section>
-        <h2 className="mb-4 text-lg font-semibold">Saneamentos a Vencer (até 7 dias)</h2>
+        <h2 className="mb-4 text-lg font-semibold">Saneamentos que vencem em até 7 dias</h2>
         {saneamentos.length === 0 ? (
           <Empty>Nenhum saneamento vencendo nos próximos 7 dias.</Empty>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="border-b bg-gray-50">
+              <thead className="border-b border-tinta-200 bg-tinta-50 text-[13px] text-tinta-500">
                 <tr>
                   <th className="px-4 py-2 text-left font-semibold">Empresa</th>
                   <th className="px-4 py-2 text-left font-semibold">CNPJ</th>
                   <th className="px-4 py-2 text-left font-semibold">Notificada em</th>
                   <th className="px-4 py-2 text-left font-semibold">Vence em</th>
-                  <th className="px-4 py-2 text-right font-semibold">Dias Restantes</th>
+                  <th className="px-4 py-2 text-right font-semibold">Dias restantes</th>
                 </tr>
               </thead>
               <tbody>
                 {saneamentos.map((s) => (
-                  <tr key={s.id} className="border-b hover:bg-gray-50">
+                  <tr key={s.id} className="border-b border-tinta-100 hover:bg-marca-50/40">
                     <td className="px-4 py-2">
                       <div className="font-medium">{s.nome_fantasia || s.razao_social}</div>
-                      <div className="text-xs text-gray-600">{s.razao_social}</div>
+                      <div className="text-xs text-tinta-500">{s.razao_social}</div>
                     </td>
-                    <td className="px-4 py-2 font-mono text-sm">{formatCnpj(s.cnpj)}</td>
-                    <td className="px-4 py-2 text-sm">{s.notificacao_data}</td>
-                    <td className="px-4 py-2 text-sm font-semibold text-red-600">{s.data_vencimento}</td>
+                    <td className="px-4 py-2 tabular text-sm">{formatCnpj(s.cnpj)}</td>
+                    <td className="px-4 py-2 text-sm">{dataBR(s.notificacao_data)}</td>
+                    <td className="px-4 py-2 text-sm font-semibold text-baixa">{dataBR(s.data_vencimento)}</td>
                     <td className="px-4 py-2 text-right">
                       <Badge tom="ruim">{s.dias_restantes} dias</Badge>
                     </td>
@@ -194,33 +194,33 @@ export default function Dashboard() {
 
       {/* Inscrições Vencendo */}
       <section>
-        <h2 className="mb-4 text-lg font-semibold">Inscrições a Vencer (até 30 dias)</h2>
+        <h2 className="mb-4 text-lg font-semibold">Inscrições que vencem em até 30 dias</h2>
         {inscricoes.length === 0 ? (
           <Empty>Nenhuma inscrição vencendo nos próximos 30 dias.</Empty>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="border-b bg-gray-50">
+              <thead className="border-b border-tinta-200 bg-tinta-50 text-[13px] text-tinta-500">
                 <tr>
                   <th className="px-4 py-2 text-left font-semibold">Empresa</th>
                   <th className="px-4 py-2 text-left font-semibold">CNPJ</th>
-                  <th className="px-4 py-2 text-left font-semibold">Status</th>
+                  <th className="px-4 py-2 text-left font-semibold">Situação</th>
                   <th className="px-4 py-2 text-left font-semibold">Vence em</th>
-                  <th className="px-4 py-2 text-right font-semibold">Dias Restantes</th>
+                  <th className="px-4 py-2 text-right font-semibold">Dias restantes</th>
                 </tr>
               </thead>
               <tbody>
                 {inscricoes.map((i) => (
-                  <tr key={i.id} className="border-b hover:bg-gray-50">
+                  <tr key={i.id} className="border-b border-tinta-100 hover:bg-marca-50/40">
                     <td className="px-4 py-2">
                       <div className="font-medium">{i.nome_fantasia || i.razao_social}</div>
-                      <div className="text-xs text-gray-600">{i.razao_social}</div>
+                      <div className="text-xs text-tinta-500">{i.razao_social}</div>
                     </td>
-                    <td className="px-4 py-2 font-mono text-sm">{formatCnpj(i.cnpj)}</td>
+                    <td className="px-4 py-2 tabular text-sm">{formatCnpj(i.cnpj)}</td>
                     <td className="px-4 py-2">
                       <SituacaoBadge s={i.situacao_efetiva as any} />
                     </td>
-                    <td className="px-4 py-2 text-sm font-semibold">{i.validade_ate}</td>
+                    <td className="px-4 py-2 text-sm font-semibold">{dataBR(i.validade_ate)}</td>
                     <td className="px-4 py-2 text-right">
                       <Badge tom={i.dias_restantes <= 7 ? 'ruim' : 'alerta'}>{i.dias_restantes} dias</Badge>
                     </td>

@@ -10,8 +10,11 @@ const TOM: Record<SituacaoEfetiva, Tom> = {
   vencida: 'ruim',
 };
 
+// Na tela, em caixa normal ("Apta"); a caixa-alta oficial fica na ficha impressa e na planilha.
+const emCaixaNormal = (t: string) => t.charAt(0) + t.slice(1).toLowerCase();
+
 export function SituacaoBadge({ s }: { s: SituacaoEfetiva }) {
-  return <Badge tom={TOM[s]}>{SITUACAO_LABEL[s]}</Badge>;
+  return <Badge tom={TOM[s]}>{emCaixaNormal(SITUACAO_LABEL[s])}</Badge>;
 }
 
 /** Filete à esquerda na cor da situação: o selo de cada registro. */

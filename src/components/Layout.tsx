@@ -11,7 +11,7 @@ export function Layout() {
     <div className="flex min-h-screen flex-col">
       <Cabecalho
         itens={[
-          ...(isGestor ? [{ rotulo: 'Dashboard', para: '/dashboard' }] : []),
+          ...(isGestor ? [{ rotulo: 'Painel', para: '/dashboard' }] : []),
           { rotulo: 'Empresas', para: '/', fim: true },
           { rotulo: 'Consulta pública', para: '/consulta' },
         ]}
