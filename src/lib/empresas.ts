@@ -91,6 +91,23 @@ export const SITUACAO_LABEL: Record<SituacaoEfetiva, string> = {
   vencida: 'VENCIDA',
 };
 
+/**
+ * Opções dos filtros de situação nas listas. APTA reúne quem está em
+ * saneamento, que continua apta até a inaptidão (art. 8º). Inapta e
+ * indeferida só aparecem com "qualquer situação".
+ */
+export const FILTRO_SITUACAO: { valor: string; rotulo: string; inclui: SituacaoEfetiva[] }[] = [
+  { valor: 'em_analise', rotulo: 'EM ANÁLISE', inclui: ['em_analise'] },
+  { valor: 'apta', rotulo: 'APTA', inclui: ['apta', 'em_saneamento'] },
+  { valor: 'vencida', rotulo: 'VENCIDA', inclui: ['vencida'] },
+];
+
+/** Situações abrangidas pelo filtro escolhido; filtro vazio abrange todas. */
+export function situacoesDoFiltro(filtro: string): SituacaoEfetiva[] {
+  if (!filtro) return Object.keys(SITUACAO_LABEL) as SituacaoEfetiva[];
+  return FILTRO_SITUACAO.find((f) => f.valor === filtro)?.inclui ?? [];
+}
+
 /** Mesma regra de `situacao_efetiva` no banco. */
 export function situacaoEfetiva(
   e: Pick<Empresa, 'situacao' | 'validade_ate'>, hoje: string,

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Empty, ErrorNote, Spinner, inputClass } from '../components/ui';
 import { BARRA, SituacaoBadge, dataBR } from '../components/Situacao';
 import { formatCnpj, onlyDigits } from '../lib/cnpj';
-import { SITUACAO_LABEL, consultaPublica, urlLogo, type LinhaPublica } from '../lib/empresas';
+import { FILTRO_SITUACAO, consultaPublica, situacoesDoFiltro, urlLogo, type LinhaPublica } from '../lib/empresas';
 
 /**
  * Consulta pública do CADEX (art. 7º, § 2º): aberta, sem login. Mostra só
@@ -26,7 +26,7 @@ export default function Consulta() {
     const q = busca.trim().toLowerCase();
     const qDig = onlyDigits(busca);
     return (linhas ?? []).filter((l) =>
-      (!situacao || l.situacao === situacao)
+      situacoesDoFiltro(situacao).includes(l.situacao)
       && (!q || l.razao_social.toLowerCase().includes(q)
           || (l.nome_fantasia ?? '').toLowerCase().includes(q)
           || l.codigo_cadex.toLowerCase().includes(q)
@@ -60,7 +60,7 @@ export default function Consulta() {
           <select className={`${inputClass} !py-3 !text-base`} value={situacao}
                   onChange={(e) => setSituacao(e.target.value)} aria-label="Situação">
             <option value="">Qualquer situação</option>
-            {Object.entries(SITUACAO_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            {FILTRO_SITUACAO.map((f) => <option key={f.valor} value={f.valor}>{f.rotulo}</option>)}
           </select>
         </div>
 

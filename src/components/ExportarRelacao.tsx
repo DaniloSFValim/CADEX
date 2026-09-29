@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from './ui';
 import { COLUNAS, COLUNAS_PADRAO, baixarArquivo, relacaoCsv, type Contexto } from '../lib/exportar';
 import {
-  SITUACAO_LABEL, TIPO_LABEL, situacaoEfetiva, type Empresa, type SituacaoEfetiva, type Tipo,
+  SITUACAO_LABEL, TIPO_LABEL, situacaoEfetiva, situacoesDoFiltro, type Empresa, type SituacaoEfetiva, type Tipo,
 } from '../lib/empresas';
 
 const TIPOS = Object.keys(TIPO_LABEL) as Tipo[];
@@ -34,7 +34,7 @@ export function ExportarRelacao({
 }) {
   const [tipos, setTipos] = useState<Tipo[]>(tipoInicial ? [tipoInicial as Tipo] : TIPOS);
   const [situacoes, setSituacoes] = useState<SituacaoEfetiva[]>(
-    situacaoInicial ? [situacaoInicial as SituacaoEfetiva] : SITUACOES);
+    situacoesDoFiltro(situacaoInicial));
   const [colunas, setColunas] = useState<string[]>(COLUNAS_PADRAO);
 
   const disponiveis = COLUNAS.filter((c) => podeVerDocumentos || !c.soGestor);

@@ -6,7 +6,7 @@ import { BARRA, SituacaoBadge } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { formatCnpj, onlyDigits } from '../lib/cnpj';
 import {
-  SITUACAO_LABEL, TIPO_LABEL, hojeISO, situacaoEfetiva, listarDocumentos, listarEmpresas, listarTiposDocumento, listarVinculos,
+  FILTRO_SITUACAO, TIPO_LABEL, situacoesDoFiltro, hojeISO, situacaoEfetiva, listarDocumentos, listarEmpresas, listarTiposDocumento, listarVinculos,
   nomeEmpresa, resumoDocumentos, type Documento, type Empresa, type Resumo, type SituacaoEfetiva, type TipoDocumento,
   type Vinculo,
 } from '../lib/empresas';
@@ -52,7 +52,7 @@ export default function Empresas() {
     const qCod = busca.trim().toUpperCase();
     return (empresas ?? []).filter((e) =>
       (!tipo || e.tipo === tipo)
-      && (!situacao || situacaoEfetiva(e, hoje) === situacao)
+      && situacoesDoFiltro(situacao).includes(situacaoEfetiva(e, hoje))
       && (!q || e.razao_social.toLowerCase().includes(q)
           || (e.nome_fantasia ?? '').toLowerCase().includes(q)
           || e.codigo_cadex.includes(qCod)
@@ -120,7 +120,7 @@ export default function Empresas() {
           </select>
           <select className={inputClass} value={situacao} onChange={(e) => setSituacao(e.target.value)} aria-label="Situação">
             <option value="">Todas as situações</option>
-            {Object.entries(SITUACAO_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            {FILTRO_SITUACAO.map((f) => <option key={f.valor} value={f.valor}>{f.rotulo}</option>)}
           </select>
         </div>
 
