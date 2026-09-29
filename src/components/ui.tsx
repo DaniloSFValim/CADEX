@@ -25,7 +25,7 @@ export function Card({
     <section>
       {(title || action) && (
         <header className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
-          <h2 className="text-xl font-semibold tracking-[-0.01em] text-tinta-900">{title}</h2>
+          <h2 className="text-xl font-bold tracking-[-0.015em] text-tinta-900">{title}</h2>
           {action}
         </header>
       )}
@@ -42,7 +42,7 @@ export function Titulo({
     <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0">
         {trilha && <div className="mb-2 text-sm text-tinta-400">{trilha}</div>}
-        <h1 className="text-3xl font-semibold leading-tight tracking-[-0.02em] text-tinta-900">{titulo}</h1>
+        <h1 className="text-[2rem] font-bold leading-tight tracking-[-0.025em] text-tinta-900 sm:text-4xl">{titulo}</h1>
         {descricao && <div className="mt-2 max-w-2xl text-base text-tinta-500">{descricao}</div>}
         {children}
       </div>
@@ -55,15 +55,15 @@ export function Button({
   children, variant = 'primary', ...rest
 }: { variant?: 'primary' | 'secondary' | 'danger' } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   const styles = {
-    primary: 'bg-marca-500 text-white hover:bg-marca-700',
-    secondary: 'bg-white text-tinta-700 ring-1 ring-inset ring-tinta-300 hover:bg-tinta-50',
+    primary: 'bg-marca-600 text-white shadow-sm hover:bg-marca-800 active:bg-marca-900',
+    secondary: 'bg-white text-tinta-800 shadow-sm ring-1 ring-inset ring-tinta-300 hover:bg-tinta-50 hover:ring-tinta-400',
     danger: 'bg-white text-baixa ring-1 ring-inset ring-baixa/30 hover:bg-baixa/10',
   }[variant];
   return (
     <button
       type="button"
       {...rest}
-      className={`inline-flex items-center justify-center gap-2 rounded px-3.5 py-2 text-sm font-medium
+      className={`inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold
         transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${styles} ${rest.className ?? ''}`}
     >
       {children}
@@ -73,8 +73,8 @@ export function Button({
 
 /** Mesmo visual dos botões, para links (react-router). */
 export const botaoLink = {
-  primary: 'inline-flex items-center justify-center gap-2 rounded bg-marca-500 px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-marca-700',
-  secondary: 'inline-flex items-center justify-center gap-2 rounded bg-white px-3.5 py-2 text-sm font-medium text-tinta-700 ring-1 ring-inset ring-tinta-300 transition-colors hover:bg-tinta-50',
+  primary: 'inline-flex items-center justify-center gap-2 rounded-md bg-marca-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-marca-800 active:bg-marca-900',
+  secondary: 'inline-flex items-center justify-center gap-2 rounded-md bg-white px-4 py-2 text-sm font-semibold text-tinta-800 shadow-sm ring-1 ring-inset ring-tinta-300 transition-colors hover:bg-tinta-50 hover:ring-tinta-400',
 };
 
 export function Field({
@@ -93,17 +93,17 @@ export function Field({
 }
 
 export const inputClass =
-  'block w-full rounded border border-tinta-300 bg-white px-3 py-2 text-sm text-tinta-900 ' +
-  'placeholder:text-tinta-400 focus:border-marca-600 focus:outline-none focus:ring-2 focus:ring-marca-600/15 ' +
+  'block w-full rounded-md border border-tinta-300 bg-white px-3 py-2 text-sm text-tinta-900 shadow-[inset_0_1px_1px_rgb(20_29_38/0.04)] ' +
+  'placeholder:text-tinta-400 hover:border-tinta-400 focus:border-marca-600 focus:outline-none focus:ring-4 focus:ring-marca-500/15 ' +
   'disabled:cursor-default disabled:bg-tinta-50 disabled:text-tinta-800';
 
 /** Tabelas de listagem. */
 export const tabela = {
   moldura: 'overflow-x-auto',
   tabela: 'w-full text-left text-sm',
-  cabeca: 'border-b border-tinta-200 text-left text-sm',
-  th: 'px-4 py-2.5 font-medium text-tinta-400',
-  linha: 'border-b border-tinta-100 last:border-0 hover:bg-tinta-50 focus-within:bg-tinta-50',
+  cabeca: 'border-b border-tinta-200 bg-tinta-50/80 text-left text-[13px]',
+  th: 'px-4 py-3 font-semibold text-tinta-500',
+  linha: 'border-b border-tinta-100 transition-colors last:border-0 hover:bg-marca-50/40 focus-within:bg-marca-50/40',
   td: 'px-4 py-3 align-middle',
 };
 
@@ -113,9 +113,9 @@ export function Kpi({ rotulo, valor, detalhe, tom }: {
 }) {
   const cor = tom ? { alta: 'text-alta', baixa: 'text-baixa', atencao: 'text-atencao' }[tom] : 'text-tinta-900';
   return (
-    <div className="border-t-2 border-tinta-900 pt-3">
+    <div className="border-t-[3px] border-tinta-900 pt-3">
       <div className="text-sm font-medium text-tinta-600">{rotulo}</div>
-      <div className={`tabular mt-1 text-3xl font-semibold tracking-[-0.02em] ${cor}`}>{valor}</div>
+      <div className={`tabular mt-1 text-4xl font-bold tracking-[-0.03em] ${cor}`}>{valor}</div>
       {detalhe && <div className="mt-1 text-sm text-tinta-400">{detalhe}</div>}
     </div>
   );
