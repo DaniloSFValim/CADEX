@@ -9,7 +9,12 @@ export const PAPEL_LABEL: Record<Papel, string> = {
   cisp: 'CISP',
 };
 
-export interface Servidor { nome: string; papel: Papel }
+export interface Servidor {
+  nome: string;
+  papel: Papel;
+  /** Gerencia as contas e os perfis de acesso. */
+  administrador: boolean;
+}
 
 interface AuthState {
   session: Session | null;
@@ -38,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Quem é servidor, e com que perfil, vem do banco sob RLS — nunca do
         // navegador. O banco aplica as mesmas regras em cada gravação.
         const { data } = await supabase
-          .from('servidores').select('nome, papel').eq('user_id', s.user.id).maybeSingle();
+          .from('servidores').select('nome, papel, administrador').eq('user_id', s.user.id).maybeSingle();
         sv = (data as Servidor | null) ?? null;
       }
       if (!cancelled) { setServidor(sv); setLoading(false); }

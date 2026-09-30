@@ -14,8 +14,10 @@ set search_path = public, extensions;
 create schema if not exists auth;
 
 create table if not exists auth.users (
-  id    uuid primary key default extensions.gen_random_uuid(),
-  email text unique
+  id              uuid primary key default extensions.gen_random_uuid(),
+  email           text unique,
+  created_at      timestamptz default now(),
+  last_sign_in_at timestamptz
 );
 
 -- Em produção auth.uid() lê o JWT. No shim, lê um GUC de sessão,

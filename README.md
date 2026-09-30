@@ -70,17 +70,26 @@ validade obrigatória nos documentos que vencem, código CADEX gerado pelo
 banco, contratada sempre terceirizada e sem ciclos na cadeia, e acesso
 restrito a servidores (RLS).
 
-## Liberar um servidor
+## Contas e acessos
 
-1. Supabase → **Authentication → Users → Add user** (marque *Auto Confirm User*).
-2. Supabase → **SQL Editor** (`papel`: `'gestor'` para a SECONSER, `'cisp'` para consulta):
+Pelo site, em **Contas** (só para administrador): criar conta com senha
+provisória, dar ou tirar acesso, escolher o perfil (`gestor` para a
+SECONSER, `cisp` para consulta), marcar quem é administrador e redefinir
+senhas. Cada pessoa troca a própria senha em **Minha conta** (clique no
+nome, no alto da página). Toda mudança fica na auditoria.
 
-   ```sql
-   insert into servidores (user_id, nome, papel)
-   select id, 'NOME DO SERVIDOR', 'gestor' from auth.users where email = 'EMAIL@niteroi.rj.gov.br';
-   ```
+- Ninguém tira a própria administração nem remove o próprio acesso: o
+  sistema não fica sem administrador por engano.
+- Criar conta e redefinir senha passam pela Edge Function `admin-contas`
+  (`supabase/functions/admin-contas`), a única que usa a chave de serviço.
 
-Para tirar o acesso: `delete from servidores where user_id = (select id from auth.users where email = '...');`
+Primeiro administrador, ou recuperação se todos perderem o acesso (SQL
+Editor):
+
+```sql
+update servidores set administrador = true
+ where user_id = (select id from auth.users where email = 'EMAIL');
+```
 
 ## Rodar localmente
 

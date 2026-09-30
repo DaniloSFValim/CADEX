@@ -9,6 +9,8 @@ import Dashboard from './pages/Dashboard';
 import Empresas from './pages/Empresas';
 import EmpresaPage from './pages/EmpresaPage';
 import Ficha from './pages/Ficha';
+import Contas from './pages/Contas';
+import MinhaConta from './pages/MinhaConta';
 
 export function App() {
   return (
@@ -54,6 +56,8 @@ function AreaRestrita() {
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="empresas/nova" element={<EmpresaPage />} />
         <Route path="empresas/:id" element={<EmpresaPage />} />
+        <Route path="contas" element={<Contas />} />
+        <Route path="minha-conta" element={<MinhaConta />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
