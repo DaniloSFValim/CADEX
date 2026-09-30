@@ -11,6 +11,7 @@ import EmpresaPage from './pages/EmpresaPage';
 import Ficha from './pages/Ficha';
 import Contas from './pages/Contas';
 import MinhaConta from './pages/MinhaConta';
+import { CadastrarMfa, ConfirmarMfa } from './pages/Mfa';
 
 export function App() {
   return (
@@ -23,7 +24,7 @@ export function App() {
 }
 
 function AreaRestrita() {
-  const { session, servidor, loading, signOut } = useAuth();
+  const { session, servidor, mfa, loading, signOut } = useAuth();
 
   if (!isConfigured) {
     return (
@@ -45,6 +46,11 @@ function AreaRestrita() {
         <Button variant="secondary" className="mt-4" onClick={() => void signOut()}>Sair</Button>
       </div>
     );
+  }
+
+  // Gestor e administrador: senha + código do aplicativo (o banco exige o mesmo).
+  if (mfa?.exigida && !mfa.confirmada) {
+    return mfa.cadastrada ? <ConfirmarMfa /> : <CadastrarMfa />;
   }
 
   return (

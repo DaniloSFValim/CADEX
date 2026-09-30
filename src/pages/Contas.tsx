@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Badge, Button, Card, Empty, ErrorNote, Field, Spinner, Titulo, inputClass, tabela } from '../components/ui';
 import { useAuth, type Papel } from '../lib/auth';
 import {
-  SENHA_MINIMA, criarConta, definirAcesso, gerarSenhaProvisoria, listarContas, redefinirSenha, removerAcesso,
+  SENHA_MINIMA, criarConta, definirAcesso, gerarSenhaProvisoria, listarContas, redefinirSenha, removerAcesso, zerarMfa,
   type Conta,
 } from '../lib/contas';
 
@@ -64,6 +64,7 @@ export default function Contas() {
                     <th className={tabela.th}>Servidor</th>
                     <th className={tabela.th}>Perfil</th>
                     <th className={tabela.th}>Administrador</th>
+                    <th className={tabela.th}>Duas etapas</th>
                     <th className={tabela.th}>Último acesso</th>
                     <th className={tabela.th}><span className="sr-only">Ações</span></th>
                   </tr>
@@ -139,7 +140,7 @@ function NovaConta({ onCriada }: { onCriada: (msg: string) => void }) {
                  onChange={(e) => setEmail(e.target.value)} />
         </Field>
         <Field label="Perfil" required>
-          <SeletorPerfil valor={papel} onChange={setPapel} completo />
+          <SeletorPerfil valor={papel} onChange={(p) => { setPapel(p); if (p !== 'gestor') setAdministrador(false); }} completo />
         </Field>
         <Field label="Senha provisória" hint={`Pelo menos ${SENHA_MINIMA} caracteres. O servidor troca no primeiro acesso.`} required>
           <div className="flex gap-2">
@@ -149,10 +150,13 @@ function NovaConta({ onCriada }: { onCriada: (msg: string) => void }) {
           </div>
         </Field>
         <label className="flex items-start gap-2 text-sm text-tinta-700 md:col-span-2">
-          <input type="checkbox" className="mt-0.5" checked={administrador} onChange={(e) => setAdministrador(e.target.checked)} />
+          <input type="checkbox" className="mt-0.5" checked={administrador} disabled={papel !== 'gestor'}
+                 onChange={(e) => setAdministrador(e.target.checked)} />
           <span>
             <span className="font-medium">Administrador de contas</span>
-            <span className="block text-tinta-500">Pode criar contas, mudar perfis e tirar acessos, inclusive de outros administradores.</span>
+            <span className="block text-tinta-500">
+              Pode criar contas, mudar perfis e tirar acessos, inclusive de outros administradores. Só para o perfil SECONSER.
+            </span>
           </span>
         </label>
         <div className="flex flex-wrap items-center gap-3 md:col-span-2">
@@ -168,7 +172,7 @@ function LinhaConta({ conta, ehVoce, onMudou }: { conta: Conta; ehVoce: boolean;
   const [nome, setNome] = useState(conta.nome ?? '');
   const [papel, setPapel] = useState<Papel>(conta.papel ?? 'gestor');
   const [administrador, setAdministrador] = useState(conta.administrador);
-  const [modo, setModo] = useState<'normal' | 'remover' | 'senha'>('normal');
+  const [modo, setModo] = useState<'normal' | 'remover' | 'senha' | 'zerar'>('normal');
   const [senha, setSenha] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -189,15 +193,22 @@ function LinhaConta({ conta, ehVoce, onMudou }: { conta: Conta; ehVoce: boolean;
         </div>
       </td>
       <td className={`${tabela.td} min-w-[140px]`}>
-        <SeletorPerfil valor={papel} onChange={setPapel} />
+        <SeletorPerfil valor={papel} onChange={(p) => { setPapel(p); if (p !== 'gestor') setAdministrador(false); }} />
       </td>
       <td className={tabela.td}>
         <label className="inline-flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={administrador} disabled={ehVoce}
+          <input type="checkbox" checked={administrador} disabled={ehVoce || papel !== 'gestor'}
                  onChange={(e) => setAdministrador(e.target.checked)} />
           {administrador ? 'Sim' : 'Não'}
         </label>
         {ehVoce && <div className="text-xs text-tinta-500">outro administrador altera</div>}
+      </td>
+      <td className={tabela.td}>
+        {conta.mfa_ativa
+          ? <Badge tom="bom">Ativa</Badge>
+          : conta.papel === 'gestor'
+            ? <Badge tom="alerta">Cadastra no próximo acesso</Badge>
+            : <span className="text-xs text-tinta-500">não exigida</span>}
       </td>
       <td className={`${tabela.td} tabular whitespace-nowrap text-xs text-tinta-600`}>{dataHora(conta.ultimo_acesso)}</td>
       <td className={`${tabela.td} min-w-[260px]`}>
@@ -212,6 +223,9 @@ function LinhaConta({ conta, ehVoce, onMudou }: { conta: Conta; ehVoce: boolean;
                     onClick={() => { setSenha(gerarSenhaProvisoria()); setModo('senha'); }}>
               Redefinir senha
             </Button>
+            {!ehVoce && conta.mfa_ativa && (
+              <Button variant="secondary" className="!px-3 !py-1.5" onClick={() => setModo('zerar')}>Zerar duas etapas</Button>
+            )}
             {!ehVoce && (
               <Button variant="danger" className="!px-3 !py-1.5" onClick={() => setModo('remover')}>Remover acesso</Button>
             )}
@@ -225,6 +239,21 @@ function LinhaConta({ conta, ehVoce, onMudou }: { conta: Conta; ehVoce: boolean;
               <Button variant="danger" className="!px-3 !py-1.5" disabled={busy}
                       onClick={() => agir(() => removerAcesso(conta.user_id), `Acesso de ${conta.nome} removido.`)}>
                 Confirmar remoção
+              </Button>
+            </div>
+          </div>
+        )}
+        {modo === 'zerar' && (
+          <div className="flex flex-col items-end gap-2 text-right text-sm">
+            <span className="text-tinta-700">
+              Use quando {conta.nome} perder ou trocar de celular. No próximo acesso, ele cadastra o aplicativo de novo.
+            </span>
+            <div className="flex gap-2">
+              <Button variant="secondary" className="!px-3 !py-1.5" onClick={() => setModo('normal')}>Cancelar</Button>
+              <Button className="!px-3 !py-1.5" disabled={busy}
+                      onClick={() => agir(() => zerarMfa(conta.user_id),
+                        `Verificação em duas etapas de ${conta.nome} zerada. No próximo acesso, ele cadastra o aplicativo de novo.`)}>
+                Confirmar
               </Button>
             </div>
           </div>

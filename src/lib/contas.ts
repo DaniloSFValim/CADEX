@@ -10,6 +10,8 @@ export interface Conta {
   administrador: boolean;
   criado_em: string;
   ultimo_acesso: string | null;
+  /** Já cadastrou o aplicativo autenticador. */
+  mfa_ativa: boolean;
 }
 
 export const SENHA_MINIMA = 10;
@@ -52,6 +54,10 @@ export function criarConta(p: { email: string; nome: string; papel: Papel; admin
 
 export function redefinirSenha(userId: string, senha: string) {
   return chamarAdmin({ acao: 'redefinir_senha', user_id: userId, senha });
+}
+
+export function zerarMfa(userId: string) {
+  return chamarAdmin({ acao: 'zerar_mfa', user_id: userId });
 }
 
 /** Senha provisória legível para ditar ou copiar: sem 0/O, 1/l/I. */
