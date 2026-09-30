@@ -70,10 +70,11 @@ export interface Documento {
   id: string;
   empresa_id: string;
   tipo: string;
-  arquivo: string;
-  nome_arquivo: string;
+  /** Arquivo no Storage; nulo quando a SECONSER só registra a entrega. */
+  arquivo: string | null;
+  nome_arquivo: string | null;
   validade: string | null;
-  status?: 'pendente' | 'entregue';
+  status: 'pendente' | 'entregue';
   enviado_em: string;
 }
 
@@ -143,10 +144,10 @@ export const ESTADO_LABEL: Record<EstadoDocumento, string> = {
 /** Datas `YYYY-MM-DD` comparadas como texto: sem fuso horário no meio. */
 export function estadoDocumento(
   tipo: Pick<TipoDocumento, 'tem_validade'>,
-  doc: Pick<Documento, 'validade'> | undefined,
+  doc: Pick<Documento, 'validade' | 'status'> | undefined,
   hoje: string,
 ): EstadoDocumento {
-  if (!doc) return 'pendente';
+  if (!doc || doc.status === 'pendente') return 'pendente';
   if (!tipo.tem_validade || !doc.validade) return 'ok';
   if (doc.validade < hoje) return 'vencido';
   return doc.validade <= somaDias(hoje, DIAS_AVISO) ? 'vence_em_breve' : 'ok';
@@ -300,34 +301,33 @@ export async function enviarDocumento(
 export async function removerDocumento(doc: Documento): Promise<void> {
   const { error } = await supabase.from('documentos').delete().eq('id', doc.id);
   if (error) throw error;
-  await supabase.storage.from(BUCKET).remove([doc.arquivo]);
+  if (doc.arquivo) await supabase.storage.from(BUCKET).remove([doc.arquivo]);
 }
 
-export async function registrarValidadeDocumento(
-  empresaId: string, tipo: string, validade: string,
-): Promise<void> {
-  const { error } = await supabase.from('documentos')
-    .update({ validade })
-    .eq('empresa_id', empresaId)
-    .eq('tipo', tipo)
-    .order('enviado_em', { ascending: false })
-    .limit(1);
-  if (error) throw error;
+export interface MarcacaoDocumento {
+  tipo: string;
+  status: 'pendente' | 'entregue';
+  validade: string | null;
 }
 
-export async function registrarStatusDocumento(
-  empresaId: string, tipo: string, status: 'pendente' | 'entregue',
-): Promise<void> {
-  const { error } = await supabase.from('documentos')
-    .update({ status })
-    .eq('empresa_id', empresaId)
-    .eq('tipo', tipo)
-    .order('enviado_em', { ascending: false })
-    .limit(1);
+/**
+ * Registra a entrega (ou a volta a pendente) de vários documentos de uma
+ * vez. Cada marcação é um registro novo: vale o mais recente, e os
+ * anteriores ficam como histórico.
+ */
+export async function registrarDocumentos(empresaId: string, marcacoes: MarcacaoDocumento[]): Promise<void> {
+  if (marcacoes.length === 0) return;
+  const { error } = await supabase.from('documentos').insert(
+    marcacoes.map((m) => ({
+      empresa_id: empresaId, tipo: m.tipo, status: m.status,
+      validade: m.status === 'entregue' ? m.validade : null,
+    })),
+  );
   if (error) throw error;
 }
 
 export async function linkDocumento(doc: Documento): Promise<string> {
+  if (!doc.arquivo) throw new Error('Este documento foi registrado sem arquivo.');
   const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(doc.arquivo, 120);
   if (error) throw error;
   return data.signedUrl;
