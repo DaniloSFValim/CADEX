@@ -9,14 +9,23 @@ const HOJE = '2026-09-24';
 const tipo = (codigo: string, obrigatorio: boolean, tem_validade: boolean): TipoDocumento =>
   ({ codigo, nome: codigo, fundamento: '', obrigatorio, tem_validade, ordem: 0 });
 
-const doc = (tipo: string, validade: string | null, enviado_em = '2026-09-01T00:00:00Z'): Documento =>
-  ({ id: tipo + enviado_em, empresa_id: 'e', tipo, arquivo: '', nome_arquivo: '', validade, enviado_em });
+const doc = (
+  tipo: string, validade: string | null, enviado_em = '2026-09-01T00:00:00Z', status: Documento['status'] = 'entregue',
+): Documento => ({ id: tipo + enviado_em, empresa_id: 'e', tipo, arquivo: null, nome_arquivo: null, validade, status, enviado_em });
 
 describe('estadoDocumento', () => {
   const certidao = tipo('CND', true, true);
 
   it('sem arquivo é pendente', () => {
     expect(estadoDocumento(certidao, undefined, HOJE)).toBe('pendente');
+  });
+
+  it('marcado de volta como pendente conta como pendente', () => {
+    expect(estadoDocumento(tipo('CARTAO', true, false), doc('CARTAO', null, undefined, 'pendente'), HOJE)).toBe('pendente');
+  });
+
+  it('entregue sem validade, em documento que não vence, está ok', () => {
+    expect(estadoDocumento(tipo('CARTAO', true, false), doc('CARTAO', null), HOJE)).toBe('ok');
   });
 
   it('documento sem validade está sempre em dia', () => {

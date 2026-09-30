@@ -6,7 +6,7 @@ import { useAuth } from '../lib/auth';
 import { formatCnpj, isValidCnpj, onlyDigits } from '../lib/cnpj';
 import {
   ESTADO_LABEL, TIPO_LABEL, buscarEmpresa, criarEmpresa, criarVinculo, definirFimVinculo,
-  enviarLogo, estadoDocumento, registrarValidadeDocumento, registrarStatusDocumento, removerLogo, urlLogo, MAX_LOGO_BYTES, TIPOS_LOGO, hojeISO, listarDocumentos, listarEmpresas,
+  enviarLogo, estadoDocumento, registrarDocumentos, removerLogo, urlLogo, MAX_LOGO_BYTES, TIPOS_LOGO, hojeISO, listarDocumentos, listarEmpresas,
   listarTiposDocumento, listarVinculos, nomeEmpresa, resumoDocumentos,
   salvarEmpresa, situacaoEfetiva, ultimoPorTipo,
   type Documento, type Empresa, type EmpresaInput, type EstadoDocumento, type TipoDocumento,
@@ -507,21 +507,27 @@ const TOM_ESTADO: Record<EstadoDocumento, Tom> = {
   pendente: 'ruim', ok: 'bom', vence_em_breve: 'alerta', vencido: 'ruim',
 };
 
-const TOM_STATUS: Record<'pendente' | 'entregue', Tom> = {
-  pendente: 'ruim', entregue: 'bom',
-};
+type Marcacao = { status: 'pendente' | 'entregue'; validade: string };
 
-const dataBR = (iso: string) => iso.split('-').reverse().join('/');
+const dataBR = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
 
+/**
+ * Documentos do art. 6º. A SECONSER marca cada um como entregue ou
+ * pendente (e a validade, nos que vencem); as mudanças ficam em rascunho
+ * até "Salvar documentos", que grava todas de uma vez.
+ */
 function Documentos({ empresa }: { empresa: Empresa }) {
   const [tipos, setTipos] = useState<TipoDocumento[]>([]);
   const [docs, setDocs] = useState<Documento[]>([]);
+  const [rascunho, setRascunho] = useState<Record<string, Marcacao>>({});
   const [error, setError] = useState<unknown>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [salvando, setSalvando] = useState(false);
 
   const recarregar = () =>
     Promise.all([listarTiposDocumento(), listarDocumentos(empresa.id)])
-      .then(([t, d]) => { setTipos(t); setDocs(d); })
+      .then(([t, d]) => { setTipos(t); setDocs(d); setRascunho({}); })
       .catch(setError)
       .finally(() => setLoading(false));
 
@@ -529,6 +535,55 @@ function Documentos({ empresa }: { empresa: Empresa }) {
 
   const hoje = hojeISO();
   const ultimos = ultimoPorTipo(docs);
+  const salvo = (codigo: string): Marcacao => {
+    const d = ultimos.get(codigo);
+    return { status: d?.status ?? 'pendente', validade: d?.validade ?? '' };
+  };
+  const atual = (codigo: string) => rascunho[codigo] ?? salvo(codigo);
+
+  const alterados = tipos.filter((t) => {
+    const r = rascunho[t.codigo];
+    if (!r) return false;
+    const s0 = salvo(t.codigo);
+    return r.status !== s0.status || (r.status === 'entregue' && r.validade !== s0.validade);
+  });
+  const semValidade = alterados.filter(
+    (t) => t.tem_validade && atual(t.codigo).status === 'entregue' && !atual(t.codigo).validade,
+  );
+
+  const marcar = (codigo: string, m: Partial<Marcacao>) => {
+    setAviso(null); setError(null);
+    setRascunho((r) => ({ ...r, [codigo]: { ...atual(codigo), ...m } }));
+  };
+
+  const salvar = async () => {
+    setSalvando(true); setError(null); setAviso(null);
+    try {
+      await registrarDocumentos(empresa.id, alterados.map((t) => ({
+        tipo: t.codigo, status: atual(t.codigo).status, validade: atual(t.codigo).validade || null,
+      })));
+      const n = alterados.length;
+      await recarregar();
+      setAviso(`${n} documento${n > 1 ? 's' : ''} salvo${n > 1 ? 's' : ''}.`);
+    } catch (err) { setError(err); } finally { setSalvando(false); }
+  };
+
+  const barra = (
+    <div className="flex flex-wrap items-center justify-end gap-3">
+      {aviso && <span role="status" className="text-sm font-medium text-alta">{aviso}</span>}
+      {semValidade.length > 0 && (
+        <span className="text-sm text-baixa">Informe a validade de: {semValidade.map((t) => t.nome).join(', ')}.</span>
+      )}
+      {alterados.length > 0 && (
+        <Button variant="secondary" disabled={salvando} onClick={() => { setRascunho({}); setAviso(null); }}>
+          Descartar
+        </Button>
+      )}
+      <Button disabled={salvando || alterados.length === 0 || semValidade.length > 0} onClick={() => void salvar()}>
+        {salvando ? 'Salvando…' : alterados.length > 0 ? `Salvar documentos (${alterados.length})` : 'Salvar documentos'}
+      </Button>
+    </div>
+  );
 
   return (
     <Card
@@ -537,124 +592,76 @@ function Documentos({ empresa }: { empresa: Empresa }) {
     >
       <ErrorNote error={error} />
       {loading ? <Spinner /> : (
-        <ul className="divide-y divide-tinta-100">
-          {tipos.map((t) => (
-            <LinhaDocumento
-              key={t.codigo}
-              empresaId={empresa.id}
-              tipo={t}
-              doc={ultimos.get(t.codigo)}
-              estado={estadoDocumento(t, ultimos.get(t.codigo), hoje)}
-              onChanged={recarregar}
-            />
-          ))}
-        </ul>
+        <>
+          <ul className="divide-y divide-tinta-100">
+            {tipos.map((t) => (
+              <LinhaDocumento
+                key={t.codigo}
+                tipo={t}
+                doc={ultimos.get(t.codigo)}
+                estado={estadoDocumento(t, ultimos.get(t.codigo), hoje)}
+                marcacao={atual(t.codigo)}
+                alterado={alterados.includes(t)}
+                disabled={salvando}
+                onMarcar={(m) => marcar(t.codigo, m)}
+              />
+            ))}
+          </ul>
+          <div className="sticky bottom-0 -mx-5 -mb-5 mt-2 rounded-b-md border-t border-tinta-200 bg-white/95 px-5 py-3 backdrop-blur">
+            {barra}
+          </div>
+        </>
       )}
     </Card>
   );
 }
 
 function LinhaDocumento({
-  empresaId, tipo, doc, estado, onChanged,
+  tipo, doc, estado, marcacao, alterado, disabled, onMarcar,
 }: {
-  empresaId: string;
   tipo: TipoDocumento;
   doc: Documento | undefined;
   estado: EstadoDocumento;
-  onChanged: () => Promise<void>;
+  marcacao: Marcacao;
+  alterado: boolean;
+  disabled: boolean;
+  onMarcar: (m: Partial<Marcacao>) => void;
 }) {
-  const [validade, setValidade] = useState(doc?.validade ?? '');
-  const [status, setStatus] = useState(doc?.status ?? 'pendente');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<unknown | null>(null);
   const exibirEstado = estado === 'pendente' && !tipo.obrigatorio ? null : estado;
-
-  useEffect(() => {
-    setValidade(doc?.validade ?? '');
-    setStatus(doc?.status ?? 'pendente');
-  }, [doc]);
-
-  const salvarValidade = async () => {
-    if (!tipo.tem_validade || !validade) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await registrarValidadeDocumento(empresaId, tipo.codigo, validade);
-      await onChanged();
-    } catch (err) {
-      setError(err as unknown);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const salvarStatus = async (novoStatus: 'pendente' | 'entregue') => {
-    if (tipo.tem_validade) return;
-    setStatus(novoStatus);
-    setBusy(true);
-    setError(null);
-    try {
-      await registrarStatusDocumento(empresaId, tipo.codigo, novoStatus);
-      await onChanged();
-    } catch (err) {
-      setError(err as unknown);
-      setStatus(status);
-    } finally {
-      setBusy(false);
-    }
-  };
+  const nome = `status-${tipo.codigo}`;
 
   return (
-    <li className="py-3">
+    <li className={`py-3 ${alterado ? '-mx-5 bg-atencao/[0.06] px-5' : ''}`}>
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <div className="text-sm font-medium text-tinta-800">{tipo.nome}</div>
           <div className="text-xs text-tinta-500">
             {tipo.obrigatorio ? 'Obrigatório' : 'Quando aplicável'}
+            {doc && <> · última marcação em {dataBR(doc.enviado_em)}</>}
           </div>
-          {tipo.tem_validade && (
-            <div className="mt-2 flex flex-wrap items-end gap-2">
-              <label className="text-xs text-tinta-600">
-                Validade
-                <input type="date" className={`${inputClass} !py-1 ml-1`} value={validade}
-                       onChange={(e) => { setValidade(e.target.value); setError(null); }}
-                       disabled={busy} />
-              </label>
-              {validade !== (doc?.validade ?? '') && (
-                <Button variant="secondary" className="!py-1 text-xs" disabled={busy || !validade}
-                        onClick={salvarValidade}>
-                  {busy ? 'Salvando…' : 'Salvar'}
-                </Button>
-              )}
-              <ErrorNote error={error} />
-            </div>
-          )}
-          {!tipo.tem_validade && (
-            <div className="mt-2 flex flex-wrap items-center gap-3">
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <label className="flex items-center gap-2 text-sm text-tinta-700">
+              <input type="radio" name={nome} checked={marcacao.status === 'pendente'} disabled={disabled}
+                     onChange={() => onMarcar({ status: 'pendente' })} />
+              Pendente
+            </label>
+            <label className="flex items-center gap-2 text-sm text-tinta-700">
+              <input type="radio" name={nome} checked={marcacao.status === 'entregue'} disabled={disabled}
+                     onChange={() => onMarcar({ status: 'entregue' })} />
+              Entregue
+            </label>
+            {tipo.tem_validade && marcacao.status === 'entregue' && (
               <label className="flex items-center gap-2 text-sm text-tinta-700">
-                <input type="radio" name={`status-${tipo.codigo}`} value="pendente"
-                       checked={status === 'pendente'} disabled={busy}
-                       onChange={() => void salvarStatus('pendente')} />
-                Pendente
+                válido até
+                <input type="date" className={`${inputClass} !w-auto !py-1`} value={marcacao.validade}
+                       disabled={disabled} required
+                       onChange={(e) => onMarcar({ validade: e.target.value })} />
               </label>
-              <label className="flex items-center gap-2 text-sm text-tinta-700">
-                <input type="radio" name={`status-${tipo.codigo}`} value="entregue"
-                       checked={status === 'entregue'} disabled={busy}
-                       onChange={() => void salvarStatus('entregue')} />
-                Entregue
-              </label>
-              <ErrorNote error={error} />
-            </div>
-          )}
-          {doc?.validade && (
-            <div className="mt-1 text-xs text-tinta-600">
-              Registrado: {dataBR(doc.validade)}
-            </div>
-          )}
+            )}
+            {alterado && <span className="text-xs font-medium text-atencao">alterado, falta salvar</span>}
+          </div>
         </div>
-        {tipo.tem_validade && exibirEstado
-          ? <Badge tom={TOM_ESTADO[exibirEstado]}>{ESTADO_LABEL[exibirEstado]}</Badge>
-          : <Badge tom={TOM_STATUS[status]}>{status === 'entregue' ? 'Entregue' : 'Pendente'}</Badge>}
+        {exibirEstado && <Badge tom={TOM_ESTADO[exibirEstado]}>{ESTADO_LABEL[exibirEstado]}</Badge>}
       </div>
     </li>
   );

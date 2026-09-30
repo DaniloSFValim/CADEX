@@ -191,6 +191,23 @@ begin
       = '00000000-0000-4000-8000-000000000001',
     'documento deveria registrar quem enviou');
 
+  -- Sem arquivo: a SECONSER marca entregue/pendente e informa a validade
+  insert into documentos (empresa_id, tipo, status) values (op, 'CNPJ_CARD', 'entregue');
+  begin
+    insert into documentos (empresa_id, tipo, status) values (op, 'CNDT', 'entregue');
+    raise exception 'ASSERT FALHOU: certidão entregue sem validade foi aceita';
+  exception when raise_exception then
+    if sqlerrm like 'ASSERT%' then raise; end if;
+  end;
+  insert into documentos (empresa_id, tipo, status, validade) values (op, 'CNDT', 'entregue', current_date + 180);
+  insert into documentos (empresa_id, tipo, status) values (op, 'CNDT', 'pendente');
+  perform pg_temp.assert(
+    (select status from documentos where empresa_id = op and tipo = 'CNDT'
+      order by enviado_em desc, status desc limit 1) is not null,
+    'registro sem arquivo deveria ser aceito');
+  select count(*) into n from documentos where empresa_id = op;
+  perform pg_temp.assert(n = 4, 'cada marcação deveria virar um registro (histórico)');
+
   -- Servidor não se promove nem cria outro servidor
   begin
     insert into servidores (user_id, nome)
