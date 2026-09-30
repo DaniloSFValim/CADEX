@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router-dom';
+import { Link, Outlet } from 'react-router-dom';
 import { PAPEL_LABEL, useAuth } from '../lib/auth';
 import { Cabecalho } from './Cabecalho';
 import { Rodape } from './Rodape';
@@ -14,12 +14,13 @@ export function Layout() {
           ...(isGestor ? [{ rotulo: 'Painel', para: '/dashboard' }] : []),
           { rotulo: 'Empresas', para: '/', fim: true },
           { rotulo: 'Consulta pública', para: '/consulta' },
+          ...(servidor?.administrador ? [{ rotulo: 'Contas', para: '/contas' }] : []),
         ]}
         direita={<>
-          <span className="text-right leading-tight">
+          <Link to="/minha-conta" className="text-right leading-tight hover:underline" title="Minha conta: trocar senha">
             <span className="block font-medium text-tinta-800">{servidor?.nome ?? session?.user.email}</span>
             {servidor && <span className="block text-xs text-tinta-500">{PAPEL_LABEL[servidor.papel]}</span>}
-          </span>
+          </Link>
           <Button variant="secondary" className="!px-3 !py-1.5" onClick={() => void signOut()}>Sair</Button>
         </>}
       />
