@@ -140,7 +140,7 @@ function NovaConta({ onCriada }: { onCriada: (msg: string) => void }) {
                  onChange={(e) => setEmail(e.target.value)} />
         </Field>
         <Field label="Perfil" required>
-          <SeletorPerfil valor={papel} onChange={setPapel} completo />
+          <SeletorPerfil valor={papel} onChange={(p) => { setPapel(p); if (p !== 'gestor') setAdministrador(false); }} completo />
         </Field>
         <Field label="Senha provisória" hint={`Pelo menos ${SENHA_MINIMA} caracteres. O servidor troca no primeiro acesso.`} required>
           <div className="flex gap-2">
@@ -150,10 +150,13 @@ function NovaConta({ onCriada }: { onCriada: (msg: string) => void }) {
           </div>
         </Field>
         <label className="flex items-start gap-2 text-sm text-tinta-700 md:col-span-2">
-          <input type="checkbox" className="mt-0.5" checked={administrador} onChange={(e) => setAdministrador(e.target.checked)} />
+          <input type="checkbox" className="mt-0.5" checked={administrador} disabled={papel !== 'gestor'}
+                 onChange={(e) => setAdministrador(e.target.checked)} />
           <span>
             <span className="font-medium">Administrador de contas</span>
-            <span className="block text-tinta-500">Pode criar contas, mudar perfis e tirar acessos, inclusive de outros administradores.</span>
+            <span className="block text-tinta-500">
+              Pode criar contas, mudar perfis e tirar acessos, inclusive de outros administradores. Só para o perfil SECONSER.
+            </span>
           </span>
         </label>
         <div className="flex flex-wrap items-center gap-3 md:col-span-2">
@@ -190,11 +193,11 @@ function LinhaConta({ conta, ehVoce, onMudou }: { conta: Conta; ehVoce: boolean;
         </div>
       </td>
       <td className={`${tabela.td} min-w-[140px]`}>
-        <SeletorPerfil valor={papel} onChange={setPapel} />
+        <SeletorPerfil valor={papel} onChange={(p) => { setPapel(p); if (p !== 'gestor') setAdministrador(false); }} />
       </td>
       <td className={tabela.td}>
         <label className="inline-flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={administrador} disabled={ehVoce}
+          <input type="checkbox" checked={administrador} disabled={ehVoce || papel !== 'gestor'}
                  onChange={(e) => setAdministrador(e.target.checked)} />
           {administrador ? 'Sim' : 'Não'}
         </label>
@@ -203,7 +206,7 @@ function LinhaConta({ conta, ehVoce, onMudou }: { conta: Conta; ehVoce: boolean;
       <td className={tabela.td}>
         {conta.mfa_ativa
           ? <Badge tom="bom">Ativa</Badge>
-          : conta.papel === 'gestor' || conta.administrador
+          : conta.papel === 'gestor'
             ? <Badge tom="alerta">Cadastra no próximo acesso</Badge>
             : <span className="text-xs text-tinta-500">não exigida</span>}
       </td>

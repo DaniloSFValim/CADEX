@@ -18,7 +18,7 @@ export interface Servidor {
 
 /** Verificação em duas etapas (aplicativo autenticador) da sessão atual. */
 export interface EstadoMfa {
-  /** Gestor e administrador só usam o sistema depois do código do aplicativo. */
+  /** O gestor só usa o sistema depois do código do aplicativo; o CISP não precisa. */
   exigida: boolean;
   /** O aplicativo já foi cadastrado (fator confirmado). */
   cadastrada: boolean;
@@ -69,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // `totp` só traz fatores confirmados; um cadastro abandonado no meio não conta.
         const fator = fatores.data?.totp[0] ?? null;
         m = {
-          exigida: sv.papel === 'gestor' || sv.administrador,
+          exigida: sv.papel === 'gestor',
           cadastrada: Boolean(fator),
           confirmada: nivel.data?.currentLevel === 'aal2',
           fatorId: fator?.id ?? null,

@@ -89,6 +89,10 @@ begin
   perform pg_temp.assert((select administrador from public.admin_listar_contas() where user_id = '00000000-0000-4000-8000-000000000022'),
     'promoção a administrador não gravou');
 
+  -- Administrador só com perfil gestor (o CISP não passa pelo código do aplicativo)
+  perform pg_temp.recusa($q$select public.admin_definir_acesso('00000000-0000-4000-8000-000000000023', 'X', 'cisp', true)$q$,
+    'CISP virou administrador');
+
   -- Perfil inválido e nome vazio
   perform pg_temp.recusa($q$select public.admin_definir_acesso('00000000-0000-4000-8000-000000000023', 'X', 'dono', false)$q$,
     'perfil inexistente foi aceito');
