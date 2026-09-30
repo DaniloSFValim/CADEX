@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Badge, Button, Card, Empty, ErrorNote, Field, Spinner, Titulo, inputClass, tabela } from '../components/ui';
 import { useAuth, type Papel } from '../lib/auth';
 import {
-  SENHA_MINIMA, criarConta, definirAcesso, gerarSenhaProvisoria, listarContas, redefinirSenha, removerAcesso,
+  SENHA_MINIMA, criarConta, definirAcesso, gerarSenhaProvisoria, listarContas, redefinirSenha, removerAcesso, zerarMfa,
   type Conta,
 } from '../lib/contas';
 
@@ -64,6 +64,7 @@ export default function Contas() {
                     <th className={tabela.th}>Servidor</th>
                     <th className={tabela.th}>Perfil</th>
                     <th className={tabela.th}>Administrador</th>
+                    <th className={tabela.th}>Duas etapas</th>
                     <th className={tabela.th}>Último acesso</th>
                     <th className={tabela.th}><span className="sr-only">Ações</span></th>
                   </tr>
@@ -168,7 +169,7 @@ function LinhaConta({ conta, ehVoce, onMudou }: { conta: Conta; ehVoce: boolean;
   const [nome, setNome] = useState(conta.nome ?? '');
   const [papel, setPapel] = useState<Papel>(conta.papel ?? 'gestor');
   const [administrador, setAdministrador] = useState(conta.administrador);
-  const [modo, setModo] = useState<'normal' | 'remover' | 'senha'>('normal');
+  const [modo, setModo] = useState<'normal' | 'remover' | 'senha' | 'zerar'>('normal');
   const [senha, setSenha] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -199,6 +200,13 @@ function LinhaConta({ conta, ehVoce, onMudou }: { conta: Conta; ehVoce: boolean;
         </label>
         {ehVoce && <div className="text-xs text-tinta-500">outro administrador altera</div>}
       </td>
+      <td className={tabela.td}>
+        {conta.mfa_ativa
+          ? <Badge tom="bom">Ativa</Badge>
+          : conta.papel === 'gestor' || conta.administrador
+            ? <Badge tom="alerta">Cadastra no próximo acesso</Badge>
+            : <span className="text-xs text-tinta-500">não exigida</span>}
+      </td>
       <td className={`${tabela.td} tabular whitespace-nowrap text-xs text-tinta-600`}>{dataHora(conta.ultimo_acesso)}</td>
       <td className={`${tabela.td} min-w-[260px]`}>
         {modo === 'normal' && (
@@ -212,6 +220,9 @@ function LinhaConta({ conta, ehVoce, onMudou }: { conta: Conta; ehVoce: boolean;
                     onClick={() => { setSenha(gerarSenhaProvisoria()); setModo('senha'); }}>
               Redefinir senha
             </Button>
+            {!ehVoce && conta.mfa_ativa && (
+              <Button variant="secondary" className="!px-3 !py-1.5" onClick={() => setModo('zerar')}>Zerar duas etapas</Button>
+            )}
             {!ehVoce && (
               <Button variant="danger" className="!px-3 !py-1.5" onClick={() => setModo('remover')}>Remover acesso</Button>
             )}
@@ -225,6 +236,21 @@ function LinhaConta({ conta, ehVoce, onMudou }: { conta: Conta; ehVoce: boolean;
               <Button variant="danger" className="!px-3 !py-1.5" disabled={busy}
                       onClick={() => agir(() => removerAcesso(conta.user_id), `Acesso de ${conta.nome} removido.`)}>
                 Confirmar remoção
+              </Button>
+            </div>
+          </div>
+        )}
+        {modo === 'zerar' && (
+          <div className="flex flex-col items-end gap-2 text-right text-sm">
+            <span className="text-tinta-700">
+              Use quando {conta.nome} perder ou trocar de celular. No próximo acesso, ele cadastra o aplicativo de novo.
+            </span>
+            <div className="flex gap-2">
+              <Button variant="secondary" className="!px-3 !py-1.5" onClick={() => setModo('normal')}>Cancelar</Button>
+              <Button className="!px-3 !py-1.5" disabled={busy}
+                      onClick={() => agir(() => zerarMfa(conta.user_id),
+                        `Verificação em duas etapas de ${conta.nome} zerada. No próximo acesso, ele cadastra o aplicativo de novo.`)}>
+                Confirmar
               </Button>
             </div>
           </div>

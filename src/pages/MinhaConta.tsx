@@ -5,7 +5,7 @@ import { SENHA_MINIMA } from '../lib/contas';
 import { supabase } from '../lib/supabase';
 
 export default function MinhaConta() {
-  const { servidor, session } = useAuth();
+  const { servidor, session, mfa } = useAuth();
   const [senha, setSenha] = useState('');
   const [confirmacao, setConfirmacao] = useState('');
   const [busy, setBusy] = useState(false);
@@ -23,6 +23,12 @@ export default function MinhaConta() {
             <dt className="text-tinta-500">Perfil</dt>
             <dd className="font-medium text-tinta-900">
               {servidor ? PAPEL_LABEL[servidor.papel] : ''}{servidor?.administrador ? ', administrador de contas' : ''}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-tinta-500">Verificação em duas etapas</dt>
+            <dd className="font-medium text-tinta-900">
+              {mfa?.cadastrada ? 'Ativa, com aplicativo autenticador' : mfa?.exigida ? 'Pendente' : 'Não exigida para o seu perfil'}
             </dd>
           </div>
         </dl>

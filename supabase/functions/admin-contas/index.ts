@@ -1,4 +1,5 @@
-// CADEX — criação de contas de login e redefinição de senha.
+// CADEX — criação de contas de login, redefinição de senha e zerar a
+// verificação em duas etapas (celular perdido).
 //
 // Só isto precisa da chave de serviço do Supabase, que nunca vai ao
 // navegador. Quem chama tem de ser administrador (is_administrador(), com
@@ -48,12 +49,24 @@ Deno.serve(async (req) => {
     return resposta(400, { erro: 'Pedido inválido.' });
   }
 
+  const admin = createClient(url, servico, { auth: { persistSession: false } });
+
+  if (corpo.acao === 'zerar_mfa') {
+    const userId = typeof corpo.user_id === 'string' ? corpo.user_id : '';
+    if (!userId) return resposta(400, { erro: 'Conta não informada.' });
+    const { data, error } = await admin.auth.admin.mfa.listFactors({ userId });
+    if (error) return resposta(400, { erro: `Não foi possível ler a verificação: ${error.message}` });
+    for (const f of data?.factors ?? []) {
+      const r = await admin.auth.admin.mfa.deleteFactor({ id: f.id, userId });
+      if (r.error) return resposta(400, { erro: `Não foi possível zerar a verificação: ${r.error.message}` });
+    }
+    return resposta(200, { ok: true });
+  }
+
   const senha = typeof corpo.senha === 'string' ? corpo.senha : '';
   if (senha.length < SENHA_MINIMA) {
     return resposta(400, { erro: `A senha precisa de pelo menos ${SENHA_MINIMA} caracteres.` });
   }
-
-  const admin = createClient(url, servico, { auth: { persistSession: false } });
 
   if (corpo.acao === 'criar') {
     const email = typeof corpo.email === 'string' ? corpo.email.trim().toLowerCase() : '';

@@ -16,8 +16,21 @@ export interface Servidor {
   administrador: boolean;
 }
 
+/** Verificação em duas etapas (aplicativo autenticador) da sessão atual. */
+export interface EstadoMfa {
+  /** Gestor e administrador só usam o sistema depois do código do aplicativo. */
+  exigida: boolean;
+  /** O aplicativo já foi cadastrado (fator confirmado). */
+  cadastrada: boolean;
+  /** Esta sessão já passou pelo código do aplicativo (nível aal2). */
+  confirmada: boolean;
+  /** Fator a usar no pedido do código. */
+  fatorId: string | null;
+}
+
 interface AuthState {
   session: Session | null;
+  mfa: EstadoMfa | null;
   /** Servidor logado, ou null se o usuário não for servidor. */
   servidor: Servidor | null;
   /** Só o gestor (SECONSER) cadastra e altera; o CISP consulta. */
@@ -32,6 +45,7 @@ const Ctx = createContext<AuthState | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [servidor, setServidor] = useState<Servidor | null>(null);
+  const [mfa, setMfa] = useState<EstadoMfa | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -46,7 +60,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .from('servidores').select('nome, papel, administrador').eq('user_id', s.user.id).maybeSingle();
         sv = (data as Servidor | null) ?? null;
       }
-      if (!cancelled) { setServidor(sv); setLoading(false); }
+      let m: EstadoMfa | null = null;
+      if (sv) {
+        const [nivel, fatores] = await Promise.all([
+          supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
+          supabase.auth.mfa.listFactors(),
+        ]);
+        // `totp` só traz fatores confirmados; um cadastro abandonado no meio não conta.
+        const fator = fatores.data?.totp[0] ?? null;
+        m = {
+          exigida: sv.papel === 'gestor' || sv.administrador,
+          cadastrada: Boolean(fator),
+          confirmada: nivel.data?.currentLevel === 'aal2',
+          fatorId: fator?.id ?? null,
+        };
+      }
+      if (!cancelled) { setServidor(sv); setMfa(m); setLoading(false); }
     };
 
     supabase.auth.getSession().then(({ data }) => {
@@ -64,13 +93,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<AuthState>(() => ({
-    session, servidor, loading, podeEditar: servidor?.papel === 'gestor',
+    session, servidor, mfa, loading, podeEditar: servidor?.papel === 'gestor',
     signIn: async (email, password) => {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
     },
     signOut: async () => { await supabase.auth.signOut(); },
-  }), [session, servidor, loading]);
+  }), [session, servidor, mfa, loading]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

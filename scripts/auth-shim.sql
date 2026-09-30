@@ -20,6 +20,13 @@ create table if not exists auth.users (
   last_sign_in_at timestamptz
 );
 
+-- Fatores da verificação em duas etapas (em produção, do Supabase Auth).
+create table if not exists auth.mfa_factors (
+  id      uuid primary key default extensions.gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  status  text not null default 'unverified'
+);
+
 -- Em produção auth.uid() lê o JWT. No shim, lê um GUC de sessão,
 -- o que permite aos testes "logar" como qualquer usuário.
 create or replace function auth.uid()
