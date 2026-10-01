@@ -1,17 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { estadoLicenca, formatarProcessoSei, lerCoordenada, linkMapa, processoSeiValido, urlPublicaLicenca } from './licencas';
+import { anteriorResolucao, estadoLicenca, lerCoordenada, linkMapa, nomeExecutora, urlPublicaLicenca } from './licencas';
 
-describe('processo SEI', () => {
-  it('monta a máscara a partir dos dígitos', () => {
-    expect(formatarProcessoSei('0501200001232026')).toBe('NIT-050120/000123/2026');
-    expect(formatarProcessoSei('NIT-050120/000123/2026')).toBe('NIT-050120/000123/2026');
-    expect(formatarProcessoSei('0501')).toBe('NIT-0501');
-    expect(formatarProcessoSei('')).toBe('');
+describe('licença anterior à Resolução', () => {
+  it('vale para decisão antes de 09/09/2026', () => {
+    expect(anteriorResolucao('2022-03-20')).toBe(true);
+    expect(anteriorResolucao('2026-09-08')).toBe(true);
+    expect(anteriorResolucao('2026-09-09')).toBe(false);
+    expect(anteriorResolucao(null)).toBe(false);
   });
-  it('valida o formato completo', () => {
-    expect(processoSeiValido('NIT-050120/000123/2026')).toBe(true);
-    expect(processoSeiValido('NIT-050120/000123/26')).toBe(false);
-    expect(processoSeiValido('050120/000123/2026')).toBe(false);
+  it('mostra a executora cadastrada ou a digitada', () => {
+    const porId = new Map([['e1', { razao_social: 'TELEMAR NORTE LESTE S.A.', nome_fantasia: 'Oi' }]]);
+    expect(nomeExecutora({ executora_id: 'e1', executora_razao_social: null }, porId)).toBe('Oi');
+    expect(nomeExecutora({ executora_id: null, executora_razao_social: 'Antiga Ltda.' }, porId)).toBe('Antiga Ltda.');
   });
 });
 

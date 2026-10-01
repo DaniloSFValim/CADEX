@@ -61,9 +61,10 @@ begin
   insert into ids values ('op', op), ('te', te), ('sub', sub), ('rt', rt);
 
   -- Processo SEI no formato do setor licenciador
+  -- Processo em texto livre (SEI ou numeração anterior), mas não vazio
   perform pg_temp.recusa(format($q$insert into licencas (processo_sei, tipos_obra, escopo, executora_id, contratante_id, protocolo_data)
-    values ('050120/000123/2026', '{vala}', 'x', %L, %L, '2026-09-01')$q$, te, op),
-    'licencas_processo_sei_check', 'aceitou processo SEI fora do formato');
+    values ('   ', '{vala}', 'x', %L, %L, '2026-09-01')$q$, te, op),
+    'licencas_processo_check', 'aceitou processo vazio');
 
   -- Terceirizada sem concessionária contratante
   perform pg_temp.recusa(format($q$insert into licencas (processo_sei, tipos_obra, escopo, executora_id, protocolo_data)
@@ -164,7 +165,7 @@ begin
     'conclusão da obra antes', 'aceitou As Built sem conclusão');
   update licencas set concluida_em = '2026-12-15' where id = lic;
   perform pg_temp.recusa(format($q$update licencas set as_built_sei = '123' where id = %L$q$, lic),
-    'documento SEI e a data', 'aceitou As Built sem data');
+    'documento e a data', 'aceitou As Built sem data');
   update licencas set as_built_sei = '123', as_built_data = '2026-12-20' where id = lic;
 
   perform pg_temp.assert((select count(*) from auditoria where tabela = 'licencas' and registro_id = lic) >= 3,

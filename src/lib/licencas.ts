@@ -20,8 +20,16 @@ export interface Licenca {
   numero: string | null;
   tipos_obra: TipoObra[];
   escopo: string;
-  executora_id: string;
+  /** Nulo só em licença anterior à Resolução com executora sem cadastro. */
+  executora_id: string | null;
   contratante_id: string | null;
+  /** Empresa sem cadastro no CADEX (só em licença anterior à Resolução). */
+  executora_razao_social: string | null;
+  executora_cnpj: string | null;
+  contratante_razao_social: string | null;
+  contratante_cnpj: string | null;
+  /** Decisão anterior a 09/09/2026 (calculado no banco). */
+  anterior_resolucao: boolean;
   subcontratada_id: string | null;
   responsavel_tecnico_id: string | null;
   art_numero: string | null;
@@ -106,21 +114,21 @@ export function estadoLicenca(
 }
 
 // ---------------------------------------------------------------------
-// Processo SEI: NIT-050120/000000/2026 (setor, número do SEI, ano)
+// Licenças anteriores à Resolução (registro histórico)
 // ---------------------------------------------------------------------
-export const PROCESSO_SEI_RE = /^NIT-\d{6}\/\d{6}\/\d{4}$/;
+/** Publicação da Resolução Conjunta nº 001/2026; mesma data do banco. */
+export const DATA_RESOLUCAO = '2026-09-09';
 
-/** Monta a máscara a partir dos dígitos digitados ou colados. */
-export function formatarProcessoSei(v: string): string {
-  const d = v.replace(/\D/g, '').slice(0, 16);
-  if (!d) return '';
-  let s = `NIT-${d.slice(0, 6)}`;
-  if (d.length > 6) s += `/${d.slice(6, 12)}`;
-  if (d.length > 12) s += `/${d.slice(12)}`;
-  return s;
+/** Decisão antes da Resolução: registro histórico, com regras próprias. */
+export const anteriorResolucao = (decisao: string | null) => Boolean(decisao) && decisao! < DATA_RESOLUCAO;
+
+/** Nome da executora, cadastrada ou digitada. */
+export function nomeExecutora(
+  l: Pick<Licenca, 'executora_id' | 'executora_razao_social'>, porId: Map<string, { razao_social: string; nome_fantasia: string | null }>,
+): string {
+  const e = l.executora_id ? porId.get(l.executora_id) : undefined;
+  return e ? (e.nome_fantasia?.trim() || e.razao_social) : (l.executora_razao_social ?? '—');
 }
-
-export const processoSeiValido = (v: string) => PROCESSO_SEI_RE.test(v);
 
 // ---------------------------------------------------------------------
 // Coordenadas coladas do Google Maps (ou digitadas)
@@ -187,7 +195,8 @@ function ordenarTrechos(l: LicencaComTrechos): LicencaComTrechos {
   return { ...l, licenca_trechos: [...(l.licenca_trechos ?? [])].sort((a, b) => a.ordem - b.ordem) };
 }
 
-export type LicencaInput = Omit<Licenca, 'id' | 'empresas_no_deferimento' | 'codigo_publico' | 'criado_em' | 'atualizado_em'> & { id?: string };
+export type LicencaInput = Omit<Licenca,
+  'id' | 'empresas_no_deferimento' | 'codigo_publico' | 'anterior_resolucao' | 'criado_em' | 'atualizado_em'> & { id?: string };
 
 /** Grava licença e trechos numa só transação (função salvar_licenca). */
 export async function salvarLicenca(licenca: LicencaInput, trechos: Trecho[]): Promise<string> {
@@ -216,8 +225,10 @@ export interface LicencaPublica {
   situacao: SituacaoPublica;
   /** Data de hoje em Niterói, segundo o banco. */
   hoje: string;
-  executora: { razao_social: string; nome_fantasia: string | null; codigo_cadex: string; situacao_cadex: string };
-  contratante: { razao_social: string; nome_fantasia: string | null; codigo_cadex: string } | null;
+  anterior_resolucao: boolean;
+  /** Sem código nem situação: empresa sem cadastro, em licença anterior à Resolução. */
+  executora: { razao_social: string; nome_fantasia: string | null; codigo_cadex: string | null; situacao_cadex: string | null };
+  contratante: { razao_social: string; nome_fantasia: string | null; codigo_cadex: string | null } | null;
   trechos: Omit<Trecho, 'id'>[];
 }
 

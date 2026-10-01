@@ -4,13 +4,14 @@ import { Badge, Button, Card, ErrorNote, Field, Spinner, Titulo, botaoLink, inpu
 import { QrCode } from '../components/QrCode';
 import { SituacaoBadge, dataBR } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
+import { formatCnpj, isValidCnpj, onlyDigits } from '../lib/cnpj';
 import {
   hojeISO, listarDaEmpresa, listarEmpresas, listarVinculos, nomeEmpresa, podeAtuar, situacaoEfetiva,
   type Empresa, type Registro, type Vinculo,
 } from '../lib/empresas';
 import {
   ESTADO_LICENCA_LABEL, SITUACAO_LICENCA_LABEL, TIPO_OBRA_LABEL, TOM_ESTADO_LICENCA, buscarLicenca,
-  coordenadaTexto, estadoLicenca, formatarProcessoSei, lerCoordenada, linkMapa, processoSeiValido, salvarLicenca,
+  anteriorResolucao, coordenadaTexto, estadoLicenca, lerCoordenada, linkMapa, salvarLicenca,
   urlPublicaLicenca,
   type LicencaComTrechos, type LicencaInput, type SituacaoLicenca, type TipoObra, type Trecho,
 } from '../lib/licencas';
@@ -20,15 +21,20 @@ interface TrechoForm { id?: string; logradouro: string; bairro: string; referenc
 type Form = {
   processo_sei: string; numero: string; tipos_obra: TipoObra[]; escopo: string; observacoes: string;
   executora_id: string; contratante_id: string; subcontratada_id: string; responsavel_tecnico_id: string;
+  executora_razao_social: string; executora_cnpj: string; contratante_razao_social: string; contratante_cnpj: string;
   art_numero: string; protocolo_data: string; situacao: SituacaoLicenca; decisao_data: string;
   inicio_previsto: string; fim_previsto: string; concluida_em: string; as_built_sei: string; as_built_data: string;
 };
+
+/** Opção do seletor para empresa sem cadastro (só em licença anterior à Resolução). */
+const SEM_CADASTRO = '__sem_cadastro__';
 
 const TRECHO_VAZIO: TrechoForm = { logradouro: '', bairro: '', referencia: '', inicio: '', fim: '' };
 
 const VAZIO: Form = {
   processo_sei: '', numero: '', tipos_obra: [], escopo: '', observacoes: '',
   executora_id: '', contratante_id: '', subcontratada_id: '', responsavel_tecnico_id: '',
+  executora_razao_social: '', executora_cnpj: '', contratante_razao_social: '', contratante_cnpj: '',
   art_numero: '', protocolo_data: '', situacao: 'em_analise', decisao_data: '',
   inicio_previsto: '', fim_previsto: '', concluida_em: '', as_built_sei: '', as_built_data: '',
 };
@@ -37,7 +43,11 @@ function paraForm(l: LicencaComTrechos): Form {
   const s = (v: string | null) => v ?? '';
   return {
     processo_sei: l.processo_sei, numero: s(l.numero), tipos_obra: l.tipos_obra, escopo: l.escopo,
-    observacoes: s(l.observacoes), executora_id: l.executora_id, contratante_id: s(l.contratante_id),
+    observacoes: s(l.observacoes),
+    executora_id: l.executora_id ?? (l.executora_razao_social ? SEM_CADASTRO : ''),
+    contratante_id: l.contratante_id ?? (l.contratante_razao_social ? SEM_CADASTRO : ''),
+    executora_razao_social: s(l.executora_razao_social), executora_cnpj: l.executora_cnpj ? formatCnpj(l.executora_cnpj) : '',
+    contratante_razao_social: s(l.contratante_razao_social), contratante_cnpj: l.contratante_cnpj ? formatCnpj(l.contratante_cnpj) : '',
     subcontratada_id: s(l.subcontratada_id), responsavel_tecnico_id: s(l.responsavel_tecnico_id),
     art_numero: s(l.art_numero), protocolo_data: l.protocolo_data, situacao: l.situacao,
     decisao_data: s(l.decisao_data), inicio_previsto: s(l.inicio_previsto), fim_previsto: s(l.fim_previsto),
@@ -81,9 +91,10 @@ export default function LicencaPage() {
         descricao={licenca
           ? <span className="inline-flex flex-wrap items-center gap-2">
               <Badge tom={TOM_ESTADO_LICENCA[estado!]}>{ESTADO_LICENCA_LABEL[estado!]}</Badge>
+              {licenca.anterior_resolucao && <Badge>Anterior à Resolução</Badge>}
               <span>Processo {licenca.processo_sei}, protocolado em {dataBR(licenca.protocolo_data)}.</span>
             </span>
-          : 'Lance os dados do processo SEI. Deferir exige executora e subcontratada APTAS no CADEX.'}
+          : 'Lance os dados do processo. Licença nova exige executora e subcontratada APTAS no CADEX; licença com decisão anterior a 09/09/2026 é registro histórico.'}
       />
       {licenca?.situacao === 'deferida' && <Placa licenca={licenca} />}
       <LicencaForm
@@ -118,21 +129,27 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
   const porId = useMemo(() => new Map(empresas.map((e) => [e.id, e])), [empresas]);
   const executora = porId.get(f.executora_id);
   const operadoras = empresas.filter((e) => e.tipo === 'operadora' && e.id !== f.executora_id);
-  const subcontratadas = vinculos
-    .filter((v) => v.contratante_id === f.executora_id && !v.fim)
-    .map((v) => porId.get(v.contratada_id))
-    .filter((e): e is Empresa => Boolean(e));
 
   // Responsáveis técnicos da executora e da subcontratada.
   useEffect(() => {
-    const ids = [f.executora_id, f.subcontratada_id].filter(Boolean);
+    const ids = [f.executora_id, f.subcontratada_id].filter((i) => i && i !== SEM_CADASTRO);
     Promise.all(ids.map((i) => listarDaEmpresa('responsaveis_tecnicos', i)))
       .then((r) => setRts(r.flat()))
       .catch(setError);
   }, [f.executora_id, f.subcontratada_id]);
 
   const deferindo = f.situacao === 'deferida';
-  const naoAptas = [f.executora_id, f.subcontratada_id]
+  const anterior = anteriorResolucao(f.decisao_data || null);
+  const executoraSemCadastro = f.executora_id === SEM_CADASTRO;
+  const contratanteSemCadastro = f.contratante_id === SEM_CADASTRO;
+  // Licença nova: só subcontratada com vínculo ativo. Anterior à Resolução: qualquer terceirizada cadastrada.
+  const subcontratadas = anterior
+    ? empresas.filter((e) => e.tipo === 'terceirizada' && e.id !== f.executora_id)
+    : vinculos
+      .filter((v) => v.contratante_id === f.executora_id && !v.fim)
+      .map((v) => porId.get(v.contratada_id))
+      .filter((e): e is Empresa => Boolean(e));
+  const naoAptas = anterior ? [] : [f.executora_id, f.subcontratada_id]
     .map((i) => porId.get(i))
     .filter((e): e is Empresa => Boolean(e) && !podeAtuar(situacaoEfetiva(e!, hoje)));
 
@@ -142,7 +159,15 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
   };
 
   function montar(): { licenca: LicencaInput; trechos: Trecho[] } | string {
-    if (!processoSeiValido(f.processo_sei)) return 'Processo SEI incompleto: use o formato NIT-050120/000000/2026.';
+    if (!f.processo_sei.trim()) return 'Informe o número do processo.';
+    if ((executoraSemCadastro || contratanteSemCadastro) && !anterior) {
+      return 'Empresa sem cadastro no CADEX só em licença com decisão anterior a 09/09/2026. Cadastre a empresa ou corrija a data da decisão.';
+    }
+    if (executoraSemCadastro && !f.executora_razao_social.trim()) return 'Informe a razão social da executora.';
+    if (contratanteSemCadastro && !f.contratante_razao_social.trim()) return 'Informe a razão social da contratante.';
+    for (const [quem, c] of [['executora', f.executora_cnpj], ['contratante', f.contratante_cnpj]] as const) {
+      if (c.trim() && !isValidCnpj(c)) return `CNPJ da ${quem} inválido.`;
+    }
     if (f.tipos_obra.length === 0) return 'Marque ao menos um tipo de obra (art. 10).';
     const lista: Trecho[] = [];
     for (const [i, t] of trechos.entries()) {
@@ -163,7 +188,13 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
       licenca: {
         ...(licenca ? { id: licenca.id } : {}),
         processo_sei: f.processo_sei, numero: n(f.numero), tipos_obra: f.tipos_obra, escopo: f.escopo.trim(),
-        observacoes: n(f.observacoes), executora_id: f.executora_id, contratante_id: n(f.contratante_id),
+        observacoes: n(f.observacoes),
+        executora_id: executoraSemCadastro ? null : f.executora_id,
+        executora_razao_social: executoraSemCadastro ? n(f.executora_razao_social) : null,
+        executora_cnpj: executoraSemCadastro && f.executora_cnpj.trim() ? onlyDigits(f.executora_cnpj) : null,
+        contratante_id: contratanteSemCadastro ? null : n(f.contratante_id),
+        contratante_razao_social: contratanteSemCadastro ? n(f.contratante_razao_social) : null,
+        contratante_cnpj: contratanteSemCadastro && f.contratante_cnpj.trim() ? onlyDigits(f.contratante_cnpj) : null,
         subcontratada_id: n(f.subcontratada_id), responsavel_tecnico_id: n(f.responsavel_tecnico_id),
         art_numero: n(f.art_numero), protocolo_data: f.protocolo_data, situacao: f.situacao,
         decisao_data: n(f.decisao_data), inicio_previsto: n(f.inicio_previsto), fim_previsto: n(f.fim_previsto),
@@ -198,10 +229,9 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
     <form onSubmit={submit} className="space-y-10">
       <Card title="Pedido">
         <div className="grid gap-4 sm:grid-cols-3">
-          <Field label="Processo SEI" required hint="Setor, número do SEI e ano.">
+          <Field label="Nº do processo" required hint="SEI (NIT-050120/000000/2026) ou a numeração anterior.">
             <input className={`${inputClass} tabular`} required disabled={ro} value={f.processo_sei}
-                   placeholder="NIT-050120/000000/2026" inputMode="numeric"
-                   onChange={(e) => set('processo_sei', formatarProcessoSei(e.target.value))} />
+                   onChange={(e) => set('processo_sei', e.target.value)} />
           </Field>
           <Field label="Data do protocolo" required>
             <input type="date" className={inputClass} required disabled={ro} value={f.protocolo_data}
@@ -231,6 +261,57 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
         </Field>
       </Card>
 
+      <Card title="Decisão">
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Field label="Situação" required>
+            <select className={inputClass} disabled={ro}
+                    value={f.situacao} onChange={(e) => set('situacao', e.target.value as SituacaoLicenca)}>
+              {(Object.keys(SITUACAO_LICENCA_LABEL) as SituacaoLicenca[])
+                .filter((s) => licenca?.situacao !== 'deferida' || s === 'deferida' || s === 'cancelada')
+                .map((s) => <option key={s} value={s}>{SITUACAO_LICENCA_LABEL[s]}</option>)}
+            </select>
+          </Field>
+          {f.situacao !== 'em_analise' && (
+            <Field label="Data da decisão" required={f.situacao !== 'cancelada'}>
+              <input type="date" className={inputClass} disabled={ro} value={f.decisao_data}
+                     required={f.situacao !== 'cancelada'} onChange={(e) => set('decisao_data', e.target.value)} />
+            </Field>
+          )}
+          {deferindo && (
+            <Field label="Nº da licença" required hint="Numeração própria da SECONSER.">
+              <input className={inputClass} required disabled={ro} value={f.numero} onChange={(e) => set('numero', e.target.value)} />
+            </Field>
+          )}
+        </div>
+        {deferindo && (
+          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+            <Field label="Início do cronograma" required>
+              <input type="date" className={inputClass} required disabled={ro} value={f.inicio_previsto}
+                     onChange={(e) => set('inicio_previsto', e.target.value)} />
+            </Field>
+            <Field label="Fim do cronograma" required hint="É a validade da licença (art. 13, parágrafo único).">
+              <input type="date" className={inputClass} required disabled={ro} value={f.fim_previsto}
+                     min={f.inicio_previsto || undefined} onChange={(e) => set('fim_previsto', e.target.value)} />
+            </Field>
+          </div>
+        )}
+        {deferindo && naoAptas.length > 0 && licenca?.situacao !== 'deferida' && (
+          <p role="alert" className="mt-4 rounded border-l-4 border-baixa bg-baixa/10 px-3 py-2 text-sm text-baixa">
+            {naoAptas.map(nomeEmpresa).join(' e ')} não {naoAptas.length > 1 ? 'estão' : 'está'} APTA no CADEX.
+            A licença não pode ser deferida enquanto a inscrição não for deferida (arts. 4º e 8º, § 2º).
+          </p>
+        )}
+        {anterior && (
+          <p className="mt-4 rounded border-l-4 border-tinta-300 bg-tinta-50 px-3 py-2 text-sm text-tinta-700">
+            Decisão anterior a 09/09/2026: registro histórico, anterior à Resolução. Não exige empresa APTA nem ART,
+            e aceita executora e contratante sem cadastro no CADEX.
+          </p>
+        )}
+        {licenca?.situacao === 'deferida' && (
+          <p className="mt-4 text-sm text-tinta-500">Licença deferida só pode ser cancelada.</p>
+        )}
+      </Card>
+
       <Card title="Empresas">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Empresa executora" required>
@@ -238,17 +319,27 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
                     onChange={(e) => { set('executora_id', e.target.value); set('subcontratada_id', ''); set('responsavel_tecnico_id', ''); }}>
               <option value="">Selecione</option>
               {empresas.map((e) => <option key={e.id} value={e.id}>{nomeEmpresa(e)} ({e.codigo_cadex})</option>)}
+              {(anterior || executoraSemCadastro) && <option value={SEM_CADASTRO}>Empresa sem cadastro no CADEX</option>}
             </select>
           </Field>
           <Field label="Concessionária contratante"
-                 hint={executora?.tipo === 'terceirizada' ? 'Obrigatória para executora terceirizada.' : 'Deixe em branco se a operadora executa a própria obra.'}>
-            <select className={inputClass} disabled={ro} required={executora?.tipo === 'terceirizada'}
+                 hint={executora?.tipo === 'terceirizada' && !anterior ? 'Obrigatória para executora terceirizada.' : 'Deixe em branco se a operadora executa a própria obra.'}>
+            <select className={inputClass} disabled={ro} required={executora?.tipo === 'terceirizada' && !anterior}
                     value={f.contratante_id} onChange={(e) => set('contratante_id', e.target.value)}>
               <option value="">Nenhuma</option>
               {operadoras.map((e) => <option key={e.id} value={e.id}>{nomeEmpresa(e)}</option>)}
+              {(anterior || contratanteSemCadastro) && <option value={SEM_CADASTRO}>Empresa sem cadastro no CADEX</option>}
             </select>
           </Field>
-          <Field label="Subcontratada" hint={f.executora_id && subcontratadas.length === 0
+          {executoraSemCadastro && (
+            <SemCadastro quem="executora" ro={ro} razao={f.executora_razao_social} cnpj={f.executora_cnpj}
+                         onRazao={(v) => set('executora_razao_social', v)} onCnpj={(v) => set('executora_cnpj', v)} />
+          )}
+          {contratanteSemCadastro && (
+            <SemCadastro quem="contratante" ro={ro} razao={f.contratante_razao_social} cnpj={f.contratante_cnpj}
+                         onRazao={(v) => set('contratante_razao_social', v)} onCnpj={(v) => set('contratante_cnpj', v)} />
+          )}
+          <Field label="Subcontratada" hint={anterior ? undefined : f.executora_id && subcontratadas.length === 0
             ? 'A executora não tem subcontratadas com vínculo ativo.' : 'Só aparecem as que têm vínculo ativo com a executora.'}>
             <select className={inputClass} disabled={ro || subcontratadas.length === 0} value={f.subcontratada_id}
                     onChange={(e) => { set('subcontratada_id', e.target.value); set('responsavel_tecnico_id', ''); }}>
@@ -264,14 +355,14 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
               {rts.map((r) => <option key={r.id} value={r.id}>{String(r.nome)} ({String(r.conselho)} {String(r.registro_numero)})</option>)}
             </select>
           </Field>
-          <Field label="ART/RRT da obra" hint="Específica desta intervenção (art. 12). Obrigatória para deferir.">
+          <Field label="ART/RRT da obra" hint={anterior ? 'Específica desta intervenção. Opcional em licença anterior à Resolução.' : 'Específica desta intervenção (art. 12). Obrigatória para deferir.'}>
             <input className={inputClass} disabled={ro} value={f.art_numero} onChange={(e) => set('art_numero', e.target.value)} />
           </Field>
         </div>
-        {[f.executora_id, f.contratante_id, f.subcontratada_id].some(Boolean) && (
+        {[f.executora_id, f.contratante_id, f.subcontratada_id].some((i) => i && i !== SEM_CADASTRO) && (
           <ul className="mt-4 space-y-1 text-sm">
             {([['Executora', f.executora_id], ['Contratante', f.contratante_id], ['Subcontratada', f.subcontratada_id]] as const)
-              .filter(([, i]) => i)
+              .filter(([, i]) => i && i !== SEM_CADASTRO)
               .map(([r, i]) => {
                 const e = porId.get(i)!;
                 return (
@@ -332,51 +423,6 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
             );
           })}
         </ol>
-      </Card>
-
-      <Card title="Decisão no SEI">
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Field label="Situação" required>
-            <select className={inputClass} disabled={ro}
-                    value={f.situacao} onChange={(e) => set('situacao', e.target.value as SituacaoLicenca)}>
-              {(Object.keys(SITUACAO_LICENCA_LABEL) as SituacaoLicenca[])
-                .filter((s) => licenca?.situacao !== 'deferida' || s === 'deferida' || s === 'cancelada')
-                .map((s) => <option key={s} value={s}>{SITUACAO_LICENCA_LABEL[s]}</option>)}
-            </select>
-          </Field>
-          {f.situacao !== 'em_analise' && (
-            <Field label="Data da decisão" required={f.situacao !== 'cancelada'}>
-              <input type="date" className={inputClass} disabled={ro} value={f.decisao_data}
-                     required={f.situacao !== 'cancelada'} onChange={(e) => set('decisao_data', e.target.value)} />
-            </Field>
-          )}
-          {deferindo && (
-            <Field label="Nº da licença" required hint="Numeração própria da SECONSER.">
-              <input className={inputClass} required disabled={ro} value={f.numero} onChange={(e) => set('numero', e.target.value)} />
-            </Field>
-          )}
-        </div>
-        {deferindo && (
-          <div className="mt-4 grid gap-4 sm:grid-cols-3">
-            <Field label="Início do cronograma" required>
-              <input type="date" className={inputClass} required disabled={ro} value={f.inicio_previsto}
-                     onChange={(e) => set('inicio_previsto', e.target.value)} />
-            </Field>
-            <Field label="Fim do cronograma" required hint="É a validade da licença (art. 13, parágrafo único).">
-              <input type="date" className={inputClass} required disabled={ro} value={f.fim_previsto}
-                     min={f.inicio_previsto || undefined} onChange={(e) => set('fim_previsto', e.target.value)} />
-            </Field>
-          </div>
-        )}
-        {deferindo && naoAptas.length > 0 && licenca?.situacao !== 'deferida' && (
-          <p role="alert" className="mt-4 rounded border-l-4 border-baixa bg-baixa/10 px-3 py-2 text-sm text-baixa">
-            {naoAptas.map(nomeEmpresa).join(' e ')} não {naoAptas.length > 1 ? 'estão' : 'está'} APTA no CADEX.
-            A licença não pode ser deferida enquanto a inscrição não for deferida (arts. 4º e 8º, § 2º).
-          </p>
-        )}
-        {licenca?.situacao === 'deferida' && (
-          <p className="mt-4 text-sm text-tinta-500">Licença deferida só pode ser cancelada.</p>
-        )}
       </Card>
 
       {deferindo && licenca?.situacao === 'deferida' && (
@@ -453,5 +499,23 @@ function Placa({ licenca }: { licenca: LicencaComTrechos }) {
         </div>
       </div>
     </section>
+  );
+}
+
+/** Executora ou contratante que não está no CADEX (licença anterior à Resolução). */
+function SemCadastro({ quem, ro, razao, cnpj, onRazao, onCnpj }: {
+  quem: 'executora' | 'contratante'; ro: boolean; razao: string; cnpj: string;
+  onRazao: (v: string) => void; onCnpj: (v: string) => void;
+}) {
+  return (
+    <div className="grid gap-4 rounded border border-dashed border-tinta-300 p-4 sm:col-span-2 sm:grid-cols-[1fr_220px]">
+      <Field label={`Razão social da ${quem}`} required hint="Não entra no cadastro nem na consulta pública de empresas.">
+        <input className={inputClass} required disabled={ro} value={razao} onChange={(e) => onRazao(e.target.value)} />
+      </Field>
+      <Field label="CNPJ" hint="Se constar no processo.">
+        <input className={`${inputClass} tabular`} disabled={ro} value={cnpj} inputMode="numeric"
+               onChange={(e) => onCnpj(formatCnpj(e.target.value))} />
+      </Field>
+    </div>
   );
 }
