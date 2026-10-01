@@ -1,3 +1,4 @@
+import { AbasConsulta } from '../components/AbasConsulta';
 import { Cabecalho, MENU_PUBLICO } from '../components/Cabecalho';
 import { Rodape } from '../components/Rodape';
 import { useEffect, useMemo, useState } from 'react';
@@ -53,7 +54,9 @@ export default function Consulta() {
           </p>
         </header>
 
-        <div className="mt-8 grid gap-3 sm:grid-cols-[1fr_240px]">
+        <AbasConsulta />
+
+        <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_240px]">
           <input className={`${inputClass} !py-3 !text-base`}
                  placeholder="Nome da empresa, CNPJ ou código CADEX"
                  value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar empresa" />

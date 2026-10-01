@@ -4,6 +4,7 @@ import { Button, Spinner } from './components/ui';
 import { useAuth } from './lib/auth';
 import { isConfigured } from './lib/supabase';
 import Consulta from './pages/Consulta';
+import ConsultaObras from './pages/ConsultaObras';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Empresas from './pages/Empresas';
@@ -22,6 +23,7 @@ export function App() {
     <Routes>
       {/* Consulta pública: aberta, com ou sem login (art. 7º, § 2º). */}
       <Route path="consulta" element={<Consulta />} />
+      <Route path="consulta/obras" element={<ConsultaObras />} />
       {/* Página da placa do canteiro (art. 14): aberta pelo QR Code, sem login. */}
       <Route path="licenca/:codigo" element={<LicencaPublica />} />
       <Route path="*" element={<AreaRestrita />} />
