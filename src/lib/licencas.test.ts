@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { estadoLicenca, formatarProcessoSei, lerCoordenada, linkMapa, processoSeiValido } from './licencas';
+import { estadoLicenca, formatarProcessoSei, lerCoordenada, linkMapa, processoSeiValido, urlPublicaLicenca } from './licencas';
 
 describe('processo SEI', () => {
   it('monta a máscara a partir dos dígitos', () => {
@@ -57,5 +57,12 @@ describe('situação da licença', () => {
   it('não deferida mantém a situação', () => {
     expect(estadoLicenca({ ...base, situacao: 'em_analise' }, '2026-10-15')).toBe('em_analise');
     expect(estadoLicenca({ ...base, situacao: 'cancelada' }, '2026-10-15')).toBe('cancelada');
+  });
+});
+
+describe('página pública', () => {
+  it('monta o endereço do QR Code com o código público, não com o id', () => {
+    expect(urlPublicaLicenca('a1b2c3d4e5f6a1b2c3d4e5f6', 'https://cadex-niteroi.vercel.app'))
+      .toBe('https://cadex-niteroi.vercel.app/licenca/a1b2c3d4e5f6a1b2c3d4e5f6');
   });
 });

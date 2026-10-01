@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Badge, Button, Card, ErrorNote, Field, Spinner, Titulo, inputClass, linkTexto } from '../components/ui';
+import { Badge, Button, Card, ErrorNote, Field, Spinner, Titulo, botaoLink, inputClass, linkTexto } from '../components/ui';
+import { QrCode } from '../components/QrCode';
 import { SituacaoBadge, dataBR } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import {
@@ -10,6 +11,7 @@ import {
 import {
   ESTADO_LICENCA_LABEL, SITUACAO_LICENCA_LABEL, TIPO_OBRA_LABEL, TOM_ESTADO_LICENCA, buscarLicenca,
   coordenadaTexto, estadoLicenca, formatarProcessoSei, lerCoordenada, linkMapa, processoSeiValido, salvarLicenca,
+  urlPublicaLicenca,
   type LicencaComTrechos, type LicencaInput, type SituacaoLicenca, type TipoObra, type Trecho,
 } from '../lib/licencas';
 
@@ -83,6 +85,7 @@ export default function LicencaPage() {
             </span>
           : 'Lance os dados do processo SEI. Deferir exige executora e subcontratada APTAS no CADEX.'}
       />
+      {licenca?.situacao === 'deferida' && <Placa licenca={licenca} />}
       <LicencaForm
         key={licenca?.id ?? 'nova'}
         licenca={licenca}
@@ -425,5 +428,30 @@ function CoordField({ label, valor, lida, ro, required, onChange }: {
       <input className={`${inputClass} tabular ${valor.trim() && !lida ? '!border-baixa' : ''}`} disabled={ro}
              value={valor} placeholder="-22.895000, -43.123000" onChange={(e) => onChange(e.target.value)} />
     </Field>
+  );
+}
+
+/** QR Code da placa do canteiro (art. 14) e atalho para imprimir. */
+function Placa({ licenca }: { licenca: LicencaComTrechos }) {
+  const url = urlPublicaLicenca(licenca.codigo_publico);
+  const [copiado, setCopiado] = useState(false);
+  return (
+    <section className="cartao mb-10 flex flex-wrap items-center gap-6 p-5">
+      <QrCode texto={url} tamanho={120} />
+      <div className="min-w-0 flex-1">
+        <h2 className="text-xl font-bold tracking-[-0.015em] text-tinta-900">Placa do canteiro</h2>
+        <p className="mt-1 max-w-xl text-sm text-tinta-600">
+          O QR Code abre a página pública desta licença, onde o fiscal confere se a obra está autorizada hoje (art. 14).
+        </p>
+        <p className="mt-2 break-all text-xs text-tinta-500">{url}</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Link to={`/obras/${licenca.id}/placa`} className={botaoLink.primary}>Imprimir placa</Link>
+          <a href={url} target="_blank" rel="noopener noreferrer" className={botaoLink.secondary}>Abrir página pública</a>
+          <Button variant="secondary" onClick={() => {
+            navigator.clipboard?.writeText(url).then(() => setCopiado(true)).catch(() => setCopiado(false));
+          }}>{copiado ? 'Link copiado' : 'Copiar link'}</Button>
+        </div>
+      </div>
+    </section>
   );
 }

@@ -35,6 +35,8 @@ export interface Licenca {
   as_built_data: string | null;
   observacoes: string | null;
   empresas_no_deferimento: Record<string, unknown> | null;
+  /** Código aleatório do QR Code da placa (art. 14); não é o id interno. */
+  codigo_publico: string;
   criado_em: string;
   atualizado_em: string;
 }
@@ -185,7 +187,7 @@ function ordenarTrechos(l: LicencaComTrechos): LicencaComTrechos {
   return { ...l, licenca_trechos: [...(l.licenca_trechos ?? [])].sort((a, b) => a.ordem - b.ordem) };
 }
 
-export type LicencaInput = Omit<Licenca, 'id' | 'empresas_no_deferimento' | 'criado_em' | 'atualizado_em'> & { id?: string };
+export type LicencaInput = Omit<Licenca, 'id' | 'empresas_no_deferimento' | 'codigo_publico' | 'criado_em' | 'atualizado_em'> & { id?: string };
 
 /** Grava licença e trechos numa só transação (função salvar_licenca). */
 export async function salvarLicenca(licenca: LicencaInput, trechos: Trecho[]): Promise<string> {
@@ -198,3 +200,33 @@ export async function excluirLicenca(id: string): Promise<void> {
   const { error } = await supabase.from('licencas').delete().eq('id', id);
   if (error) throw error;
 }
+
+// ---------------------------------------------------------------------
+// Página pública da licença (QR Code da placa, art. 14): sem login
+// ---------------------------------------------------------------------
+export type SituacaoPublica = 'vigente' | 'aguardando_inicio' | 'prazo_encerrado' | 'concluida' | 'cancelada';
+
+export interface LicencaPublica {
+  numero: string;
+  tipos_obra: TipoObra[];
+  escopo: string;
+  inicio_previsto: string;
+  fim_previsto: string;
+  concluida_em: string | null;
+  situacao: SituacaoPublica;
+  /** Data de hoje em Niterói, segundo o banco. */
+  hoje: string;
+  executora: { razao_social: string; nome_fantasia: string | null; codigo_cadex: string; situacao_cadex: string };
+  contratante: { razao_social: string; nome_fantasia: string | null; codigo_cadex: string } | null;
+  trechos: Omit<Trecho, 'id'>[];
+}
+
+/** Nulo: código inexistente, ou pedido ainda não deferido. */
+export async function buscarLicencaPublica(codigo: string): Promise<LicencaPublica | null> {
+  const { data, error } = await supabase.rpc('licenca_publica', { p_codigo: codigo });
+  if (error) throw error;
+  return (data as LicencaPublica | null) ?? null;
+}
+
+/** Endereço que vai no QR Code. Usa o domínio em que o sistema está aberto. */
+export const urlPublicaLicenca = (codigo: string, origem = window.location.origin) => `${origem}/licenca/${codigo}`;
