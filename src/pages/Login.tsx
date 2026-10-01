@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Cabecalho, MENU_PUBLICO } from '../components/Cabecalho';
 import { Rodape } from '../components/Rodape';
 import { Button, ErrorNote, Field, inputClass } from '../components/ui';
 import { useAuth } from '../lib/auth';
+import { MENSAGEM_SAIDA, lerMotivo, limparMotivo } from '../lib/sessao';
 
 export default function Login() {
   const { signIn } = useAuth();
@@ -11,6 +12,9 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
+  // Saída automática (inatividade ou 12 h): explica uma vez por que pediu login.
+  const [motivo] = useState(lerMotivo);
+  useEffect(() => { limparMotivo(); }, []);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -19,6 +23,11 @@ export default function Login() {
         <div className="cartao w-full max-w-sm p-8">
           <h1 className="text-xl font-semibold tracking-tight text-tinta-900">Área restrita</h1>
           <p className="mt-1 text-sm text-tinta-500">Acesso para servidores da SECONSER e do CISP.</p>
+          {motivo && (
+            <p role="status" className="mt-4 rounded border-l-4 border-atencao bg-atencao/[0.06] px-3 py-2 text-sm text-tinta-800">
+              {MENSAGEM_SAIDA[motivo]}
+            </p>
+          )}
 
           <form
             className="mt-6 space-y-4"

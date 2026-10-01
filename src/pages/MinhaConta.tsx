@@ -5,12 +5,14 @@ import { SENHA_MINIMA } from '../lib/contas';
 import { supabase } from '../lib/supabase';
 
 export default function MinhaConta() {
-  const { servidor, session, mfa } = useAuth();
+  const { servidor, session, mfa, signOutTodos } = useAuth();
   const [senha, setSenha] = useState('');
   const [confirmacao, setConfirmacao] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [feito, setFeito] = useState(false);
+  const [confirmarTodos, setConfirmarTodos] = useState(false);
+  const [erroTodos, setErroTodos] = useState<unknown>(null);
 
   return (
     <>
@@ -62,6 +64,28 @@ export default function MinhaConta() {
               <ErrorNote error={error} />
             </div>
           </form>
+        </Card>
+
+        <Card title="Sessões">
+          <p className="text-sm text-tinta-600">
+            A sessão encerra sozinha depois de 30 minutos sem uso e 12 horas depois do login. Se você deixou o
+            CADEX aberto em outro computador ou celular, encerre todas as sessões; será preciso entrar de novo em
+            todos eles, inclusive neste.
+          </p>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            {confirmarTodos ? (
+              <>
+                <Button variant="danger" onClick={async () => {
+                  setErroTodos(null);
+                  try { await signOutTodos(); } catch (err) { setErroTodos(err); }
+                }}>Confirmar: sair de todos</Button>
+                <Button variant="secondary" onClick={() => setConfirmarTodos(false)}>Cancelar</Button>
+              </>
+            ) : (
+              <Button variant="secondary" onClick={() => setConfirmarTodos(true)}>Sair de todos os dispositivos</Button>
+            )}
+            <ErrorNote error={erroTodos} />
+          </div>
         </Card>
       </div>
     </>
