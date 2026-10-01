@@ -7,6 +7,7 @@ import Consulta from './pages/Consulta';
 import ConsultaObras from './pages/ConsultaObras';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import CruzamentoAnatel from './pages/CruzamentoAnatel';
 import Empresas from './pages/Empresas';
 import EmpresaPage from './pages/EmpresaPage';
 import Ficha from './pages/Ficha';
@@ -69,6 +70,7 @@ function AreaRestrita() {
       <Route element={<Layout />}>
         <Route index element={<Empresas />} />
         <Route path="dashboard" element={<Dashboard />} />
+        <Route path="anatel" element={<CruzamentoAnatel />} />
         <Route path="empresas/nova" element={<EmpresaPage />} />
         <Route path="empresas/:id" element={<EmpresaPage />} />
         <Route path="obras" element={<Licencas />} />
