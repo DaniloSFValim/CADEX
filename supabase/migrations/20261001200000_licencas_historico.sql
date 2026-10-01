@@ -23,7 +23,8 @@
 
 -- Data de publicação da Resolução: única fonte da regra.
 create or replace function public.licenca_anterior_resolucao(p_decisao date)
-returns boolean language sql immutable as $$
+returns boolean language sql immutable
+set search_path = public as $$
   select p_decisao < date '2026-09-09';
 $$;
 
