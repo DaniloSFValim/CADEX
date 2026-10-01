@@ -1,0 +1,90 @@
+# Gera a base do mapa de Niterói servida pelo próprio site, sem depender de
+# serviço de mapas de terceiros em funcionamento:
+#
+#   public/mapa/niteroi.pmtiles   recorte do mapa do OpenStreetMap (Protomaps)
+#   public/mapa/fontes/…          fontes dos rótulos (latim e pontuação)
+#   public/mapa/sprites/…         ícones do estilo claro
+#
+# Dados © colaboradores do OpenStreetMap (ODbL); o mapa exibe a atribuição.
+# Roda à mão (Actions → Base do mapa → Run workflow) ou quando este arquivo
+# muda; grava o resultado no próprio ramo. Rodar de novo atualiza o mapa.
+name: Base do mapa
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/mapa-base.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mapa-base-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gerar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Instalar o pmtiles (go-pmtiles)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          url=$(curl -sfL -H "Authorization: Bearer $GH_TOKEN" \
+                  https://api.github.com/repos/protomaps/go-pmtiles/releases/latest \
+                | jq -r '.assets[] | select(.name | test("Linux_x86_64\\.tar\\.gz$")) | .browser_download_url')
+          echo "pmtiles: $url"
+          curl -sfL "$url" | tar -xz -C /usr/local/bin pmtiles
+          pmtiles version || true
+
+      - name: Recortar Niterói da base diária do Protomaps
+        run: |
+          # As bases diárias ficam disponíveis por alguns dias: usa a mais recente que existir.
+          for i in $(seq 0 20); do
+            d=$(date -u -d "-$i day" +%Y%m%d)
+            if curl -sfI "https://build.protomaps.com/$d.pmtiles" > /dev/null; then base=$d; break; fi
+          done
+          test -n "$base" || { echo "Nenhuma base diária encontrada nos últimos 20 dias."; exit 1; }
+          echo "Base: $base"
+          mkdir -p public/mapa
+          # Município de Niterói com folga (oeste, sul, leste, norte).
+          pmtiles extract "https://build.protomaps.com/$base.pmtiles" public/mapa/niteroi.pmtiles \
+            --bbox=-43.20,-23.02,-42.90,-22.83 --maxzoom=15
+          echo "$base" > public/mapa/BASE.txt
+          ls -lh public/mapa/niteroi.pmtiles
+
+      - name: Baixar fontes e ícones do estilo
+        run: |
+          assets=https://protomaps.github.io/basemaps-assets
+          for fonte in "Noto Sans Regular" "Noto Sans Medium" "Noto Sans Italic"; do
+            dir="public/mapa/fontes/$fonte"; mkdir -p "$dir"
+            enc=${fonte// /%20}
+            # Latim básico e estendido (acentos) e pontuação.
+            for faixa in 0-255 256-511 8192-8447; do
+              curl -sfL "$assets/fonts/$enc/$faixa.pbf" -o "$dir/$faixa.pbf"
+            done
+          done
+          mkdir -p public/mapa/sprites
+          for v in v4 v3; do
+            if curl -sfL "$assets/sprites/$v/light.json" -o public/mapa/sprites/light.json; then
+              curl -sfL "$assets/sprites/$v/light.png" -o public/mapa/sprites/light.png
+              curl -sfL "$assets/sprites/$v/light@2x.json" -o public/mapa/sprites/light@2x.json
+              curl -sfL "$assets/sprites/$v/light@2x.png" -o public/mapa/sprites/light@2x.png
+              echo "sprites $v"; break
+            fi
+          done
+          du -sh public/mapa
+
+      - name: Gravar no ramo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/mapa
+          if git diff --cached --quiet; then echo "Base do mapa sem mudanças."; exit 0; fi
+          git commit -m "Base do mapa de Niterói ($(cat public/mapa/BASE.txt))"
+          git push origin HEAD:${{ github.ref_name }}

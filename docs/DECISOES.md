@@ -40,3 +40,9 @@ próprio (ex.: analista de licenciamento), as políticas de `licencas` e
 
 ### Mapa público de obras (01/10/2026)
 - Mostra **todas** as licenças cadastradas; base de mapa **gratuita**.
+- Abre nas vigentes e nas que vão começar; o filtro mostra todas, por ano.
+- Base do mapa: recorte de Niterói do OpenStreetMap (Protomaps), gerado pela
+  automação "Base do mapa" e servido pelo próprio site (`public/mapa`), sem
+  serviço de terceiros. Se o arquivo faltar, o mapa usa os blocos públicos do
+  OpenStreetMap, que não têm garantia de disponibilidade.
+- Fica na consulta pública, aba "Obras licenciadas" (`/consulta/obras`).
