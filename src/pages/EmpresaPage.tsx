@@ -5,11 +5,11 @@ import { BARRA, SituacaoBadge } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { formatCnpj, isValidCnpj, onlyDigits } from '../lib/cnpj';
 import {
-  ESTADO_LABEL, TIPO_LABEL, buscarEmpresa, criarEmpresa, criarVinculo, definirFimVinculo,
+  ESTADO_LABEL, SETORES, SETOR_LABEL, TIPO_LABEL, buscarEmpresa, descricaoEmpresa, ehContratante, tiposDaEmpresa, criarEmpresa, criarVinculo, definirFimVinculo,
   enviarLogo, estadoDocumento, registrarDocumentos, removerLogo, urlLogo, MAX_LOGO_BYTES, TIPOS_LOGO, hojeISO, listarDocumentos, listarEmpresas,
   listarTiposDocumento, listarVinculos, nomeEmpresa, resumoDocumentos,
   salvarEmpresa, situacaoEfetiva, ultimoPorTipo,
-  type Documento, type Empresa, type EmpresaInput, type EstadoDocumento, type TipoDocumento,
+  type Documento, type Empresa, type EmpresaInput, type EstadoDocumento, type Setor, type TipoDocumento,
   type Vinculo,
 } from '../lib/empresas';
 import { ResumoBadge } from './Empresas';
@@ -18,14 +18,14 @@ import { LicencasDaEmpresa } from './Licencas';
 import { Operacional } from './Operacional';
 
 const VAZIA: EmpresaInput = {
-  cnpj: '', razao_social: '', nome_fantasia: '', tipo: 'operadora',
+  cnpj: '', razao_social: '', nome_fantasia: '', tipo: 'operadora', setores: ['telecom'],
   email: '', telefone: '', cep: '', logradouro: '', numero: '', complemento: '',
   bairro: '', cidade: 'Niterói', uf: 'RJ', observacoes: '',
 };
 
 const paraInput = (e: Empresa): EmpresaInput => ({
   cnpj: formatCnpj(e.cnpj), razao_social: e.razao_social, nome_fantasia: e.nome_fantasia ?? '',
-  tipo: e.tipo, email: e.email, telefone: e.telefone ?? '',
+  tipo: e.tipo, setores: e.setores, email: e.email, telefone: e.telefone ?? '',
   cep: e.cep ?? '', logradouro: e.logradouro ?? '', numero: e.numero ?? '',
   complemento: e.complemento ?? '', bairro: e.bairro ?? '', cidade: e.cidade ?? '',
   uf: e.uf ?? '', observacoes: e.observacoes ?? '',
@@ -53,7 +53,8 @@ export default function EmpresaPage() {
   if (!id && !podeEditar) return <ErrorNote error="Seu perfil é só de consulta." />;
 
   const recarregar = async () => { if (empresa) setEmpresa(await buscarEmpresa(empresa.id)); };
-  const operadoras = todas.filter((o) => o.tipo === 'operadora');
+  // Quem pode aparecer na traseira dos veículos (art. 21): quem contrata.
+  const contratantesTodas = todas.filter((o) => ehContratante(o.tipo));
 
   return (
     <div className="space-y-6">
@@ -90,7 +91,7 @@ export default function EmpresaPage() {
               </div>
               <div>
                 <dt className="text-xs text-tinta-500">Tipo</dt>
-                <dd className="mt-0.5 text-tinta-800">{TIPO_LABEL[empresa.tipo]}</dd>
+                <dd className="mt-0.5 text-tinta-800">{descricaoEmpresa(empresa)}</dd>
               </div>
               {empresa.validade_ate && (
                 <div>
@@ -130,7 +131,7 @@ export default function EmpresaPage() {
 
       {empresa && <Vinculos empresa={empresa} todas={todas} podeEditar={podeEditar} />}
 
-      {empresa && <Operacional empresa={empresa} operadoras={operadoras} podeEditar={podeEditar} />}
+      {empresa && <Operacional empresa={empresa} operadoras={contratantesTodas} podeEditar={podeEditar} />}
 
       {empresa && <LicencasDaEmpresa empresa={empresa} todas={todas} />}
 
@@ -182,8 +183,13 @@ function EmpresaForm({
         e.preventDefault();
         setError(null); setSalvo(false);
         if (!editando && !isValidCnpj(v.cnpj)) { setError('CNPJ inválido.'); return; }
-        if (!editando && v.tipo === 'terceirizada' && contratantes.length === 0) {
-          setError('Marque ao menos uma empresa que contrata a terceirizada.'); return;
+        if (v.tipo === 'terceirizada' && v.setores.length === 0) {
+          setError('Marque ao menos um setor em que a terceirizada atua.'); return;
+        }
+        // Em telecom a terceirizada sempre tem contratante (art. 2º, III). Nos
+        // outros setores pode trabalhar para particulares (ex.: drenagem).
+        if (!editando && v.tipo === 'terceirizada' && v.setores.includes('telecom') && contratantes.length === 0) {
+          setError('Terceirizada de telecomunicações: marque ao menos uma empresa que a contrata.'); return;
         }
         setBusy(true);
         try { await onSubmit(v, contratantes); setSalvo(true); if (editando) setAberto(false); }
@@ -214,28 +220,66 @@ function EmpresaForm({
       <Field label="Tipo" required className="sm:col-span-3"
              hint={editando ? 'Não pode ser alterado.' : undefined}>
         <select id="tipo" className={inputClass} value={v.tipo} disabled={editando}
-                onChange={(e) => set('tipo', e.target.value as EmpresaInput['tipo'])}>
+                onChange={(e) => {
+                  const t = e.target.value as EmpresaInput['tipo'];
+                  set('tipo', t);
+                  set('setores', t === 'operadora' ? ['telecom'] : t === 'construtora' ? ['construcao']
+                    : t === 'concessionaria' ? ['gas'] : []);
+                }}>
           <option value="operadora">Operadora de telecomunicações</option>
+          <option value="concessionaria">Concessionária (gás ou saneamento)</option>
+          <option value="construtora">Construtora</option>
           <option value="terceirizada">Terceirizada</option>
         </select>
       </Field>
+      {v.tipo === 'concessionaria' && (
+        <Field label="Setor" required className="sm:col-span-3"
+               hint={editando ? 'Faz parte do código CADEX: não pode ser alterado.' : undefined}>
+          <select className={inputClass} value={v.setores[0] ?? 'gas'} disabled={editando}
+                  onChange={(e) => set('setores', [e.target.value as Setor])}>
+            <option value="gas">Gás</option>
+            <option value="saneamento">Saneamento</option>
+          </select>
+        </Field>
+      )}
+      {v.tipo === 'terceirizada' && (
+        <fieldset className="sm:col-span-6">
+          <legend className="text-sm font-medium text-tinta-700">
+            Setores em que atua<span className="ml-0.5 text-baixa" aria-hidden>*</span>
+          </legend>
+          <div className="mt-1 flex flex-wrap gap-x-5 gap-y-2">
+            {SETORES.map((st) => (
+              <label key={st} className="flex items-center gap-2 text-sm text-tinta-700">
+                <input type="checkbox" checked={v.setores.includes(st)}
+                       onChange={(e) => set('setores', e.target.checked
+                         ? SETORES.filter((x) => x === st || v.setores.includes(x))
+                         : v.setores.filter((x) => x !== st))} />
+                {SETOR_LABEL[st]}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      )}
       {!editando && v.tipo === 'terceirizada' && (
         <fieldset className="sm:col-span-6">
           <legend className="text-sm font-medium text-tinta-700">
-            Contratada por<span className="ml-0.5 text-baixa" aria-hidden>*</span>
+            Contratada por
+            {v.setores.includes('telecom') && <span className="ml-0.5 text-baixa" aria-hidden>*</span>}
           </legend>
           <p className="text-xs text-tinta-500">
-            Operadoras e, em caso de subcontratação, terceirizadas.
+            Operadoras, concessionárias, construtoras e, em caso de subcontratação, terceirizadas.
+            Obrigatório em telecomunicações; nos outros setores, só se houver.
           </p>
           {empresas.length === 0
-            ? <p className="mt-1 text-xs text-tinta-500">Nenhuma empresa cadastrada ainda. Cadastre a operadora primeiro.</p>
-            : (['operadora', 'terceirizada'] as const).map((t) => {
+            ? <p className="mt-1 text-xs text-tinta-500">Nenhuma empresa cadastrada ainda. Cadastre a contratante primeiro.</p>
+            : (['operadora', 'concessionaria', 'construtora', 'terceirizada'] as const).map((t) => {
                 const grupo = empresas.filter((o) => o.tipo === t);
                 if (grupo.length === 0) return null;
                 return (
                   <div key={t} className="mt-2">
                     <div className="text-sm font-semibold text-tinta-700">
-                      {t === 'operadora' ? 'Operadoras' : 'Terceirizadas (subcontratação)'}
+                      {{ operadora: 'Operadoras', concessionaria: 'Concessionárias', construtora: 'Construtoras',
+                         terceirizada: 'Terceirizadas (subcontratação)' }[t]}
                     </div>
                     <div className="mt-1 flex flex-wrap gap-x-5 gap-y-2">
                       {grupo.map((o) => (
@@ -394,7 +438,7 @@ function Vinculos({
           {ehTerceirizada && (
             <LadoVinculo
               titulo="Contratada por"
-              dica="Operadoras e, em caso de subcontratação, terceirizadas."
+              dica="Operadoras, concessionárias, construtoras e, em caso de subcontratação, terceirizadas."
               vinculos={contratadaPor}
               outra={(v) => v.contratante_id}
               todas={todas}
@@ -530,7 +574,8 @@ function Documentos({ empresa }: { empresa: Empresa }) {
 
   const recarregar = () =>
     Promise.all([listarTiposDocumento(), listarDocumentos(empresa.id)])
-      .then(([t, d]) => { setTipos(t); setDocs(d); setRascunho({}); })
+      // Só os documentos exigidos do perfil da empresa (telecom, gás, saneamento, construtora, terceirizada).
+      .then(([t, d]) => { setTipos(tiposDaEmpresa(t, empresa)); setDocs(d); setRascunho({}); })
       .catch(setError)
       .finally(() => setLoading(false));
 

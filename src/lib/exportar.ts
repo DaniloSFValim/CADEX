@@ -1,6 +1,6 @@
 import { formatCnpj } from './cnpj';
 import {
-  SITUACAO_LABEL, TIPO_LABEL, nomeEmpresa, situacaoEfetiva,
+  SITUACAO_LABEL, descricaoEmpresa, nomeEmpresa, situacaoEfetiva,
   type Empresa, type Resumo, type Vinculo,
 } from './empresas';
 
@@ -70,7 +70,7 @@ export const COLUNAS: Coluna[] = [
   { chave: 'razao', rotulo: 'Razão social', grupo: 'Identificação', valor: (e) => e.razao_social },
   { chave: 'fantasia', rotulo: 'Nome fantasia', grupo: 'Identificação', valor: (e) => e.nome_fantasia ?? '' },
   { chave: 'cnpj', rotulo: 'CNPJ', grupo: 'Identificação', valor: (e) => formatCnpj(e.cnpj) },
-  { chave: 'tipo', rotulo: 'Tipo', grupo: 'Identificação', valor: (e) => TIPO_LABEL[e.tipo] },
+  { chave: 'tipo', rotulo: 'Tipo', grupo: 'Identificação', valor: (e) => descricaoEmpresa(e) },
 
   { chave: 'situacao', rotulo: 'Situação', grupo: 'Inscrição',
     valor: (e, c) => SITUACAO_LABEL[situacaoEfetiva(e, c.hoje)] },

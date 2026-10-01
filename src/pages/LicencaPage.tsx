@@ -6,12 +6,12 @@ import { SituacaoBadge, dataBR } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { formatCnpj, isValidCnpj, onlyDigits } from '../lib/cnpj';
 import {
-  hojeISO, listarDaEmpresa, listarEmpresas, listarVinculos, nomeEmpresa, podeAtuar, situacaoEfetiva,
-  type Empresa, type Registro, type Vinculo,
+  SETORES, SETOR_LABEL, atuaNoSetor, ehContratante, hojeISO, listarDaEmpresa, listarEmpresas, listarVinculos,
+  nomeEmpresa, podeAtuar, situacaoEfetiva, type Empresa, type Registro, type Setor, type Vinculo,
 } from '../lib/empresas';
 import {
   ESTADO_LICENCA_LABEL, SITUACAO_LICENCA_LABEL, TIPO_OBRA_LABEL, TOM_ESTADO_LICENCA, buscarLicenca,
-  anteriorResolucao, coordenadaTexto, estadoLicenca, lerCoordenada, linkMapa, salvarLicenca,
+  anteriorResolucao, coordenadaTexto, segueResolucao, estadoLicenca, lerCoordenada, linkMapa, salvarLicenca,
   urlPublicaLicenca,
   type LicencaComTrechos, type LicencaInput, type SituacaoLicenca, type TipoObra, type Trecho,
 } from '../lib/licencas';
@@ -19,7 +19,7 @@ import {
 interface TrechoForm { id?: string; logradouro: string; bairro: string; referencia: string; inicio: string; fim: string }
 
 type Form = {
-  processo_sei: string; numero: string; tipos_obra: TipoObra[]; escopo: string; observacoes: string;
+  setor: Setor; processo_sei: string; numero: string; tipos_obra: TipoObra[]; escopo: string; observacoes: string;
   executora_id: string; contratante_id: string; subcontratada_id: string; responsavel_tecnico_id: string;
   executora_razao_social: string; executora_cnpj: string; contratante_razao_social: string; contratante_cnpj: string;
   art_numero: string; protocolo_data: string; situacao: SituacaoLicenca; decisao_data: string;
@@ -32,7 +32,7 @@ const SEM_CADASTRO = '__sem_cadastro__';
 const TRECHO_VAZIO: TrechoForm = { logradouro: '', bairro: '', referencia: '', inicio: '', fim: '' };
 
 const VAZIO: Form = {
-  processo_sei: '', numero: '', tipos_obra: [], escopo: '', observacoes: '',
+  setor: 'telecom', processo_sei: '', numero: '', tipos_obra: [], escopo: '', observacoes: '',
   executora_id: '', contratante_id: '', subcontratada_id: '', responsavel_tecnico_id: '',
   executora_razao_social: '', executora_cnpj: '', contratante_razao_social: '', contratante_cnpj: '',
   art_numero: '', protocolo_data: '', situacao: 'em_analise', decisao_data: '',
@@ -42,7 +42,7 @@ const VAZIO: Form = {
 function paraForm(l: LicencaComTrechos): Form {
   const s = (v: string | null) => v ?? '';
   return {
-    processo_sei: l.processo_sei, numero: s(l.numero), tipos_obra: l.tipos_obra, escopo: l.escopo,
+    setor: l.setor, processo_sei: l.processo_sei, numero: s(l.numero), tipos_obra: l.tipos_obra, escopo: l.escopo,
     observacoes: s(l.observacoes),
     executora_id: l.executora_id ?? (l.executora_razao_social ? SEM_CADASTRO : ''),
     contratante_id: l.contratante_id ?? (l.contratante_razao_social ? SEM_CADASTRO : ''),
@@ -91,7 +91,8 @@ export default function LicencaPage() {
         descricao={licenca
           ? <span className="inline-flex flex-wrap items-center gap-2">
               <Badge tom={TOM_ESTADO_LICENCA[estado!]}>{ESTADO_LICENCA_LABEL[estado!]}</Badge>
-              {licenca.anterior_resolucao && <Badge>Anterior à Resolução</Badge>}
+              <Badge>{SETOR_LABEL[licenca.setor]}</Badge>
+              {licenca.setor === 'telecom' && licenca.anterior_resolucao && <Badge>Anterior à Resolução</Badge>}
               <span>Processo {licenca.processo_sei}, protocolado em {dataBR(licenca.protocolo_data)}.</span>
             </span>
           : 'Lance os dados do processo. Licença nova exige executora e subcontratada APTAS no CADEX; licença com decisão anterior a 09/09/2026 é registro histórico.'}
@@ -128,7 +129,9 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
   const set = <K extends keyof Form>(k: K, v: Form[K]) => { setF((x) => ({ ...x, [k]: v })); setSalvo(false); };
   const porId = useMemo(() => new Map(empresas.map((e) => [e.id, e])), [empresas]);
   const executora = porId.get(f.executora_id);
-  const operadoras = empresas.filter((e) => e.tipo === 'operadora' && e.id !== f.executora_id);
+  // Só empresas que atuam no setor da licença (o banco confere o mesmo).
+  const executoras = empresas.filter((e) => atuaNoSetor(e, f.setor));
+  const contratantes = empresas.filter((e) => ehContratante(e.tipo) && atuaNoSetor(e, f.setor) && e.id !== f.executora_id);
 
   // Responsáveis técnicos da executora e da subcontratada.
   useEffect(() => {
@@ -140,16 +143,19 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
 
   const deferindo = f.situacao === 'deferida';
   const anterior = anteriorResolucao(f.decisao_data || null);
+  // Regras da Resolução (APTA, ART, vínculo da subcontratada): só telecom a partir de 09/09/2026.
+  const resolucao = segueResolucao(f.setor, f.decisao_data || null);
+  const drenagem = f.setor === 'drenagem';
   const executoraSemCadastro = f.executora_id === SEM_CADASTRO;
   const contratanteSemCadastro = f.contratante_id === SEM_CADASTRO;
-  // Licença nova: só subcontratada com vínculo ativo. Anterior à Resolução: qualquer terceirizada cadastrada.
-  const subcontratadas = anterior
+  // Sob a Resolução: só subcontratada com vínculo ativo. Fora dela: qualquer terceirizada do setor.
+  const subcontratadas = (!resolucao
     ? empresas.filter((e) => e.tipo === 'terceirizada' && e.id !== f.executora_id)
     : vinculos
       .filter((v) => v.contratante_id === f.executora_id && !v.fim)
       .map((v) => porId.get(v.contratada_id))
-      .filter((e): e is Empresa => Boolean(e));
-  const naoAptas = anterior ? [] : [f.executora_id, f.subcontratada_id]
+      .filter((e): e is Empresa => Boolean(e))).filter((e) => atuaNoSetor(e, f.setor));
+  const naoAptas = !resolucao ? [] : [f.executora_id, f.subcontratada_id]
     .map((i) => porId.get(i))
     .filter((e): e is Empresa => Boolean(e) && !podeAtuar(situacaoEfetiva(e!, hoje)));
 
@@ -160,8 +166,11 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
 
   function montar(): { licenca: LicencaInput; trechos: Trecho[] } | string {
     if (!f.processo_sei.trim()) return 'Informe o número do processo.';
-    if ((executoraSemCadastro || contratanteSemCadastro) && !anterior) {
-      return 'Empresa sem cadastro no CADEX só em licença com decisão anterior a 09/09/2026. Cadastre a empresa ou corrija a data da decisão.';
+    if (executoraSemCadastro && !anterior) {
+      return 'Executora sem cadastro no CADEX só em licença com decisão anterior a 09/09/2026. Cadastre a empresa ou corrija a data da decisão.';
+    }
+    if (contratanteSemCadastro && !anterior && !drenagem) {
+      return 'Contratante sem cadastro no CADEX só em drenagem ou em licença com decisão anterior a 09/09/2026.';
     }
     if (executoraSemCadastro && !f.executora_razao_social.trim()) return 'Informe a razão social da executora.';
     if (contratanteSemCadastro && !f.contratante_razao_social.trim()) return 'Informe a razão social da contratante.';
@@ -187,7 +196,7 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
     return {
       licenca: {
         ...(licenca ? { id: licenca.id } : {}),
-        processo_sei: f.processo_sei, numero: n(f.numero), tipos_obra: f.tipos_obra, escopo: f.escopo.trim(),
+        setor: f.setor, processo_sei: f.processo_sei, numero: n(f.numero), tipos_obra: f.tipos_obra, escopo: f.escopo.trim(),
         observacoes: n(f.observacoes),
         executora_id: executoraSemCadastro ? null : f.executora_id,
         executora_razao_social: executoraSemCadastro ? n(f.executora_razao_social) : null,
@@ -229,6 +238,21 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
     <form onSubmit={submit} className="space-y-10">
       <Card title="Pedido">
         <div className="grid gap-4 sm:grid-cols-3">
+          <Field label="Setor" required hint={f.setor === 'telecom'
+            ? 'Segue a Resolução Conjunta nº 001/2026.' : 'Fora de telecom não se aplicam as regras da Resolução.'}>
+            <select className={inputClass} required disabled={ro} value={f.setor}
+                    onChange={(e) => {
+                      const st = e.target.value as Setor;
+                      set('setor', st);
+                      // Empresa que não atua no novo setor sai da licença.
+                      const fora = (id: string) => id && id !== SEM_CADASTRO && !atuaNoSetor(porId.get(id)!, st);
+                      if (fora(f.executora_id)) set('executora_id', '');
+                      if (fora(f.contratante_id)) set('contratante_id', '');
+                      if (fora(f.subcontratada_id)) set('subcontratada_id', '');
+                    }}>
+              {SETORES.map((st) => <option key={st} value={st}>{SETOR_LABEL[st]}</option>)}
+            </select>
+          </Field>
           <Field label="Nº do processo" required hint="SEI (NIT-050120/000000/2026) ou a numeração anterior.">
             <input className={`${inputClass} tabular`} required disabled={ro} value={f.processo_sei}
                    onChange={(e) => set('processo_sei', e.target.value)} />
@@ -241,7 +265,9 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
         <fieldset className="mt-5">
           <legend className="text-[13px] font-medium text-tinta-700">
             Tipo de obra <span className="text-baixa" aria-hidden>*</span>
-            <span className="ml-2 font-normal text-tinta-500">art. 10; marque todos que se aplicam</span>
+            <span className="ml-2 font-normal text-tinta-500">
+              {f.setor === 'telecom' ? 'art. 10; ' : ''}marque todos que se aplicam
+            </span>
           </legend>
           <div className="mt-2 flex flex-wrap gap-x-6 gap-y-2">
             {(Object.keys(TIPO_OBRA_LABEL) as TipoObra[]).map((t) => (
@@ -301,10 +327,17 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
             A licença não pode ser deferida enquanto a inscrição não for deferida (arts. 4º e 8º, § 2º).
           </p>
         )}
-        {anterior && (
+        {f.setor === 'telecom' && anterior && (
           <p className="mt-4 rounded border-l-4 border-tinta-300 bg-tinta-50 px-3 py-2 text-sm text-tinta-700">
             Decisão anterior a 09/09/2026: registro histórico, anterior à Resolução. Não exige empresa APTA nem ART,
             e aceita executora e contratante sem cadastro no CADEX.
+          </p>
+        )}
+        {f.setor !== 'telecom' && (
+          <p className="mt-4 rounded border-l-4 border-tinta-300 bg-tinta-50 px-3 py-2 text-sm text-tinta-700">
+            {SETOR_LABEL[f.setor]}: a Resolução nº 001/2026 vale só para telecomunicações. Não se exige empresa APTA,
+            ART da obra nem vínculo da subcontratada.
+            {anterior && ' Decisão anterior a 09/09/2026: aceita executora sem cadastro no CADEX.'}
           </p>
         )}
         {licenca?.situacao === 'deferida' && (
@@ -318,17 +351,21 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
             <select className={inputClass} required disabled={ro} value={f.executora_id}
                     onChange={(e) => { set('executora_id', e.target.value); set('subcontratada_id', ''); set('responsavel_tecnico_id', ''); }}>
               <option value="">Selecione</option>
-              {empresas.map((e) => <option key={e.id} value={e.id}>{nomeEmpresa(e)} ({e.codigo_cadex})</option>)}
+              {executoras.map((e) => <option key={e.id} value={e.id}>{nomeEmpresa(e)} ({e.codigo_cadex})</option>)}
               {(anterior || executoraSemCadastro) && <option value={SEM_CADASTRO}>Empresa sem cadastro no CADEX</option>}
             </select>
           </Field>
-          <Field label="Concessionária contratante"
-                 hint={executora?.tipo === 'terceirizada' && !anterior ? 'Obrigatória para executora terceirizada.' : 'Deixe em branco se a operadora executa a própria obra.'}>
-            <select className={inputClass} disabled={ro} required={executora?.tipo === 'terceirizada' && !anterior}
+          <Field label={f.setor === 'telecom' ? 'Concessionária contratante' : 'Contratante'}
+                 hint={executora?.tipo === 'terceirizada' && resolucao ? 'Obrigatória para executora terceirizada.'
+                   : drenagem ? 'Construtora ou o dono do imóvel (sem cadastro). Deixe em branco se não houver.'
+                   : 'Deixe em branco se a própria titular executa a obra.'}>
+            <select className={inputClass} disabled={ro} required={executora?.tipo === 'terceirizada' && resolucao}
                     value={f.contratante_id} onChange={(e) => set('contratante_id', e.target.value)}>
               <option value="">Nenhuma</option>
-              {operadoras.map((e) => <option key={e.id} value={e.id}>{nomeEmpresa(e)}</option>)}
-              {(anterior || contratanteSemCadastro) && <option value={SEM_CADASTRO}>Empresa sem cadastro no CADEX</option>}
+              {contratantes.map((e) => <option key={e.id} value={e.id}>{nomeEmpresa(e)}</option>)}
+              {(anterior || drenagem || contratanteSemCadastro) && (
+                <option value={SEM_CADASTRO}>{drenagem && !anterior ? 'Dono do imóvel ou empresa sem cadastro' : 'Empresa sem cadastro no CADEX'}</option>
+              )}
             </select>
           </Field>
           {executoraSemCadastro && (
@@ -339,7 +376,7 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
             <SemCadastro quem="contratante" ro={ro} razao={f.contratante_razao_social} cnpj={f.contratante_cnpj}
                          onRazao={(v) => set('contratante_razao_social', v)} onCnpj={(v) => set('contratante_cnpj', v)} />
           )}
-          <Field label="Subcontratada" hint={anterior ? undefined : f.executora_id && subcontratadas.length === 0
+          <Field label="Subcontratada" hint={!resolucao ? undefined : f.executora_id && subcontratadas.length === 0
             ? 'A executora não tem subcontratadas com vínculo ativo.' : 'Só aparecem as que têm vínculo ativo com a executora.'}>
             <select className={inputClass} disabled={ro || subcontratadas.length === 0} value={f.subcontratada_id}
                     onChange={(e) => { set('subcontratada_id', e.target.value); set('responsavel_tecnico_id', ''); }}>
@@ -355,7 +392,7 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
               {rts.map((r) => <option key={r.id} value={r.id}>{String(r.nome)} ({String(r.conselho)} {String(r.registro_numero)})</option>)}
             </select>
           </Field>
-          <Field label="ART/RRT da obra" hint={anterior ? 'Específica desta intervenção. Opcional em licença anterior à Resolução.' : 'Específica desta intervenção (art. 12). Obrigatória para deferir.'}>
+          <Field label="ART/RRT da obra" hint={resolucao ? 'Específica desta intervenção (art. 12). Obrigatória para deferir.' : 'Específica desta intervenção. Opcional.'}>
             <input className={inputClass} disabled={ro} value={f.art_numero} onChange={(e) => set('art_numero', e.target.value)} />
           </Field>
         </div>

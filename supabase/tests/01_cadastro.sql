@@ -53,8 +53,8 @@ begin
   returning id, codigo_cadex into op2, cod;
   perform pg_temp.assert(cod like 'CADEX-OPE-%-0002', 'numeração da operadora deveria seguir: ' || cod);
 
-  insert into empresas (cnpj, razao_social, tipo, email)
-  values ('22333444000181', 'Terceirizada Teste Ltda.', 'terceirizada', 'te@t.test')
+  insert into empresas (cnpj, razao_social, tipo, email, setores)
+  values ('22333444000181', 'Terceirizada Teste Ltda.', 'terceirizada', 'te@t.test', '{telecom}')
   returning id, codigo_cadex into te, cod;
   perform pg_temp.assert(cod like 'CADEX-TER-%-0001',
     'terceirizada tem numeração própria, começando em 0001: ' || cod);
@@ -83,11 +83,11 @@ begin
   end;
 
   -- Subcontratação em qualquer grau (arts. 2º, VIII, e 3º, § 1º)
-  insert into empresas (cnpj, razao_social, tipo, email)
-  values ('66777888000181', 'Subcontratada 1º grau Ltda.', 'terceirizada', 's1@t.test')
+  insert into empresas (cnpj, razao_social, tipo, email, setores)
+  values ('66777888000181', 'Subcontratada 1º grau Ltda.', 'terceirizada', 's1@t.test', '{telecom}')
   returning id into sub1;
-  insert into empresas (cnpj, razao_social, tipo, email)
-  values ('77888999000181', 'Subcontratada 2º grau Ltda.', 'terceirizada', 's2@t.test')
+  insert into empresas (cnpj, razao_social, tipo, email, setores)
+  values ('77888999000181', 'Subcontratada 2º grau Ltda.', 'terceirizada', 's2@t.test', '{telecom}')
   returning id into sub2;
   insert into vinculos (contratante_id, contratada_id) values (te, sub1), (sub1, sub2);
   perform pg_temp.assert(
@@ -138,7 +138,7 @@ begin
 
   -- Numeração não pode ser chamada nem mexida por fora
   begin
-    perform proximo_codigo_cadex('operadora');
+    perform proximo_codigo_cadex('operadora', '{telecom}');
     raise exception 'ASSERT FALHOU: usuário gerou código CADEX por fora do cadastro';
   exception when insufficient_privilege then null;
   end;

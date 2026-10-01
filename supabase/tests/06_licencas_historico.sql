@@ -49,13 +49,13 @@ begin
   -- Operadora cadastrada, mas EM ANÁLISE; executora terceirizada sem vínculo
   insert into empresas (cnpj, razao_social, tipo, email)
   values ('12345678000195', 'Operadora Histórica S.A.', 'operadora', 'op@h.test') returning id into op;
-  insert into empresas (cnpj, razao_social, tipo, email)
-  values ('11444777000161', 'Executora Histórica Ltda.', 'terceirizada', 'ex@h.test') returning id into ex;
+  insert into empresas (cnpj, razao_social, tipo, email, setores)
+  values ('11444777000161', 'Executora Histórica Ltda.', 'terceirizada', 'ex@h.test', '{telecom}') returning id into ex;
   insert into ids values ('op', op, null), ('ex', ex, null);
 
   -- 2022, executora sem cadastro, processo em outra numeração, sem ART
   lic := public.salvar_licenca(jsonb_build_object(
-      'processo_sei', ' 030/001234/2022 ', 'numero', 'LIC-2022/045', 'tipos_obra', array['vala'],
+      'setor', 'telecom', 'processo_sei', ' 030/001234/2022 ', 'numero', 'LIC-2022/045', 'tipos_obra', array['vala'],
       'escopo', 'Rede subterrânea', 'executora_razao_social', 'Antiga Construtora Ltda.',
       'executora_cnpj', '11.222.333/0001-81', 'contratante_id', op,
       'protocolo_data', '2022-03-01', 'situacao', 'deferida', 'decisao_data', '2022-03-20',
@@ -69,35 +69,35 @@ begin
 
   -- 2024, executora cadastrada mas EM ANÁLISE e terceirizada sem contratante: aceita (anterior)
   perform public.salvar_licenca(jsonb_build_object(
-      'processo_sei', 'PROC 2024-777', 'numero', 'LIC-2024/010', 'tipos_obra', array['poste'],
+      'setor', 'telecom', 'processo_sei', 'PROC 2024-777', 'numero', 'LIC-2024/010', 'tipos_obra', array['poste'],
       'escopo', 'Poste', 'executora_id', ex, 'protocolo_data', '2024-01-10', 'situacao', 'deferida',
       'decisao_data', '2024-02-01', 'inicio_previsto', '2024-02-05', 'fim_previsto', '2024-02-20'), trecho);
 
   -- Executora digitada em licença nova: recusa
   perform pg_temp.recusa(format($q$select public.salvar_licenca(jsonb_build_object(
-      'processo_sei', 'NIT-050120/000901/2026', 'numero', 'LIC 901/2026', 'tipos_obra', array['vala'], 'escopo', 'x',
+      'setor', 'telecom', 'processo_sei', 'NIT-050120/000901/2026', 'numero', 'LIC 901/2026', 'tipos_obra', array['vala'], 'escopo', 'x',
       'executora_razao_social', 'Sem Cadastro Ltda.', 'protocolo_data', '2026-09-10', 'situacao', 'deferida',
       'decisao_data', '2026-09-15', 'inicio_previsto', '2026-10-01', 'fim_previsto', '2026-10-10', 'art_numero', 'A'),
     %L::jsonb)$q$, trecho), 'anterior a 09/09/2026', 'aceitou empresa sem cadastro em licença nova');
 
   -- Em 09/09/2026 já vale a regra nova (APTA)
   perform pg_temp.recusa(format($q$select public.salvar_licenca(jsonb_build_object(
-      'processo_sei', 'NIT-050120/000902/2026', 'numero', 'LIC 902/2026', 'tipos_obra', array['vala'], 'escopo', 'x',
+      'setor', 'telecom', 'processo_sei', 'NIT-050120/000902/2026', 'numero', 'LIC 902/2026', 'tipos_obra', array['vala'], 'escopo', 'x',
       'executora_id', %L, 'contratante_id', %L, 'protocolo_data', '2026-09-01', 'situacao', 'deferida',
       'decisao_data', '2026-09-09', 'inicio_previsto', '2026-10-01', 'fim_previsto', '2026-10-10', 'art_numero', 'A'),
     %L::jsonb)$q$, ex, op, trecho), 'não está APTA', 'licença do dia da Resolução escapou da regra APTA');
 
   -- Executora nos dois formatos ao mesmo tempo, ou em nenhum
-  perform pg_temp.recusa(format($q$insert into licencas (processo_sei, tipos_obra, escopo, executora_id,
+  perform pg_temp.recusa(format($q$insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id,
       executora_razao_social, protocolo_data, decisao_data, situacao)
-    values ('X-1', '{vala}', 'x', %L, 'Duplicada', '2022-01-01', '2022-01-02', 'indeferida')$q$, ex),
+    values ('telecom', 'X-1', '{vala}', 'x', %L, 'Duplicada', '2022-01-01', '2022-01-02', 'indeferida')$q$, ex),
     'licencas_executora_check', 'aceitou executora cadastrada e digitada juntas');
-  perform pg_temp.recusa($q$insert into licencas (processo_sei, tipos_obra, escopo, protocolo_data)
-    values ('X-2', '{vala}', 'x', '2022-01-01')$q$, 'licencas_executora_check', 'aceitou licença sem executora');
+  perform pg_temp.recusa($q$insert into licencas (setor, processo_sei, tipos_obra, escopo, protocolo_data)
+    values ('telecom', 'X-2', '{vala}', 'x', '2022-01-01')$q$, 'licencas_executora_check', 'aceitou licença sem executora');
 
   -- CNPJ inválido
   perform pg_temp.recusa(format($q$select public.salvar_licenca(jsonb_build_object(
-      'processo_sei', 'X-3', 'numero', 'L-3', 'tipos_obra', array['vala'], 'escopo', 'x',
+      'setor', 'telecom', 'processo_sei', 'X-3', 'numero', 'L-3', 'tipos_obra', array['vala'], 'escopo', 'x',
       'executora_razao_social', 'CNPJ Errado Ltda.', 'executora_cnpj', '11222333000180',
       'protocolo_data', '2022-01-01', 'situacao', 'deferida', 'decisao_data', '2022-01-02',
       'inicio_previsto', '2022-01-05', 'fim_previsto', '2022-01-10'), %L::jsonb)$q$, trecho),

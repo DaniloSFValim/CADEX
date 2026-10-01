@@ -50,7 +50,7 @@ const camposVeiculo = (operadoras: Empresa[]): Campo[] => [
   { chave: 'modelo', rotulo: 'Marca/modelo' },
   { chave: 'identificacao_laterais', rotulo: 'Nome da empresa nas laterais', tipo: 'marcar', largura: 2 },
   { chave: 'identificacao_traseira', rotulo: 'Nome da operadora na traseira', tipo: 'marcar', largura: 2 },
-  { chave: 'concessionaria_traseira_id', rotulo: 'Operadora na traseira', tipo: 'opcoes', largura: 2,
+  { chave: 'concessionaria_traseira_id', rotulo: 'Contratante na traseira', tipo: 'opcoes', largura: 2,
     quando: (t) => Boolean(t.identificacao_traseira),
     opcoes: [{ valor: '', rotulo: '—' }, ...operadoras.map((o) => ({ valor: o.id, rotulo: nomeEmpresa(o) }))] },
 ];

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Badge, Card, Empty, ErrorNote, Kpi, Spinner, Titulo, botaoLink, inputClass, tabela } from '../components/ui';
 import { dataBR } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
-import { hojeISO, listarEmpresas, nomeEmpresa, type Empresa } from '../lib/empresas';
+import { SETORES, SETOR_LABEL, hojeISO, listarEmpresas, nomeEmpresa, type Empresa } from '../lib/empresas';
 import {
   ESTADO_LICENCA_LABEL, TIPO_OBRA_LABEL, TOM_ESTADO_LICENCA, estadoLicenca, listarLicencas, nomeExecutora,
   type EstadoLicenca, type LicencaComTrechos,
@@ -24,6 +24,7 @@ export default function Licencas() {
   const [error, setError] = useState<unknown>(null);
   const [busca, setBusca] = useState('');
   const [filtro, setFiltro] = useState('');
+  const [setor, setSetor] = useState('');
   const hoje = hojeISO();
 
   useEffect(() => {
@@ -39,6 +40,7 @@ export default function Licencas() {
     const inclui = FILTROS.find((f) => f.valor === filtro)?.inclui;
     return (licencas ?? []).filter((l) => {
       if (inclui && !inclui.includes(estadoLicenca(l, hoje))) return false;
+      if (setor && l.setor !== setor) return false;
       if (!q) return true;
       const empresasTxt = [l.executora_id, l.contratante_id, l.subcontratada_id]
         .map((id) => (id ? porId.get(id) : undefined))
@@ -48,7 +50,7 @@ export default function Licencas() {
               ...l.licenca_trechos.flatMap((t) => [t.logradouro, t.bairro ?? ''])]
         .some((s) => s.toLowerCase().includes(q));
     });
-  }, [licencas, busca, filtro, hoje, porId]);
+  }, [licencas, busca, filtro, setor, hoje, porId]);
 
   const conta = (e: EstadoLicenca[]) => (licencas ?? []).filter((l) => e.includes(estadoLicenca(l, hoje))).length;
 
@@ -70,9 +72,13 @@ export default function Licencas() {
       )}
 
       <section className="cartao">
-        <div className="grid gap-3 border-b border-tinta-200 p-4 sm:grid-cols-[1fr_340px]">
+        <div className="grid gap-3 border-b border-tinta-200 p-4 sm:grid-cols-[1fr_200px_340px]">
           <input className={inputClass} value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar"
                  placeholder="Buscar por processo SEI, nº da licença, empresa ou rua" />
+          <select className={inputClass} value={setor} onChange={(e) => setSetor(e.target.value)} aria-label="Setor">
+            <option value="">Todos os setores</option>
+            {SETORES.map((st) => <option key={st} value={st}>{SETOR_LABEL[st]}</option>)}
+          </select>
           <select className={inputClass} value={filtro} onChange={(e) => setFiltro(e.target.value)} aria-label="Situação">
             <option value="">Todas as situações</option>
             {FILTROS.map((f) => <option key={f.valor} value={f.valor}>{f.rotulo}</option>)}
@@ -137,7 +143,7 @@ export function TabelaLicencas({ licencas, porId, hoje, semExecutora = false }: 
                 <td className={tabela.td}>
                   {t1 ? <>{t1.logradouro}{t1.bairro && <span className="text-tinta-500">, {t1.bairro}</span>}</> : '—'}
                   <div className="text-xs text-tinta-500">
-                    {l.tipos_obra.map((t) => TIPO_OBRA_LABEL[t]).join(', ')}
+                    {SETOR_LABEL[l.setor]}: {l.tipos_obra.map((t) => TIPO_OBRA_LABEL[t].toLowerCase()).join(', ')}
                     {resto.length > 0 && `; mais ${resto.length} trecho${resto.length > 1 ? 's' : ''}`}
                   </div>
                 </td>

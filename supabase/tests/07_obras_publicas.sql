@@ -32,7 +32,7 @@ begin
 
   -- Histórica emitida, com executora digitada e CNPJ (não pode aparecer)
   perform public.salvar_licenca(jsonb_build_object(
-      'processo_sei', 'PROC-INTERNO-1', 'numero', '010/2023', 'tipos_obra', array['vala'], 'escopo', 'Vala',
+      'setor', 'telecom', 'processo_sei', 'PROC-INTERNO-1', 'numero', '010/2023', 'tipos_obra', array['vala'], 'escopo', 'Vala',
       'executora_razao_social', 'Antiga Ltda.', 'executora_cnpj', '11222333000181', 'contratante_id', op,
       'observacoes', 'nota interna', 'protocolo_data', '2023-01-02', 'situacao', 'deferida',
       'decisao_data', '2023-01-10', 'inicio_previsto', '2023-02-01', 'fim_previsto', '2023-03-01'),
@@ -43,7 +43,7 @@ begin
 
   -- Pedido em análise: não aparece
   perform public.salvar_licenca(jsonb_build_object(
-      'processo_sei', 'PROC-INTERNO-2', 'tipos_obra', array['poste'], 'escopo', 'Poste',
+      'setor', 'telecom', 'processo_sei', 'PROC-INTERNO-2', 'tipos_obra', array['poste'], 'escopo', 'Poste',
       'executora_id', op, 'protocolo_data', '2026-09-20'),
     jsonb_build_array(jsonb_build_object('logradouro', 'Rua C', 'inicio_lat', -22.9, 'inicio_lng', -43.1)));
 end $$;

@@ -1,3 +1,4 @@
+import type { Setor } from './empresas';
 import { supabase } from './supabase';
 
 // ---------------------------------------------------------------------
@@ -5,7 +6,9 @@ import { supabase } from './supabase';
 // decidido no SEI; aqui fica o registro para consulta e fiscalização.
 // ---------------------------------------------------------------------
 
-export type TipoObra = 'vala' | 'escavacao' | 'perfuracao_nao_destrutiva' | 'poste' | 'rede';
+export type TipoObra =
+  | 'vala' | 'escavacao' | 'perfuracao_nao_destrutiva' | 'poste' | 'rede'
+  | 'ligacao_predial' | 'galeria_drenagem' | 'boca_de_lobo' | 'recomposicao';
 export type SituacaoLicenca = 'em_analise' | 'deferida' | 'indeferida' | 'cancelada';
 
 /** Situação exibida: a deferida se desdobra conforme o cronograma e a conclusão. */
@@ -16,6 +19,8 @@ export type EstadoLicenca =
 
 export interface Licenca {
   id: string;
+  /** Telecom segue a Resolução nº 001/2026; os demais setores, regras mais leves. */
+  setor: Setor;
   processo_sei: string;
   numero: string | null;
   tipos_obra: TipoObra[];
@@ -71,7 +76,15 @@ export const TIPO_OBRA_LABEL: Record<TipoObra, string> = {
   perfuracao_nao_destrutiva: 'Perfuração não destrutiva',
   poste: 'Implantação de poste',
   rede: 'Instalação ou expansão de rede',
+  ligacao_predial: 'Ligação de imóvel à rede pública',
+  galeria_drenagem: 'Galeria ou rede de drenagem',
+  boca_de_lobo: 'Boca de lobo ou caixa de ralo',
+  recomposicao: 'Recomposição de calçada ou pavimento',
 };
+
+/** Licença em que valem as regras da Resolução (só telecom, a partir de 09/09/2026). */
+export const segueResolucao = (setor: Setor, decisao: string | null) =>
+  setor === 'telecom' && !anteriorResolucao(decisao);
 
 export const SITUACAO_LICENCA_LABEL: Record<SituacaoLicenca, string> = {
   em_analise: 'Em análise',
@@ -216,6 +229,7 @@ export async function excluirLicenca(id: string): Promise<void> {
 export type SituacaoPublica = 'vigente' | 'aguardando_inicio' | 'prazo_encerrado' | 'concluida' | 'cancelada';
 
 export interface LicencaPublica {
+  setor: Setor;
   numero: string;
   tipos_obra: TipoObra[];
   escopo: string;

@@ -1,5 +1,6 @@
 import type { Feature, FeatureCollection } from 'geojson';
 import { supabase } from './supabase';
+import type { Setor } from './empresas';
 import type { SituacaoPublica, TipoObra } from './licencas';
 
 // ---------------------------------------------------------------------
@@ -9,6 +10,7 @@ import type { SituacaoPublica, TipoObra } from './licencas';
 export interface ObraPublica {
   /** Código público: leva à página da licença (/licenca/:codigo). */
   codigo: string;
+  setor: Setor;
   numero: string;
   tipos_obra: TipoObra[];
   escopo: string;
@@ -52,7 +54,7 @@ export const FILTRO_OBRAS: { valor: string; rotulo: string; inclui: SituacaoPubl
   { valor: 'encerradas', rotulo: 'Encerradas, concluídas ou canceladas', inclui: ['prazo_encerrado', 'concluida', 'cancelada'] },
 ];
 
-export interface FiltroObras { situacao: string; ano: string; busca: string }
+export interface FiltroObras { situacao: string; ano: string; busca: string; setor?: string }
 
 export function filtrarObras(obras: ObraPublica[], f: FiltroObras): ObraPublica[] {
   const inclui = FILTRO_OBRAS.find((x) => x.valor === f.situacao)?.inclui ?? FILTRO_OBRAS[0].inclui;
@@ -60,6 +62,7 @@ export function filtrarObras(obras: ObraPublica[], f: FiltroObras): ObraPublica[
   return obras.filter((o) =>
     inclui.includes(o.situacao)
     && (!f.ano || o.decisao_data.startsWith(f.ano))
+    && (!f.setor || o.setor === f.setor)
     && (!q || [o.numero, o.executora, o.contratante ?? '', o.escopo,
                ...o.trechos.flatMap((t) => [t.logradouro, t.bairro ?? ''])]
       .some((s) => s.toLowerCase().includes(q))));

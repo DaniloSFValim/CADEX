@@ -46,3 +46,25 @@ próprio (ex.: analista de licenciamento), as políticas de `licencas` e
   serviço de terceiros. Se o arquivo faltar, o mapa usa os blocos públicos do
   OpenStreetMap, que não têm garantia de disponibilidade.
 - Fica na consulta pública, aba "Obras licenciadas" (`/consulta/obras`).
+
+### Outros setores: gás, saneamento, drenagem e construção (01/10/2026)
+- A Resolução nº 001/2026 vale **só para telecom**. Nos outros setores ela serve
+  de referência, mas a licença não exige empresa APTA, ART nem vínculo da
+  subcontratada.
+- Tipos de empresa: **operadora** (telecom), **concessionária** (um setor:
+  gás = Naturgy, saneamento = Águas de Niterói), **construtora** e
+  **terceirizada** (um ou mais setores: telecom, gás, saneamento, drenagem).
+- Códigos CADEX: OPE (operadora), GAS e SAN (concessionárias), CON
+  (construtora), TER (terceirizada). Tipo, CNPJ, código e o setor da
+  concessionária não mudam depois do cadastro.
+- Documentos por perfil: telecom 15; gás e saneamento 13 (sem contrato de
+  compartilhamento e comprovante de adimplência); construtora e terceirizada 11
+  (também sem declaração do órgão regulador e mapa de infraestrutura).
+- "Contratada por" só é obrigatório para terceirizada de telecom. Quem contrata
+  terceirizadas: operadora, concessionária ou construtora.
+- Drenagem: ligação de imóvel particular à rede pública, executada por
+  terceirizada ou pela própria construtora. O contratante pode ser o dono do
+  imóvel ou empresa sem cadastro.
+- Novos tipos de obra: ligação predial, galeria de drenagem, boca de lobo e
+  recomposição de pavimento.
+- Mapa e consulta pública ganham filtro por setor.

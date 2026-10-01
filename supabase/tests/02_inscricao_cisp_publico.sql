@@ -92,8 +92,8 @@ begin
     'histórico deveria ter 5 registros (cadastro, apta, saneamento, inapta, apta), tem ' || (select count(*) from historico_situacao where empresa_id = op));
 
   -- Terceirizada indeferida
-  insert into empresas (cnpj, razao_social, tipo, email)
-  values ('22333444000181', 'Terceirizada Teste Ltda.', 'terceirizada', 'te@t.test')
+  insert into empresas (cnpj, razao_social, tipo, email, setores)
+  values ('22333444000181', 'Terceirizada Teste Ltda.', 'terceirizada', 'te@t.test', '{telecom}')
   returning id into te;
   insert into ids values ('te', te);
   insert into vinculos (contratante_id, contratada_id) values (op, te);
