@@ -1,0 +1,61 @@
+import { describe, expect, it } from 'vitest';
+import { estadoLicenca, formatarProcessoSei, lerCoordenada, linkMapa, processoSeiValido } from './licencas';
+
+describe('processo SEI', () => {
+  it('monta a máscara a partir dos dígitos', () => {
+    expect(formatarProcessoSei('0501200001232026')).toBe('NIT-050120/000123/2026');
+    expect(formatarProcessoSei('NIT-050120/000123/2026')).toBe('NIT-050120/000123/2026');
+    expect(formatarProcessoSei('0501')).toBe('NIT-0501');
+    expect(formatarProcessoSei('')).toBe('');
+  });
+  it('valida o formato completo', () => {
+    expect(processoSeiValido('NIT-050120/000123/2026')).toBe(true);
+    expect(processoSeiValido('NIT-050120/000123/26')).toBe(false);
+    expect(processoSeiValido('050120/000123/2026')).toBe(false);
+  });
+});
+
+describe('coordenadas', () => {
+  it('lê o par digitado ou colado', () => {
+    expect(lerCoordenada('-22.8950, -43.1230')).toEqual({ lat: -22.895, lng: -43.123 });
+    expect(lerCoordenada('-22.8950 -43.1230')).toEqual({ lat: -22.895, lng: -43.123 });
+  });
+  it('corrige o par invertido', () => {
+    expect(lerCoordenada('-43.1230, -22.8950')).toEqual({ lat: -22.895, lng: -43.123 });
+  });
+  it('lê links do Google Maps', () => {
+    expect(lerCoordenada('https://www.google.com/maps/@-22.8950,-43.1230,17z')).toEqual({ lat: -22.895, lng: -43.123 });
+    expect(lerCoordenada('https://www.google.com/maps/place/X/data=!3d-22.8950!4d-43.1230'))
+      .toEqual({ lat: -22.895, lng: -43.123 });
+  });
+  it('recusa fora de Niterói ou ilegível', () => {
+    expect(lerCoordenada('-23.5505, -46.6333')).toBeNull(); // São Paulo
+    expect(lerCoordenada('Rua da Conceição')).toBeNull();
+    expect(lerCoordenada('')).toBeNull();
+  });
+  it('monta o link do ponto ou do trecho', () => {
+    expect(linkMapa({ inicio_lat: -22.9, inicio_lng: -43.1, fim_lat: null, fim_lng: null }))
+      .toContain('query=-22.9,-43.1');
+    expect(linkMapa({ inicio_lat: -22.9, inicio_lng: -43.1, fim_lat: -22.91, fim_lng: -43.11 }))
+      .toContain('destination=-22.91,-43.11');
+  });
+});
+
+describe('situação da licença', () => {
+  const base = { situacao: 'deferida' as const, inicio_previsto: '2026-10-01', fim_previsto: '2026-10-31',
+                 concluida_em: null, as_built_sei: null };
+  it('segue o cronograma', () => {
+    expect(estadoLicenca(base, '2026-09-30')).toBe('aguardando_inicio');
+    expect(estadoLicenca(base, '2026-10-01')).toBe('em_execucao');
+    expect(estadoLicenca(base, '2026-10-31')).toBe('em_execucao');
+    expect(estadoLicenca(base, '2026-11-01')).toBe('prazo_encerrado');
+  });
+  it('conclusão e As Built', () => {
+    expect(estadoLicenca({ ...base, concluida_em: '2026-10-20' }, '2026-11-01')).toBe('concluida_sem_as_built');
+    expect(estadoLicenca({ ...base, concluida_em: '2026-10-20', as_built_sei: '123' }, '2026-11-01')).toBe('concluida');
+  });
+  it('não deferida mantém a situação', () => {
+    expect(estadoLicenca({ ...base, situacao: 'em_analise' }, '2026-10-15')).toBe('em_analise');
+    expect(estadoLicenca({ ...base, situacao: 'cancelada' }, '2026-10-15')).toBe('cancelada');
+  });
+});
