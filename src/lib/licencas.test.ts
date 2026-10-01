@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { anteriorResolucao, estadoLicenca, lerCoordenada, linkMapa, nomeExecutora, urlPublicaLicenca } from './licencas';
+import {
+  anteriorResolucao, estadoLicenca, lerCoordenada, linkMapa, nomeExecutora, pendenciasLicencas, urlPublicaLicenca,
+} from './licencas';
 
 describe('licença anterior à Resolução', () => {
   it('vale para decisão antes de 09/09/2026', () => {
@@ -64,5 +66,29 @@ describe('página pública', () => {
   it('monta o endereço do QR Code com o código público, não com o id', () => {
     expect(urlPublicaLicenca('a1b2c3d4e5f6a1b2c3d4e5f6', 'https://cadex-niteroi.vercel.app'))
       .toBe('https://cadex-niteroi.vercel.app/licenca/a1b2c3d4e5f6a1b2c3d4e5f6');
+  });
+});
+
+describe('pendências do painel', () => {
+  const l = (o: Record<string, unknown>) => ({
+    id: String(o.id), situacao: 'deferida', inicio_previsto: '2026-09-10', fim_previsto: '2026-09-20',
+    concluida_em: null, as_built_sei: null, anterior_resolucao: false, licenca_trechos: [], ...o,
+  }) as unknown as Parameters<typeof pendenciasLicencas>[0][number];
+  const hoje = '2026-10-01';
+  const r = pendenciasLicencas([
+    l({ id: 'a' }),                                                     // prazo encerrado há 11 dias
+    l({ id: 'b', fim_previsto: '2026-09-30' }),                         // há 1 dia
+    l({ id: 'c', concluida_em: '2026-09-15' }),                         // sem As Built há 16 dias
+    l({ id: 'd', concluida_em: '2026-09-15', as_built_sei: '1' }),      // concluída: fora
+    l({ id: 'e', fim_previsto: '2026-12-31' }),                         // em execução: fora
+    l({ id: 'f', anterior_resolucao: true, fim_previsto: '2022-05-30' }), // histórica: só conta
+    l({ id: 'g', situacao: 'cancelada' }),                              // cancelada: fora
+  ], hoje);
+  it('lista prazo encerrado e sem As Built, mais atrasados primeiro', () => {
+    expect(r.prazoEncerrado.map((p) => [p.licenca.id, p.dias])).toEqual([['a', 11], ['b', 1]]);
+    expect(r.semAsBuilt.map((p) => [p.licenca.id, p.dias])).toEqual([['c', 16]]);
+  });
+  it('só conta as anteriores à Resolução', () => {
+    expect(r.historicasEmAberto).toBe(1);
   });
 });

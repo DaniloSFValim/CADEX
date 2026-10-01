@@ -241,3 +241,35 @@ export async function buscarLicencaPublica(codigo: string): Promise<LicencaPubli
 
 /** Endereço que vai no QR Code. Usa o domínio em que o sistema está aberto. */
 export const urlPublicaLicenca = (codigo: string, origem = window.location.origin) => `${origem}/licenca/${codigo}`;
+
+// ---------------------------------------------------------------------
+// Pendências para o painel do gestor
+// ---------------------------------------------------------------------
+const diasEntre = (de: string, ate: string) =>
+  Math.round((Date.parse(`${ate}T00:00:00Z`) - Date.parse(`${de}T00:00:00Z`)) / 86_400_000);
+
+export interface PendenciaLicenca { licenca: LicencaComTrechos; dias: number }
+
+/**
+ * Licenças que pedem providência da SECONSER: prazo do cronograma
+ * encerrado sem conclusão registrada, e obra concluída sem As Built
+ * (art. 26). Só as emitidas sob a Resolução entram nas listas; as
+ * anteriores (registro histórico) só são contadas, porque costumam vir
+ * sem dados de conclusão e encheriam o painel.
+ */
+export function pendenciasLicencas(licencas: LicencaComTrechos[], hoje: string) {
+  const prazoEncerrado: PendenciaLicenca[] = [];
+  const semAsBuilt: PendenciaLicenca[] = [];
+  let historicasEmAberto = 0;
+  for (const l of licencas) {
+    const e = estadoLicenca(l, hoje);
+    if (e !== 'prazo_encerrado' && e !== 'concluida_sem_as_built') continue;
+    if (l.anterior_resolucao) { historicasEmAberto++; continue; }
+    if (e === 'prazo_encerrado') prazoEncerrado.push({ licenca: l, dias: diasEntre(l.fim_previsto!, hoje) });
+    else semAsBuilt.push({ licenca: l, dias: diasEntre(l.concluida_em!, hoje) });
+  }
+  // Mais atrasadas primeiro.
+  prazoEncerrado.sort((a, b) => b.dias - a.dias);
+  semAsBuilt.sort((a, b) => b.dias - a.dias);
+  return { prazoEncerrado, semAsBuilt, historicasEmAberto };
+}
