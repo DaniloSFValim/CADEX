@@ -13,6 +13,8 @@ import Contas from './pages/Contas';
 import MinhaConta from './pages/MinhaConta';
 import Licencas from './pages/Licencas';
 import LicencaPage from './pages/LicencaPage';
+import LicencaPublica from './pages/LicencaPublica';
+import PlacaLicenca from './pages/PlacaLicenca';
 import { CadastrarMfa, ConfirmarMfa } from './pages/Mfa';
 
 export function App() {
@@ -20,6 +22,8 @@ export function App() {
     <Routes>
       {/* Consulta pública: aberta, com ou sem login (art. 7º, § 2º). */}
       <Route path="consulta" element={<Consulta />} />
+      {/* Página da placa do canteiro (art. 14): aberta pelo QR Code, sem login. */}
+      <Route path="licenca/:codigo" element={<LicencaPublica />} />
       <Route path="*" element={<AreaRestrita />} />
     </Routes>
   );
@@ -59,6 +63,7 @@ function AreaRestrita() {
     <Routes>
       {/* Ficha para impressão: sem cabeçalho nem menu. */}
       <Route path="empresas/:id/ficha" element={<Ficha />} />
+      <Route path="obras/:id/placa" element={<PlacaLicenca />} />
       <Route element={<Layout />}>
         <Route index element={<Empresas />} />
         <Route path="dashboard" element={<Dashboard />} />
