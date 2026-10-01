@@ -116,7 +116,7 @@ export function Kpi({ rotulo, valor, detalhe, tom }: {
     <div className="border-l border-tinta-300 pl-4">
       <div className="flex items-baseline gap-2">
         <span className={`tabular text-3xl font-semibold tracking-[-0.02em] ${cor}`}>{valor}</span>
-        <span className="text-base font-medium text-tinta-800">{rotulo.toLowerCase()}</span>
+        <span className="text-base font-medium text-tinta-800">{rotulo.charAt(0).toLowerCase() + rotulo.slice(1)}</span>
       </div>
       {detalhe && <div className="mt-1 text-sm text-tinta-500">{detalhe}</div>}
     </div>

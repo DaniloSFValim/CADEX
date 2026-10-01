@@ -1,9 +1,14 @@
-import { useEffect, useState } from 'react';
-import { Badge, Empty, ErrorNote, Kpi, Spinner, Titulo } from '../components/ui';
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Badge, Empty, ErrorNote, Kpi, Spinner, Titulo, linkTexto } from '../components/ui';
 import { SituacaoBadge, dataBR } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { formatCnpj } from '../lib/cnpj';
 import { supabase } from '../lib/supabase';
+import { hojeISO, listarEmpresas, type Empresa } from '../lib/empresas';
+import {
+  listarLicencas, nomeExecutora, pendenciasLicencas, type LicencaComTrechos, type PendenciaLicenca,
+} from '../lib/licencas';
 
 interface AnalisePendente {
   id: string;
@@ -53,6 +58,8 @@ export default function Dashboard() {
   const [analises, setAnalises] = useState<AnalisePendente[]>([]);
   const [saneamentos, setSaneamentos] = useState<SaneamentoVencimento[]>([]);
   const [inscricoes, setInscricoes] = useState<InscricaoVencimento[]>([]);
+  const [licencas, setLicencas] = useState<LicencaComTrechos[]>([]);
+  const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
 
@@ -61,11 +68,13 @@ export default function Dashboard() {
 
     (async () => {
       try {
-        const [sumRes, anlRes, sanRes, insRes] = await Promise.all([
+        const [sumRes, anlRes, sanRes, insRes, lic, emp] = await Promise.all([
           supabase.rpc('dashboard_sumario'),
           supabase.rpc('dashboard_analises_pendentes'),
           supabase.rpc('dashboard_saneamentos_vencimento'),
           supabase.rpc('dashboard_inscricoes_vencimento'),
+          listarLicencas(),
+          listarEmpresas(),
         ]);
 
         if (sumRes.error) throw sumRes.error;
@@ -77,6 +86,8 @@ export default function Dashboard() {
         setAnalises(anlRes.data || []);
         setSaneamentos(sanRes.data || []);
         setInscricoes(insRes.data || []);
+        setLicencas(lic);
+        setEmpresas(emp);
       } catch (err) {
         setError(err);
       } finally {
@@ -84,6 +95,9 @@ export default function Dashboard() {
       }
     })();
   }, [podeEditar]);
+
+  const obras = useMemo(() => pendenciasLicencas(licencas, hojeISO()), [licencas]);
+  const porId = useMemo(() => new Map(empresas.map((e) => [e.id, e])), [empresas]);
 
   if (!podeEditar) {
     return <Empty>Acesso negado: apenas o gestor tem acesso ao dashboard.</Empty>;
@@ -102,19 +116,19 @@ export default function Dashboard() {
           rotulo="análises atrasadas"
           valor={sumario?.analises_pendentes || 0}
           detalhe="requeridas há mais de 15 dias"
-          tom={sumario?.analises_pendentes ? 'atencao' : 'baixa'}
+          tom={sumario?.analises_pendentes ? 'atencao' : undefined}
         />
         <Kpi
           rotulo="saneamentos no fim do prazo"
           valor={sumario?.saneamentos_vencendo || 0}
           detalhe="vencem em até 7 dias"
-          tom={sumario?.saneamentos_vencendo ? 'atencao' : 'baixa'}
+          tom={sumario?.saneamentos_vencendo ? 'atencao' : undefined}
         />
         <Kpi
           rotulo="inscrições por vencer"
           valor={sumario?.inscricoes_vencendo || 0}
           detalhe="validade termina em até 30 dias"
-          tom={sumario?.inscricoes_vencendo ? 'atencao' : 'baixa'}
+          tom={sumario?.inscricoes_vencendo ? 'atencao' : undefined}
         />
       </div>
 
@@ -231,6 +245,89 @@ export default function Dashboard() {
           </div>
         )}
       </section>
+
+      {/* Licenças de obra */}
+      <section className="mt-4 border-t border-tinta-200 pt-8">
+        <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-xl font-bold tracking-[-0.015em] text-tinta-900">Licenças de obra</h2>
+          <Link to="/obras" className={`${linkTexto} text-sm`}>Ver todas as licenças</Link>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Kpi rotulo="prazos encerrados" valor={obras.prazoEncerrado.length}
+               detalhe="cronograma vencido sem conclusão registrada"
+               tom={obras.prazoEncerrado.length ? 'baixa' : undefined} />
+          <Kpi rotulo="sem As Built" valor={obras.semAsBuilt.length}
+               detalhe="obra concluída sem o projeto como construído (art. 26)"
+               tom={obras.semAsBuilt.length ? 'atencao' : undefined} />
+        </div>
+
+        <TabelaPendencias
+          titulo="Prazo do cronograma encerrado"
+          vazio="Nenhuma licença com prazo encerrado sem conclusão."
+          coluna="Prazo terminou em" data={(l) => l.fim_previsto} sufixo="de atraso" tom="ruim"
+          itens={obras.prazoEncerrado} porId={porId} />
+        <TabelaPendencias
+          titulo="Obra concluída sem As Built"
+          vazio="Nenhuma obra concluída aguardando As Built."
+          coluna="Concluída em" data={(l) => l.concluida_em} sufixo="sem As Built" tom="alerta"
+          itens={obras.semAsBuilt} porId={porId} />
+
+        {obras.historicasEmAberto > 0 && (
+          <p className="mt-4 text-sm text-tinta-500">
+            Além dessas, {obras.historicasEmAberto} licença{obras.historicasEmAberto === 1 ? '' : 's'} anterior
+            {obras.historicasEmAberto === 1 ? '' : 'es'} à Resolução sem conclusão ou As Built registrados. Não
+            entram nas listas: são registro histórico e costumam vir sem esses dados.
+          </p>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function TabelaPendencias({ titulo, vazio, coluna, data, sufixo, tom, itens, porId }: {
+  titulo: string; vazio: string; coluna: string; data: (l: LicencaComTrechos) => string | null;
+  sufixo: string; tom: 'ruim' | 'alerta'; itens: PendenciaLicenca[];
+  porId: Map<string, Empresa>;
+}) {
+  return (
+    <div className="mt-6">
+      <h3 className="mb-3 text-base font-semibold text-tinta-900">{titulo}</h3>
+      {itens.length === 0 ? (
+        <Empty>{vazio}</Empty>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="border-b border-tinta-200 bg-tinta-50 text-[13px] text-tinta-500">
+              <tr>
+                <th className="px-4 py-2 text-left font-semibold">Licença</th>
+                <th className="px-4 py-2 text-left font-semibold">Executora</th>
+                <th className="px-4 py-2 text-left font-semibold">Local</th>
+                <th className="px-4 py-2 text-left font-semibold">{coluna}</th>
+                <th className="px-4 py-2 text-right font-semibold">Dias</th>
+              </tr>
+            </thead>
+            <tbody>
+              {itens.map(({ licenca: l, dias }) => (
+                <tr key={l.id} className="border-b border-tinta-100 hover:bg-marca-50/40">
+                  <td className="px-4 py-2">
+                    <Link to={`/obras/${l.id}`} className="font-medium hover:text-marca-700 hover:underline">{l.numero}</Link>
+                    <div className="tabular text-xs text-tinta-500">{l.processo_sei}</div>
+                  </td>
+                  <td className="px-4 py-2">{nomeExecutora(l, porId)}</td>
+                  <td className="px-4 py-2">
+                    {l.licenca_trechos[0]?.logradouro ?? '—'}
+                    {l.licenca_trechos[0]?.bairro && <span className="text-tinta-500">, {l.licenca_trechos[0].bairro}</span>}
+                  </td>
+                  <td className="tabular px-4 py-2">{dataBR(data(l))}</td>
+                  <td className="px-4 py-2 text-right">
+                    <Badge tom={tom}>{dias} dia{dias === 1 ? '' : 's'} {sufixo}</Badge>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
