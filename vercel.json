@@ -3,5 +3,8 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [
+    { "source": "/anatel/niteroi.json", "destination": "https://netranking-rj.labdados.org/data/municipios/niteroi.json" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
