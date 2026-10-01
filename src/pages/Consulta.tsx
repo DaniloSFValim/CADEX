@@ -50,7 +50,7 @@ export default function Consulta() {
           <p className="text-sm text-tinta-400">
             Consulta pública, Resolução Conjunta SECONSER/SEOP nº&nbsp;001/2026
           </p>
-          <h1 className="mt-3 text-3xl font-semibold leading-[1.15] tracking-[-0.02em] text-tinta-900 sm:text-4xl md:text-[3rem]">
+          <h1 className="mt-3 text-3xl font-semibold leading-[1.15] tracking-[-0.02em] text-tinta-900 sm:text-4xl sm:leading-[1.15] md:text-[3rem] md:leading-[1.1]">
             Consultar empresa executora
           </h1>
           <p className="mt-5 max-w-2xl text-lg leading-relaxed text-tinta-500">
