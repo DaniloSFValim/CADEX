@@ -218,7 +218,9 @@ function EmpresaForm({
         <input id="fantasia" className={inputClass} {...text('nome_fantasia')} />
       </Field>
       <Field label="Tipo" required className="sm:col-span-3"
-             hint={editando ? 'Não pode ser alterado.' : undefined}>
+             hint={editando ? 'Não pode ser alterado.'
+               : v.tipo === 'construtora' ? 'Pessoa jurídica que constrói imóveis, com licença de obra da Prefeitura. Empreiteira de rede é terceirizada.'
+               : undefined}>
         <select id="tipo" className={inputClass} value={v.tipo} disabled={editando}
                 onChange={(e) => {
                   const t = e.target.value as EmpresaInput['tipo'];

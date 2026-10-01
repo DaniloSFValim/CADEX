@@ -4,7 +4,7 @@ import { Badge, Button, Card, ErrorNote, Field, Spinner, Titulo, botaoLink, inpu
 import { QrCode } from '../components/QrCode';
 import { SituacaoBadge, dataBR } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
-import { formatCnpj, isValidCnpj, onlyDigits } from '../lib/cnpj';
+import { formatCnpj, formatCpf, isValidCnpj, isValidCpf, onlyDigits } from '../lib/cnpj';
 import {
   SETORES, SETOR_LABEL, atuaNoSetor, ehContratante, hojeISO, listarDaEmpresa, listarEmpresas, listarVinculos,
   nomeEmpresa, podeAtuar, situacaoEfetiva, type Empresa, type Registro, type Setor, type Vinculo,
@@ -21,7 +21,10 @@ interface TrechoForm { id?: string; logradouro: string; bairro: string; referenc
 type Form = {
   setor: Setor; processo_sei: string; numero: string; tipos_obra: TipoObra[]; escopo: string; observacoes: string;
   executora_id: string; contratante_id: string; subcontratada_id: string; responsavel_tecnico_id: string;
-  executora_razao_social: string; executora_cnpj: string; contratante_razao_social: string; contratante_cnpj: string;
+  executora_razao_social: string; executora_cnpj: string; contratante_razao_social: string;
+  /** CNPJ, ou CPF do dono do imóvel na drenagem. */
+  contratante_cnpj: string;
+  imovel_endereco: string; processo_urbanismo: string;
   art_numero: string; protocolo_data: string; situacao: SituacaoLicenca; decisao_data: string;
   inicio_previsto: string; fim_previsto: string; concluida_em: string; as_built_sei: string; as_built_data: string;
 };
@@ -35,6 +38,7 @@ const VAZIO: Form = {
   setor: 'telecom', processo_sei: '', numero: '', tipos_obra: [], escopo: '', observacoes: '',
   executora_id: '', contratante_id: '', subcontratada_id: '', responsavel_tecnico_id: '',
   executora_razao_social: '', executora_cnpj: '', contratante_razao_social: '', contratante_cnpj: '',
+  imovel_endereco: '', processo_urbanismo: '',
   art_numero: '', protocolo_data: '', situacao: 'em_analise', decisao_data: '',
   inicio_previsto: '', fim_previsto: '', concluida_em: '', as_built_sei: '', as_built_data: '',
 };
@@ -47,7 +51,8 @@ function paraForm(l: LicencaComTrechos): Form {
     executora_id: l.executora_id ?? (l.executora_razao_social ? SEM_CADASTRO : ''),
     contratante_id: l.contratante_id ?? (l.contratante_razao_social ? SEM_CADASTRO : ''),
     executora_razao_social: s(l.executora_razao_social), executora_cnpj: l.executora_cnpj ? formatCnpj(l.executora_cnpj) : '',
-    contratante_razao_social: s(l.contratante_razao_social), contratante_cnpj: l.contratante_cnpj ? formatCnpj(l.contratante_cnpj) : '',
+    contratante_razao_social: s(l.contratante_razao_social), contratante_cnpj: l.contratante_cpf ? formatCpf(l.contratante_cpf) : l.contratante_cnpj ? formatCnpj(l.contratante_cnpj) : '',
+    imovel_endereco: s(l.imovel_endereco), processo_urbanismo: s(l.processo_urbanismo),
     subcontratada_id: s(l.subcontratada_id), responsavel_tecnico_id: s(l.responsavel_tecnico_id),
     art_numero: s(l.art_numero), protocolo_data: l.protocolo_data, situacao: l.situacao,
     decisao_data: s(l.decisao_data), inicio_previsto: s(l.inicio_previsto), fim_previsto: s(l.fim_previsto),
@@ -148,6 +153,9 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
   const drenagem = f.setor === 'drenagem';
   const executoraSemCadastro = f.executora_id === SEM_CADASTRO;
   const contratanteSemCadastro = f.contratante_id === SEM_CADASTRO;
+  // Na drenagem o dono do imóvel pode ser pessoa física: 11 dígitos = CPF.
+  const contratanteCpf = drenagem && contratanteSemCadastro && onlyDigits(f.contratante_cnpj).length <= 11
+    && f.contratante_cnpj.trim() !== '';
   // Sob a Resolução: só subcontratada com vínculo ativo. Fora dela: qualquer terceirizada do setor.
   const subcontratadas = (!resolucao
     ? empresas.filter((e) => e.tipo === 'terceirizada' && e.id !== f.executora_id)
@@ -174,8 +182,15 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
     }
     if (executoraSemCadastro && !f.executora_razao_social.trim()) return 'Informe a razão social da executora.';
     if (contratanteSemCadastro && !f.contratante_razao_social.trim()) return 'Informe a razão social da contratante.';
-    for (const [quem, c] of [['executora', f.executora_cnpj], ['contratante', f.contratante_cnpj]] as const) {
-      if (c.trim() && !isValidCnpj(c)) return `CNPJ da ${quem} inválido.`;
+    if (f.executora_cnpj.trim() && !isValidCnpj(f.executora_cnpj)) return 'CNPJ da executora inválido.';
+    if (contratanteCpf ? !isValidCpf(f.contratante_cnpj) : f.contratante_cnpj.trim() && !isValidCnpj(f.contratante_cnpj)) {
+      return drenagem ? 'CPF ou CNPJ do dono do imóvel inválido.' : 'CNPJ da contratante inválido.';
+    }
+    if (drenagem && !anterior) {
+      if (!f.imovel_endereco.trim()) return 'Drenagem: informe o endereço do imóvel atendido.';
+      if (!f.processo_urbanismo.trim()) return 'Drenagem: informe o processo de licenciamento da obra no Urbanismo.';
+      if (contratanteSemCadastro && !f.contratante_cnpj.trim()) return 'Drenagem: informe o CPF ou o CNPJ do dono do imóvel.';
+      if (!f.contratante_id && executora?.tipo !== 'construtora') return 'Drenagem: informe o dono do imóvel ou a construtora contratante.';
     }
     if (f.tipos_obra.length === 0) return 'Marque ao menos um tipo de obra (art. 10).';
     const lista: Trecho[] = [];
@@ -203,7 +218,10 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
         executora_cnpj: executoraSemCadastro && f.executora_cnpj.trim() ? onlyDigits(f.executora_cnpj) : null,
         contratante_id: contratanteSemCadastro ? null : n(f.contratante_id),
         contratante_razao_social: contratanteSemCadastro ? n(f.contratante_razao_social) : null,
-        contratante_cnpj: contratanteSemCadastro && f.contratante_cnpj.trim() ? onlyDigits(f.contratante_cnpj) : null,
+        contratante_cnpj: contratanteSemCadastro && !contratanteCpf && f.contratante_cnpj.trim() ? onlyDigits(f.contratante_cnpj) : null,
+        contratante_cpf: contratanteSemCadastro && contratanteCpf ? onlyDigits(f.contratante_cnpj) : null,
+        imovel_endereco: drenagem ? n(f.imovel_endereco) : null,
+        processo_urbanismo: drenagem ? n(f.processo_urbanismo) : null,
         subcontratada_id: n(f.subcontratada_id), responsavel_tecnico_id: n(f.responsavel_tecnico_id),
         art_numero: n(f.art_numero), protocolo_data: f.protocolo_data, situacao: f.situacao,
         decisao_data: n(f.decisao_data), inicio_previsto: n(f.inicio_previsto), fim_previsto: n(f.fim_previsto),
@@ -285,6 +303,18 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
           <textarea className={inputClass} rows={2} required disabled={ro} value={f.escopo}
                     onChange={(e) => set('escopo', e.target.value)} />
         </Field>
+        {drenagem && (
+          <div className="mt-5 grid gap-4 sm:grid-cols-[1fr_260px]">
+            <Field label="Endereço do imóvel atendido" required={!anterior} hint="Imóvel ligado à rede pública de drenagem.">
+              <input className={inputClass} required={!anterior} disabled={ro} value={f.imovel_endereco}
+                     onChange={(e) => set('imovel_endereco', e.target.value)} />
+            </Field>
+            <Field label="Processo da obra no Urbanismo" required={!anterior} hint="Licenciamento da edificação.">
+              <input className={`${inputClass} tabular`} required={!anterior} disabled={ro} value={f.processo_urbanismo}
+                     onChange={(e) => set('processo_urbanismo', e.target.value)} />
+            </Field>
+          </div>
+        )}
       </Card>
 
       <Card title="Decisão">
@@ -357,7 +387,7 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
           </Field>
           <Field label={f.setor === 'telecom' ? 'Concessionária contratante' : 'Contratante'}
                  hint={executora?.tipo === 'terceirizada' && resolucao ? 'Obrigatória para executora terceirizada.'
-                   : drenagem ? 'Construtora ou o dono do imóvel (sem cadastro). Deixe em branco se não houver.'
+                   : drenagem ? 'Construtora ou o dono do imóvel (sem cadastro). Em branco só quando a própria construtora executa.'
                    : 'Deixe em branco se a própria titular executa a obra.'}>
             <select className={inputClass} disabled={ro} required={executora?.tipo === 'terceirizada' && resolucao}
                     value={f.contratante_id} onChange={(e) => set('contratante_id', e.target.value)}>
@@ -374,6 +404,7 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
           )}
           {contratanteSemCadastro && (
             <SemCadastro quem="contratante" ro={ro} razao={f.contratante_razao_social} cnpj={f.contratante_cnpj}
+                         donoImovel={drenagem}
                          onRazao={(v) => set('contratante_razao_social', v)} onCnpj={(v) => set('contratante_cnpj', v)} />
           )}
           <Field label="Subcontratada" hint={!resolucao ? undefined : f.executora_id && subcontratadas.length === 0
@@ -540,18 +571,26 @@ function Placa({ licenca }: { licenca: LicencaComTrechos }) {
 }
 
 /** Executora ou contratante que não está no CADEX (licença anterior à Resolução). */
-function SemCadastro({ quem, ro, razao, cnpj, onRazao, onCnpj }: {
-  quem: 'executora' | 'contratante'; ro: boolean; razao: string; cnpj: string;
+function SemCadastro({ quem, ro, razao, cnpj, donoImovel, onRazao, onCnpj }: {
+  quem: 'executora' | 'contratante'; ro: boolean; razao: string; cnpj: string; donoImovel?: boolean;
   onRazao: (v: string) => void; onCnpj: (v: string) => void;
 }) {
   return (
     <div className="grid gap-4 rounded border border-dashed border-tinta-300 p-4 sm:col-span-2 sm:grid-cols-[1fr_220px]">
-      <Field label={`Razão social da ${quem}`} required hint="Não entra no cadastro nem na consulta pública de empresas.">
-        <input className={inputClass} required disabled={ro} value={razao} onChange={(e) => onRazao(e.target.value)} />
-      </Field>
-      <Field label="CNPJ" hint="Se constar no processo.">
-        <input className={`${inputClass} tabular`} disabled={ro} value={cnpj} inputMode="numeric"
-               onChange={(e) => onCnpj(formatCnpj(e.target.value))} />
+      {donoImovel ? (
+        <Field label="Nome ou razão social do dono do imóvel" required
+               hint="Pessoa física (CPF): o nome não aparece nas páginas públicas.">
+          <input className={inputClass} required disabled={ro} value={razao} onChange={(e) => onRazao(e.target.value)} />
+        </Field>
+      ) : (
+        <Field label={`Razão social da ${quem}`} required hint="Não entra no cadastro nem na consulta pública de empresas.">
+          <input className={inputClass} required disabled={ro} value={razao} onChange={(e) => onRazao(e.target.value)} />
+        </Field>
+      )}
+      <Field label={donoImovel ? 'CPF ou CNPJ' : 'CNPJ'} required={donoImovel} hint={donoImovel ? undefined : 'Se constar no processo.'}>
+        <input className={`${inputClass} tabular`} disabled={ro} value={cnpj} inputMode="numeric" required={donoImovel}
+               onChange={(e) => onCnpj(donoImovel && onlyDigits(e.target.value).length <= 11
+                 ? formatCpf(e.target.value) : formatCnpj(e.target.value))} />
       </Field>
     </div>
   );

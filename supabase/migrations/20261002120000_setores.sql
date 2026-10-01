@@ -9,8 +9,10 @@
 --   operadora      contratante de telecom            setores = {telecom}
 --   concessionaria contratante de gás (Naturgy) ou   setores = {gas} ou {saneamento}
 --                  de saneamento (Águas de Niterói)
---   construtora    contrata terceirizadas e também   setores = {construcao}
---                  executa (ex.: ligação de drenagem)
+--   construtora    pessoa jurídica que constrói      setores = {construcao}
+--                  imóveis (com licença de obra da
+--                  Prefeitura); contrata terceirizadas
+--                  e também executa (ex.: drenagem)
 --   terceirizada   executa para qualquer contratante setores = um ou mais
 --
 -- Drenagem não tem concessionária: são ligações de imóveis particulares
@@ -19,10 +21,13 @@
 -- Código CADEX por tipo: OPE, GAS, SAN, CON, TER. Os já emitidos não mudam.
 --
 -- Documentos por perfil (tipos_documento.perfis):
---   art. 6º, I e II (identificação, certidões, RT, equipamentos): todos
---   III (regularidade no órgão regulador) e IV (mapa da infraestrutura):
---       telecom, gás e saneamento
+--   art. 6º, I, a-f e II, a-b (identificação, certidões fiscais e RT): todos
+--   III (regularidade no órgão regulador: Anatel ou AGENERSA) e
+--   IV (mapa da infraestrutura): telecom, gás e saneamento
 --   V (compartilhamento e adimplência): só telecom
+--   I, g (CRF/FGTS), I, h (CNDT) e II, c (equipamentos e pessoal): deixam
+--       de ser exigidos (decisão da SECONSER de 01/10/2026). Os tipos ficam
+--       no catálogo, sem perfil, para não perder histórico.
 -- =====================================================================
 
 -- ---------------------------------------------------------------------
@@ -142,6 +147,11 @@ update public.tipos_documento set perfis = '{telecom,gas,saneamento}'
  where codigo in ('DECL_REGULADOR', 'MAPA_INFRA');
 update public.tipos_documento set perfis = '{telecom}'
  where codigo in ('CONTRATO_COMPART', 'COMPROV_ADIMPLENCIA');
+update public.tipos_documento set perfis = '{}'
+ where codigo in ('CRF_FGTS', 'CNDT', 'REL_EQUIPAMENTOS');
+update public.tipos_documento
+   set fundamento = 'Conformidade regulatória: Anatel (telecom) ou AGENERSA (gás e saneamento)'
+ where codigo = 'DECL_REGULADOR';
 
 -- Perfil documental da empresa.
 create or replace function public.perfil_documental(p_tipo text, p_setores text[])

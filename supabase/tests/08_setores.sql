@@ -87,12 +87,14 @@ begin
 
   -- Documentos por perfil
   perform pg_temp.assert(
-    (select count(*) from tipos_documento where 'telecom' = any(perfis)) = 15
-    and (select count(*) from tipos_documento where 'gas' = any(perfis)) = 13
-    and (select count(*) from tipos_documento where 'construtora' = any(perfis)) = 11
-    and (select count(*) from tipos_documento where 'terceirizada' = any(perfis)) = 11
+    (select count(*) from tipos_documento where 'telecom' = any(perfis)) = 12
+    and (select count(*) from tipos_documento where 'gas' = any(perfis)) = 10
+    and (select count(*) from tipos_documento where 'construtora' = any(perfis)) = 8
+    and (select count(*) from tipos_documento where 'terceirizada' = any(perfis)) = 8
     and not exists (select 1 from tipos_documento where 'terceirizada' = any(perfis)
-                     and codigo in ('DECL_REGULADOR', 'MAPA_INFRA', 'CONTRATO_COMPART')),
+                     and codigo in ('DECL_REGULADOR', 'MAPA_INFRA', 'CONTRATO_COMPART'))
+    and not exists (select 1 from tipos_documento where cardinality(perfis) > 0
+                     and codigo in ('CRF_FGTS', 'CNDT', 'REL_EQUIPAMENTOS')),
     'documentos por perfil errados');
   perform pg_temp.assert(public.perfil_documental('concessionaria', '{saneamento}') = 'saneamento'
                          and public.perfil_documental('operadora', '{telecom}') = 'telecom'
@@ -125,16 +127,47 @@ begin
       'executora_id', %L, 'contratante_id', %L, 'protocolo_data', '2026-09-20'), %L::jsonb)$q$, terc_gas, terc_multi, trecho),
     'operadora, concessionária ou construtora', 'terceirizada como contratante');
 
-  -- Drenagem: construtora executa; dono do imóvel como contratante sem cadastro
+  -- Drenagem: construtora executa; dono do imóvel (pessoa física) sem cadastro
   perform public.salvar_licenca(jsonb_build_object(
       'setor', 'drenagem', 'processo_sei', 'DRE-1', 'numero', 'D-1', 'tipos_obra', array['ligacao_predial', 'boca_de_lobo'],
-      'escopo', 'Ligação do condomínio à rede pública', 'executora_id', con,
-      'contratante_razao_social', 'Condomínio Edifício Exemplo', 'protocolo_data', '2026-09-20', 'situacao', 'deferida',
+      'escopo', 'Ligação da casa à rede pública', 'executora_id', con,
+      'contratante_razao_social', 'Fulano de Tal', 'contratante_cpf', '529.982.247-25',
+      'imovel_endereco', 'Rua A, 100', 'processo_urbanismo', 'URB-123/2026',
+      'protocolo_data', '2026-09-20', 'situacao', 'deferida',
       'decisao_data', '2026-09-25', 'inicio_previsto', '2026-10-01', 'fim_previsto', '2026-10-05'), trecho);
   -- Drenagem: terceirizada contratada pela construtora
   perform public.salvar_licenca(jsonb_build_object(
       'setor', 'drenagem', 'processo_sei', 'DRE-2', 'tipos_obra', array['galeria_drenagem', 'recomposicao'],
-      'escopo', 'Galeria', 'executora_id', terc_dren, 'contratante_id', con, 'protocolo_data', '2026-09-20'), trecho);
+      'escopo', 'Galeria', 'executora_id', terc_dren, 'contratante_id', con,
+      'imovel_endereco', 'Rua B, 20', 'processo_urbanismo', 'URB-124/2026', 'protocolo_data', '2026-09-20'), trecho);
+  -- Drenagem: a própria construtora executa, sem contratante
+  perform public.salvar_licenca(jsonb_build_object(
+      'setor', 'drenagem', 'processo_sei', 'DRE-3', 'tipos_obra', array['ligacao_predial'], 'escopo', 'Ligação do prédio',
+      'executora_id', con, 'imovel_endereco', 'Rua C, 30', 'processo_urbanismo', 'URB-125/2026',
+      'protocolo_data', '2026-09-20'), trecho);
+  -- Drenagem: exigências
+  perform pg_temp.recusa(format($q$select public.salvar_licenca(jsonb_build_object(
+      'setor', 'drenagem', 'processo_sei', 'DRE-4', 'tipos_obra', array['ligacao_predial'], 'escopo', 'x',
+      'executora_id', %L, 'contratante_id', %L, 'processo_urbanismo', 'URB-1', 'protocolo_data', '2026-09-20'), %L::jsonb)$q$,
+      terc_dren, con, trecho), 'endereço do imóvel', 'drenagem sem endereço do imóvel');
+  perform pg_temp.recusa(format($q$select public.salvar_licenca(jsonb_build_object(
+      'setor', 'drenagem', 'processo_sei', 'DRE-5', 'tipos_obra', array['ligacao_predial'], 'escopo', 'x',
+      'executora_id', %L, 'contratante_id', %L, 'imovel_endereco', 'Rua D', 'protocolo_data', '2026-09-20'), %L::jsonb)$q$,
+      terc_dren, con, trecho), 'Urbanismo', 'drenagem sem processo do Urbanismo');
+  perform pg_temp.recusa(format($q$select public.salvar_licenca(jsonb_build_object(
+      'setor', 'drenagem', 'processo_sei', 'DRE-6', 'tipos_obra', array['ligacao_predial'], 'escopo', 'x',
+      'executora_id', %L, 'contratante_razao_social', 'Beltrano', 'imovel_endereco', 'Rua D',
+      'processo_urbanismo', 'URB-2', 'protocolo_data', '2026-09-20'), %L::jsonb)$q$,
+      terc_dren, trecho), 'CPF ou o CNPJ', 'dono do imóvel sem CPF/CNPJ');
+  perform pg_temp.recusa(format($q$select public.salvar_licenca(jsonb_build_object(
+      'setor', 'drenagem', 'processo_sei', 'DRE-7', 'tipos_obra', array['ligacao_predial'], 'escopo', 'x',
+      'executora_id', %L, 'imovel_endereco', 'Rua D', 'processo_urbanismo', 'URB-3', 'protocolo_data', '2026-09-20'), %L::jsonb)$q$,
+      terc_dren, trecho), 'dono do imóvel ou a construtora', 'terceirizada sem contratante na drenagem');
+  perform pg_temp.recusa(format($q$select public.salvar_licenca(jsonb_build_object(
+      'setor', 'drenagem', 'processo_sei', 'DRE-8', 'tipos_obra', array['ligacao_predial'], 'escopo', 'x',
+      'executora_id', %L, 'contratante_razao_social', 'Beltrano', 'contratante_cpf', '11111111111',
+      'imovel_endereco', 'Rua D', 'processo_urbanismo', 'URB-4', 'protocolo_data', '2026-09-20'), %L::jsonb)$q$,
+      terc_dren, trecho), null, 'CPF inválido aceito');
   -- Contratante sem cadastro fora da drenagem
   perform pg_temp.recusa(format($q$select public.salvar_licenca(jsonb_build_object(
       'setor', 'gas', 'processo_sei', 'GAS-4', 'tipos_obra', array['vala'], 'escopo', 'x',
@@ -151,6 +184,7 @@ begin
 end $$;
 
 -- Público: setores na consulta e no mapa
+select set_config('cadex.dre1', (select codigo_publico from licencas where numero = 'D-1'), true);
 reset role;
 set local role anon;
 do $$
@@ -159,6 +193,10 @@ begin
                            where razao_social = 'Terceirizada Multissetor Ltda.'), 'consulta pública sem setores');
   perform pg_temp.assert((select count(*) from jsonb_array_elements(public.obras_publicas()) o
                            where o ->> 'setor' in ('gas', 'drenagem')) = 2, 'mapa sem as licenças de gás e drenagem');
+  perform pg_temp.assert(public.obras_publicas()::text not like '%Fulano%', 'mapa publicou nome de pessoa física');
+  perform pg_temp.assert(public.licenca_publica(current_setting('cadex.dre1')) ->> 'contratante' is null
+                         and public.licenca_publica(current_setting('cadex.dre1')) ->> 'imovel_endereco' = 'Rua A, 100',
+    'página pública com nome de pessoa física ou sem o imóvel');
 end $$;
 
 rollback;

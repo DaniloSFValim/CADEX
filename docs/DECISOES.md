@@ -48,23 +48,34 @@ próprio (ex.: analista de licenciamento), as políticas de `licencas` e
 - Fica na consulta pública, aba "Obras licenciadas" (`/consulta/obras`).
 
 ### Outros setores: gás, saneamento, drenagem e construção (01/10/2026)
-- A Resolução nº 001/2026 vale **só para telecom**. Nos outros setores ela serve
-  de referência, mas a licença não exige empresa APTA, ART nem vínculo da
-  subcontratada.
+- A Resolução nº 001/2026 vale **só para telecom**. Nos outros setores a
+  licença não exige empresa APTA, ART nem vínculo da subcontratada; os
+  documentos da inscrição ficam como registro (opção "b" da SECONSER).
 - Tipos de empresa: **operadora** (telecom), **concessionária** (um setor:
-  gás = Naturgy, saneamento = Águas de Niterói), **construtora** e
+  gás = Naturgy, saneamento = Águas de Niterói), **construtora** (pessoa
+  jurídica que constrói imóveis, com licença de obra da Prefeitura) e
   **terceirizada** (um ou mais setores: telecom, gás, saneamento, drenagem).
 - Códigos CADEX: OPE (operadora), GAS e SAN (concessionárias), CON
   (construtora), TER (terceirizada). Tipo, CNPJ, código e o setor da
   concessionária não mudam depois do cadastro.
-- Documentos por perfil: telecom 15; gás e saneamento 13 (sem contrato de
-  compartilhamento e comprovante de adimplência); construtora e terceirizada 11
-  (também sem declaração do órgão regulador e mapa de infraestrutura).
+- Documentos (O = obrigatório, Q = quando aplicável):
+  - todos os perfis: cartão CNPJ, contrato social, documentos dos sócios,
+    certidões negativas federal, estadual e municipal, registro do RT e
+    ART/RRT de cargo (O);
+  - operadora e concessionárias: declaração de regularidade no órgão
+    regulador (O; Anatel ou AGENERSA) e mapa da infraestrutura (Q);
+  - operadora: contrato de compartilhamento e comprovante de adimplência (Q);
+  - terceirizadas não entregam a declaração do regulador: ela é da
+    concessionária.
+  - CRF/FGTS, CNDT e relação de equipamentos e pessoal deixam de ser
+    exigidos de todos.
 - "Contratada por" só é obrigatório para terceirizada de telecom. Quem contrata
   terceirizadas: operadora, concessionária ou construtora.
 - Drenagem: ligação de imóvel particular à rede pública, executada por
-  terceirizada ou pela própria construtora. O contratante pode ser o dono do
-  imóvel ou empresa sem cadastro.
+  terceirizada ou pela própria construtora. Exige o endereço do imóvel, o
+  processo de licenciamento da obra no Urbanismo e o contratante (construtora
+  cadastrada ou dono do imóvel com CPF ou CNPJ), salvo quando a própria
+  construtora executa. Nome de pessoa física não aparece nas páginas públicas.
 - Novos tipos de obra: ligação predial, galeria de drenagem, boca de lobo e
   recomposição de pavimento.
 - Mapa e consulta pública ganham filtro por setor.

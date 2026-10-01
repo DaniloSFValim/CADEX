@@ -33,6 +33,11 @@ export interface Licenca {
   executora_cnpj: string | null;
   contratante_razao_social: string | null;
   contratante_cnpj: string | null;
+  /** Dono do imóvel pessoa física (drenagem); o nome não é publicado. */
+  contratante_cpf: string | null;
+  /** Drenagem: imóvel ligado à rede e processo da obra no Urbanismo. */
+  imovel_endereco: string | null;
+  processo_urbanismo: string | null;
   /** Decisão anterior a 09/09/2026 (calculado no banco). */
   anterior_resolucao: boolean;
   subcontratada_id: string | null;
@@ -240,6 +245,8 @@ export interface LicencaPublica {
   /** Data de hoje em Niterói, segundo o banco. */
   hoje: string;
   anterior_resolucao: boolean;
+  /** Drenagem: imóvel ligado à rede pública. */
+  imovel_endereco: string | null;
   /** Sem código nem situação: empresa sem cadastro, em licença anterior à Resolução. */
   executora: { razao_social: string; nome_fantasia: string | null; codigo_cadex: string | null; situacao_cadex: string | null };
   contratante: { razao_social: string; nome_fantasia: string | null; codigo_cadex: string | null } | null;

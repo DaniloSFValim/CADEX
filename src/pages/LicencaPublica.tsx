@@ -94,12 +94,13 @@ function Conteudo({ d }: { d: Dados }) {
           </span>
         </Item>
         {d.contratante && (
-          <Item rotulo="Concessionária contratante" largo>
+          <Item rotulo={d.setor === 'telecom' ? 'Concessionária contratante' : 'Contratante'} largo>
             {nome(d.contratante)}
             {d.contratante.codigo_cadex && <span className="block text-sm text-tinta-500">{d.contratante.codigo_cadex}</span>}
           </Item>
         )}
         <Item rotulo="Setor">{SETOR_LABEL[d.setor]}</Item>
+        {d.imovel_endereco && <Item rotulo="Imóvel atendido" largo>{d.imovel_endereco}</Item>}
         <Item rotulo="Tipo de obra">{d.tipos_obra.map((t) => TIPO_OBRA_LABEL[t]).join(', ')}</Item>
         <Item rotulo="Escopo" largo>{d.escopo}</Item>
       </dl>

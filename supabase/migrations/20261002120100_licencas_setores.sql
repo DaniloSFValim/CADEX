@@ -11,13 +11,22 @@
 --   Resolução      APTA, ART da obra, vínculo da subcontratada e
 --                  contratante obrigatória para terceirizada só valem
 --                  para telecom com decisão a partir de 09/09/2026
---   drenagem       contratante pode ser só o nome (dono do imóvel)
+--   drenagem       ligação de imóvel particular à rede pública: exige o
+--                  endereço do imóvel e o processo de licenciamento da
+--                  obra no Urbanismo; o contratante pode ser o dono do
+--                  imóvel sem cadastro, com CPF ou CNPJ. Nome de pessoa
+--                  física (CPF) não aparece nas páginas públicas.
 -- =====================================================================
 
 alter table public.licencas
   add column setor text not null default 'telecom'
     check (setor in ('telecom', 'gas', 'saneamento', 'drenagem', 'construcao'));
 alter table public.licencas alter column setor drop default;
+
+alter table public.licencas
+  add column contratante_cpf    text check (contratante_cpf is null or (contratante_cpf ~ '^\d{11}$' and public.cpf_valido(contratante_cpf))),
+  add column imovel_endereco    text,
+  add column processo_urbanismo text;
 
 alter table public.licencas drop constraint licencas_tipos_obra_check;
 alter table public.licencas add constraint licencas_tipos_obra_check
@@ -58,6 +67,9 @@ begin
   new.contratante_razao_social := nullif(btrim(new.contratante_razao_social), '');
   new.executora_cnpj   := nullif(regexp_replace(coalesce(new.executora_cnpj, ''), '\D', '', 'g'), '');
   new.contratante_cnpj := nullif(regexp_replace(coalesce(new.contratante_cnpj, ''), '\D', '', 'g'), '');
+  new.contratante_cpf  := nullif(regexp_replace(coalesce(new.contratante_cpf, ''), '\D', '', 'g'), '');
+  new.imovel_endereco    := nullif(btrim(new.imovel_endereco), '');
+  new.processo_urbanismo := nullif(btrim(new.processo_urbanismo), '');
   new.atualizado_em := now();
 
   -- Empresa sem cadastro: executora só em licença anterior à Resolução;
@@ -68,6 +80,29 @@ begin
   end if;
   if not v_anterior and new.setor <> 'drenagem' and new.contratante_razao_social is not null then
     raise exception 'Contratante sem cadastro no CADEX só é aceita em drenagem ou em licença com decisão anterior a 09/09/2026.';
+  end if;
+
+  if new.contratante_cpf is not null and (new.contratante_razao_social is null or new.contratante_cnpj is not null) then
+    raise exception 'O CPF é só do contratante sem cadastro pessoa física: informe o nome e o CPF, ou o CNPJ.';
+  end if;
+
+  -- Drenagem (ligação de imóvel particular à rede pública): imóvel,
+  -- processo no Urbanismo e quem contratou, com CPF ou CNPJ. Dispensa o
+  -- contratante quando a própria construtora executa.
+  if new.setor = 'drenagem' and not v_anterior then
+    if new.imovel_endereco is null then
+      raise exception 'Drenagem: informe o endereço do imóvel atendido.';
+    end if;
+    if new.processo_urbanismo is null then
+      raise exception 'Drenagem: informe o processo de licenciamento da obra no Urbanismo.';
+    end if;
+    if new.contratante_razao_social is not null and new.contratante_cpf is null and new.contratante_cnpj is null then
+      raise exception 'Drenagem: informe o CPF ou o CNPJ do dono do imóvel.';
+    end if;
+    if new.contratante_id is null and new.contratante_razao_social is null
+       and not exists (select 1 from empresas where id = new.executora_id and tipo = 'construtora') then
+      raise exception 'Drenagem: informe o dono do imóvel ou a construtora contratante.';
+    end if;
   end if;
 
   -- Partes (art. 2º, II, III e VIII): todas atuam no setor da licença.
@@ -159,7 +194,8 @@ begin
                               jsonb_build_object('razao_social', new.executora_razao_social, 'cnpj', new.executora_cnpj)),
         'contratante', coalesce(public.empresa_resumo(new.contratante_id),
                                 case when new.contratante_razao_social is not null then
-                                  jsonb_build_object('razao_social', new.contratante_razao_social, 'cnpj', new.contratante_cnpj) end),
+                                  jsonb_build_object('razao_social', new.contratante_razao_social, 'cnpj', new.contratante_cnpj,
+                                                     'cpf', new.contratante_cpf) end),
         'subcontratada', public.empresa_resumo(new.subcontratada_id));
     end if;
   elsif new.situacao <> 'cancelada' then
@@ -188,7 +224,7 @@ $$;
 
 revoke execute on function public.licencas_antes_de_gravar() from public, anon, authenticated;
 
--- Gravação: passa a levar o setor.
+-- Gravação: passa a levar o setor e os dados da drenagem.
 create or replace function public.salvar_licenca(p_licenca jsonb, p_trechos jsonb)
 returns uuid language plpgsql security invoker
 set search_path = public as $$
@@ -204,11 +240,11 @@ begin
   if v_id is null then
     insert into licencas (setor, processo_sei, numero, tipos_obra, escopo, executora_id, executora_razao_social,
                           executora_cnpj, contratante_id, contratante_razao_social, contratante_cnpj,
-                          subcontratada_id, responsavel_tecnico_id, art_numero, protocolo_data,
+                          contratante_cpf, imovel_endereco, processo_urbanismo, subcontratada_id, responsavel_tecnico_id, art_numero, protocolo_data,
                           situacao, decisao_data, inicio_previsto, fim_previsto, observacoes)
     values (r.setor, r.processo_sei, r.numero, r.tipos_obra, r.escopo, r.executora_id, r.executora_razao_social,
             r.executora_cnpj, r.contratante_id, r.contratante_razao_social, r.contratante_cnpj,
-            r.subcontratada_id, r.responsavel_tecnico_id, r.art_numero, r.protocolo_data,
+            r.contratante_cpf, r.imovel_endereco, r.processo_urbanismo, r.subcontratada_id, r.responsavel_tecnico_id, r.art_numero, r.protocolo_data,
             case when v_sit = 'deferida' then 'em_analise' else v_sit end,
             r.decisao_data, r.inicio_previsto, r.fim_previsto, r.observacoes)
     returning id into v_id;
@@ -218,6 +254,8 @@ begin
       executora_id = r.executora_id, executora_razao_social = r.executora_razao_social,
       executora_cnpj = r.executora_cnpj, contratante_id = r.contratante_id,
       contratante_razao_social = r.contratante_razao_social, contratante_cnpj = r.contratante_cnpj,
+      contratante_cpf = r.contratante_cpf, imovel_endereco = r.imovel_endereco,
+      processo_urbanismo = r.processo_urbanismo,
       subcontratada_id = r.subcontratada_id, responsavel_tecnico_id = r.responsavel_tecnico_id,
       art_numero = r.art_numero, protocolo_data = r.protocolo_data, decisao_data = r.decisao_data,
       inicio_previsto = r.inicio_previsto, fim_previsto = r.fim_previsto, observacoes = r.observacoes
@@ -266,7 +304,7 @@ $$;
 revoke execute on function public.salvar_licenca(jsonb, jsonb) from public, anon;
 grant  execute on function public.salvar_licenca(jsonb, jsonb) to authenticated;
 
--- Página pública: setor.
+-- Página pública: setor e endereço do imóvel (drenagem).
 create or replace function public.licenca_publica(p_codigo text)
 returns jsonb language sql stable security definer
 set search_path = public as $$
@@ -279,6 +317,7 @@ set search_path = public as $$
     'fim_previsto', l.fim_previsto,
     'concluida_em', l.concluida_em,
     'setor', l.setor,
+    'imovel_endereco', l.imovel_endereco,
     'anterior_resolucao', l.anterior_resolucao and l.setor = 'telecom',
     'situacao', case
       when l.situacao = 'cancelada' then 'cancelada'
@@ -296,7 +335,8 @@ set search_path = public as $$
     'contratante', case
       when co.id is not null then jsonb_build_object(
         'razao_social', co.razao_social, 'nome_fantasia', co.nome_fantasia, 'codigo_cadex', co.codigo_cadex)
-      when l.contratante_razao_social is not null then jsonb_build_object(
+      -- Pessoa física (CPF): o nome não é publicado (LGPD).
+      when l.contratante_razao_social is not null and l.contratante_cpf is null then jsonb_build_object(
         'razao_social', l.contratante_razao_social, 'nome_fantasia', null, 'codigo_cadex', null) end,
     'trechos', coalesce((
       select jsonb_agg(jsonb_build_object(
@@ -315,7 +355,7 @@ $$;
 revoke execute on function public.licenca_publica(text) from public;
 grant  execute on function public.licenca_publica(text) to anon, authenticated;
 
--- Mapa público: setor.
+-- Mapa público: setor; sem o nome de contratante pessoa física.
 create or replace function public.obras_publicas()
 returns jsonb language sql stable security definer
 set search_path = public as $$
@@ -336,7 +376,8 @@ set search_path = public as $$
         when hoje.d > l.fim_previsto then 'prazo_encerrado'
         else 'vigente' end,
       'executora', coalesce(nullif(btrim(ex.nome_fantasia), ''), ex.razao_social, l.executora_razao_social),
-      'contratante', coalesce(nullif(btrim(co.nome_fantasia), ''), co.razao_social, l.contratante_razao_social),
+      'contratante', coalesce(nullif(btrim(co.nome_fantasia), ''), co.razao_social,
+                              case when l.contratante_cpf is null then l.contratante_razao_social end),
       'trechos', coalesce((
         select jsonb_agg(jsonb_build_object(
                  'logradouro', t.logradouro, 'bairro', t.bairro,
