@@ -11,6 +11,8 @@ import EmpresaPage from './pages/EmpresaPage';
 import Ficha from './pages/Ficha';
 import Contas from './pages/Contas';
 import MinhaConta from './pages/MinhaConta';
+import Licencas from './pages/Licencas';
+import LicencaPage from './pages/LicencaPage';
 import { CadastrarMfa, ConfirmarMfa } from './pages/Mfa';
 
 export function App() {
@@ -62,6 +64,9 @@ function AreaRestrita() {
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="empresas/nova" element={<EmpresaPage />} />
         <Route path="empresas/:id" element={<EmpresaPage />} />
+        <Route path="obras" element={<Licencas />} />
+        <Route path="obras/nova" element={<LicencaPage />} />
+        <Route path="obras/:id" element={<LicencaPage />} />
         <Route path="contas" element={<Contas />} />
         <Route path="minha-conta" element={<MinhaConta />} />
         <Route path="*" element={<Navigate to="/" replace />} />

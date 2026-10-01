@@ -14,6 +14,7 @@ import {
 } from '../lib/empresas';
 import { ResumoBadge } from './Empresas';
 import { Inscricao } from './Inscricao';
+import { LicencasDaEmpresa } from './Licencas';
 import { Operacional } from './Operacional';
 
 const VAZIA: EmpresaInput = {
@@ -130,6 +131,8 @@ export default function EmpresaPage() {
       {empresa && <Vinculos empresa={empresa} todas={todas} podeEditar={podeEditar} />}
 
       {empresa && <Operacional empresa={empresa} operadoras={operadoras} podeEditar={podeEditar} />}
+
+      {empresa && <LicencasDaEmpresa empresa={empresa} todas={todas} />}
 
       {/* Documentos têm dados pessoais de sócios e procuradores: só a SECONSER vê. */}
       {empresa && podeEditar && <Documentos empresa={empresa} />}

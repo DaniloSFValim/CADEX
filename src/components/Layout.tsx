@@ -13,6 +13,7 @@ export function Layout() {
         itens={[
           ...(isGestor ? [{ rotulo: 'Painel', para: '/dashboard' }] : []),
           { rotulo: 'Empresas', para: '/', fim: true },
+          { rotulo: 'Obras', para: '/obras' },
           { rotulo: 'Consulta pública', para: '/consulta' },
           ...(servidor?.administrador ? [{ rotulo: 'Contas', para: '/contas' }] : []),
         ]}
