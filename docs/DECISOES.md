@@ -79,3 +79,12 @@ próprio (ex.: analista de licenciamento), as políticas de `licencas` e
 - Novos tipos de obra: ligação predial, galeria de drenagem, boca de lobo e
   recomposição de pavimento.
 - Mapa e consulta pública ganham filtro por setor.
+
+### Encerramento automático da sessão (01/10/2026)
+- Sem uso por **30 minutos**, a sessão encerra (aviso com contagem no último
+  minuto, "Continuar conectado"); **12 horas** depois do login com senha, pede
+  login de novo mesmo em uso. Vale para todas as abas do navegador.
+- "Sair" encerra só este navegador; "Sair de todos os dispositivos" (Minha
+  conta) encerra a sessão em todos os computadores e celulares.
+- A proteção roda no navegador (computador esquecido aberto). Limite de sessão
+  no servidor depende das configurações do Supabase (Authentication → Sessions).

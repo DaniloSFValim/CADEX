@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
+import { GuardaSessao } from './components/GuardaSessao';
 import { Layout } from './components/Layout';
 import { Button, Spinner } from './components/ui';
 import { useAuth } from './lib/auth';
@@ -21,6 +22,8 @@ import { CadastrarMfa, ConfirmarMfa } from './pages/Mfa';
 
 export function App() {
   return (
+    <>
+    <GuardaSessao />
     <Routes>
       {/* Consulta pública: aberta, com ou sem login (art. 7º, § 2º). */}
       <Route path="consulta" element={<Consulta />} />
@@ -29,6 +32,7 @@ export function App() {
       <Route path="licenca/:codigo" element={<LicencaPublica />} />
       <Route path="*" element={<AreaRestrita />} />
     </Routes>
+    </>
   );
 }
 

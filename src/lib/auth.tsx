@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
+import { registrarAtividade } from './sessao';
 import { supabase } from './supabase';
 
 export type Papel = 'gestor' | 'cisp';
@@ -37,7 +38,10 @@ interface AuthState {
   podeEditar: boolean;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
+  /** Sai só neste navegador. */
   signOut: () => Promise<void>;
+  /** Encerra a sessão em todos os computadores e celulares. */
+  signOutTodos: () => Promise<void>;
 }
 
 const Ctx = createContext<AuthState | null>(null);
@@ -97,8 +101,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signIn: async (email, password) => {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
+      registrarAtividade();
     },
-    signOut: async () => { await supabase.auth.signOut(); },
+    // O padrão do Supabase é 'global'; "Sair" encerra só este navegador.
+    signOut: async () => { await supabase.auth.signOut({ scope: 'local' }); },
+    signOutTodos: async () => {
+      const { error } = await supabase.auth.signOut({ scope: 'global' });
+      if (error) throw error;
+    },
   }), [session, servidor, mfa, loading]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
