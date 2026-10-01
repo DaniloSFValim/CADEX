@@ -1,7 +1,15 @@
 import { BUCKET, BUCKET_LOGOS, supabase } from './supabase';
 import { onlyDigits } from './cnpj';
 
-export type Tipo = 'operadora' | 'terceirizada';
+/**
+ * Papel da empresa. Operadora (telecom), concessionária (gás ou
+ * saneamento) e construtora contratam; terceirizada executa.
+ */
+export type Tipo = 'operadora' | 'concessionaria' | 'construtora' | 'terceirizada';
+/** Setores de obras e serviços em via pública. */
+export type Setor = 'telecom' | 'gas' | 'saneamento' | 'drenagem' | 'construcao';
+/** Perfil que define os documentos exigidos (tipos_documento.perfis). */
+export type Perfil = 'telecom' | 'gas' | 'saneamento' | 'construtora' | 'terceirizada';
 /** Situação da inscrição no CADEX (arts. 7º e 8º). */
 export type Situacao = 'em_analise' | 'apta' | 'em_saneamento' | 'inapta' | 'indeferida';
 /** Situação exibida: inclui VENCIDA, calculada pela validade. */
@@ -14,6 +22,9 @@ export interface Empresa {
   razao_social: string;
   nome_fantasia: string | null;
   tipo: Tipo;
+  /** Operadora: telecom. Concessionária: gás ou saneamento. Construtora:
+   *  construção. Terceirizada: um ou mais. */
+  setores: Setor[];
   email: string;
   telefone: string | null;
   cep: string | null;
@@ -39,7 +50,7 @@ export interface Empresa {
 
 /** Dados cadastrais editáveis no formulário da empresa. */
 export type EmpresaInput = Pick<Empresa,
-  'cnpj' | 'razao_social' | 'nome_fantasia' | 'tipo' | 'email' | 'telefone' | 'cep' | 'logradouro'
+  'cnpj' | 'razao_social' | 'nome_fantasia' | 'tipo' | 'setores' | 'email' | 'telefone' | 'cep' | 'logradouro'
   | 'numero' | 'complemento' | 'bairro' | 'cidade' | 'uf' | 'observacoes'>;
 
 /** Dados da inscrição, alterados pela SECONSER. */
@@ -64,6 +75,8 @@ export interface TipoDocumento {
   obrigatorio: boolean;
   tem_validade: boolean;
   ordem: number;
+  /** Perfis que entregam o documento (telecom, gás, saneamento, construtora, terceirizada). */
+  perfis?: Perfil[];
 }
 
 export interface Documento {
@@ -80,8 +93,49 @@ export interface Documento {
 
 export const TIPO_LABEL: Record<Tipo, string> = {
   operadora: 'Operadora',
+  concessionaria: 'Concessionária',
+  construtora: 'Construtora',
   terceirizada: 'Terceirizada',
 };
+
+export const SETOR_LABEL: Record<Setor, string> = {
+  telecom: 'Telecomunicações',
+  gas: 'Gás',
+  saneamento: 'Saneamento',
+  drenagem: 'Drenagem',
+  construcao: 'Construção civil',
+};
+
+export const SETORES = Object.keys(SETOR_LABEL) as Setor[];
+
+/** Quem contrata (operadora, concessionária, construtora), em oposição à terceirizada. */
+export const ehContratante = (t: Tipo) => t !== 'terceirizada';
+
+/** Descrição curta: "Concessionária de gás", "Terceirizada: gás, drenagem"… */
+export function descricaoEmpresa(e: Pick<Empresa, 'tipo' | 'setores'>): string {
+  const setores = e.setores.map((s) => SETOR_LABEL[s].toLowerCase());
+  switch (e.tipo) {
+    case 'operadora': return 'Operadora de telecomunicações';
+    case 'concessionaria': return `Concessionária de ${setores[0] ?? ''}`.trim();
+    case 'construtora': return 'Construtora';
+    default: return setores.length ? `Terceirizada: ${setores.join(', ')}` : 'Terceirizada';
+  }
+}
+
+/** Mesma regra de perfil_documental no banco. */
+export function perfilDocumental(e: Pick<Empresa, 'tipo' | 'setores'>): Perfil {
+  if (e.tipo === 'operadora') return 'telecom';
+  if (e.tipo === 'concessionaria') return (e.setores[0] as Perfil) ?? 'gas';
+  return e.tipo;
+}
+
+/** Documentos exigidos desta empresa. */
+export const tiposDaEmpresa = (tipos: TipoDocumento[], e: Pick<Empresa, 'tipo' | 'setores'>) =>
+  tipos.filter((t) => !t.perfis || t.perfis.includes(perfilDocumental(e)));
+
+/** Mesma regra de empresa_atua_no_setor no banco. */
+export const atuaNoSetor = (e: Pick<Empresa, 'tipo' | 'setores'>, s: Setor) =>
+  e.tipo === 'construtora' ? s === 'construcao' || s === 'drenagem' : e.setores.includes(s);
 
 export const SITUACAO_LABEL: Record<SituacaoEfetiva, string> = {
   em_analise: 'EM ANÁLISE',
@@ -431,6 +485,7 @@ export interface LinhaPublica {
   nome_fantasia: string | null;
   cnpj: string;
   tipo: Tipo;
+  setores: Setor[];
   situacao: SituacaoEfetiva;
   validade_ate: string | null;
   portaria_numero: string | null;

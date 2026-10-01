@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { anosDasObras, filtrarObras, obrasParaGeoJSON, type ObraPublica } from './obras';
 
 const obra = (o: Partial<ObraPublica>): ObraPublica => ({
-  codigo: 'c1', numero: '001/2026', tipos_obra: ['vala'], escopo: 'Rede', inicio_previsto: '2026-10-01',
+  codigo: 'c1', setor: 'telecom', numero: '001/2026', tipos_obra: ['vala'], escopo: 'Rede', inicio_previsto: '2026-10-01',
   fim_previsto: '2026-10-30', decisao_data: '2026-09-20', situacao: 'vigente', executora: 'Rede Fibra',
   contratante: 'Oi', trechos: [{ logradouro: 'Rua Mem de Sá', bairro: 'Icaraí', inicio: [-43.11, -22.905], fim: null }],
   ...o,

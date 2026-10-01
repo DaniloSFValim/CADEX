@@ -51,10 +51,10 @@ declare op uuid; te uuid; sub uuid; rt uuid; lic uuid;
 begin
   insert into empresas (cnpj, razao_social, tipo, email)
   values ('12345678000195', 'Operadora Licença S.A.', 'operadora', 'op@l.test') returning id into op;
-  insert into empresas (cnpj, razao_social, tipo, email)
-  values ('98765432000198', 'Executora Licença Ltda.', 'terceirizada', 'te@l.test') returning id into te;
-  insert into empresas (cnpj, razao_social, tipo, email)
-  values ('11444777000161', 'Subcontratada Licença Ltda.', 'terceirizada', 'sub@l.test') returning id into sub;
+  insert into empresas (cnpj, razao_social, tipo, email, setores)
+  values ('98765432000198', 'Executora Licença Ltda.', 'terceirizada', 'te@l.test', '{telecom}') returning id into te;
+  insert into empresas (cnpj, razao_social, tipo, email, setores)
+  values ('11444777000161', 'Subcontratada Licença Ltda.', 'terceirizada', 'sub@l.test', '{telecom}') returning id into sub;
   insert into vinculos (contratante_id, contratada_id) values (op, te);
   insert into responsaveis_tecnicos (empresa_id, nome, cpf, conselho, registro_numero)
   values (te, 'Eng. Fulano', '52998224725', 'CREA', 'RJ-123') returning id into rt;
@@ -62,37 +62,37 @@ begin
 
   -- Processo SEI no formato do setor licenciador
   -- Processo em texto livre (SEI ou numeração anterior), mas não vazio
-  perform pg_temp.recusa(format($q$insert into licencas (processo_sei, tipos_obra, escopo, executora_id, contratante_id, protocolo_data)
-    values ('   ', '{vala}', 'x', %L, %L, '2026-09-01')$q$, te, op),
+  perform pg_temp.recusa(format($q$insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id, contratante_id, protocolo_data)
+    values ('telecom', '   ', '{vala}', 'x', %L, %L, '2026-09-01')$q$, te, op),
     'licencas_processo_check', 'aceitou processo vazio');
 
   -- Terceirizada sem concessionária contratante
-  perform pg_temp.recusa(format($q$insert into licencas (processo_sei, tipos_obra, escopo, executora_id, protocolo_data)
-    values ('NIT-050120/000123/2026', '{vala}', 'x', %L, '2026-09-01')$q$, te),
+  perform pg_temp.recusa(format($q$insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id, protocolo_data)
+    values ('telecom', 'NIT-050120/000123/2026', '{vala}', 'x', %L, '2026-09-01')$q$, te),
     'informe a concessionária', 'aceitou terceirizada sem contratante');
 
   -- Tipo de obra fora do art. 10
-  perform pg_temp.recusa(format($q$insert into licencas (processo_sei, tipos_obra, escopo, executora_id, contratante_id, protocolo_data)
-    values ('NIT-050120/000123/2026', '{pintura}', 'x', %L, %L, '2026-09-01')$q$, te, op),
+  perform pg_temp.recusa(format($q$insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id, contratante_id, protocolo_data)
+    values ('telecom', 'NIT-050120/000123/2026', '{pintura}', 'x', %L, %L, '2026-09-01')$q$, te, op),
     'licencas_tipos_obra_check', 'aceitou tipo de obra fora do art. 10');
 
   -- Subcontratada sem vínculo com a executora
-  perform pg_temp.recusa(format($q$insert into licencas (processo_sei, tipos_obra, escopo, executora_id, contratante_id, subcontratada_id, protocolo_data)
-    values ('NIT-050120/000123/2026', '{vala}', 'x', %L, %L, %L, '2026-09-01')$q$, te, op, sub),
+  perform pg_temp.recusa(format($q$insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id, contratante_id, subcontratada_id, protocolo_data)
+    values ('telecom', 'NIT-050120/000123/2026', '{vala}', 'x', %L, %L, %L, '2026-09-01')$q$, te, op, sub),
     'vínculo ativo', 'aceitou subcontratada sem vínculo');
   insert into vinculos (contratante_id, contratada_id) values (te, sub);
 
   -- Pedido válido, em análise; processo normalizado para maiúsculas
-  insert into licencas (processo_sei, tipos_obra, escopo, executora_id, contratante_id, subcontratada_id,
+  insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id, contratante_id, subcontratada_id,
                         responsavel_tecnico_id, protocolo_data)
-  values (' nit-050120/000123/2026 ', '{vala,rede}', 'Expansão de rede em vala', te, op, sub, rt, '2026-09-01')
+  values ('telecom', ' nit-050120/000123/2026 ', '{vala,rede}', 'Expansão de rede em vala', te, op, sub, rt, '2026-09-01')
   returning id into lic;
   insert into ids values ('lic', lic);
   perform pg_temp.assert((select processo_sei from licencas where id = lic) = 'NIT-050120/000123/2026',
     'processo SEI não normalizado');
 
-  perform pg_temp.recusa(format($q$insert into licencas (processo_sei, tipos_obra, escopo, executora_id, contratante_id, protocolo_data)
-    values ('NIT-050120/000123/2026', '{vala}', 'x', %L, %L, '2026-09-01')$q$, te, op),
+  perform pg_temp.recusa(format($q$insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id, contratante_id, protocolo_data)
+    values ('telecom', 'NIT-050120/000123/2026', '{vala}', 'x', %L, %L, '2026-09-01')$q$, te, op),
     'licencas_processo_sei_key', 'aceitou processo SEI repetido');
 
   -- Trecho com latitude e longitude trocadas
@@ -150,8 +150,8 @@ begin
   perform pg_temp.assert((select empresas_no_deferimento -> 'executora' ->> 'situacao' from licencas where id = lic) = 'apta',
     'foto do deferimento mudou com a empresa');
 
-  perform pg_temp.recusa(format($q$insert into licencas (processo_sei, numero, tipos_obra, escopo, executora_id, contratante_id, protocolo_data)
-    values ('NIT-050120/000999/2026', 'LIC 001/2026', '{poste}', 'x', %L, %L, '2026-09-01')$q$, te, op),
+  perform pg_temp.recusa(format($q$insert into licencas (setor, processo_sei, numero, tipos_obra, escopo, executora_id, contratante_id, protocolo_data)
+    values ('telecom', 'NIT-050120/000999/2026', 'LIC 001/2026', '{poste}', 'x', %L, %L, '2026-09-01')$q$, te, op),
     'licencas_numero_key', 'aceitou número de licença repetido');
 
   perform pg_temp.recusa(format($q$update licencas set situacao = 'em_analise' where id = %L$q$, lic),
@@ -186,7 +186,7 @@ declare te uuid := (select id from ids where nome = 'te');
 begin
   -- Nova e já deferida numa chamada (executora em saneamento continua apta)
   lic := public.salvar_licenca(jsonb_build_object(
-      'processo_sei', 'NIT-050120/000200/2026', 'numero', 'LIC 002/2026', 'tipos_obra', array['poste'],
+      'setor', 'telecom', 'processo_sei', 'NIT-050120/000200/2026', 'numero', 'LIC 002/2026', 'tipos_obra', array['poste'],
       'escopo', 'Implantação de poste', 'executora_id', te, 'contratante_id', op, 'art_numero', 'ART-2',
       'protocolo_data', '2026-09-02', 'situacao', 'deferida', 'decisao_data', '2026-09-25',
       'inicio_previsto', '2026-10-05', 'fim_previsto', '2026-10-10'),
@@ -208,7 +208,7 @@ begin
 
   -- Falha no trecho desfaz a licença inteira
   perform pg_temp.recusa(format($q$select public.salvar_licenca(jsonb_build_object(
-      'processo_sei', 'NIT-050120/000300/2026', 'tipos_obra', array['vala'], 'escopo', 'x',
+      'setor', 'telecom', 'processo_sei', 'NIT-050120/000300/2026', 'tipos_obra', array['vala'], 'escopo', 'x',
       'executora_id', %L, 'contratante_id', %L, 'protocolo_data', '2026-09-03'),
     jsonb_build_array(jsonb_build_object('logradouro', 'Rua X', 'inicio_lat', 10, 'inicio_lng', 10)))$q$, te, op),
     'licenca_trechos_inicio_lat_check', 'RPC aceitou trecho fora de Niterói');

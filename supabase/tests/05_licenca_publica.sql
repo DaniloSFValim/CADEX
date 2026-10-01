@@ -32,20 +32,20 @@ declare op uuid; ex uuid; deferida uuid; analise uuid; hoje date := (now() at ti
 begin
   insert into empresas (cnpj, razao_social, nome_fantasia, tipo, email)
   values ('12345678000195', 'Operadora Pública S.A.', 'OpPub', 'operadora', 'op@p.test') returning id into op;
-  insert into empresas (cnpj, razao_social, tipo, email)
-  values ('11444777000161', 'Executora Pública Ltda.', 'terceirizada', 'ex@p.test') returning id into ex;
+  insert into empresas (cnpj, razao_social, tipo, email, setores)
+  values ('11444777000161', 'Executora Pública Ltda.', 'terceirizada', 'ex@p.test', '{telecom}') returning id into ex;
   insert into vinculos (contratante_id, contratada_id) values (op, ex);
   update empresas set situacao = 'apta', portaria_numero = 'P-9', portaria_data = hoje - 5 where id = ex;
 
   deferida := public.salvar_licenca(jsonb_build_object(
-      'processo_sei', 'NIT-050120/000777/2026', 'numero', '077/2026', 'tipos_obra', array['vala'],
+      'setor', 'telecom', 'processo_sei', 'NIT-050120/000777/2026', 'numero', '077/2026', 'tipos_obra', array['vala'],
       'escopo', 'Travessia de rede', 'executora_id', ex, 'contratante_id', op, 'art_numero', 'ART-SIGILO',
       'observacoes', 'nota interna', 'protocolo_data', hoje - 20, 'situacao', 'deferida', 'decisao_data', hoje - 10,
       'inicio_previsto', hoje - 1, 'fim_previsto', hoje + 30),
     jsonb_build_array(jsonb_build_object('logradouro', 'Rua Gavião Peixoto', 'bairro', 'Icaraí',
       'inicio_lat', -22.9035, 'inicio_lng', -43.1102)));
   analise := public.salvar_licenca(jsonb_build_object(
-      'processo_sei', 'NIT-050120/000778/2026', 'tipos_obra', array['poste'], 'escopo', 'Poste',
+      'setor', 'telecom', 'processo_sei', 'NIT-050120/000778/2026', 'tipos_obra', array['poste'], 'escopo', 'Poste',
       'executora_id', ex, 'contratante_id', op, 'protocolo_data', hoje),
     jsonb_build_array(jsonb_build_object('logradouro', 'Rua X', 'inicio_lat', -22.9, 'inicio_lng', -43.1)));
 

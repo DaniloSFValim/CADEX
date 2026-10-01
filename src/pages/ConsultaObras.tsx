@@ -5,6 +5,7 @@ import { Cabecalho, MENU_PUBLICO } from '../components/Cabecalho';
 import { Rodape } from '../components/Rodape';
 import { Empty, ErrorNote, Spinner, inputClass } from '../components/ui';
 import { dataBR } from '../components/Situacao';
+import { SETORES, SETOR_LABEL } from '../lib/empresas';
 import { TIPO_OBRA_LABEL } from '../lib/licencas';
 import {
   COR_SITUACAO, FILTRO_OBRAS, SITUACAO_PUBLICA_LABEL, anosDasObras, buscarObrasPublicas, filtrarObras,
@@ -20,12 +21,13 @@ export default function ConsultaObras() {
   const [error, setError] = useState<unknown>(null);
   const [situacao, setSituacao] = useState('vigentes');
   const [ano, setAno] = useState('');
+  const [setor, setSetor] = useState('');
   const [busca, setBusca] = useState('');
   const [foco, setFoco] = useState<string | null>(null);
 
   useEffect(() => { buscarObrasPublicas().then(setObras).catch(setError); }, []);
 
-  const filtradas = useMemo(() => filtrarObras(obras ?? [], { situacao, ano, busca }), [obras, situacao, ano, busca]);
+  const filtradas = useMemo(() => filtrarObras(obras ?? [], { situacao, ano, busca, setor }), [obras, situacao, ano, busca, setor]);
   const anos = useMemo(() => anosDasObras(obras ?? []), [obras]);
 
   return (
@@ -44,9 +46,13 @@ export default function ConsultaObras() {
 
         <AbasConsulta />
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_260px_140px]">
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_190px_240px_140px]">
           <input className={inputClass} value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar obra"
                  placeholder="Rua, bairro, empresa ou nº da licença" />
+          <select className={inputClass} value={setor} onChange={(e) => setSetor(e.target.value)} aria-label="Setor">
+            <option value="">Todos os setores</option>
+            {SETORES.map((st) => <option key={st} value={st}>{SETOR_LABEL[st]}</option>)}
+          </select>
           <select className={inputClass} value={situacao} onChange={(e) => setSituacao(e.target.value)} aria-label="Situação">
             {FILTRO_OBRAS.map((f) => <option key={f.valor} value={f.valor}>{f.rotulo}</option>)}
           </select>

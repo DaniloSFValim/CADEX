@@ -6,8 +6,8 @@ import { BARRA, SituacaoBadge } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { formatCnpj, onlyDigits } from '../lib/cnpj';
 import {
-  FILTRO_SITUACAO, TIPO_LABEL, situacoesDoFiltro, hojeISO, situacaoEfetiva, listarDocumentos, listarEmpresas, listarTiposDocumento, listarVinculos,
-  nomeEmpresa, resumoDocumentos, type Documento, type Empresa, type Resumo, type SituacaoEfetiva, type TipoDocumento,
+  FILTRO_SITUACAO, SETORES, SETOR_LABEL, atuaNoSetor, descricaoEmpresa, tiposDaEmpresa, situacoesDoFiltro, hojeISO, situacaoEfetiva, listarDocumentos, listarEmpresas, listarTiposDocumento, listarVinculos,
+  nomeEmpresa, resumoDocumentos, type Documento, type Empresa, type Resumo, type Setor, type SituacaoEfetiva, type TipoDocumento,
   type Vinculo,
 } from '../lib/empresas';
 
@@ -27,6 +27,7 @@ export default function Empresas() {
   const [error, setError] = useState<unknown>(null);
   const [busca, setBusca] = useState('');
   const [tipo, setTipo] = useState('');
+  const [setor, setSetor] = useState('');
   const [situacao, setSituacao] = useState('');
   const [exportando, setExportando] = useState(false);
 
@@ -52,12 +53,13 @@ export default function Empresas() {
     const qCod = busca.trim().toUpperCase();
     return (empresas ?? []).filter((e) =>
       (!tipo || e.tipo === tipo)
+      && (!setor || atuaNoSetor(e, setor as Setor))
       && situacoesDoFiltro(situacao).includes(situacaoEfetiva(e, hoje))
       && (!q || e.razao_social.toLowerCase().includes(q)
           || (e.nome_fantasia ?? '').toLowerCase().includes(q)
           || e.codigo_cadex.includes(qCod)
           || (qDig.length >= 3 && e.cnpj.includes(qDig))));
-  }, [empresas, busca, tipo, situacao, hoje]);
+  }, [empresas, busca, tipo, setor, situacao, hoje]);
 
   return (
     <>
@@ -78,12 +80,12 @@ export default function Empresas() {
         const terceirizadas = empresas.filter((e) => e.tipo === 'terceirizada').length;
         const saneamento = n((x) => x === 'em_saneamento');
         const pendentes = podeEditar
-          ? empresas.filter((e) => resumoDocumentos(tipos, docs.filter((d) => d.empresa_id === e.id), hoje).faltando > 0).length
+          ? empresas.filter((e) => resumoDocumentos(tiposDaEmpresa(tipos, e), docs.filter((d) => d.empresa_id === e.id), hoje).faltando > 0).length
           : null;
         return (
           <div className="mb-10 grid grid-cols-2 gap-x-8 gap-y-6 md:grid-cols-4">
             <Kpi rotulo="Cadastradas" valor={empresas.length}
-                 detalhe={`${empresas.length - terceirizadas} operadora${empresas.length - terceirizadas === 1 ? '' : 's'}, ${terceirizadas} terceirizada${terceirizadas === 1 ? '' : 's'}`} />
+                 detalhe={`${empresas.length - terceirizadas} contratante${empresas.length - terceirizadas === 1 ? '' : 's'}, ${terceirizadas} terceirizada${terceirizadas === 1 ? '' : 's'}`} />
             <Kpi rotulo="Aptas" valor={n((x) => x === 'apta' || x === 'em_saneamento')} tom="alta"
                  detalhe={saneamento ? `${saneamento} em saneamento` : 'podem atuar'} />
             <Kpi rotulo="Em análise" valor={n((x) => x === 'em_analise')} detalhe="aguardando decisão" />
@@ -99,7 +101,7 @@ export default function Empresas() {
           contexto={{
             hoje, porId, vinculos,
             resumoDocs: podeEditar
-              ? (e) => resumoDocumentos(tipos, docs.filter((d) => d.empresa_id === e.id), hoje)
+              ? (e) => resumoDocumentos(tiposDaEmpresa(tipos, e), docs.filter((d) => d.empresa_id === e.id), hoje)
               : undefined,
           }}
           podeVerDocumentos={podeEditar}
@@ -110,13 +112,19 @@ export default function Empresas() {
       )}
 
       <section className="cartao">
-        <div className="grid gap-3 border-b border-tinta-200 p-4 sm:grid-cols-[1fr_200px_220px]">
+        <div className="grid gap-3 border-b border-tinta-200 p-4 sm:grid-cols-2 lg:grid-cols-[1fr_190px_190px_200px]">
           <input className={inputClass} placeholder="Buscar por nome, CNPJ ou código CADEX" value={busca}
                  onChange={(e) => setBusca(e.target.value)} aria-label="Buscar" />
           <select className={inputClass} value={tipo} onChange={(e) => setTipo(e.target.value)} aria-label="Tipo">
             <option value="">Todos os tipos</option>
-            <option value="operadora">Operadoras</option>
+            <option value="operadora">Operadoras de telecom</option>
+            <option value="concessionaria">Concessionárias</option>
+            <option value="construtora">Construtoras</option>
             <option value="terceirizada">Terceirizadas</option>
+          </select>
+          <select className={inputClass} value={setor} onChange={(e) => setSetor(e.target.value)} aria-label="Setor">
+            <option value="">Todos os setores</option>
+            {SETORES.map((s) => <option key={s} value={s}>{SETOR_LABEL[s]}</option>)}
           </select>
           <select className={inputClass} value={situacao} onChange={(e) => setSituacao(e.target.value)} aria-label="Situação">
             <option value="">Todas as situações</option>
@@ -149,7 +157,7 @@ export default function Empresas() {
                     .filter((v) => v.contratada_id === e.id && !v.fim)
                     .map((v) => porId.get(v.contratante_id))
                     .filter((o): o is Empresa => Boolean(o));
-                  const r = resumoDocumentos(tipos, docs.filter((d) => d.empresa_id === e.id), hoje);
+                  const r = resumoDocumentos(tiposDaEmpresa(tipos, e), docs.filter((d) => d.empresa_id === e.id), hoje);
                   return (
                     <tr key={e.id} className={tabela.linha}>
                       <td className={`${tabela.td} border-l-4 ${BARRA[situacaoEfetiva(e, hoje)]}`}>
@@ -161,7 +169,7 @@ export default function Empresas() {
                       <td className={`${tabela.td} tabular whitespace-nowrap text-xs text-tinta-700`}>{e.codigo_cadex}</td>
                       <td className={`${tabela.td} tabular whitespace-nowrap text-xs text-tinta-700`}>{formatCnpj(e.cnpj)}</td>
                       <td className={tabela.td}>
-                        {TIPO_LABEL[e.tipo]}
+                        {descricaoEmpresa(e)}
                         {contratantes.length > 0 && (
                           <div className="text-xs text-tinta-500">para {contratantes.map(nomeEmpresa).join(', ')}</div>
                         )}

@@ -5,7 +5,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { Empty, ErrorNote, Spinner, inputClass } from '../components/ui';
 import { BARRA, SituacaoBadge, dataBR } from '../components/Situacao';
 import { formatCnpj, onlyDigits } from '../lib/cnpj';
-import { FILTRO_SITUACAO, consultaPublica, situacoesDoFiltro, urlLogo, type LinhaPublica } from '../lib/empresas';
+import {
+  FILTRO_SITUACAO, SETORES, SETOR_LABEL, atuaNoSetor, consultaPublica, descricaoEmpresa, situacoesDoFiltro, urlLogo,
+  type LinhaPublica, type Setor,
+} from '../lib/empresas';
 
 /**
  * Consulta pública do CADEX (art. 7º, § 2º): aberta, sem login. Mostra só
@@ -20,6 +23,7 @@ export default function Consulta() {
   const [error, setError] = useState<unknown>(null);
   const [busca, setBusca] = useState('');
   const [situacao, setSituacao] = useState('');
+  const [setor, setSetor] = useState('');
 
   useEffect(() => { consultaPublica().then(setLinhas).catch(setError); }, []);
 
@@ -28,11 +32,12 @@ export default function Consulta() {
     const qDig = onlyDigits(busca);
     return (linhas ?? []).filter((l) =>
       situacoesDoFiltro(situacao).includes(l.situacao)
+      && (!setor || atuaNoSetor(l, setor as Setor))
       && (!q || l.razao_social.toLowerCase().includes(q)
           || (l.nome_fantasia ?? '').toLowerCase().includes(q)
           || l.codigo_cadex.toLowerCase().includes(q)
           || (qDig.length >= 3 && l.cnpj.includes(qDig))));
-  }, [linhas, busca, situacao]);
+  }, [linhas, busca, situacao, setor]);
 
   const temLogo = filtradas.some((l) => l.logo_arquivo);
 
@@ -56,7 +61,7 @@ export default function Consulta() {
 
         <AbasConsulta />
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_240px]">
+        <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_220px_220px]">
           <input className={`${inputClass} !py-3 !text-base`}
                  placeholder="Nome da empresa, CNPJ ou código CADEX"
                  value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar empresa" />
@@ -64,6 +69,11 @@ export default function Consulta() {
                   onChange={(e) => setSituacao(e.target.value)} aria-label="Situação">
             <option value="">Qualquer situação</option>
             {FILTRO_SITUACAO.map((f) => <option key={f.valor} value={f.valor}>{f.rotulo}</option>)}
+          </select>
+          <select className={`${inputClass} !py-3 !text-base`} value={setor}
+                  onChange={(e) => setSetor(e.target.value)} aria-label="Setor">
+            <option value="">Todos os setores</option>
+            {SETORES.map((s) => <option key={s} value={s}>{SETOR_LABEL[s]}</option>)}
           </select>
         </div>
 
@@ -108,7 +118,7 @@ export default function Consulta() {
                       <div className="font-semibold text-tinta-900">{l.razao_social}</div>
                       {l.nome_fantasia && <div className="text-sm text-tinta-600">{l.nome_fantasia}</div>}
                       <div className="mt-0.5 text-sm text-tinta-500">
-                        {l.tipo === 'operadora' ? 'Operadora de telecomunicações' : 'Terceirizada'}
+                        {descricaoEmpresa(l)}
                         {l.contratantes.length > 0 && `, contratada por ${l.contratantes.join(', ')}`}
                       </div>
                     </div>

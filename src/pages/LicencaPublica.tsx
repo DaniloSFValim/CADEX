@@ -4,7 +4,7 @@ import { Cabecalho, MENU_PUBLICO } from '../components/Cabecalho';
 import { Rodape } from '../components/Rodape';
 import { ErrorNote, Spinner, linkTexto } from '../components/ui';
 import { dataBR } from '../components/Situacao';
-import { SITUACAO_LABEL, type SituacaoEfetiva } from '../lib/empresas';
+import { SETOR_LABEL, SITUACAO_LABEL, type SituacaoEfetiva } from '../lib/empresas';
 import {
   TIPO_OBRA_LABEL, buscarLicencaPublica, linkMapa, type LicencaPublica as Dados, type SituacaoPublica,
 } from '../lib/licencas';
@@ -94,12 +94,14 @@ function Conteudo({ d }: { d: Dados }) {
           </span>
         </Item>
         {d.contratante && (
-          <Item rotulo="Concessionária contratante" largo>
+          <Item rotulo={d.setor === 'telecom' ? 'Concessionária contratante' : 'Contratante'} largo>
             {nome(d.contratante)}
             {d.contratante.codigo_cadex && <span className="block text-sm text-tinta-500">{d.contratante.codigo_cadex}</span>}
           </Item>
         )}
-        <Item rotulo="Tipo de obra" largo>{d.tipos_obra.map((t) => TIPO_OBRA_LABEL[t]).join(', ')}</Item>
+        <Item rotulo="Setor">{SETOR_LABEL[d.setor]}</Item>
+        {d.imovel_endereco && <Item rotulo="Imóvel atendido" largo>{d.imovel_endereco}</Item>}
+        <Item rotulo="Tipo de obra">{d.tipos_obra.map((t) => TIPO_OBRA_LABEL[t]).join(', ')}</Item>
         <Item rotulo="Escopo" largo>{d.escopo}</Item>
       </dl>
 

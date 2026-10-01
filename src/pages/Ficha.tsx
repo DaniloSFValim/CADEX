@@ -5,7 +5,7 @@ import { dataBR } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { formatCnpj, formatCpf } from '../lib/cnpj';
 import {
-  ESTADO_LABEL, SITUACAO_LABEL, TIPO_LABEL, buscarEmpresa, estadoDocumento, hojeISO,
+  ESTADO_LABEL, SITUACAO_LABEL, buscarEmpresa, descricaoEmpresa, tiposDaEmpresa, estadoDocumento, hojeISO,
   listarDaEmpresa, listarDocumentos, listarEmpresas, listarHistorico, listarTiposDocumento, listarVinculos,
   nomeEmpresa, situacaoEfetiva, ultimoPorTipo, urlLogo,
   type Documento, type Empresa, type Historico, type Registro, type TipoDocumento, type Vinculo,
@@ -55,7 +55,7 @@ export default function Ficha() {
       .then(([empresa, todas, vinculos, historico, rt, pessoal, veiculos, tipos, docs]) => setD({
         empresa, todas, vinculos, historico,
         rt: rt.filter((r) => r.ativo), pessoal: pessoal.filter((r) => r.ativo),
-        veiculos: veiculos.filter((r) => r.ativo), tipos, docs,
+        veiculos: veiculos.filter((r) => r.ativo), tipos: tiposDaEmpresa(tipos, empresa), docs,
       }))
       .catch(setError);
   }, [id, podeEditar]);
@@ -119,7 +119,7 @@ export default function Ficha() {
           <Bloco titulo="Dados cadastrais">
             <Grade itens={[
               ['CNPJ', formatCnpj(e.cnpj)],
-              ['Tipo', TIPO_LABEL[e.tipo]],
+              ['Tipo', descricaoEmpresa(e)],
               ['E-mail', e.email],
               ['Telefone', e.telefone],
               ['Endereço', [[e.logradouro, e.numero].filter(Boolean).join(', '), e.complemento, e.bairro,
