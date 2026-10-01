@@ -111,21 +111,21 @@ export default function Dashboard() {
       <Titulo titulo="Painel da gestão" descricao="Prazos da SECONSER que pedem atenção agora." />
 
       {/* KPIs */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="mb-10 grid grid-cols-1 gap-6 sm:grid-cols-3">
         <Kpi
-          rotulo="análises atrasadas"
+          rotulo="Análises atrasadas"
           valor={sumario?.analises_pendentes || 0}
           detalhe="requeridas há mais de 15 dias"
           tom={sumario?.analises_pendentes ? 'atencao' : undefined}
         />
         <Kpi
-          rotulo="saneamentos no fim do prazo"
+          rotulo="Saneamentos no fim do prazo"
           valor={sumario?.saneamentos_vencendo || 0}
           detalhe="vencem em até 7 dias"
           tom={sumario?.saneamentos_vencendo ? 'atencao' : undefined}
         />
         <Kpi
-          rotulo="inscrições por vencer"
+          rotulo="Inscrições por vencer"
           valor={sumario?.inscricoes_vencendo || 0}
           detalhe="validade termina em até 30 dias"
           tom={sumario?.inscricoes_vencendo ? 'atencao' : undefined}
@@ -140,12 +140,12 @@ export default function Dashboard() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="border-b border-tinta-200 bg-tinta-50 text-[13px] text-tinta-500">
+              <thead className="border-b border-tinta-200 text-tinta-400">
                 <tr>
-                  <th className="px-4 py-2 text-left font-semibold">Empresa</th>
-                  <th className="px-4 py-2 text-left font-semibold">CNPJ</th>
-                  <th className="px-4 py-2 text-left font-semibold">Requerida em</th>
-                  <th className="px-4 py-2 text-right font-semibold">Dias em análise</th>
+                  <th className="px-3 py-2.5 text-left font-medium">Empresa</th>
+                  <th className="px-3 py-2.5 text-left font-medium">CNPJ</th>
+                  <th className="px-3 py-2.5 text-left font-medium">Requerida em</th>
+                  <th className="px-3 py-2.5 text-right font-medium">Dias em análise</th>
                 </tr>
               </thead>
               <tbody>
@@ -176,13 +176,13 @@ export default function Dashboard() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="border-b border-tinta-200 bg-tinta-50 text-[13px] text-tinta-500">
+              <thead className="border-b border-tinta-200 text-tinta-400">
                 <tr>
-                  <th className="px-4 py-2 text-left font-semibold">Empresa</th>
-                  <th className="px-4 py-2 text-left font-semibold">CNPJ</th>
-                  <th className="px-4 py-2 text-left font-semibold">Notificada em</th>
-                  <th className="px-4 py-2 text-left font-semibold">Vence em</th>
-                  <th className="px-4 py-2 text-right font-semibold">Dias restantes</th>
+                  <th className="px-3 py-2.5 text-left font-medium">Empresa</th>
+                  <th className="px-3 py-2.5 text-left font-medium">CNPJ</th>
+                  <th className="px-3 py-2.5 text-left font-medium">Notificada em</th>
+                  <th className="px-3 py-2.5 text-left font-medium">Vence em</th>
+                  <th className="px-3 py-2.5 text-right font-medium">Dias restantes</th>
                 </tr>
               </thead>
               <tbody>
@@ -214,13 +214,13 @@ export default function Dashboard() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="border-b border-tinta-200 bg-tinta-50 text-[13px] text-tinta-500">
+              <thead className="border-b border-tinta-200 text-tinta-400">
                 <tr>
-                  <th className="px-4 py-2 text-left font-semibold">Empresa</th>
-                  <th className="px-4 py-2 text-left font-semibold">CNPJ</th>
-                  <th className="px-4 py-2 text-left font-semibold">Situação</th>
-                  <th className="px-4 py-2 text-left font-semibold">Vence em</th>
-                  <th className="px-4 py-2 text-right font-semibold">Dias restantes</th>
+                  <th className="px-3 py-2.5 text-left font-medium">Empresa</th>
+                  <th className="px-3 py-2.5 text-left font-medium">CNPJ</th>
+                  <th className="px-3 py-2.5 text-left font-medium">Situação</th>
+                  <th className="px-3 py-2.5 text-left font-medium">Vence em</th>
+                  <th className="px-3 py-2.5 text-right font-medium">Dias restantes</th>
                 </tr>
               </thead>
               <tbody>
@@ -252,11 +252,11 @@ export default function Dashboard() {
           <h2 className="text-xl font-bold tracking-[-0.015em] text-tinta-900">Licenças de obra</h2>
           <Link to="/obras" className={`${linkTexto} text-sm`}>Ver todas as licenças</Link>
         </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Kpi rotulo="prazos encerrados" valor={obras.prazoEncerrado.length}
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <Kpi rotulo="Prazos encerrados" valor={obras.prazoEncerrado.length}
                detalhe="cronograma vencido sem conclusão registrada"
                tom={obras.prazoEncerrado.length ? 'baixa' : undefined} />
-          <Kpi rotulo="sem As Built" valor={obras.semAsBuilt.length}
+          <Kpi rotulo="Sem As Built" valor={obras.semAsBuilt.length}
                detalhe="obra concluída sem o projeto como construído (art. 26)"
                tom={obras.semAsBuilt.length ? 'atencao' : undefined} />
         </div>
@@ -297,13 +297,13 @@ function TabelaPendencias({ titulo, vazio, coluna, data, sufixo, tom, itens, por
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="border-b border-tinta-200 bg-tinta-50 text-[13px] text-tinta-500">
+            <thead className="border-b border-tinta-200 text-tinta-400">
               <tr>
-                <th className="px-4 py-2 text-left font-semibold">Licença</th>
-                <th className="px-4 py-2 text-left font-semibold">Executora</th>
-                <th className="px-4 py-2 text-left font-semibold">Local</th>
-                <th className="px-4 py-2 text-left font-semibold">{coluna}</th>
-                <th className="px-4 py-2 text-right font-semibold">Dias</th>
+                <th className="px-3 py-2.5 text-left font-medium">Licença</th>
+                <th className="px-3 py-2.5 text-left font-medium">Executora</th>
+                <th className="px-3 py-2.5 text-left font-medium">Local</th>
+                <th className="px-3 py-2.5 text-left font-medium">{coluna}</th>
+                <th className="px-3 py-2.5 text-right font-medium">Dias</th>
               </tr>
             </thead>
             <tbody>

@@ -33,7 +33,7 @@ export default function ConsultaObras() {
   return (
     <div className="flex min-h-screen flex-col">
       <Cabecalho itens={MENU_PUBLICO} />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-12">
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-12">
         <header className="max-w-4xl pt-2">
           <p className="text-sm text-tinta-400">Consulta pública, Resolução Conjunta SECONSER/SEOP nº&nbsp;001/2026</p>
           <h1 className="mt-3 text-3xl font-semibold leading-[1.15] tracking-[-0.02em] text-tinta-900 sm:text-4xl md:text-[3rem]">

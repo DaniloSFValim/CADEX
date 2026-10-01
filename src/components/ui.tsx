@@ -25,7 +25,7 @@ export function Card({
     <section>
       {(title || action) && (
         <header className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
-          <h2 className="text-xl font-bold tracking-[-0.015em] text-tinta-900">{title}</h2>
+          <h2 className="text-xl font-semibold tracking-[-0.01em] text-tinta-900">{title}</h2>
           {action}
         </header>
       )}
@@ -41,9 +41,9 @@ export function Titulo({
   return (
     <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0">
-        {trilha && <div className="mb-2 text-sm text-tinta-400">{trilha}</div>}
-        <h1 className="text-[2rem] font-bold leading-tight tracking-[-0.025em] text-tinta-900 sm:text-4xl">{titulo}</h1>
-        {descricao && <div className="mt-2 max-w-2xl text-base text-tinta-500">{descricao}</div>}
+        {trilha && <div className="mb-1 text-sm text-tinta-400">{trilha}</div>}
+        <h1 className="text-3xl font-semibold leading-[1.15] tracking-[-0.02em] text-tinta-900 sm:text-4xl">{titulo}</h1>
+        {descricao && <div className="mt-1.5 max-w-2xl text-sm text-tinta-500">{descricao}</div>}
         {children}
       </div>
       {acoes && <div className="flex flex-wrap items-center gap-2">{acoes}</div>}
@@ -101,24 +101,22 @@ export const inputClass =
 export const tabela = {
   moldura: 'overflow-x-auto',
   tabela: 'w-full text-left text-sm',
-  cabeca: 'border-b border-tinta-200 bg-tinta-50/80 text-left text-[13px]',
-  th: 'px-4 py-3 font-semibold text-tinta-500',
-  linha: 'border-b border-tinta-100 transition-colors last:border-0 hover:bg-marca-50/40 focus-within:bg-marca-50/40',
-  td: 'px-4 py-3 align-middle',
+  cabeca: 'border-b border-tinta-200 text-left',
+  th: 'px-3 py-2.5 font-medium text-tinta-400',
+  linha: 'border-b border-tinta-100 last:border-0 hover:bg-tinta-50 focus-within:bg-tinta-50',
+  td: 'px-3 py-2.5 align-middle',
 };
 
-/** Linha do quadro-resumo: número e rótulo na mesma linha de base, colunas separadas por fio. */
+/** Indicador no desenho do NETRANK: fio escuro no topo, rótulo, número grande e detalhe. */
 export function Kpi({ rotulo, valor, detalhe, tom }: {
   rotulo: string; valor: ReactNode; detalhe?: ReactNode; tom?: 'alta' | 'baixa' | 'atencao';
 }) {
   const cor = tom ? { alta: 'text-alta', baixa: 'text-baixa', atencao: 'text-atencao' }[tom] : 'text-tinta-900';
   return (
-    <div className="border-l border-tinta-300 pl-4">
-      <div className="flex items-baseline gap-2">
-        <span className={`tabular text-3xl font-semibold tracking-[-0.02em] ${cor}`}>{valor}</span>
-        <span className="text-base font-medium text-tinta-800">{rotulo.charAt(0).toLowerCase() + rotulo.slice(1)}</span>
-      </div>
-      {detalhe && <div className="mt-1 text-sm text-tinta-500">{detalhe}</div>}
+    <div className="border-t-2 border-tinta-900 pt-3">
+      <div className="text-sm font-medium text-tinta-600">{rotulo}</div>
+      <div className={`tabular mt-1 text-3xl font-semibold tracking-[-0.02em] ${cor}`}>{valor}</div>
+      {detalhe && <div className="mt-1 text-sm text-tinta-400">{detalhe}</div>}
     </div>
   );
 }
