@@ -71,7 +71,7 @@ export default function LicencaPublica() {
 
 function Conteudo({ d }: { d: Dados }) {
   const v = VEREDITO[d.situacao];
-  const sitCadex = d.executora.situacao_cadex as SituacaoEfetiva;
+  const sitCadex = d.executora.situacao_cadex as SituacaoEfetiva | null;
   return (
     <>
       <div className={`mt-3 rounded border-l-4 px-4 py-4 ${v.cor}`} role="status">
@@ -88,13 +88,15 @@ function Conteudo({ d }: { d: Dados }) {
         <Item rotulo="Empresa executora" largo>
           {nome(d.executora)}
           <span className="block text-sm text-tinta-500">
-            {d.executora.codigo_cadex}; inscrição no CADEX hoje: {SITUACAO_LABEL[sitCadex] ?? sitCadex}
+            {d.executora.codigo_cadex && sitCadex
+              ? `${d.executora.codigo_cadex}; inscrição no CADEX hoje: ${SITUACAO_LABEL[sitCadex] ?? sitCadex}`
+              : 'Sem inscrição no CADEX: licença anterior à Resolução nº 001/2026.'}
           </span>
         </Item>
         {d.contratante && (
           <Item rotulo="Concessionária contratante" largo>
             {nome(d.contratante)}
-            <span className="block text-sm text-tinta-500">{d.contratante.codigo_cadex}</span>
+            {d.contratante.codigo_cadex && <span className="block text-sm text-tinta-500">{d.contratante.codigo_cadex}</span>}
           </Item>
         )}
         <Item rotulo="Tipo de obra" largo>{d.tipos_obra.map((t) => TIPO_OBRA_LABEL[t]).join(', ')}</Item>

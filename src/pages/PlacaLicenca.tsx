@@ -14,17 +14,17 @@ import { TIPO_OBRA_LABEL, buscarLicenca, urlPublicaLicenca, type LicencaComTrech
 export default function PlacaLicenca() {
   const { id = '' } = useParams();
   const [l, setL] = useState<LicencaComTrechos | null>(null);
-  const [exec, setExec] = useState<Empresa | null>(null);
+  const [exec, setExec] = useState<Empresa | null | undefined>(undefined);
   const [error, setError] = useState<unknown>(null);
 
   useEffect(() => {
     buscarLicenca(id)
-      .then(async (x) => { setL(x); setExec(await buscarEmpresa(x.executora_id)); })
+      .then(async (x) => { setL(x); setExec(x.executora_id ? await buscarEmpresa(x.executora_id) : null); })
       .catch(setError);
   }, [id]);
 
   if (error) return <div className="p-8"><ErrorNote error={error} /></div>;
-  if (!l || !exec) return <Spinner />;
+  if (!l || exec === undefined) return <Spinner />;
   if (l.situacao !== 'deferida') {
     return (
       <div className="mx-auto max-w-xl p-8 text-sm text-tinta-700">
@@ -55,8 +55,8 @@ export default function PlacaLicenca() {
           <dl className="space-y-4">
             <div>
               <dt className="text-xs font-semibold text-tinta-500">Empresa executora</dt>
-              <dd className="text-2xl font-bold leading-tight text-tinta-900">{exec.razao_social}</dd>
-              <dd className="tabular text-sm text-tinta-600">{exec.codigo_cadex}</dd>
+              <dd className="text-2xl font-bold leading-tight text-tinta-900">{exec?.razao_social ?? l.executora_razao_social}</dd>
+              {exec && <dd className="tabular text-sm text-tinta-600">{exec.codigo_cadex}</dd>}
             </div>
             <div>
               <dt className="text-xs font-semibold text-tinta-500">Escopo</dt>

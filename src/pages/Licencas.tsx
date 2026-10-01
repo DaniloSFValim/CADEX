@@ -5,7 +5,7 @@ import { dataBR } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { hojeISO, listarEmpresas, nomeEmpresa, type Empresa } from '../lib/empresas';
 import {
-  ESTADO_LICENCA_LABEL, TIPO_OBRA_LABEL, TOM_ESTADO_LICENCA, estadoLicenca, listarLicencas,
+  ESTADO_LICENCA_LABEL, TIPO_OBRA_LABEL, TOM_ESTADO_LICENCA, estadoLicenca, listarLicencas, nomeExecutora,
   type EstadoLicenca, type LicencaComTrechos,
 } from '../lib/licencas';
 
@@ -44,6 +44,7 @@ export default function Licencas() {
         .map((id) => (id ? porId.get(id) : undefined))
         .flatMap((e) => (e ? [e.razao_social, e.nome_fantasia ?? '', e.codigo_cadex] : []));
       return [l.processo_sei, l.numero ?? '', l.escopo, ...empresasTxt,
+              l.executora_razao_social ?? '', l.contratante_razao_social ?? '',
               ...l.licenca_trechos.flatMap((t) => [t.logradouro, t.bairro ?? ''])]
         .some((s) => s.toLowerCase().includes(q));
     });
@@ -115,8 +116,8 @@ export function TabelaLicencas({ licencas, porId, hoje, semExecutora = false }: 
         <tbody>
           {licencas.map((l) => {
             const estado = estadoLicenca(l, hoje);
-            const exec = porId.get(l.executora_id);
             const contr = l.contratante_id ? porId.get(l.contratante_id) : undefined;
+            const nomeContr = contr ? nomeEmpresa(contr) : l.contratante_razao_social;
             const [t1, ...resto] = l.licenca_trechos;
             return (
               <tr key={l.id} className={tabela.linha}>
@@ -125,11 +126,12 @@ export function TabelaLicencas({ licencas, porId, hoje, semExecutora = false }: 
                     {l.numero ?? 'Sem número'}
                   </Link>
                   <div className="tabular text-xs text-tinta-500">{l.processo_sei}</div>
+                  {l.anterior_resolucao && <div className="text-xs text-tinta-500">anterior à Resolução</div>}
                 </td>
                 {!semExecutora && (
                   <td className={tabela.td}>
-                    {exec ? nomeEmpresa(exec) : '—'}
-                    {contr && <div className="text-xs text-tinta-500">para {nomeEmpresa(contr)}</div>}
+                    {nomeExecutora(l, porId)}
+                    {nomeContr && <div className="text-xs text-tinta-500">para {nomeContr}</div>}
                   </td>
                 )}
                 <td className={tabela.td}>
