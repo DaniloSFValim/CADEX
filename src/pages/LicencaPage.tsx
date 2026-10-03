@@ -352,19 +352,19 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
           </div>
         )}
         {deferindo && naoAptas.length > 0 && licenca?.situacao !== 'deferida' && (
-          <p role="alert" className="mt-4 rounded border-l-4 border-baixa bg-baixa/10 px-3 py-2 text-sm text-baixa">
+          <p role="alert" className="mt-4 rounded-sm border-l-4 border-baixa bg-baixa/10 px-3 py-2 text-sm text-baixa">
             {naoAptas.map(nomeEmpresa).join(' e ')} não {naoAptas.length > 1 ? 'estão' : 'está'} APTA no CADEX.
             A licença não pode ser deferida enquanto a inscrição não for deferida (arts. 4º e 8º, § 2º).
           </p>
         )}
         {f.setor === 'telecom' && anterior && (
-          <p className="mt-4 rounded border-l-4 border-tinta-300 bg-tinta-50 px-3 py-2 text-sm text-tinta-700">
+          <p className="mt-4 rounded-sm border-l-4 border-tinta-300 bg-tinta-50 px-3 py-2 text-sm text-tinta-700">
             Decisão anterior a 09/09/2026: registro histórico, anterior à Resolução. Não exige empresa APTA nem ART,
             e aceita executora e contratante sem cadastro no CADEX.
           </p>
         )}
         {f.setor !== 'telecom' && (
-          <p className="mt-4 rounded border-l-4 border-tinta-300 bg-tinta-50 px-3 py-2 text-sm text-tinta-700">
+          <p className="mt-4 rounded-sm border-l-4 border-tinta-300 bg-tinta-50 px-3 py-2 text-sm text-tinta-700">
             {SETOR_LABEL[f.setor]}: a Resolução nº 001/2026 vale só para telecomunicações. Não se exige empresa APTA,
             ART da obra nem vínculo da subcontratada.
             {anterior && ' Decisão anterior a 09/09/2026: aceita executora sem cadastro no CADEX.'}
@@ -446,7 +446,7 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
       </Card>
 
       <Card title={`Trechos (${trechos.length})`}
-            action={!ro && <Button variant="secondary" className="!px-3 !py-1.5"
+            action={!ro && <Button variant="secondary" className="px-3! py-1.5!"
                                    onClick={() => { setTrechos((t) => [...t, TRECHO_VAZIO]); setSalvo(false); }}>
               Incluir trecho</Button>}>
         <p className="mb-4 text-sm text-tinta-500">
@@ -468,7 +468,7 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
                 </Field>
                 <div className="flex items-end sm:col-span-1">
                   {!ro && trechos.length > 1 && (
-                    <Button variant="danger" className="w-full !px-3"
+                    <Button variant="danger" className="w-full px-3!"
                             onClick={() => { setTrechos((ts) => ts.filter((_, j) => j !== i)); setSalvo(false); }}>
                       Remover
                     </Button>
@@ -520,7 +520,7 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
       </Card>
 
       {!ro && (
-        <div className="sticky bottom-0 -mx-4 flex flex-wrap items-center justify-end gap-3 border-t border-tinta-200 bg-white/95 px-4 py-3 backdrop-blur">
+        <div className="sticky bottom-0 -mx-4 flex flex-wrap items-center justify-end gap-3 border-t border-tinta-200 bg-white/95 px-4 py-3 backdrop-blur-sm">
           <div className="mr-auto min-w-0"><ErrorNote error={error} /></div>
           {salvo && <span className="text-sm text-alta" role="status">Licença salva.</span>}
           <Button type="submit" disabled={busy}>{busy ? 'Salvando…' : licenca ? 'Salvar alterações' : 'Registrar licença'}</Button>
@@ -539,7 +539,7 @@ function CoordField({ label, valor, lida, ro, required, onChange }: {
     : lida ? `Lida: ${coordenadaTexto(lida.lat, lida.lng)}` : 'Não reconhecida ou fora de Niterói.';
   return (
     <Field label={label} required={required} className="sm:col-span-2" hint={hint}>
-      <input className={`${inputClass} tabular ${valor.trim() && !lida ? '!border-baixa' : ''}`} disabled={ro}
+      <input className={`${inputClass} tabular ${valor.trim() && !lida ? 'border-baixa!' : ''}`} disabled={ro}
              value={valor} placeholder="-22.895000, -43.123000" onChange={(e) => onChange(e.target.value)} />
     </Field>
   );
@@ -576,7 +576,7 @@ function SemCadastro({ quem, ro, razao, cnpj, donoImovel, onRazao, onCnpj }: {
   onRazao: (v: string) => void; onCnpj: (v: string) => void;
 }) {
   return (
-    <div className="grid gap-4 rounded border border-dashed border-tinta-300 p-4 sm:col-span-2 sm:grid-cols-[1fr_220px]">
+    <div className="grid gap-4 rounded-sm border border-dashed border-tinta-300 p-4 sm:col-span-2 sm:grid-cols-[1fr_220px]">
       {donoImovel ? (
         <Field label="Nome ou razão social do dono do imóvel" required
                hint="Pessoa física (CPF): o nome não aparece nas páginas públicas.">

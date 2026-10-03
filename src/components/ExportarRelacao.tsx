@@ -46,7 +46,7 @@ export function ExportarRelacao({
     tipos.includes(e.tipo) && situacoes.includes(situacaoEfetiva(e, contexto.hoje)));
 
   return (
-    <div className="mb-4 space-y-4 rounded border border-tinta-200 bg-tinta-50 p-4">
+    <div className="mb-4 space-y-4 rounded-sm border border-tinta-200 bg-tinta-50 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-semibold text-tinta-800">Exportar relação de empresas</h3>
         <button type="button" className="text-sm text-tinta-500 hover:text-tinta-800" onClick={onFechar}>Fechar</button>

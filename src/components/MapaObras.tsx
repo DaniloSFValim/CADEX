@@ -165,10 +165,10 @@ export default function MapaObras({ obras, foco }: { obras: ObraPublica[]; foco?
 
   return (
     <div className="relative">
-      <div ref={caixa} className="h-[60vh] min-h-[360px] w-full overflow-hidden rounded border border-tinta-200 bg-tinta-50"
+      <div ref={caixa} className="h-[60vh] min-h-[360px] w-full overflow-hidden rounded-sm border border-tinta-200 bg-tinta-50"
            role="region" aria-label="Mapa das obras licenciadas em Niterói" />
       {erro && (
-        <p role="alert" className="absolute inset-x-3 bottom-3 rounded bg-white/95 px-3 py-2 text-sm text-baixa shadow">
+        <p role="alert" className="absolute inset-x-3 bottom-3 rounded-sm bg-white/95 px-3 py-2 text-sm text-baixa shadow-sm">
           O mapa não carregou ({erro}). A lista abaixo continua com todas as obras.
         </p>
       )}

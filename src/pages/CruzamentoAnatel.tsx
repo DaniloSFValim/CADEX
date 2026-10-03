@@ -114,13 +114,13 @@ export default function CruzamentoAnatel() {
             semPadding
             action={
               <div className="flex flex-wrap items-center gap-3">
-                <select className={`${inputClass} !w-auto`} value={filtro} aria-label="Inscrição"
+                <select className={`${inputClass} w-auto!`} value={filtro} aria-label="Inscrição"
                         onChange={(e) => setFiltro(e.target.value)}>
                   {FILTROS.map((f) => <option key={f.valor} value={f.valor}>{f.rotulo}</option>)}
                 </select>
                 <label className="flex items-center gap-2 text-sm text-tinta-600">
                   Mínimo de acessos
-                  <input className={`${inputClass} tabular !w-24`} type="number" min={0} value={minimo}
+                  <input className={`${inputClass} tabular w-24!`} type="number" min={0} value={minimo}
                          onChange={(e) => setMinimo(e.target.value)} />
                 </label>
               </div>

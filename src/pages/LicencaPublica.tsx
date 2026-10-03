@@ -15,15 +15,15 @@ import {
  */
 const VEREDITO: Record<SituacaoPublica, { titulo: string; cor: string; frase: (d: Dados) => string }> = {
   vigente: {
-    titulo: 'Licença vigente', cor: 'border-alta bg-alta/[0.06] text-alta',
+    titulo: 'Licença vigente', cor: 'border-alta bg-alta/6 text-alta',
     frase: (d) => `Obra autorizada até ${dataBR(d.fim_previsto)}.`,
   },
   aguardando_inicio: {
-    titulo: 'Fora do período', cor: 'border-atencao bg-atencao/[0.06] text-atencao',
+    titulo: 'Fora do período', cor: 'border-atencao bg-atencao/6 text-atencao',
     frase: (d) => `A licença só vale a partir de ${dataBR(d.inicio_previsto)}. Antes disso a obra não está autorizada.`,
   },
   prazo_encerrado: {
-    titulo: 'Prazo encerrado', cor: 'border-baixa bg-baixa/[0.06] text-baixa',
+    titulo: 'Prazo encerrado', cor: 'border-baixa bg-baixa/6 text-baixa',
     frase: (d) => `O cronograma terminou em ${dataBR(d.fim_previsto)}. A obra não está mais autorizada.`,
   },
   concluida: {
@@ -31,7 +31,7 @@ const VEREDITO: Record<SituacaoPublica, { titulo: string; cor: string; frase: (d
     frase: (d) => `Concluída em ${dataBR(d.concluida_em)}. Não há obra autorizada neste local por esta licença.`,
   },
   cancelada: {
-    titulo: 'Licença cancelada', cor: 'border-baixa bg-baixa/[0.06] text-baixa',
+    titulo: 'Licença cancelada', cor: 'border-baixa bg-baixa/6 text-baixa',
     frase: () => 'Esta licença foi cancelada pela SECONSER. A obra não está autorizada.',
   },
 };
@@ -54,7 +54,7 @@ export default function LicencaPublica() {
         <ErrorNote error={error} />
         {d === undefined && !error && <Spinner label="Consultando a licença…" />}
         {d === null && (
-          <div className="mt-4 rounded border-l-4 border-baixa bg-baixa/[0.06] px-4 py-4">
+          <div className="mt-4 rounded-sm border-l-4 border-baixa bg-baixa/6 px-4 py-4">
             <h1 className="text-2xl font-bold text-baixa">Licença não encontrada</h1>
             <p className="mt-2 text-sm text-tinta-700">
               Este código não corresponde a nenhuma licença emitida pela SECONSER. Uma placa com este
@@ -74,7 +74,7 @@ function Conteudo({ d }: { d: Dados }) {
   const sitCadex = d.executora.situacao_cadex as SituacaoEfetiva | null;
   return (
     <>
-      <div className={`mt-3 rounded border-l-4 px-4 py-4 ${v.cor}`} role="status">
+      <div className={`mt-3 rounded-sm border-l-4 px-4 py-4 ${v.cor}`} role="status">
         <h1 className="text-[1.75rem] font-bold leading-tight tracking-[-0.02em]">{v.titulo}</h1>
         <p className="mt-1 text-base text-tinta-800">{v.frase(d)}</p>
         <p className="mt-2 text-xs text-tinta-500">Consulta de {dataBR(d.hoje)}, com os dados da SECONSER neste momento.</p>

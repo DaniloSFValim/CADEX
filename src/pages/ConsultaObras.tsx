@@ -68,7 +68,7 @@ export default function ConsultaObras() {
         {obras && (
           <>
             <div className="mt-4">
-              <Suspense fallback={<div className="h-[60vh] min-h-[360px] rounded border border-tinta-200 bg-tinta-50" />}>
+              <Suspense fallback={<div className="h-[60vh] min-h-[360px] rounded-sm border border-tinta-200 bg-tinta-50" />}>
                 <MapaObras obras={filtradas} foco={foco} />
               </Suspense>
               <Legenda />

@@ -62,15 +62,15 @@ export default function Consulta() {
         <AbasConsulta />
 
         <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_220px_220px]">
-          <input className={`${inputClass} !py-3 !text-base`}
+          <input className={`${inputClass} py-3! text-base!`}
                  placeholder="Nome da empresa, CNPJ ou código CADEX"
                  value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar empresa" />
-          <select className={`${inputClass} !py-3 !text-base`} value={situacao}
+          <select className={`${inputClass} py-3! text-base!`} value={situacao}
                   onChange={(e) => setSituacao(e.target.value)} aria-label="Situação">
             <option value="">Qualquer situação</option>
             {FILTRO_SITUACAO.map((f) => <option key={f.valor} value={f.valor}>{f.rotulo}</option>)}
           </select>
-          <select className={`${inputClass} !py-3 !text-base`} value={setor}
+          <select className={`${inputClass} py-3! text-base!`} value={setor}
                   onChange={(e) => setSetor(e.target.value)} aria-label="Setor">
             <option value="">Todos os setores</option>
             {SETORES.map((s) => <option key={s} value={s}>{SETOR_LABEL[s]}</option>)}
@@ -112,7 +112,7 @@ export default function Consulta() {
                   <div className="flex min-w-0 gap-3">
                     {temLogo && (l.logo_arquivo
                       ? <img src={urlLogo(l.logo_arquivo)} alt="" loading="lazy"
-                             className="h-10 w-10 flex-none rounded border border-tinta-200 bg-white object-contain p-0.5" />
+                             className="h-10 w-10 flex-none rounded-sm border border-tinta-200 bg-white object-contain p-0.5" />
                       : <span className="h-10 w-10 flex-none" aria-hidden />)}
                     <div className="min-w-0">
                       <div className="font-semibold text-tinta-900">{l.razao_social}</div>

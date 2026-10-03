@@ -61,7 +61,7 @@ export function Inscricao({
         </div>
       </dl>
       {efetiva === 'vencida' && (
-        <p className="mb-4 rounded bg-baixa/10 px-3 py-2 text-sm text-baixa ring-1 ring-inset ring-baixa/30">
+        <p className="mb-4 rounded-sm bg-baixa/10 px-3 py-2 text-sm text-baixa ring-1 ring-inset ring-baixa/30">
           Inscrição vencida. Registre a portaria de renovação.
         </p>
       )}

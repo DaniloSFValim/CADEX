@@ -36,7 +36,7 @@ export function SeletorAgrupamento<T extends string>({ valor, opcoes, onChange }
   return (
     <label className="flex flex-wrap items-center gap-2 text-sm font-semibold text-tinta-700">
       Agrupar por
-      <select className="rounded border border-tinta-300 bg-white px-2 py-1.5 text-sm font-normal text-tinta-900"
+      <select className="rounded-sm border border-tinta-300 bg-white px-2 py-1.5 text-sm font-normal text-tinta-900"
               value={valor} onChange={(e) => onChange(e.target.value as T)}>
         {opcoes.map((o) => <option key={o.valor} value={o.valor}>{o.rotulo}</option>)}
       </select>

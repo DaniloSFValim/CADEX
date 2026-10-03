@@ -41,7 +41,7 @@ export default function PlacaLicenca() {
         <Button onClick={() => window.print()}>Imprimir placa</Button>
       </div>
 
-      <article className="mx-auto flex max-w-[210mm] flex-col bg-white p-[14mm] shadow print:shadow-none"
+      <article className="mx-auto flex max-w-[210mm] flex-col bg-white p-[14mm] shadow-sm print:shadow-none"
                style={{ minHeight: '148mm' }}>
         <header className="flex items-center justify-between gap-6 border-b-2 border-marca-800 pb-4">
           <img src="/logo-prefeitura-seconser.png" alt="Prefeitura de Niterói, SECONSER" className="h-14 w-auto" />

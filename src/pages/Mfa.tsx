@@ -14,7 +14,7 @@ function Moldura({ titulo, children }: { titulo: string; children: ReactNode }) 
         itens={[]}
         direita={<>
           <span className="hidden text-tinta-500 sm:inline">{session?.user.email}</span>
-          <Button variant="secondary" className="!px-3 !py-1.5" onClick={() => void signOut()}>Sair</Button>
+          <Button variant="secondary" className="px-3! py-1.5!" onClick={() => void signOut()}>Sair</Button>
         </>}
       />
       <main className="flex flex-1 items-start justify-center px-4 py-12">
@@ -33,7 +33,7 @@ function CampoCodigo({ valor, onChange }: { valor: string; onChange: (v: string)
   return (
     <Field label="Código de 6 dígitos do aplicativo" required>
       <input
-        className={`${inputClass} tabular !py-3 text-center !text-2xl tracking-[0.4em]`}
+        className={`${inputClass} tabular py-3! text-center text-2xl! tracking-[0.4em]`}
         inputMode="numeric" autoComplete="one-time-code" autoFocus required
         pattern="[0-9]{6}" maxLength={6} placeholder="000000"
         value={valor} onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, 6))}
@@ -97,13 +97,13 @@ export function CadastrarMfa() {
         <li>
           <p className="font-semibold text-tinta-900">2. No aplicativo, toque em “+” e leia este QR code</p>
           <div className="mt-3 flex flex-wrap items-start gap-5">
-            <div className="flex h-44 w-44 flex-none items-center justify-center rounded border border-tinta-200 bg-white p-2">
+            <div className="flex h-44 w-44 flex-none items-center justify-center rounded-sm border border-tinta-200 bg-white p-2">
               {qr ? <img src={qr} alt="QR code para cadastrar o CADEX no aplicativo autenticador" className="h-full w-full" />
                   : <span className="text-xs text-tinta-400">{erroInicio ? '—' : 'Gerando…'}</span>}
             </div>
             <div className="min-w-0 flex-1 text-xs text-tinta-500">
               Não consegue ler? Escolha “inserir chave” no aplicativo e digite:
-              <code className="mt-1 block break-all rounded bg-tinta-50 px-2 py-1.5 font-semibold tracking-wider text-tinta-900">
+              <code className="mt-1 block break-all rounded-sm bg-tinta-50 px-2 py-1.5 font-semibold tracking-wider text-tinta-900">
                 {segredo || '…'}
               </code>
             </div>

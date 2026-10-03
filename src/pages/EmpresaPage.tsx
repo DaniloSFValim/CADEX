@@ -64,7 +64,7 @@ export default function EmpresaPage() {
           <span className="flex items-center gap-4">
             {empresa?.logo_arquivo && (
               <img src={urlLogo(empresa.logo_arquivo)} alt=""
-                   className="h-12 w-12 flex-none rounded border border-tinta-200 bg-white object-contain p-1" />
+                   className="h-12 w-12 flex-none rounded-sm border border-tinta-200 bg-white object-contain p-1" />
             )}
             {empresa ? nomeEmpresa(empresa) : 'Nova empresa'}
           </span>
@@ -367,7 +367,7 @@ function LogoEmpresa({
 
   return (
     <div className="mb-5 flex flex-wrap items-center gap-4 border-b border-tinta-100 pb-5">
-      <div className="flex h-20 w-20 flex-none items-center justify-center rounded border border-dashed border-tinta-300 bg-tinta-50">
+      <div className="flex h-20 w-20 flex-none items-center justify-center rounded-sm border border-dashed border-tinta-300 bg-tinta-50">
         {empresa.logo_arquivo
           ? <img src={urlLogo(empresa.logo_arquivo)} alt="Logo da empresa" className="h-full w-full object-contain p-1" />
           : <span className="text-xs text-tinta-400">sem logo</span>}
@@ -378,13 +378,13 @@ function LogoEmpresa({
           <div className="flex flex-wrap items-center gap-2">
             <input key={inputKey} type="file" aria-label="Logo da empresa" disabled={busy}
                    accept={TIPOS_LOGO.join(',')}
-                   className="block max-w-full text-sm text-tinta-600 file:mr-2 file:rounded file:border-0 file:bg-tinta-100 file:px-2 file:py-1 file:text-sm"
+                   className="block max-w-full text-sm text-tinta-600 file:mr-2 file:rounded-sm file:border-0 file:bg-tinta-100 file:px-2 file:py-1 file:text-sm"
                    onChange={(e) => {
                      const f = e.target.files?.[0];
                      if (f) void agir(() => enviarLogo(empresa, f));
                    }} />
             {empresa.logo_arquivo && (
-              <Button variant="danger" className="!px-2 !py-1 text-xs" disabled={busy}
+              <Button variant="danger" className="px-2! py-1! text-xs" disabled={busy}
                       onClick={() => { if (window.confirm('Remover o logo?')) void agir(() => removerLogo(empresa)); }}>
                 Remover
               </Button>
@@ -522,7 +522,7 @@ function LadoVinculo({
                   {e && <SituacaoBadge s={situacaoEfetiva(e, hojeISO())} />}
                   <Badge tom={v.fim ? 'neutro' : 'bom'}>{v.fim ? 'Encerrado' : 'Ativo'}</Badge>
                   {podeEditar && (
-                    <Button variant="secondary" className="!px-2 !py-1 text-xs" disabled={busy}
+                    <Button variant="secondary" className="px-2! py-1! text-xs" disabled={busy}
                             onClick={() => void onFim(v)}>
                       {v.fim ? 'Reativar' : 'Encerrar'}
                     </Button>
@@ -535,7 +535,7 @@ function LadoVinculo({
       )}
       {podeEditar && opcoes.length > 0 && (
         <div className="mt-2 flex flex-wrap items-end gap-2">
-          <select aria-label={rotuloIncluir} className={`${inputClass} !w-auto`} value={nova}
+          <select aria-label={rotuloIncluir} className={`${inputClass} w-auto!`} value={nova}
                   onChange={(e) => setNova(e.target.value)}>
             <option value="">{rotuloIncluir}</option>
             {opcoes.map((o) => (
@@ -657,7 +657,7 @@ function Documentos({ empresa }: { empresa: Empresa }) {
               />
             ))}
           </ul>
-          <div className="sticky bottom-0 -mx-5 -mb-5 mt-2 rounded-b-md border-t border-tinta-200 bg-white/95 px-5 py-3 backdrop-blur">
+          <div className="sticky bottom-0 -mx-5 -mb-5 mt-2 rounded-b-md border-t border-tinta-200 bg-white/95 px-5 py-3 backdrop-blur-sm">
             {barra}
           </div>
         </>
@@ -681,7 +681,7 @@ function LinhaDocumento({
   const nome = `status-${tipo.codigo}`;
 
   return (
-    <li className={`py-3 ${alterado ? '-mx-5 bg-atencao/[0.06] px-5' : ''}`}>
+    <li className={`py-3 ${alterado ? '-mx-5 bg-atencao/6 px-5' : ''}`}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <div className="text-sm font-medium text-tinta-800">{tipo.nome}</div>
@@ -703,7 +703,7 @@ function LinhaDocumento({
             {tipo.tem_validade && marcacao.status === 'entregue' && (
               <label className="flex items-center gap-2 text-sm text-tinta-700">
                 válido até
-                <input type="date" className={`${inputClass} !w-auto !py-1`} value={marcacao.validade}
+                <input type="date" className={`${inputClass} w-auto! py-1!`} value={marcacao.validade}
                        disabled={disabled} required
                        onChange={(e) => onMarcar({ validade: e.target.value })} />
               </label>
