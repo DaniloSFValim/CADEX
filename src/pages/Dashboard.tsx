@@ -9,6 +9,7 @@ import { hojeISO, listarEmpresas, type Empresa } from '../lib/empresas';
 import {
   listarLicencas, nomeExecutora, pendenciasLicencas, type LicencaComTrechos, type PendenciaLicenca,
 } from '../lib/licencas';
+import { NIVEL_LABEL, NIVEL_TOM, triagemRisco } from '../lib/triagem';
 
 interface AnalisePendente {
   id: string;
@@ -99,6 +100,15 @@ export default function Dashboard() {
   const obras = useMemo(() => pendenciasLicencas(licencas, hojeISO()), [licencas]);
   const porId = useMemo(() => new Map(empresas.map((e) => [e.id, e])), [empresas]);
 
+  // Triagem por empresa: reúne todos os sinais numa fila de ação ordenada.
+  const triagem = useMemo(() => triagemRisco(empresas, {
+    inscricoesVencendo: inscricoes.map((i) => ({ id: i.id, dias_restantes: i.dias_restantes })),
+    saneamentos: saneamentos.map((s) => ({ id: s.id, dias_restantes: s.dias_restantes })),
+    analises: analises.map((a) => ({ id: a.id, dias_pendentes: a.dias_pendentes })),
+    prazoEncerrado: obras.prazoEncerrado.map(({ licenca: l, dias }) => ({ executora_id: l.executora_id, numero: l.numero, dias })),
+    semAsBuilt: obras.semAsBuilt.map(({ licenca: l, dias }) => ({ executora_id: l.executora_id, numero: l.numero, dias })),
+  }, hojeISO()), [empresas, inscricoes, saneamentos, analises, obras]);
+
   if (!podeEditar) {
     return <Empty>Acesso negado: apenas o gestor tem acesso ao dashboard.</Empty>;
   }
@@ -150,6 +160,54 @@ export default function Dashboard() {
           tom={sumario?.inscricoes_vencendo ? 'atencao' : undefined}
         />
       </div>
+
+      {/* Fila de ação: uma empresa por linha, com todos os seus motivos */}
+      <section>
+        <CabecalhoSecao
+          titulo="Empresas que exigem ação"
+          descricao="Cada executora com alguma pendência, da mais urgente para a menos. As listas por tipo, abaixo, trazem o detalhe."
+        />
+        {triagem.length === 0 ? (
+          <Empty>Nenhuma empresa com pendência de prazo ou de licença agora.</Empty>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-tinta-200 text-tinta-400">
+                <tr>
+                  <th className="px-3 py-2.5 text-left font-medium">Empresa</th>
+                  <th className="px-3 py-2.5 text-left font-medium">Prioridade</th>
+                  <th className="px-3 py-2.5 text-left font-medium">O que exige ação</th>
+                </tr>
+              </thead>
+              <tbody>
+                {triagem.map((r) => (
+                  <tr key={r.id} className="border-b border-tinta-100 align-top hover:bg-tinta-50">
+                    <td className="px-3 py-2.5">
+                      <Link to={`/empresas/${r.id}`} className="font-medium hover:text-marca-700 hover:underline">
+                        {r.nome}
+                      </Link>
+                      {r.nome !== r.razaoSocial && <div className="text-xs text-tinta-500">{r.razaoSocial}</div>}
+                      <div className="tabular text-xs text-tinta-500">{formatCnpj(r.cnpj)}</div>
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <Badge tom={NIVEL_TOM[r.nivel]}>{NIVEL_LABEL[r.nivel]}</Badge>
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <ul className="flex flex-col gap-1">
+                        {r.motivos.map((m, idx) => (
+                          <li key={idx} className={m.nivel === 'critico' ? 'text-tinta-900' : 'text-tinta-600'}>
+                            {m.texto}
+                          </li>
+                        ))}
+                      </ul>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
 
       {/* Análises Pendentes */}
       <section>
