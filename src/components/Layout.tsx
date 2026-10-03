@@ -22,7 +22,7 @@ export function Layout() {
             <span className="block font-medium text-tinta-800">{servidor?.nome ?? session?.user.email}</span>
             {servidor && <span className="block text-xs text-tinta-500">{PAPEL_LABEL[servidor.papel]}</span>}
           </Link>
-          <Button variant="secondary" className="!px-3 !py-1.5" onClick={() => void signOut()}>Sair</Button>
+          <Button variant="secondary" className="px-3! py-1.5!" onClick={() => void signOut()}>Sair</Button>
         </>}
       />
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">

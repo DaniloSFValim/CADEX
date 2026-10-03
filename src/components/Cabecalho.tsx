@@ -23,7 +23,7 @@ export function Cabecalho({ itens, direita }: { itens: ItemMenu[]; direita?: Rea
           <span className="text-lg font-bold tracking-[-0.01em] text-tinta-900">CADEX</span>
         </Link>
 
-        <nav className="order-3 -mx-1 w-full overflow-x-auto md:order-none md:mx-0 md:w-auto md:overflow-visible"
+        <nav className="order-3 -mx-1 w-full overflow-x-auto md:order-0 md:mx-0 md:w-auto md:overflow-visible"
              aria-label="Menu principal">
           <ul className="flex gap-1 whitespace-nowrap">
             {itens.map((i) => (

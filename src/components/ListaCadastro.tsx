@@ -77,12 +77,12 @@ export function ListaCadastro({
     <Card
       title={`${titulo}${itens ? ` (${itens.filter((r) => r.ativo).length})` : ''}`}
       action={podeEditar && editando === null && (
-        <Button variant="secondary" className="!py-1 text-xs" onClick={() => abrir('novo')}>Incluir</Button>
+        <Button variant="secondary" className="py-1! text-xs" onClick={() => abrir('novo')}>Incluir</Button>
       )}
     >
       {editando !== null && (
         <form
-          className="mb-4 grid gap-3 rounded bg-tinta-50 p-3 sm:grid-cols-6"
+          className="mb-4 grid gap-3 rounded-sm bg-tinta-50 p-3 sm:grid-cols-6"
           onSubmit={(e) => {
             e.preventDefault();
             for (const c of campos) {
@@ -146,9 +146,9 @@ export function ListaCadastro({
                 {!r.ativo && <Badge>Desativado</Badge>}
                 {podeEditar && (
                   <>
-                    <Button variant="secondary" className="!px-2 !py-1 text-xs" disabled={busy}
+                    <Button variant="secondary" className="px-2! py-1! text-xs" disabled={busy}
                             onClick={() => abrir(r)}>Editar</Button>
-                    <Button variant="secondary" className="!px-2 !py-1 text-xs" disabled={busy}
+                    <Button variant="secondary" className="px-2! py-1! text-xs" disabled={busy}
                             onClick={() => void gravar({ ativo: !r.ativo }, r.id)}>
                       {r.ativo ? 'Desativar' : 'Reativar'}
                     </Button>

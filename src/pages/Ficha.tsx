@@ -102,7 +102,7 @@ export default function Ficha() {
         <div className="mt-5 flex items-start gap-5">
           {e.logo_arquivo && (
             <img src={urlLogo(e.logo_arquivo)} alt={`Logo de ${nomeEmpresa(e)}`}
-                 className="h-20 w-20 flex-none rounded border border-tinta-200 object-contain p-1" />
+                 className="h-20 w-20 flex-none rounded-sm border border-tinta-200 object-contain p-1" />
           )}
           <div className="flex-1">
             <h1 className="text-xl font-semibold">{e.razao_social}</h1>

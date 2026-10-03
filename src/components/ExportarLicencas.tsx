@@ -13,7 +13,7 @@ export function ExportarLicencas({ licencas, contexto, filtros, onFechar }: {
   const [colunas, setColunas] = useState<string[]>(COLUNAS_LICENCA_PADRAO);
   const [agrupar, setAgrupar] = useState<AgrupamentoLicencas>('');
   return (
-    <div className="mb-4 space-y-4 rounded border border-tinta-200 bg-tinta-50 p-4">
+    <div className="mb-4 space-y-4 rounded-sm border border-tinta-200 bg-tinta-50 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-semibold text-tinta-800">Exportar relação de licenças</h3>
         <button type="button" className="text-sm text-tinta-500 hover:text-tinta-800" onClick={onFechar}>Fechar</button>

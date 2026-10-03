@@ -5,14 +5,14 @@ export type Tom = 'neutro' | 'bom' | 'alerta' | 'ruim';
 // Selo como carimbo de registro: contorno na cor da situação, sem preenchimento forte.
 const TOM: Record<Tom, string> = {
   neutro: 'border-tinta-300 bg-white text-tinta-600',
-  bom: 'border-alta/60 bg-alta/[0.04] text-alta',
-  alerta: 'border-atencao/60 bg-atencao/[0.04] text-atencao',
-  ruim: 'border-baixa/60 bg-baixa/[0.04] text-baixa',
+  bom: 'border-alta/60 bg-alta/4 text-alta',
+  alerta: 'border-atencao/60 bg-atencao/4 text-atencao',
+  ruim: 'border-baixa/60 bg-baixa/4 text-baixa',
 };
 
 export function Badge({ tom = 'neutro', children }: { tom?: Tom; children: ReactNode }) {
   return (
-    <span className={`inline-block whitespace-nowrap rounded-sm border px-1.5 py-px text-xs font-semibold ${TOM[tom]}`}>
+    <span className={`inline-block whitespace-nowrap rounded-xs border px-1.5 py-px text-xs font-semibold ${TOM[tom]}`}>
       {children}
     </span>
   );
@@ -73,8 +73,8 @@ export function Button({
 
 /** Mesmo visual dos botões, para links (react-router). */
 export const botaoLink = {
-  primary: 'inline-flex items-center justify-center gap-2 rounded bg-marca-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-marca-800 active:bg-marca-900',
-  secondary: 'inline-flex items-center justify-center gap-2 rounded bg-white px-4 py-2 text-sm font-semibold text-tinta-800 ring-1 ring-inset ring-tinta-300 transition-colors hover:bg-tinta-50 hover:ring-tinta-400',
+  primary: 'inline-flex items-center justify-center gap-2 rounded-sm bg-marca-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-marca-800 active:bg-marca-900',
+  secondary: 'inline-flex items-center justify-center gap-2 rounded-sm bg-white px-4 py-2 text-sm font-semibold text-tinta-800 ring-1 ring-inset ring-tinta-300 transition-colors hover:bg-tinta-50 hover:ring-tinta-400',
 };
 
 export function Field({
@@ -93,8 +93,8 @@ export function Field({
 }
 
 export const inputClass =
-  'block w-full rounded border border-tinta-300 bg-white px-3 py-2 text-sm text-tinta-900 ' +
-  'placeholder:text-tinta-400 hover:border-tinta-400 focus:border-marca-600 focus:outline-none focus:ring-4 focus:ring-marca-500/15 ' +
+  'block w-full rounded-sm border border-tinta-300 bg-white px-3 py-2 text-sm text-tinta-900 ' +
+  'placeholder:text-tinta-400 hover:border-tinta-400 focus:border-marca-600 focus:outline-hidden focus:ring-4 focus:ring-marca-500/15 ' +
   'disabled:cursor-default disabled:bg-tinta-50 disabled:text-tinta-800';
 
 /** Tabelas de listagem. */
@@ -148,7 +148,7 @@ export function errorMessage(error: unknown): string {
 export function ErrorNote({ error }: { error: unknown }) {
   if (!error) return null;
   return (
-    <p role="alert" className="rounded border-l-4 border-baixa bg-baixa/10 px-3 py-2 text-sm text-baixa">
+    <p role="alert" className="rounded-sm border-l-4 border-baixa bg-baixa/10 px-3 py-2 text-sm text-baixa">
       {errorMessage(error)}
     </p>
   );

@@ -44,7 +44,7 @@ export default function Contas() {
         <NovaConta onCriada={(msg) => { setAviso(msg); carregar(); }} />
 
         {aviso && (
-          <div role="status" className="rounded border-l-4 border-alta bg-alta/10 px-4 py-3 text-sm text-tinta-800">
+          <div role="status" className="rounded-sm border-l-4 border-alta bg-alta/10 px-4 py-3 text-sm text-tinta-800">
             {aviso}
             <button type="button" className="ml-3 font-semibold text-marca-700 underline" onClick={() => setAviso(null)}>
               Fechar
@@ -187,7 +187,7 @@ function LinhaConta({ conta, ehVoce, onMudou }: { conta: Conta; ehVoce: boolean;
   return (
     <tr className={tabela.linha}>
       <td className={tabela.td}>
-        <input className={`${inputClass} !py-1.5`} value={nome} onChange={(e) => setNome(e.target.value)} aria-label="Nome" />
+        <input className={`${inputClass} py-1.5!`} value={nome} onChange={(e) => setNome(e.target.value)} aria-label="Nome" />
         <div className="mt-1 text-xs text-tinta-500">
           {conta.email}{ehVoce && <span className="ml-2"><Badge>você</Badge></span>}
         </div>
@@ -214,20 +214,20 @@ function LinhaConta({ conta, ehVoce, onMudou }: { conta: Conta; ehVoce: boolean;
       <td className={`${tabela.td} min-w-[260px]`}>
         {modo === 'normal' && (
           <div className="flex flex-wrap justify-end gap-2">
-            <Button className="!px-3 !py-1.5" disabled={!alterado || busy}
+            <Button className="px-3! py-1.5!" disabled={!alterado || busy}
                     onClick={() => agir(() => definirAcesso(conta.user_id, nome.trim(), papel, administrador),
                       `Acesso de ${nome.trim()} atualizado.`)}>
               Salvar
             </Button>
-            <Button variant="secondary" className="!px-3 !py-1.5"
+            <Button variant="secondary" className="px-3! py-1.5!"
                     onClick={() => { setSenha(gerarSenhaProvisoria()); setModo('senha'); }}>
               Redefinir senha
             </Button>
             {!ehVoce && conta.mfa_ativa && (
-              <Button variant="secondary" className="!px-3 !py-1.5" onClick={() => setModo('zerar')}>Zerar duas etapas</Button>
+              <Button variant="secondary" className="px-3! py-1.5!" onClick={() => setModo('zerar')}>Zerar duas etapas</Button>
             )}
             {!ehVoce && (
-              <Button variant="danger" className="!px-3 !py-1.5" onClick={() => setModo('remover')}>Remover acesso</Button>
+              <Button variant="danger" className="px-3! py-1.5!" onClick={() => setModo('remover')}>Remover acesso</Button>
             )}
           </div>
         )}
@@ -235,8 +235,8 @@ function LinhaConta({ conta, ehVoce, onMudou }: { conta: Conta; ehVoce: boolean;
           <div className="flex flex-col items-end gap-2 text-right text-sm">
             <span className="text-tinta-700">{conta.nome} deixa de entrar na área restrita. A conta de login continua existindo.</span>
             <div className="flex gap-2">
-              <Button variant="secondary" className="!px-3 !py-1.5" onClick={() => setModo('normal')}>Cancelar</Button>
-              <Button variant="danger" className="!px-3 !py-1.5" disabled={busy}
+              <Button variant="secondary" className="px-3! py-1.5!" onClick={() => setModo('normal')}>Cancelar</Button>
+              <Button variant="danger" className="px-3! py-1.5!" disabled={busy}
                       onClick={() => agir(() => removerAcesso(conta.user_id), `Acesso de ${conta.nome} removido.`)}>
                 Confirmar remoção
               </Button>
@@ -249,8 +249,8 @@ function LinhaConta({ conta, ehVoce, onMudou }: { conta: Conta; ehVoce: boolean;
               Use quando {conta.nome} perder ou trocar de celular. No próximo acesso, ele cadastra o aplicativo de novo.
             </span>
             <div className="flex gap-2">
-              <Button variant="secondary" className="!px-3 !py-1.5" onClick={() => setModo('normal')}>Cancelar</Button>
-              <Button className="!px-3 !py-1.5" disabled={busy}
+              <Button variant="secondary" className="px-3! py-1.5!" onClick={() => setModo('normal')}>Cancelar</Button>
+              <Button className="px-3! py-1.5!" disabled={busy}
                       onClick={() => agir(() => zerarMfa(conta.user_id),
                         `Verificação em duas etapas de ${conta.nome} zerada. No próximo acesso, ele cadastra o aplicativo de novo.`)}>
                 Confirmar
@@ -260,11 +260,11 @@ function LinhaConta({ conta, ehVoce, onMudou }: { conta: Conta; ehVoce: boolean;
         )}
         {modo === 'senha' && (
           <div className="flex flex-col items-end gap-2">
-            <input className={`${inputClass} tabular !py-1.5`} value={senha} minLength={SENHA_MINIMA}
+            <input className={`${inputClass} tabular py-1.5!`} value={senha} minLength={SENHA_MINIMA}
                    onChange={(e) => setSenha(e.target.value)} aria-label="Nova senha provisória" />
             <div className="flex gap-2">
-              <Button variant="secondary" className="!px-3 !py-1.5" onClick={() => setModo('normal')}>Cancelar</Button>
-              <Button className="!px-3 !py-1.5" disabled={busy || senha.length < SENHA_MINIMA}
+              <Button variant="secondary" className="px-3! py-1.5!" onClick={() => setModo('normal')}>Cancelar</Button>
+              <Button className="px-3! py-1.5!" disabled={busy || senha.length < SENHA_MINIMA}
                       onClick={() => agir(() => redefinirSenha(conta.user_id, senha),
                         `Senha de ${conta.nome} redefinida para ${senha}. Passe a ele e peça para trocá-la em "Minha conta".`)}>
                 Definir senha
@@ -291,12 +291,12 @@ function LinhaSemAcesso({ conta, onMudou }: { conta: Conta; onMudou: (msg: strin
         <div className="text-xs text-tinta-500">criada em {dataHora(conta.criado_em)}</div>
       </td>
       <td className={tabela.td}>
-        <input className={`${inputClass} !py-1.5`} placeholder="Nome do servidor" value={nome}
+        <input className={`${inputClass} py-1.5!`} placeholder="Nome do servidor" value={nome}
                onChange={(e) => setNome(e.target.value)} aria-label="Nome" />
       </td>
       <td className={`${tabela.td} min-w-[140px]`}><SeletorPerfil valor={papel} onChange={setPapel} /></td>
       <td className={`${tabela.td} text-right`}>
-        <Button className="!px-3 !py-1.5" disabled={busy || !nome.trim()}
+        <Button className="px-3! py-1.5!" disabled={busy || !nome.trim()}
                 onClick={async () => {
                   setBusy(true); setError(null);
                   try { await definirAcesso(conta.user_id, nome.trim(), papel, false); onMudou(`Acesso dado a ${nome.trim()}.`); }

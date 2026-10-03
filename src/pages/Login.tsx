@@ -24,7 +24,7 @@ export default function Login() {
           <h1 className="text-xl font-semibold tracking-tight text-tinta-900">Área restrita</h1>
           <p className="mt-1 text-sm text-tinta-500">Acesso para servidores da SECONSER e do CISP.</p>
           {motivo && (
-            <p role="status" className="mt-4 rounded border-l-4 border-atencao bg-atencao/[0.06] px-3 py-2 text-sm text-tinta-800">
+            <p role="status" className="mt-4 rounded-sm border-l-4 border-atencao bg-atencao/6 px-3 py-2 text-sm text-tinta-800">
               {MENSAGEM_SAIDA[motivo]}
             </p>
           )}
