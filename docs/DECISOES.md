@@ -88,3 +88,15 @@ próprio (ex.: analista de licenciamento), as políticas de `licencas` e
   conta) encerra a sessão em todos os computadores e celulares.
 - A proteção roda no navegador (computador esquecido aberto). Limite de sessão
   no servidor depende das configurações do Supabase (Authentication → Sessions).
+
+### Exportação em PDF e planilha (03/10/2026)
+- Empresas, licenças de obra e o cruzamento Anatel × CADEX saem em **PDF**
+  (para anexar ao SEI) ou em planilha, com o mesmo conteúdo.
+- Empresas: filtros por tipo e situação, colunas à escolha e agrupamento por
+  tipo, setor, situação ou contratante (terceirizada aparece sob cada
+  contratante). Licenças: sai a lista da tela (busca e filtros aplicados),
+  com colunas à escolha e agrupamento por setor, situação, executora,
+  contratante, bairro ou ano da decisão.
+- O PDF traz cabeçalho da Prefeitura/SECONSER, filtros, total, data e hora da
+  emissão, quem emitiu e "Página X de Y". Contratante pessoa física (dono de
+  imóvel na drenagem) sai como "Particular".

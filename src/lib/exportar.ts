@@ -1,8 +1,9 @@
 import { formatCnpj } from './cnpj';
 import {
-  SITUACAO_LABEL, descricaoEmpresa, nomeEmpresa, situacaoEfetiva,
+  SETOR_LABEL, SITUACAO_LABEL, TIPO_LABEL, descricaoEmpresa, nomeEmpresa, situacaoEfetiva,
   type Empresa, type Resumo, type Vinculo,
 } from './empresas';
+import { agrupar, type Relatorio } from './relatorio';
 
 // ---------------------------------------------------------------------
 // CSV no padrão do Excel em português: separador `;`, BOM UTF-8 e CRLF.
@@ -111,4 +112,47 @@ export const COLUNAS_PADRAO = ['codigo', 'razao', 'fantasia', 'cnpj', 'tipo', 's
 export function relacaoCsv(empresas: Empresa[], chaves: string[], c: Contexto): string {
   const cols = COLUNAS.filter((col) => chaves.includes(col.chave));
   return gerarCsv(cols.map((col) => col.rotulo), empresas.map((e) => cols.map((col) => col.valor(e, c))));
+}
+
+// ---------------------------------------------------------------------
+// Relação de empresas como relatório (PDF ou planilha), com agrupamento
+// ---------------------------------------------------------------------
+
+export const AGRUPAR_EMPRESAS = [
+  { valor: '', rotulo: 'Sem agrupamento' },
+  { valor: 'tipo', rotulo: 'Tipo de empresa' },
+  { valor: 'setor', rotulo: 'Setor' },
+  { valor: 'situacao', rotulo: 'Situação da inscrição' },
+  { valor: 'contratante', rotulo: 'Contratante (terceirizadas por quem as contrata)' },
+] as const;
+
+export type AgrupamentoEmpresas = (typeof AGRUPAR_EMPRESAS)[number]['valor'];
+
+function gruposDaEmpresa(e: Empresa, por: AgrupamentoEmpresas, c: Contexto): string[] {
+  switch (por) {
+    case 'tipo': return [TIPO_LABEL[e.tipo]];
+    case 'setor': return e.setores.map((s) => SETOR_LABEL[s]);
+    case 'situacao': return [SITUACAO_LABEL[situacaoEfetiva(e, c.hoje)]];
+    case 'contratante': {
+      const l = contratantes(e, c);
+      return l.length ? l.map((x) => `${nomeEmpresa(x)} (${x.codigo_cadex})`) : ['Sem contratante vinculado'];
+    }
+    default: return [''];
+  }
+}
+
+export function relacaoEmpresas(
+  empresas: Empresa[], chaves: string[], c: Contexto, por: AgrupamentoEmpresas, filtros: string[],
+): Relatorio {
+  const cols = COLUNAS.filter((col) => chaves.includes(col.chave));
+  const linha = (e: Empresa) => cols.map((col) => col.valor(e, c));
+  const rotuloGrupo = AGRUPAR_EMPRESAS.find((a) => a.valor === por)?.rotulo;
+  return {
+    titulo: 'Relação de empresas',
+    arquivo: 'cadex-empresas',
+    filtros: por ? [...filtros, `Agrupado por: ${rotuloGrupo?.toLowerCase()}.`] : filtros,
+    colunas: cols.map((col) => col.rotulo),
+    grupos: [...agrupar(empresas, (e) => gruposDaEmpresa(e, por, c)).entries()]
+      .map(([titulo, lista]) => ({ titulo, linhas: lista.map(linha) })),
+  };
 }

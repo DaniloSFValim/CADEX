@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Badge, Card, Empty, ErrorNote, Kpi, Spinner, Titulo, botaoLink, inputClass, tabela } from '../components/ui';
+import { ExportarLicencas } from '../components/ExportarLicencas';
+import { Badge, Button, Card, Empty, ErrorNote, Kpi, Spinner, Titulo, botaoLink, inputClass, tabela } from '../components/ui';
 import { dataBR } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { SETORES, SETOR_LABEL, hojeISO, listarEmpresas, nomeEmpresa, type Empresa } from '../lib/empresas';
@@ -25,6 +26,7 @@ export default function Licencas() {
   const [busca, setBusca] = useState('');
   const [filtro, setFiltro] = useState('');
   const [setor, setSetor] = useState('');
+  const [exportando, setExportando] = useState(false);
   const hoje = hojeISO();
 
   useEffect(() => {
@@ -59,7 +61,12 @@ export default function Licencas() {
       <Titulo
         titulo="Obras licenciadas"
         descricao="Licenças de obra de infraestrutura (arts. 10 a 14 da Resolução). O pedido tramita e é decidido no SEI; aqui fica o registro para consulta e fiscalização."
-        acoes={podeEditar && <Link to="/obras/nova" className={botaoLink.primary}>Registrar licença</Link>}
+        acoes={<>
+          <Button variant="secondary" disabled={!licencas?.length} onClick={() => setExportando((x) => !x)}>
+            Exportar (PDF ou planilha)
+          </Button>
+          {podeEditar && <Link to="/obras/nova" className={botaoLink.primary}>Registrar licença</Link>}
+        </>}
       />
 
       {licencas && licencas.length > 0 && (
@@ -69,6 +76,19 @@ export default function Licencas() {
           <Kpi rotulo="Prazo encerrado" valor={conta(['prazo_encerrado'])} tom="baixa" detalhe="cronograma vencido sem conclusão" />
           <Kpi rotulo="Sem As Built" valor={conta(['concluida_sem_as_built'])} tom="atencao" detalhe="concluídas, art. 26 pendente" />
         </div>
+      )}
+
+      {exportando && licencas && (
+        <ExportarLicencas
+          licencas={filtradas}
+          contexto={{ hoje, porId }}
+          filtros={[
+            `Setor: ${setor ? SETOR_LABEL[setor as keyof typeof SETOR_LABEL].toLowerCase() : 'todos'}.`,
+            `Situação: ${FILTROS.find((f) => f.valor === filtro)?.rotulo.toLowerCase() ?? 'todas'}.`,
+            ...(busca.trim() ? [`Busca: "${busca.trim()}".`] : []),
+          ]}
+          onFechar={() => setExportando(false)}
+        />
       )}
 
       <section className="cartao">
