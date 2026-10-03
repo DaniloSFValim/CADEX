@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { Badge, Empty, ErrorNote, Kpi, Spinner, Titulo, linkTexto } from '../components/ui';
+import { Badge, Empty, ErrorNote, Kpi, Spinner, linkTexto } from '../components/ui';
 import { SituacaoBadge, dataBR } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { formatCnpj } from '../lib/cnpj';
@@ -106,12 +106,31 @@ export default function Dashboard() {
   if (loading) return <Spinner />;
   if (error) return <ErrorNote error={error} />;
 
-  return (
-    <div className="flex flex-col gap-6">
-      <Titulo titulo="Painel da gestão" descricao="Prazos da SECONSER que pedem atenção agora." />
+  const pendencias =
+    (sumario?.analises_pendentes || 0) + (sumario?.saneamentos_vencendo || 0) +
+    (sumario?.inscricoes_vencendo || 0) + obras.prazoEncerrado.length + obras.semAsBuilt.length;
 
-      {/* KPIs */}
-      <div className="mb-10 grid grid-cols-1 gap-6 sm:grid-cols-3">
+  return (
+    <div className="flex flex-col gap-14">
+      <header className="max-w-3xl">
+        <p className="text-sm text-tinta-500">Painel da SECONSER em {dataBR(hojeISO())}</p>
+        <h1 className="mt-2 text-3xl font-semibold leading-[1.15] tracking-[-0.02em] text-tinta-900 sm:text-4xl sm:leading-[1.15]">
+          {pendencias === 0
+            ? 'Nada pede atenção agora.'
+            : `${pendencias} ${pendencias === 1 ? 'item pede' : 'itens pedem'} atenção.`}
+        </h1>
+        <p className="mt-4 text-lg leading-relaxed text-tinta-500">
+          {pendencias === 0
+            ? 'Nenhum prazo de inscrição ou licença está no limite; as listas abaixo estão vazias.'
+            : 'Cada empresa e obra que precisa de ação está nas listas abaixo, em ordem de urgência.'}
+        </p>
+        <nav className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-base" aria-label="Atalhos">
+          <Link to="/" className={linkTexto}>Ver empresas</Link>
+          <Link to="/obras" className={linkTexto}>Ver obras</Link>
+        </nav>
+      </header>
+
+      <div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-3">
         <Kpi
           rotulo="Análises atrasadas"
           valor={sumario?.analises_pendentes || 0}
@@ -134,12 +153,14 @@ export default function Dashboard() {
 
       {/* Análises Pendentes */}
       <section>
-        <h2 className="mb-4 text-lg font-semibold">Análises requeridas há mais de 15 dias</h2>
+        <CabecalhoSecao titulo="Análises atrasadas"
+                        descricao="Inscrições requeridas há mais de 15 dias sem decisão." />
+        {/* Análises requeridas há mais de 15 dias */}
         {analises.length === 0 ? (
           <Empty>Nenhuma análise pendente há mais de 15 dias.</Empty>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-left text-sm">
               <thead className="border-b border-tinta-200 text-tinta-400">
                 <tr>
                   <th className="px-3 py-2.5 text-left font-medium">Empresa</th>
@@ -150,14 +171,14 @@ export default function Dashboard() {
               </thead>
               <tbody>
                 {analises.map((a) => (
-                  <tr key={a.id} className="border-b border-tinta-100 hover:bg-marca-50/40">
-                    <td className="px-4 py-2">
+                  <tr key={a.id} className="border-b border-tinta-100 hover:bg-tinta-50">
+                    <td className="px-3 py-2.5">
                       <div className="font-medium">{a.nome_fantasia || a.razao_social}</div>
                       <div className="text-xs text-tinta-500">{a.razao_social}</div>
                     </td>
-                    <td className="px-4 py-2 tabular text-sm">{formatCnpj(a.cnpj)}</td>
-                    <td className="px-4 py-2 text-sm">{dataBR(a.data_requerimento)}</td>
-                    <td className="px-4 py-2 text-right">
+                    <td className="px-3 py-2.5 tabular text-sm">{formatCnpj(a.cnpj)}</td>
+                    <td className="px-3 py-2.5 text-sm">{dataBR(a.data_requerimento)}</td>
+                    <td className="px-3 py-2.5 text-right">
                       <Badge tom={a.dias_pendentes > 30 ? 'ruim' : 'alerta'}>{a.dias_pendentes} dias</Badge>
                     </td>
                   </tr>
@@ -170,12 +191,13 @@ export default function Dashboard() {
 
       {/* Saneamentos Vencendo */}
       <section>
-        <h2 className="mb-4 text-lg font-semibold">Saneamentos que vencem em até 7 dias</h2>
+        <CabecalhoSecao titulo="Saneamentos no fim do prazo"
+                        descricao="Empresas em saneamento cujo prazo vence em até 7 dias." />
         {saneamentos.length === 0 ? (
           <Empty>Nenhum saneamento vencendo nos próximos 7 dias.</Empty>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-left text-sm">
               <thead className="border-b border-tinta-200 text-tinta-400">
                 <tr>
                   <th className="px-3 py-2.5 text-left font-medium">Empresa</th>
@@ -187,15 +209,15 @@ export default function Dashboard() {
               </thead>
               <tbody>
                 {saneamentos.map((s) => (
-                  <tr key={s.id} className="border-b border-tinta-100 hover:bg-marca-50/40">
-                    <td className="px-4 py-2">
+                  <tr key={s.id} className="border-b border-tinta-100 hover:bg-tinta-50">
+                    <td className="px-3 py-2.5">
                       <div className="font-medium">{s.nome_fantasia || s.razao_social}</div>
                       <div className="text-xs text-tinta-500">{s.razao_social}</div>
                     </td>
-                    <td className="px-4 py-2 tabular text-sm">{formatCnpj(s.cnpj)}</td>
-                    <td className="px-4 py-2 text-sm">{dataBR(s.notificacao_data)}</td>
-                    <td className="px-4 py-2 text-sm font-semibold text-baixa">{dataBR(s.data_vencimento)}</td>
-                    <td className="px-4 py-2 text-right">
+                    <td className="px-3 py-2.5 tabular text-sm">{formatCnpj(s.cnpj)}</td>
+                    <td className="px-3 py-2.5 text-sm">{dataBR(s.notificacao_data)}</td>
+                    <td className="px-3 py-2.5 text-sm font-semibold text-baixa">{dataBR(s.data_vencimento)}</td>
+                    <td className="px-3 py-2.5 text-right">
                       <Badge tom="ruim">{s.dias_restantes} dias</Badge>
                     </td>
                   </tr>
@@ -208,12 +230,13 @@ export default function Dashboard() {
 
       {/* Inscrições Vencendo */}
       <section>
-        <h2 className="mb-4 text-lg font-semibold">Inscrições que vencem em até 30 dias</h2>
+        <CabecalhoSecao titulo="Inscrições por vencer"
+                        descricao="Inscrições APTA cuja validade termina em até 30 dias." />
         {inscricoes.length === 0 ? (
           <Empty>Nenhuma inscrição vencendo nos próximos 30 dias.</Empty>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-left text-sm">
               <thead className="border-b border-tinta-200 text-tinta-400">
                 <tr>
                   <th className="px-3 py-2.5 text-left font-medium">Empresa</th>
@@ -225,17 +248,17 @@ export default function Dashboard() {
               </thead>
               <tbody>
                 {inscricoes.map((i) => (
-                  <tr key={i.id} className="border-b border-tinta-100 hover:bg-marca-50/40">
-                    <td className="px-4 py-2">
+                  <tr key={i.id} className="border-b border-tinta-100 hover:bg-tinta-50">
+                    <td className="px-3 py-2.5">
                       <div className="font-medium">{i.nome_fantasia || i.razao_social}</div>
                       <div className="text-xs text-tinta-500">{i.razao_social}</div>
                     </td>
-                    <td className="px-4 py-2 tabular text-sm">{formatCnpj(i.cnpj)}</td>
-                    <td className="px-4 py-2">
+                    <td className="px-3 py-2.5 tabular text-sm">{formatCnpj(i.cnpj)}</td>
+                    <td className="px-3 py-2.5">
                       <SituacaoBadge s={i.situacao_efetiva as any} />
                     </td>
-                    <td className="px-4 py-2 text-sm font-semibold">{dataBR(i.validade_ate)}</td>
-                    <td className="px-4 py-2 text-right">
+                    <td className="px-3 py-2.5 text-sm font-semibold">{dataBR(i.validade_ate)}</td>
+                    <td className="px-3 py-2.5 text-right">
                       <Badge tom={i.dias_restantes <= 7 ? 'ruim' : 'alerta'}>{i.dias_restantes} dias</Badge>
                     </td>
                   </tr>
@@ -247,12 +270,11 @@ export default function Dashboard() {
       </section>
 
       {/* Licenças de obra */}
-      <section className="mt-4 border-t border-tinta-200 pt-8">
-        <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-xl font-bold tracking-[-0.015em] text-tinta-900">Licenças de obra</h2>
-          <Link to="/obras" className={`${linkTexto} text-sm`}>Ver todas as licenças</Link>
-        </div>
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+      <section className="border-t border-tinta-200 pt-10">
+        <CabecalhoSecao titulo="Licenças de obra"
+                        descricao="Obras cujo acompanhamento está pendente (arts. 24 e 26)."
+                        acao={<Link to="/obras" className={`${linkTexto} text-sm`}>Ver todas as licenças</Link>} />
+        <div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2">
           <Kpi rotulo="Prazos encerrados" valor={obras.prazoEncerrado.length}
                detalhe="cronograma vencido sem conclusão registrada"
                tom={obras.prazoEncerrado.length ? 'baixa' : undefined} />
@@ -284,6 +306,19 @@ export default function Dashboard() {
   );
 }
 
+/** Cabeçalho de seção no padrão do NETRANK: título, uma linha de descrição e ação opcional. */
+function CabecalhoSecao({ titulo, descricao, acao }: { titulo: string; descricao: string; acao?: ReactNode }) {
+  return (
+    <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+      <div>
+        <h2 className="text-xl font-semibold tracking-[-0.01em] text-tinta-900">{titulo}</h2>
+        <p className="mt-1 text-sm text-tinta-500">{descricao}</p>
+      </div>
+      {acao}
+    </div>
+  );
+}
+
 function TabelaPendencias({ titulo, vazio, coluna, data, sufixo, tom, itens, porId }: {
   titulo: string; vazio: string; coluna: string; data: (l: LicencaComTrechos) => string | null;
   sufixo: string; tom: 'ruim' | 'alerta'; itens: PendenciaLicenca[];
@@ -296,7 +331,7 @@ function TabelaPendencias({ titulo, vazio, coluna, data, sufixo, tom, itens, por
         <Empty>{vazio}</Empty>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-left text-sm">
             <thead className="border-b border-tinta-200 text-tinta-400">
               <tr>
                 <th className="px-3 py-2.5 text-left font-medium">Licença</th>
@@ -308,18 +343,18 @@ function TabelaPendencias({ titulo, vazio, coluna, data, sufixo, tom, itens, por
             </thead>
             <tbody>
               {itens.map(({ licenca: l, dias }) => (
-                <tr key={l.id} className="border-b border-tinta-100 hover:bg-marca-50/40">
-                  <td className="px-4 py-2">
+                <tr key={l.id} className="border-b border-tinta-100 hover:bg-tinta-50">
+                  <td className="px-3 py-2.5">
                     <Link to={`/obras/${l.id}`} className="font-medium hover:text-marca-700 hover:underline">{l.numero}</Link>
                     <div className="tabular text-xs text-tinta-500">{l.processo_sei}</div>
                   </td>
-                  <td className="px-4 py-2">{nomeExecutora(l, porId)}</td>
-                  <td className="px-4 py-2">
+                  <td className="px-3 py-2.5">{nomeExecutora(l, porId)}</td>
+                  <td className="px-3 py-2.5">
                     {l.licenca_trechos[0]?.logradouro ?? '—'}
                     {l.licenca_trechos[0]?.bairro && <span className="text-tinta-500">, {l.licenca_trechos[0].bairro}</span>}
                   </td>
-                  <td className="tabular px-4 py-2">{dataBR(data(l))}</td>
-                  <td className="px-4 py-2 text-right">
+                  <td className="tabular px-3 py-2.5">{dataBR(data(l))}</td>
+                  <td className="px-3 py-2.5 text-right">
                     <Badge tom={tom}>{dias} dia{dias === 1 ? '' : 's'} {sufixo}</Badge>
                   </td>
                 </tr>
