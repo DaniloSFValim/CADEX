@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { Badge, Card, Empty, ErrorNote, Kpi, Spinner, Titulo, inputClass, linkTexto, tabela } from '../components/ui';
+import { BotoesExportar } from '../components/BotoesExportar';
 import { SituacaoBadge } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { formatCnpj } from '../lib/cnpj';
-import { hojeISO, listarEmpresas, nomeEmpresa, situacaoEfetiva, type Empresa } from '../lib/empresas';
+import { SITUACAO_LABEL, hojeISO, listarEmpresas, nomeEmpresa, situacaoEfetiva, type Empresa } from '../lib/empresas';
+import { agrupar, type Relatorio } from '../lib/relatorio';
 import {
   FONTE_ANATEL, buscarNiteroiAnatel, cruzar, rotuloCompetencia, type AtuacaoAnatel, type MunicipioAnatel,
 } from '../lib/anatel';
@@ -51,6 +53,27 @@ export default function CruzamentoAnatel() {
     l.provedor.acessos >= min && (filtro === 'sem' ? !l.empresa : filtro === 'com' ? !!l.empresa : true));
   const sem = cruzamento?.linhas.filter((l) => !l.empresa && !l.grupoInscrito) ?? [];
   const soGrupo = cruzamento?.linhas.filter((l) => l.grupoInscrito) ?? [];
+
+  // Relatório da lista na tela, agrupado pela situação no CADEX.
+  const relatorio: Relatorio | null = anatel && {
+    titulo: 'Provedores em Niterói (Anatel) e inscrição no CADEX',
+    arquivo: 'cadex-anatel-niteroi',
+    filtros: [
+      `Acessos de banda larga fixa declarados à Anatel em ${rotuloCompetencia(anatel.competencia)}, processados pelo NETRANK RJ.`,
+      `Filtro: ${FILTROS.find((f) => f.valor === filtro)?.rotulo.toLowerCase()}; mínimo de ${min} acesso${min === 1 ? '' : 's'}. Agrupado pela situação no CADEX.`,
+      'Comparação pela raiz do CNPJ. Ter acessos não prova obra em via pública.',
+    ],
+    colunas: ['Provedor', 'CNPJ', 'Acessos', 'Participação', 'Atuação na Anatel', 'CADEX'],
+    grupos: [...agrupar(linhas, (l) => [l.empresa ? 'Inscritos no CADEX' : l.grupoInscrito ? 'CNPJ não inscrito, grupo inscrito' : 'Sem inscrição no CADEX'])
+      .entries()].map(([titulo, ls]) => ({
+        titulo,
+        linhas: ls.map(({ provedor: p, empresa: e, grupoInscrito: g }) => [
+          p.nome, formatCnpj(p.cnpj), p.acessos.toLocaleString('pt-BR'), `${pct(p.marketShare)}%`,
+          ATUACAO_LABEL[p.tipoAtuacao ?? 'INDEFINIDO'],
+          e ? `${e.codigo_cadex}, ${SITUACAO_LABEL[situacaoEfetiva(e, hoje)].toLowerCase()}` : g ? `grupo: ${g.codigo_cadex}` : '',
+        ]),
+      })),
+  };
   const acessosSem = sem.reduce((s, l) => s + l.provedor.acessos, 0);
   const total = anatel?.concentracao.totalAcessos ?? 0;
 
@@ -83,6 +106,8 @@ export default function CruzamentoAnatel() {
                  valor={cruzamento.operadorasSemAcessos.length}
                  detalhe="Inscritas no CADEX, sem acessos declarados em Niterói" />
           </div>
+
+          {relatorio && <div className="mb-4"><BotoesExportar relatorio={relatorio} /></div>}
 
           <Card
             title="Provedores"

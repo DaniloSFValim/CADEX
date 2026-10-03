@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { Button } from './ui';
-import { COLUNAS, COLUNAS_PADRAO, baixarArquivo, relacaoCsv, type Contexto } from '../lib/exportar';
+import { BotoesExportar, SeletorAgrupamento } from './BotoesExportar';
+import {
+  AGRUPAR_EMPRESAS, COLUNAS, COLUNAS_PADRAO, relacaoEmpresas, type AgrupamentoEmpresas, type Contexto,
+} from '../lib/exportar';
 import {
   SITUACAO_LABEL, TIPO_LABEL, situacaoEfetiva, situacoesDoFiltro, type Empresa, type SituacaoEfetiva, type Tipo,
 } from '../lib/empresas';
@@ -21,7 +23,7 @@ function Opcao({ rotulo, marcado, onChange }: { rotulo: string; marcado: boolean
   );
 }
 
-/** Relação de empresas em planilha (.csv que abre no Excel), com filtros e colunas à escolha. */
+/** Relação de empresas em PDF ou planilha, com filtros, colunas e agrupamento à escolha. */
 export function ExportarRelacao({
   empresas, contexto, podeVerDocumentos, tipoInicial, situacaoInicial, onFechar,
 }: {
@@ -36,6 +38,7 @@ export function ExportarRelacao({
   const [situacoes, setSituacoes] = useState<SituacaoEfetiva[]>(
     situacoesDoFiltro(situacaoInicial));
   const [colunas, setColunas] = useState<string[]>(COLUNAS_PADRAO);
+  const [agrupar, setAgrupar] = useState<AgrupamentoEmpresas>('');
 
   const disponiveis = COLUNAS.filter((c) => podeVerDocumentos || !c.soGestor);
   const grupos = [...new Set(disponiveis.map((c) => c.grupo))];
@@ -45,7 +48,7 @@ export function ExportarRelacao({
   return (
     <div className="mb-4 space-y-4 rounded border border-tinta-200 bg-tinta-50 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-tinta-800">Exportar planilha</h3>
+        <h3 className="text-sm font-semibold text-tinta-800">Exportar relação de empresas</h3>
         <button type="button" className="text-sm text-tinta-500 hover:text-tinta-800" onClick={onFechar}>Fechar</button>
       </div>
 
@@ -91,18 +94,12 @@ export function ExportarRelacao({
         </div>
       </fieldset>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <Button disabled={selecionadas.length === 0 || colunas.length === 0}
-                onClick={() => baixarArquivo(
-                  `cadex-empresas-${contexto.hoje}.csv`,
-                  relacaoCsv(selecionadas, colunas, contexto),
-                )}>
-          Baixar planilha
-        </Button>
-        <span className="text-sm text-tinta-600">
-          {selecionadas.length} empresa{selecionadas.length === 1 ? '' : 's'}, {colunas.length} coluna{colunas.length === 1 ? '' : 's'}
-        </span>
-      </div>
+      <SeletorAgrupamento valor={agrupar} opcoes={AGRUPAR_EMPRESAS} onChange={setAgrupar} />
+
+      <BotoesExportar relatorio={relacaoEmpresas(selecionadas, colunas, contexto, agrupar, [
+        `Tipos: ${tipos.length === TIPOS.length ? 'todos' : tipos.map((t) => TIPO_LABEL[t].toLowerCase()).join(', ')}.`,
+        `Situações: ${situacoes.length === SITUACOES.length ? 'todas' : situacoes.map((x) => SITUACAO_LABEL[x].toLowerCase()).join(', ')}.`,
+      ])} />
     </div>
   );
 }

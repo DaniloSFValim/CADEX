@@ -65,10 +65,10 @@ export default function Empresas() {
     <>
       <Titulo
         titulo="Empresas"
-        descricao="Operadoras de telecomunicações e terceirizadas cadastradas no CADEX."
+        descricao="Operadoras, concessionárias, construtoras e terceirizadas cadastradas no CADEX."
         acoes={<>
           <Button variant="secondary" disabled={!empresas?.length} onClick={() => setExportando((x) => !x)}>
-            Exportar planilha
+            Exportar (PDF ou planilha)
           </Button>
           {podeEditar && <Link to="/empresas/nova" className={botaoLink.primary}>Nova empresa</Link>}
         </>}
