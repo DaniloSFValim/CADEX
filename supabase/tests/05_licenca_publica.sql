@@ -35,6 +35,10 @@ begin
   insert into empresas (cnpj, razao_social, tipo, email, setores)
   values ('11444777000161', 'Executora Pública Ltda.', 'terceirizada', 'ex@p.test', '{telecom}') returning id into ex;
   insert into vinculos (contratante_id, contratada_id) values (op, ex);
+  insert into documentos (empresa_id, tipo, status)
+  select e.id, t.codigo, 'entregue' from empresas e join tipos_documento t
+    on t.obrigatorio and public.perfil_documental(e.tipo, e.setores) = any(t.perfis)
+   where e.id = ex;
   update empresas set situacao = 'apta', portaria_numero = 'P-9', portaria_data = hoje - 5 where id = ex;
 
   deferida := public.salvar_licenca(jsonb_build_object(

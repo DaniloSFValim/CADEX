@@ -90,8 +90,8 @@ describe('situacoesDoFiltro', () => {
   it('APTA inclui as empresas em saneamento', () => {
     expect(situacoesDoFiltro('apta')).toEqual(['apta', 'em_saneamento']);
   });
-  it('vazio abrange todas as situações, inclusive inapta e indeferida', () => {
-    expect(situacoesDoFiltro('')).toEqual(expect.arrayContaining(['inapta', 'indeferida', 'vencida']));
+  it('vazio abrange todas as situações, inclusive deferida e inapta', () => {
+    expect(situacoesDoFiltro('')).toEqual(expect.arrayContaining(['deferida', 'inapta', 'vencida']));
   });
   it('valor desconhecido não abrange nada', () => {
     expect(situacoesDoFiltro('inapta')).toEqual([]);

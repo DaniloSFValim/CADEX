@@ -59,6 +59,19 @@ begin
   perform pg_temp.assert((select count(*) from historico_situacao where empresa_id = op) = 1,
     'cadastro deveria abrir o histórico');
 
+  -- DEFERIDA/APTA exigem zero pendência documental: entrega tudo antes.
+  perform pg_temp.recusa(format($q$update empresas set situacao = 'deferida' where id = %L$q$, op),
+    'DEFERIDA com documentos pendentes foi aceita');
+  insert into documentos (empresa_id, tipo, status)
+  select e.id, t.codigo, 'entregue' from empresas e join tipos_documento t
+    on t.obrigatorio and public.perfil_documental(e.tipo, e.setores) = any(t.perfis)
+   where e.id = op;
+
+  -- DEFERIDA: habilitada, sem portaria; e volta para APTA ao publicar a portaria.
+  update empresas set situacao = 'deferida' where id = op;
+  perform pg_temp.assert((select validade_ate from empresas where id = op) is null,
+    'DEFERIDA não tem validade (sem portaria)');
+
   -- APTA exige a portaria
   perform pg_temp.recusa(format($q$update empresas set situacao = 'apta' where id = %L$q$, op),
     'APTA sem portaria foi aceita');
@@ -67,9 +80,7 @@ begin
   perform pg_temp.assert((select validade_ate from empresas where id = op) = date '2027-09-20',
     'validade deveria ser de 12 meses a partir da publicação (art. 7º, § 1º)');
 
-  -- Indeferir só o que está em análise; inapta só depois do saneamento
-  perform pg_temp.recusa(format($q$update empresas set situacao = 'indeferida' where id = %L$q$, op),
-    'empresa APTA foi indeferida');
+  -- Inapta só depois do saneamento
   perform pg_temp.recusa(format($q$update empresas set situacao = 'inapta' where id = %L$q$, op),
     'APTA virou INAPTA sem notificação (art. 8º)');
 
@@ -88,8 +99,8 @@ begin
   update empresas set situacao = 'apta' where id = op;
   perform pg_temp.assert((select notificacao_data from empresas where id = op) is null,
     'restabelecer deveria encerrar a notificação');
-  perform pg_temp.assert((select count(*) from historico_situacao where empresa_id = op) = 5,
-    'histórico deveria ter 5 registros (cadastro, apta, saneamento, inapta, apta), tem ' || (select count(*) from historico_situacao where empresa_id = op));
+  perform pg_temp.assert((select count(*) from historico_situacao where empresa_id = op) = 6,
+    'histórico deveria ter 6 registros (cadastro, deferida, apta, saneamento, inapta, apta), tem ' || (select count(*) from historico_situacao where empresa_id = op));
 
   -- Terceirizada indeferida
   insert into empresas (cnpj, razao_social, tipo, email, setores)
@@ -97,7 +108,11 @@ begin
   returning id into te;
   insert into ids values ('te', te);
   insert into vinculos (contratante_id, contratada_id) values (op, te);
-  update empresas set situacao = 'indeferida' where id = te;
+  insert into documentos (empresa_id, tipo, status)
+  select e.id, t.codigo, 'entregue' from empresas e join tipos_documento t
+    on t.obrigatorio and public.perfil_documental(e.tipo, e.setores) = any(t.perfis)
+   where e.id = te;
+  update empresas set situacao = 'deferida' where id = te;
 
   -- Operadora com inscrição vencida
   insert into empresas (cnpj, razao_social, tipo, email, situacao, portaria_numero, portaria_data)
@@ -187,8 +202,8 @@ begin
   perform pg_temp.assert(r.logo_arquivo like '%/logo-1.png', 'consulta pública deveria trazer o logo');
 
   select * into r from consulta_publica() where cnpj = '22333444000181';
-  perform pg_temp.assert(r.situacao = 'indeferida' and r.contratantes = array['OpTeste'],
-    'terceirizada deveria aparecer INDEFERIDA, atendendo a OpTeste');
+  perform pg_temp.assert(r.situacao = 'deferida' and r.contratantes = array['OpTeste'],
+    'terceirizada deveria aparecer DEFERIDA, atendendo a OpTeste');
 
   select * into r from consulta_publica() where cnpj = '55666777000181';
   perform pg_temp.assert(r.situacao = 'vencida', 'inscrição com mais de 12 meses deveria aparecer VENCIDA');

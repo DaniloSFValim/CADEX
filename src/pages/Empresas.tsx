@@ -86,11 +86,11 @@ export default function Empresas() {
           <div className="mb-10 grid grid-cols-2 gap-x-8 gap-y-6 md:grid-cols-4">
             <Kpi rotulo="Cadastradas" valor={empresas.length}
                  detalhe={`${empresas.length - terceirizadas} contratante${empresas.length - terceirizadas === 1 ? '' : 's'}, ${terceirizadas} terceirizada${terceirizadas === 1 ? '' : 's'}`} />
-            <Kpi rotulo="Aptas" valor={n((x) => x === 'apta' || x === 'em_saneamento')} tom="alta"
+            <Kpi rotulo="Habilitadas" valor={n((x) => x === 'deferida' || x === 'apta' || x === 'em_saneamento')} tom="alta"
                  detalhe={saneamento ? `${saneamento} em saneamento` : 'podem atuar'} />
             <Kpi rotulo="Em análise" valor={n((x) => x === 'em_analise')} detalhe="aguardando decisão" />
-            <Kpi rotulo="Impedidas" valor={n((x) => x === 'inapta' || x === 'vencida' || x === 'indeferida')} tom="baixa"
-                 detalhe={pendentes !== null ? `${pendentes} com documentos pendentes` : 'inaptas, vencidas ou indeferidas'} />
+            <Kpi rotulo="Impedidas" valor={n((x) => x === 'inapta' || x === 'vencida')} tom="baixa"
+                 detalhe={pendentes !== null ? `${pendentes} com documentos pendentes` : 'inaptas ou vencidas'} />
           </div>
         );
       })()}
