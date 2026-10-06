@@ -164,15 +164,6 @@ begin
   exception when unique_violation then null;
   end;
 
-  -- Documento com validade exige a data
-  begin
-    insert into documentos (empresa_id, tipo, arquivo, nome_arquivo)
-    values (op, 'CND_FEDERAL', op || '/cnd.pdf', 'cnd.pdf');
-    raise exception 'ASSERT FALHOU: certidão sem validade foi aceita';
-  exception when raise_exception then
-    if sqlerrm like 'ASSERT%' then raise; end if;
-  end;
-
   -- Arquivo fora da pasta da empresa
   begin
     insert into documentos (empresa_id, tipo, arquivo, nome_arquivo)
@@ -191,15 +182,9 @@ begin
       = '00000000-0000-4000-8000-000000000001',
     'documento deveria registrar quem enviou');
 
-  -- Sem arquivo: a SECONSER marca entregue/pendente e informa a validade
+  -- Sem arquivo: a SECONSER só marca entregue/pendente (documento não tem mais validade).
   insert into documentos (empresa_id, tipo, status) values (op, 'CNPJ_CARD', 'entregue');
-  begin
-    insert into documentos (empresa_id, tipo, status) values (op, 'CNDT', 'entregue');
-    raise exception 'ASSERT FALHOU: certidão entregue sem validade foi aceita';
-  exception when raise_exception then
-    if sqlerrm like 'ASSERT%' then raise; end if;
-  end;
-  insert into documentos (empresa_id, tipo, status, validade) values (op, 'CNDT', 'entregue', current_date + 180);
+  insert into documentos (empresa_id, tipo, status) values (op, 'CNDT', 'entregue');
   insert into documentos (empresa_id, tipo, status) values (op, 'CNDT', 'pendente');
   perform pg_temp.assert(
     (select status from documentos where empresa_id = op and tipo = 'CNDT'
