@@ -60,6 +60,12 @@ begin
   values (te, 'Eng. Fulano', '52998224725', 'CREA', 'RJ-123') returning id into rt;
   insert into ids values ('op', op), ('te', te), ('sub', sub), ('rt', rt);
 
+  -- Documentos obrigatórios entregues: pré-requisito para tornar APTA.
+  insert into documentos (empresa_id, tipo, status)
+  select e.id, t.codigo, 'entregue' from empresas e join tipos_documento t
+    on t.obrigatorio and public.perfil_documental(e.tipo, e.setores) = any(t.perfis)
+   where e.id in (te, sub);
+
   -- Processo SEI no formato do setor licenciador
   -- Processo em texto livre (SEI ou numeração anterior), mas não vazio
   perform pg_temp.recusa(format($q$insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id, contratante_id, protocolo_data)

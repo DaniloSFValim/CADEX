@@ -11,7 +11,7 @@ export type Setor = 'telecom' | 'gas' | 'saneamento' | 'drenagem' | 'construcao'
 /** Perfil que define os documentos exigidos (tipos_documento.perfis). */
 export type Perfil = 'telecom' | 'gas' | 'saneamento' | 'construtora' | 'terceirizada';
 /** Situação da inscrição no CADEX (arts. 7º e 8º). */
-export type Situacao = 'em_analise' | 'apta' | 'em_saneamento' | 'inapta' | 'indeferida';
+export type Situacao = 'em_analise' | 'deferida' | 'apta' | 'em_saneamento' | 'inapta';
 /** Situação exibida: inclui VENCIDA, calculada pela validade. */
 export type SituacaoEfetiva = Situacao | 'vencida';
 
@@ -139,20 +139,21 @@ export const atuaNoSetor = (e: Pick<Empresa, 'tipo' | 'setores'>, s: Setor) =>
 
 export const SITUACAO_LABEL: Record<SituacaoEfetiva, string> = {
   em_analise: 'EM ANÁLISE',
+  deferida: 'DEFERIDA',
   apta: 'APTA',
   em_saneamento: 'APTA – EM SANEAMENTO',
   inapta: 'INAPTA',
-  indeferida: 'INDEFERIDA',
   vencida: 'VENCIDA',
 };
 
 /**
  * Opções dos filtros de situação nas listas. APTA reúne quem está em
- * saneamento, que continua apta até a inaptidão (art. 8º). Inapta e
- * indeferida só aparecem com "qualquer situação".
+ * saneamento, que continua apta até a inaptidão (art. 8º). Inapta só
+ * aparece com "qualquer situação".
  */
 export const FILTRO_SITUACAO: { valor: string; rotulo: string; inclui: SituacaoEfetiva[] }[] = [
   { valor: 'em_analise', rotulo: 'EM ANÁLISE', inclui: ['em_analise'] },
+  { valor: 'deferida', rotulo: 'DEFERIDA', inclui: ['deferida'] },
   { valor: 'apta', rotulo: 'APTA', inclui: ['apta', 'em_saneamento'] },
   { valor: 'vencida', rotulo: 'VENCIDA', inclui: ['vencida'] },
 ];
@@ -173,8 +174,9 @@ export function situacaoEfetiva(
   return e.situacao;
 }
 
-/** Pode atuar (art. 3º): inscrição deferida e dentro da validade. */
-export const podeAtuar = (s: SituacaoEfetiva) => s === 'apta' || s === 'em_saneamento';
+/** Pode atuar (art. 3º): deferida/apta (inclui saneamento, que segue apta). */
+export const podeAtuar = (s: SituacaoEfetiva) =>
+  s === 'deferida' || s === 'apta' || s === 'em_saneamento';
 
 export const nomeEmpresa = (e: Pick<Empresa, 'razao_social' | 'nome_fantasia'>) =>
   e.nome_fantasia?.trim() || e.razao_social;

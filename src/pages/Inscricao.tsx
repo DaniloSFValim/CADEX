@@ -19,10 +19,10 @@ const paraInput = (e: Empresa): InscricaoInput => ({
 /** O que cada situação exige, conforme a Resolução, para orientar quem preenche. */
 const AJUDA: Record<Situacao, string> = {
   em_analise: 'Requerimento recebido. Prazo de análise: 15 dias úteis.',
+  deferida: 'Documentos completos; já habilitada a atuar. Publique a portaria para tornar APTA.',
   apta: 'Informe a portaria e a data de publicação. Vale por 12 meses.',
   em_saneamento: 'Notificada por pendência. Continua apta por 30 dias para regularizar.',
   inapta: 'Após 30 dias da notificação sem regularização. Não pode atuar.',
-  indeferida: 'Requerimento negado.',
 };
 
 export function Inscricao({
@@ -107,7 +107,9 @@ export function Inscricao({
           <Field label="Situação" className="sm:col-span-2" hint={AJUDA[v.situacao]}>
             <select id="insc-situacao" className={inputClass} value={v.situacao} onChange={set('situacao')}>
               {(Object.keys(AJUDA) as Situacao[]).map((s) => (
-                <option key={s} value={s}>{SITUACAO_LABEL[s]}</option>
+                <option key={s} value={s} disabled={(s === 'deferida' || s === 'apta') && faltando > 0}>
+                  {SITUACAO_LABEL[s]}
+                </option>
               ))}
             </select>
           </Field>
