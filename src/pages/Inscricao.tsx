@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { Button, Card, ErrorNote, Field, inputClass } from '../components/ui';
 import { SituacaoBadge, dataBR } from '../components/Situacao';
 import {
-  SITUACAO_LABEL, hojeISO, listarHistorico, salvarInscricao, situacaoEfetiva, somaDias,
-  type Empresa, type Historico, type InscricaoInput, type Situacao,
+  SITUACAO_LABEL, hojeISO, listarDocumentos, listarHistorico, listarTiposDocumento, resumoDocumentos,
+  salvarInscricao, situacaoEfetiva, somaDias, tiposDaEmpresa,
+  type Documento, type Empresa, type Historico, type InscricaoInput, type Situacao, type TipoDocumento,
 } from '../lib/empresas';
 
 const paraInput = (e: Empresa): InscricaoInput => ({
@@ -29,12 +30,20 @@ export function Inscricao({
 }: { empresa: Empresa; podeEditar: boolean; onSalvo: () => Promise<void> }) {
   const [v, setV] = useState<InscricaoInput>(paraInput(empresa));
   const [historico, setHistorico] = useState<Historico[]>([]);
+  const [tipos, setTipos] = useState<TipoDocumento[]>([]);
+  const [docs, setDocs] = useState<Documento[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [salvo, setSalvo] = useState(false);
 
   useEffect(() => { setV(paraInput(empresa)); }, [empresa]);
   useEffect(() => { listarHistorico(empresa.id).then(setHistorico).catch(setError); }, [empresa]);
+  // Completude documental, para orientar a decisão de deferir (não a automatiza).
+  useEffect(() => {
+    Promise.all([listarTiposDocumento(), listarDocumentos(empresa.id)])
+      .then(([t, d]) => { setTipos(tiposDaEmpresa(t, empresa)); setDocs(d); })
+      .catch(setError);
+  }, [empresa]);
 
   const set = (k: keyof InscricaoInput) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -45,6 +54,10 @@ export function Inscricao({
   const hoje = hojeISO();
   const efetiva = situacaoEfetiva(empresa, hoje);
   const fimSaneamento = empresa.notificacao_data ? somaDias(empresa.notificacao_data, 30) : null;
+
+  const obrigatorios = tipos.filter((t) => t.obrigatorio).length;
+  const faltando = resumoDocumentos(tipos, docs, hoje).faltando;
+  const entregues = obrigatorios - faltando;
 
   return (
     <Card title="Inscrição no CADEX" action={<SituacaoBadge s={efetiva} />}>
@@ -60,6 +73,20 @@ export function Inscricao({
           <dd>{empresa.situacao === 'em_saneamento' ? dataBR(fimSaneamento) : '—'}</dd>
         </div>
       </dl>
+
+      {obrigatorios > 0 && (
+        <p className={`mb-4 rounded-sm px-3 py-2 text-sm ring-1 ring-inset ${
+          faltando === 0
+            ? 'bg-alta/10 text-alta ring-alta/30'
+            : 'bg-atencao/10 text-atencao ring-atencao/30'
+        }`}>
+          {faltando === 0
+            ? `Todos os ${obrigatorios} documentos obrigatórios foram entregues — pronta para deferir.`
+            : `${entregues} de ${obrigatorios} documentos obrigatórios entregues. ${
+                faltando === 1 ? 'Falta 1' : `Faltam ${faltando}`} — confira em Documentos antes de deferir.`}
+        </p>
+      )}
+
       {efetiva === 'vencida' && (
         <p className="mb-4 rounded-sm bg-baixa/10 px-3 py-2 text-sm text-baixa ring-1 ring-inset ring-baixa/30">
           Inscrição vencida. Registre a portaria de renovação.
