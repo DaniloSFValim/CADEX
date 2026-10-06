@@ -115,6 +115,14 @@ guardada por 90 dias no GitHub Actions. Configuração e restauração:
 ## Publicação
 
 - **Banco:** aplicar `supabase/migrations/*.sql` no projeto Supabase.
-- **Site:** Vercel, projeto `cadex-niteroi`, ligado a este repositório;
+- **Site (Vercel):** projeto `cadex-niteroi`, ligado a este repositório;
   cada merge na `main` publica sozinho. Variáveis: `VITE_SUPABASE_URL` e
-  `VITE_SUPABASE_ANON_KEY`.
+  `VITE_SUPABASE_ANON_KEY`. Config em `vercel.json`.
+- **Site (Cloudflare Pages):** mesmo repositório, em paralelo à Vercel.
+  Build `npm run build`, saída `dist`. As mesmas variáveis
+  (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) nas configurações de
+  build. O fallback da SPA está em `public/_redirects`; o repasse
+  `/anatel/*` para o NETRANK é a Function `functions/anatel/[[path]].js`
+  (o `_redirects` da Cloudflare não faz proxy para domínio externo). O
+  Supabase não muda: a troca de hospedagem não encosta no banco nem no
+  login.
