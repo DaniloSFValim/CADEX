@@ -3,11 +3,12 @@ import type { Session } from '@supabase/supabase-js';
 import { registrarAtividade } from './sessao';
 import { supabase } from './supabase';
 
-export type Papel = 'gestor' | 'cisp';
+export type Papel = 'gestor' | 'cisp' | 'licenciador';
 
 export const PAPEL_LABEL: Record<Papel, string> = {
   gestor: 'SECONSER',
   cisp: 'CISP',
+  licenciador: 'Licenciamento',
 };
 
 export interface Servidor {
@@ -34,8 +35,10 @@ interface AuthState {
   mfa: EstadoMfa | null;
   /** Servidor logado, ou null se o usuário não for servidor. */
   servidor: Servidor | null;
-  /** Só o gestor (SECONSER) cadastra e altera; o CISP consulta. */
+  /** Só o gestor (SECONSER) cadastra e altera empresas/inscrições; o CISP consulta. */
   podeEditar: boolean;
+  /** Gestor ou licenciador: registra e atualiza licenças de obra. */
+  podeLicenciar: boolean;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   /** Sai só neste navegador. */
@@ -73,7 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // `totp` só traz fatores confirmados; um cadastro abandonado no meio não conta.
         const fator = fatores.data?.totp[0] ?? null;
         m = {
-          exigida: sv.papel === 'gestor',
+          exigida: sv.papel === 'gestor' || sv.papel === 'licenciador',
           cadastrada: Boolean(fator),
           confirmada: nivel.data?.currentLevel === 'aal2',
           fatorId: fator?.id ?? null,
@@ -98,6 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<AuthState>(() => ({
     session, servidor, mfa, loading, podeEditar: servidor?.papel === 'gestor',
+    podeLicenciar: servidor?.papel === 'gestor' || servidor?.papel === 'licenciador',
     signIn: async (email, password) => {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
