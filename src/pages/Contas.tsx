@@ -8,6 +8,7 @@ import {
 
 const PERFIS: { valor: Papel; rotulo: string; descricao: string }[] = [
   { valor: 'gestor', rotulo: 'SECONSER', descricao: 'cadastra, altera e decide inscrições' },
+  { valor: 'licenciador', rotulo: 'Licenciamento', descricao: 'só registra licenças de obra' },
   { valor: 'cisp', rotulo: 'CISP', descricao: 'só consulta, sem ver documentos' },
 ];
 
