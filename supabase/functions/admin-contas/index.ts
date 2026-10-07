@@ -15,7 +15,7 @@ const CORS = {
 };
 
 const SENHA_MINIMA = 10;
-const PAPEIS = ['gestor', 'cisp'];
+const PAPEIS = ['gestor', 'cisp', 'licenciador'];
 
 function resposta(status: number, corpo: Record<string, unknown>) {
   return new Response(JSON.stringify(corpo), {
