@@ -7,10 +7,14 @@ import { Button } from './ui';
 export function Layout() {
   const { servidor, session, signOut } = useAuth();
   const isGestor = servidor?.papel === 'gestor';
+  const soLicencas = servidor?.papel === 'licenciador';
   return (
     <div className="flex min-h-screen flex-col">
       <Cabecalho
-        itens={[
+        itens={soLicencas ? [
+          { rotulo: 'Obras', para: '/obras', fim: true },
+          { rotulo: 'Consulta pública', para: '/consulta' },
+        ] : [
           ...(isGestor ? [{ rotulo: 'Painel', para: '/dashboard' }, { rotulo: 'Anatel', para: '/anatel' }] : []),
           { rotulo: 'Empresas', para: '/', fim: true },
           { rotulo: 'Obras', para: '/obras' },

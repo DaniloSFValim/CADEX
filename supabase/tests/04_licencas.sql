@@ -131,16 +131,10 @@ begin
       numero = 'LIC 001/2026', art_numero = 'ART-1', inicio_previsto = '2026-12-31', fim_previsto = '2026-10-01'
     where id = %L$q$, lic), 'fim do cronograma', 'aceitou cronograma invertido');
 
-  -- Empresas em análise: bloqueado (arts. 4º e 8º, § 2º)
-  perform pg_temp.recusa(format($q$update licencas set situacao = 'deferida', decisao_data = '2026-09-20',
-      numero = 'LIC 001/2026', art_numero = 'ART-1', inicio_previsto = '2026-10-01', fim_previsto = '2026-12-31'
-    where id = %L$q$, lic), 'executora não está APTA', 'deferiu com executora em análise');
-
+  -- APTA deixou de ser exigida para deferir (flexibilização). As empresas
+  -- são tornadas aptas só para conferir que o deferimento congela a
+  -- situação no snapshot.
   update empresas set situacao = 'apta', portaria_numero = 'P-1', portaria_data = current_date - 10 where id = te;
-  perform pg_temp.recusa(format($q$update licencas set situacao = 'deferida', decisao_data = '2026-09-20',
-      numero = 'LIC 001/2026', art_numero = 'ART-1', inicio_previsto = '2026-10-01', fim_previsto = '2026-12-31'
-    where id = %L$q$, lic), 'subcontratada não está APTA', 'deferiu com subcontratada em análise');
-
   update empresas set situacao = 'apta', portaria_numero = 'P-2', portaria_data = current_date - 10 where id = sub;
   update licencas set situacao = 'deferida', decisao_data = '2026-09-20', numero = 'LIC 001/2026',
          art_numero = 'ART-1', inicio_previsto = '2026-10-01', fim_previsto = '2026-12-31'

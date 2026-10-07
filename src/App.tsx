@@ -61,9 +61,26 @@ function AreaRestrita() {
     );
   }
 
-  // Gestor e administrador: senha + código do aplicativo (o banco exige o mesmo).
+  // Gestor e licenciador: senha + código do aplicativo (o banco exige o mesmo).
   if (mfa?.exigida && !mfa.confirmada) {
     return mfa.cadastrada ? <ConfirmarMfa /> : <CadastrarMfa />;
+  }
+
+  // Licenciador: única prerrogativa é registrar licenças de obra.
+  if (servidor.papel === 'licenciador') {
+    return (
+      <Routes>
+        <Route path="obras/:id/placa" element={<PlacaLicenca />} />
+        <Route element={<Layout />}>
+          <Route index element={<Navigate to="/obras" replace />} />
+          <Route path="obras" element={<Licencas />} />
+          <Route path="obras/nova" element={<LicencaPage />} />
+          <Route path="obras/:id" element={<LicencaPage />} />
+          <Route path="minha-conta" element={<MinhaConta />} />
+          <Route path="*" element={<Navigate to="/obras" replace />} />
+        </Route>
+      </Routes>
+    );
   }
 
   return (

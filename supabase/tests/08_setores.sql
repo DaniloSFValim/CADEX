@@ -175,12 +175,12 @@ begin
       terc_gas, trecho),
     'só é aceita em drenagem', 'contratante sem cadastro em licença de gás');
 
-  -- Telecom continua com a Resolução: terceirizada multissetor em análise não é deferida
-  perform pg_temp.recusa(format($q$select public.salvar_licenca(jsonb_build_object(
+  -- Flexibilização: telecom defere mesmo com executora não APTA (sem ART).
+  perform pg_temp.assert(public.salvar_licenca(jsonb_build_object(
       'setor', 'telecom', 'processo_sei', 'NIT-050120/000500/2026', 'numero', 'T-1', 'tipos_obra', array['rede'],
-      'escopo', 'x', 'executora_id', %L, 'contratante_id', %L, 'art_numero', 'A', 'protocolo_data', '2026-09-20',
+      'escopo', 'x', 'executora_id', terc_multi, 'contratante_id', op, 'protocolo_data', '2026-09-20',
       'situacao', 'deferida', 'decisao_data', '2026-09-25', 'inicio_previsto', '2026-10-01', 'fim_previsto', '2026-10-10'),
-    %L::jsonb)$q$, terc_multi, op, trecho), 'não está APTA', 'telecom deferiu sem APTA');
+    trecho::jsonb) is not null, 'telecom deveria deferir sem exigir APTA nem ART');
 end $$;
 
 -- Público: setores na consulta e no mapa

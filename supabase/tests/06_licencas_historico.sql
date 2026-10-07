@@ -80,13 +80,6 @@ begin
       'decisao_data', '2026-09-15', 'inicio_previsto', '2026-10-01', 'fim_previsto', '2026-10-10', 'art_numero', 'A'),
     %L::jsonb)$q$, trecho), 'anterior a 09/09/2026', 'aceitou empresa sem cadastro em licença nova');
 
-  -- Em 09/09/2026 já vale a regra nova (APTA)
-  perform pg_temp.recusa(format($q$select public.salvar_licenca(jsonb_build_object(
-      'setor', 'telecom', 'processo_sei', 'NIT-050120/000902/2026', 'numero', 'LIC 902/2026', 'tipos_obra', array['vala'], 'escopo', 'x',
-      'executora_id', %L, 'contratante_id', %L, 'protocolo_data', '2026-09-01', 'situacao', 'deferida',
-      'decisao_data', '2026-09-09', 'inicio_previsto', '2026-10-01', 'fim_previsto', '2026-10-10', 'art_numero', 'A'),
-    %L::jsonb)$q$, ex, op, trecho), 'não está APTA', 'licença do dia da Resolução escapou da regra APTA');
-
   -- Executora nos dois formatos ao mesmo tempo, ou em nenhum
   perform pg_temp.recusa(format($q$insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id,
       executora_razao_social, protocolo_data, decisao_data, situacao)

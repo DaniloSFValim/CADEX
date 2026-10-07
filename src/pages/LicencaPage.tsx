@@ -5,18 +5,19 @@ import { QrCode } from '../components/QrCode';
 import { SituacaoBadge, dataBR } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { formatCnpj, formatCpf, isValidCnpj, isValidCpf, onlyDigits } from '../lib/cnpj';
+import { buscarCep, cepValido, formatCep } from '../lib/cep';
 import {
   SETORES, SETOR_LABEL, atuaNoSetor, ehContratante, hojeISO, listarDaEmpresa, listarEmpresas, listarVinculos,
   nomeEmpresa, podeAtuar, situacaoEfetiva, type Empresa, type Registro, type Setor, type Vinculo,
 } from '../lib/empresas';
 import {
-  ESTADO_LICENCA_LABEL, SITUACAO_LICENCA_LABEL, TIPO_OBRA_LABEL, TOM_ESTADO_LICENCA, buscarLicenca,
+  ESTADO_LICENCA_LABEL, TIPO_OBRA_LABEL, TOM_ESTADO_LICENCA, buscarLicenca,
   anteriorResolucao, coordenadaTexto, segueResolucao, estadoLicenca, lerCoordenada, linkMapa, salvarLicenca,
   urlPublicaLicenca,
   type LicencaComTrechos, type LicencaInput, type SituacaoLicenca, type TipoObra, type Trecho,
 } from '../lib/licencas';
 
-interface TrechoForm { id?: string; logradouro: string; bairro: string; referencia: string; inicio: string; fim: string }
+interface TrechoForm { id?: string; cep: string; logradouro: string; bairro: string; referencia: string; inicio: string; fim: string }
 
 type Form = {
   setor: Setor; processo_sei: string; numero: string; tipos_obra: TipoObra[]; escopo: string; observacoes: string;
@@ -32,14 +33,33 @@ type Form = {
 /** Opção do seletor para empresa sem cadastro (só em licença anterior à Resolução). */
 const SEM_CADASTRO = '__sem_cadastro__';
 
-const TRECHO_VAZIO: TrechoForm = { logradouro: '', bairro: '', referencia: '', inicio: '', fim: '' };
+/** Situação como o registro enxerga: o ciclo da obra, não a decisão administrativa. */
+type UiSituacao = 'em_execucao' | 'concluida' | 'indeferida' | 'cancelada';
+const UI_SITUACAO_LABEL: Record<UiSituacao, string> = {
+  em_execucao: 'Em execução',
+  concluida: 'Concluída',
+  indeferida: 'Indeferida',
+  cancelada: 'Cancelada',
+};
+/** Ciclo da obra → situação administrativa gravada no banco. */
+const SITUACAO_DE_UI: Record<UiSituacao, SituacaoLicenca> = {
+  em_execucao: 'deferida', concluida: 'deferida', indeferida: 'indeferida', cancelada: 'cancelada',
+};
+/** Em execução e concluída são "deferida"; a conclusão distingue pela data. */
+function uiDaSituacao(situacao: SituacaoLicenca, concluidaEm: string): UiSituacao {
+  if (situacao === 'cancelada') return 'cancelada';
+  if (situacao === 'indeferida') return 'indeferida';
+  return concluidaEm ? 'concluida' : 'em_execucao';
+}
+
+const TRECHO_VAZIO: TrechoForm = { cep: '', logradouro: '', bairro: '', referencia: '', inicio: '', fim: '' };
 
 const VAZIO: Form = {
   setor: 'telecom', processo_sei: '', numero: '', tipos_obra: [], escopo: '', observacoes: '',
   executora_id: '', contratante_id: '', subcontratada_id: '', responsavel_tecnico_id: '',
   executora_razao_social: '', executora_cnpj: '', contratante_razao_social: '', contratante_cnpj: '',
   imovel_endereco: '', processo_urbanismo: '',
-  art_numero: '', protocolo_data: '', situacao: 'em_analise', decisao_data: '',
+  art_numero: '', protocolo_data: '', situacao: 'deferida', decisao_data: '',
   inicio_previsto: '', fim_previsto: '', concluida_em: '', as_built_sei: '', as_built_data: '',
 };
 
@@ -61,7 +81,7 @@ function paraForm(l: LicencaComTrechos): Form {
 }
 
 const trechoParaForm = (t: Trecho & { id: string }): TrechoForm => ({
-  id: t.id, logradouro: t.logradouro, bairro: t.bairro ?? '', referencia: t.referencia ?? '',
+  id: t.id, cep: '', logradouro: t.logradouro, bairro: t.bairro ?? '', referencia: t.referencia ?? '',
   inicio: coordenadaTexto(t.inicio_lat, t.inicio_lng),
   fim: t.fim_lat != null && t.fim_lng != null ? coordenadaTexto(t.fim_lat, t.fim_lng) : '',
 });
@@ -69,7 +89,7 @@ const trechoParaForm = (t: Trecho & { id: string }): TrechoForm => ({
 export default function LicencaPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { podeEditar } = useAuth();
+  const { podeLicenciar } = useAuth();
   const [licenca, setLicenca] = useState<LicencaComTrechos | null>(null);
   const [empresas, setEmpresas] = useState<Empresa[] | null>(null);
   const [vinculos, setVinculos] = useState<Vinculo[]>([]);
@@ -100,7 +120,7 @@ export default function LicencaPage() {
               {licenca.setor === 'telecom' && licenca.anterior_resolucao && <Badge>Anterior à Resolução</Badge>}
               <span>Processo {licenca.processo_sei}, protocolado em {dataBR(licenca.protocolo_data)}.</span>
             </span>
-          : 'Lance os dados do processo. Licença nova exige executora e subcontratada APTAS no CADEX; licença com decisão anterior a 09/09/2026 é registro histórico.'}
+          : 'Lance os dados do processo: executora habilitada no setor, trechos da obra e a situação (em execução ou concluída).'}
       />
       {licenca?.situacao === 'deferida' && <Placa licenca={licenca} />}
       <LicencaForm
@@ -108,7 +128,7 @@ export default function LicencaPage() {
         licenca={licenca}
         empresas={empresas}
         vinculos={vinculos}
-        somenteLeitura={!podeEditar}
+        somenteLeitura={!podeLicenciar}
         onSalvo={async (novoId) => {
           if (!licenca) navigate(`/obras/${novoId}`, { replace: true });
           else setLicenca(await buscarLicenca(novoId));
@@ -134,8 +154,9 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
   const set = <K extends keyof Form>(k: K, v: Form[K]) => { setF((x) => ({ ...x, [k]: v })); setSalvo(false); };
   const porId = useMemo(() => new Map(empresas.map((e) => [e.id, e])), [empresas]);
   const executora = porId.get(f.executora_id);
-  // Só empresas que atuam no setor da licença (o banco confere o mesmo).
-  const executoras = empresas.filter((e) => atuaNoSetor(e, f.setor));
+  // Executora: empresa HABILITADA (deferida/apta) que atua no setor da licença.
+  const executoras = empresas.filter((e) => atuaNoSetor(e, f.setor) && podeAtuar(situacaoEfetiva(e, hoje)));
+  // Contratante: titular (operadora, concessionária ou construtora) do setor.
   const contratantes = empresas.filter((e) => ehContratante(e.tipo) && atuaNoSetor(e, f.setor) && e.id !== f.executora_id);
 
   // Responsáveis técnicos da executora e da subcontratada.
@@ -147,6 +168,12 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
   }, [f.executora_id, f.subcontratada_id]);
 
   const deferindo = f.situacao === 'deferida';
+  const uiSituacao = uiDaSituacao(f.situacao, f.concluida_em);
+  const setUiSituacao = (u: UiSituacao) => {
+    set('situacao', SITUACAO_DE_UI[u]);
+    if (u === 'concluida') { if (!f.concluida_em) set('concluida_em', hoje); }
+    else set('concluida_em', '');
+  };
   const anterior = anteriorResolucao(f.decisao_data || null);
   // Regras da Resolução (APTA, ART, vínculo da subcontratada): só telecom a partir de 09/09/2026.
   const resolucao = segueResolucao(f.setor, f.decisao_data || null);
@@ -163,13 +190,21 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
       .filter((v) => v.contratante_id === f.executora_id && !v.fim)
       .map((v) => porId.get(v.contratada_id))
       .filter((e): e is Empresa => Boolean(e))).filter((e) => atuaNoSetor(e, f.setor));
-  const naoAptas = !resolucao ? [] : [f.executora_id, f.subcontratada_id]
-    .map((i) => porId.get(i))
-    .filter((e): e is Empresa => Boolean(e) && !podeAtuar(situacaoEfetiva(e!, hoje)));
-
-  const setTrecho = (i: number, k: keyof TrechoForm, v: string) => {
+  const setTrecho =(i: number, k: keyof TrechoForm, v: string) => {
     setTrechos((ts) => ts.map((t, j) => (j === i ? { ...t, [k]: v } : t)));
     setSalvo(false);
+  };
+  // CEP preenche logradouro e bairro; as coordenadas continuam à mão.
+  const buscarCepTrecho = async (i: number, cep: string) => {
+    if (!cepValido(cep)) return;
+    setError(null);
+    try {
+      const end = await buscarCep(cep);
+      if (!end) { setError(new Error('CEP não encontrado.')); return; }
+      setTrechos((ts) => ts.map((t, j) => (j === i
+        ? { ...t, logradouro: end.logradouro || t.logradouro, bairro: end.bairro || t.bairro } : t)));
+      setSalvo(false);
+    } catch (err) { setError(err); }
   };
 
   function montar(): { licenca: LicencaInput; trechos: Trecho[] } | string {
@@ -321,16 +356,17 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="Situação" required>
             <select className={inputClass} disabled={ro}
-                    value={f.situacao} onChange={(e) => set('situacao', e.target.value as SituacaoLicenca)}>
-              {(Object.keys(SITUACAO_LICENCA_LABEL) as SituacaoLicenca[])
-                .filter((s) => licenca?.situacao !== 'deferida' || s === 'deferida' || s === 'cancelada')
-                .map((s) => <option key={s} value={s}>{SITUACAO_LICENCA_LABEL[s]}</option>)}
+                    value={uiSituacao} onChange={(e) => setUiSituacao(e.target.value as UiSituacao)}>
+              {(Object.keys(UI_SITUACAO_LABEL) as UiSituacao[])
+                // Licença já em execução/concluída não volta a indeferida.
+                .filter((s) => licenca?.situacao !== 'deferida' || s !== 'indeferida')
+                .map((s) => <option key={s} value={s}>{UI_SITUACAO_LABEL[s]}</option>)}
             </select>
           </Field>
-          {f.situacao !== 'em_analise' && (
-            <Field label="Data da decisão" required={f.situacao !== 'cancelada'}>
+          {uiSituacao !== 'cancelada' && (
+            <Field label="Data da decisão" required hint="Quando a licença foi concedida.">
               <input type="date" className={inputClass} disabled={ro} value={f.decisao_data}
-                     required={f.situacao !== 'cancelada'} onChange={(e) => set('decisao_data', e.target.value)} />
+                     required onChange={(e) => set('decisao_data', e.target.value)} />
             </Field>
           )}
           {deferindo && (
@@ -350,12 +386,6 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
                      min={f.inicio_previsto || undefined} onChange={(e) => set('fim_previsto', e.target.value)} />
             </Field>
           </div>
-        )}
-        {deferindo && naoAptas.length > 0 && licenca?.situacao !== 'deferida' && (
-          <p role="alert" className="mt-4 rounded-sm border-l-4 border-baixa bg-baixa/10 px-3 py-2 text-sm text-baixa">
-            {naoAptas.map(nomeEmpresa).join(' e ')} não {naoAptas.length > 1 ? 'estão' : 'está'} APTA no CADEX.
-            A licença não pode ser deferida enquanto a inscrição não for deferida (arts. 4º e 8º, § 2º).
-          </p>
         )}
         {f.setor === 'telecom' && anterior && (
           <p className="mt-4 rounded-sm border-l-4 border-tinta-300 bg-tinta-50 px-3 py-2 text-sm text-tinta-700">
@@ -377,15 +407,15 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
 
       <Card title="Empresas">
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Empresa executora" required>
+          <Field label="Executora" required>
             <select className={inputClass} required disabled={ro} value={f.executora_id}
                     onChange={(e) => { set('executora_id', e.target.value); set('subcontratada_id', ''); set('responsavel_tecnico_id', ''); }}>
               <option value="">Selecione</option>
-              {executoras.map((e) => <option key={e.id} value={e.id}>{nomeEmpresa(e)} ({e.codigo_cadex})</option>)}
+              {executoras.map((e) => <option key={e.id} value={e.id}>{nomeEmpresa(e)}</option>)}
               {(anterior || executoraSemCadastro) && <option value={SEM_CADASTRO}>Empresa sem cadastro no CADEX</option>}
             </select>
           </Field>
-          <Field label={f.setor === 'telecom' ? 'Concessionária contratante' : 'Contratante'}
+          <Field label="Contratante"
                  hint={executora?.tipo === 'terceirizada' && resolucao ? 'Obrigatória para executora terceirizada.'
                    : drenagem ? 'Construtora ou o dono do imóvel (sem cadastro). Em branco só quando a própria construtora executa.'
                    : 'Deixe em branco se a própria titular executa a obra.'}>
@@ -423,9 +453,6 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
               {rts.map((r) => <option key={r.id} value={r.id}>{String(r.nome)} ({String(r.conselho)} {String(r.registro_numero)})</option>)}
             </select>
           </Field>
-          <Field label="ART/RRT da obra" hint={resolucao ? 'Específica desta intervenção (art. 12). Obrigatória para deferir.' : 'Específica desta intervenção. Opcional.'}>
-            <input className={inputClass} disabled={ro} value={f.art_numero} onChange={(e) => set('art_numero', e.target.value)} />
-          </Field>
         </div>
         {[f.executora_id, f.contratante_id, f.subcontratada_id].some((i) => i && i !== SEM_CADASTRO) && (
           <ul className="mt-4 space-y-1 text-sm">
@@ -459,7 +486,13 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
             const fim = t.fim.trim() ? lerCoordenada(t.fim) : null;
             return (
               <li key={t.id ?? `novo-${i}`} className="grid gap-4 py-5 first:pt-0 last:pb-0 sm:grid-cols-6">
-                <Field label={trechos.length > 1 ? `Logradouro do trecho ${i + 1}` : 'Logradouro'} required className="sm:col-span-3">
+                <Field label="CEP" className="sm:col-span-1" hint="Preenche o endereço.">
+                  <input className={`${inputClass} tabular`} disabled={ro} value={t.cep} inputMode="numeric"
+                         placeholder="00000-000"
+                         onChange={(e) => setTrecho(i, 'cep', formatCep(e.target.value))}
+                         onBlur={(e) => void buscarCepTrecho(i, e.target.value)} />
+                </Field>
+                <Field label={trechos.length > 1 ? `Logradouro do trecho ${i + 1}` : 'Logradouro'} required className="sm:col-span-2">
                   <input className={inputClass} disabled={ro} value={t.logradouro}
                          onChange={(e) => setTrecho(i, 'logradouro', e.target.value)} />
                 </Field>
@@ -493,11 +526,11 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
         </ol>
       </Card>
 
-      {deferindo && licenca?.situacao === 'deferida' && (
+      {uiSituacao === 'concluida' && (
         <Card title="Conclusão da obra">
           <div className="grid gap-4 sm:grid-cols-3">
-            <Field label="Concluída em">
-              <input type="date" className={inputClass} disabled={ro} value={f.concluida_em}
+            <Field label="Concluída em" required>
+              <input type="date" className={inputClass} required disabled={ro} value={f.concluida_em}
                      min={f.inicio_previsto || undefined} onChange={(e) => set('concluida_em', e.target.value)} />
             </Field>
             {f.concluida_em && (<>
