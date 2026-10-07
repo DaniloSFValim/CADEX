@@ -19,7 +19,7 @@ const FILTROS: { valor: string; rotulo: string; inclui: EstadoLicenca[] }[] = [
 ];
 
 export default function Licencas() {
-  const { podeEditar } = useAuth();
+  const { podeLicenciar } = useAuth();
   const [licencas, setLicencas] = useState<LicencaComTrechos[] | null>(null);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [error, setError] = useState<unknown>(null);
@@ -65,7 +65,7 @@ export default function Licencas() {
           <Button variant="secondary" disabled={!licencas?.length} onClick={() => setExportando((x) => !x)}>
             Exportar (PDF ou planilha)
           </Button>
-          {podeEditar && <Link to="/obras/nova" className={botaoLink.primary}>Registrar licença</Link>}
+          {podeLicenciar && <Link to="/obras/nova" className={botaoLink.primary}>Registrar licença</Link>}
         </>}
       />
 
@@ -109,7 +109,7 @@ export default function Licencas() {
         {licencas && filtradas.length === 0 && (
           <Empty>
             {licencas.length === 0
-              ? podeEditar ? 'Nenhuma licença registrada. Use Registrar licença para lançar a primeira.' : 'Nenhuma licença registrada.'
+              ? podeLicenciar ? 'Nenhuma licença registrada. Use Registrar licença para lançar a primeira.' : 'Nenhuma licença registrada.'
               : 'Nenhuma licença corresponde à busca.'}
           </Empty>
         )}
