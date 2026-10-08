@@ -28,6 +28,8 @@ export interface Licenca {
   /** Nulo só em licença anterior à Resolução com executora sem cadastro. */
   executora_id: string | null;
   contratante_id: string | null;
+  /** Órgão público contratante (SEMOB, etc.): alternativa à empresa privada. */
+  orgao_contratante_id: string | null;
   /** Empresa sem cadastro no CADEX (só em licença anterior à Resolução). */
   executora_razao_social: string | null;
   executora_cnpj: string | null;

@@ -75,7 +75,7 @@ begin
   -- Terceirizada sem concessionária contratante
   perform pg_temp.recusa(format($q$insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id, protocolo_data)
     values ('telecom', 'NIT-050120/000123/2026', '{vala}', 'x', %L, '2026-09-01')$q$, te),
-    'informe a concessionária', 'aceitou terceirizada sem contratante');
+    'informe a contratante', 'aceitou terceirizada sem contratante');
 
   -- Tipo de obra fora do art. 10
   perform pg_temp.recusa(format($q$insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id, contratante_id, protocolo_data)
