@@ -13,6 +13,7 @@ import Empresas from './pages/Empresas';
 import EmpresaPage from './pages/EmpresaPage';
 import Ficha from './pages/Ficha';
 import Contas from './pages/Contas';
+import Orgaos from './pages/Orgaos';
 import MinhaConta from './pages/MinhaConta';
 import Licencas from './pages/Licencas';
 import LicencaPage from './pages/LicencaPage';
@@ -97,6 +98,7 @@ function AreaRestrita() {
         <Route path="obras" element={<Licencas />} />
         <Route path="obras/nova" element={<LicencaPage />} />
         <Route path="obras/:id" element={<LicencaPage />} />
+        <Route path="orgaos" element={<Orgaos />} />
         <Route path="contas" element={<Contas />} />
         <Route path="minha-conta" element={<MinhaConta />} />
         <Route path="*" element={<Navigate to="/" replace />} />

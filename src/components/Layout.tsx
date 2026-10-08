@@ -18,6 +18,7 @@ export function Layout() {
           ...(isGestor ? [{ rotulo: 'Painel', para: '/dashboard' }, { rotulo: 'Anatel', para: '/anatel' }] : []),
           { rotulo: 'Empresas', para: '/', fim: true },
           { rotulo: 'Obras', para: '/obras' },
+          { rotulo: 'Órgãos', para: '/orgaos' },
           { rotulo: 'Consulta pública', para: '/consulta' },
           ...(servidor?.administrador ? [{ rotulo: 'Contas', para: '/contas' }] : []),
         ]}

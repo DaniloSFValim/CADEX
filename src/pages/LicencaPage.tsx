@@ -16,6 +16,7 @@ import {
   urlPublicaLicenca,
   type LicencaComTrechos, type LicencaInput, type SituacaoLicenca, type TipoObra, type Trecho,
 } from '../lib/licencas';
+import { listarOrgaos, nomeOrgao, type Orgao } from '../lib/orgaos';
 
 interface TrechoForm { id?: string; cep: string; logradouro: string; bairro: string; referencia: string; inicio: string; fim: string }
 
@@ -32,6 +33,10 @@ type Form = {
 
 /** Opção do seletor para empresa sem cadastro (só em licença anterior à Resolução). */
 const SEM_CADASTRO = '__sem_cadastro__';
+/** Prefixo no valor da contratante quando ela é um órgão público (vs. empresa). */
+const ORGAO_PREFIXO = 'orgao:';
+/** Órgão que contrata neste setor (sem setores = sem restrição). */
+const orgaoNoSetor = (o: Orgao, s: Setor) => o.setores.length === 0 || o.setores.includes(s);
 
 /** Situação como o registro enxerga: o ciclo da obra, não a decisão administrativa. */
 type UiSituacao = 'em_execucao' | 'concluida' | 'indeferida' | 'cancelada';
@@ -69,7 +74,8 @@ function paraForm(l: LicencaComTrechos): Form {
     setor: l.setor, processo_sei: l.processo_sei, numero: s(l.numero), tipos_obra: l.tipos_obra, escopo: l.escopo,
     observacoes: s(l.observacoes),
     executora_id: l.executora_id ?? (l.executora_razao_social ? SEM_CADASTRO : ''),
-    contratante_id: l.contratante_id ?? (l.contratante_razao_social ? SEM_CADASTRO : ''),
+    contratante_id: l.orgao_contratante_id ? `${ORGAO_PREFIXO}${l.orgao_contratante_id}`
+      : l.contratante_id ?? (l.contratante_razao_social ? SEM_CADASTRO : ''),
     executora_razao_social: s(l.executora_razao_social), executora_cnpj: l.executora_cnpj ? formatCnpj(l.executora_cnpj) : '',
     contratante_razao_social: s(l.contratante_razao_social), contratante_cnpj: l.contratante_cpf ? formatCpf(l.contratante_cpf) : l.contratante_cnpj ? formatCnpj(l.contratante_cnpj) : '',
     imovel_endereco: s(l.imovel_endereco), processo_urbanismo: s(l.processo_urbanismo),
@@ -93,12 +99,13 @@ export default function LicencaPage() {
   const [licenca, setLicenca] = useState<LicencaComTrechos | null>(null);
   const [empresas, setEmpresas] = useState<Empresa[] | null>(null);
   const [vinculos, setVinculos] = useState<Vinculo[]>([]);
+  const [orgaos, setOrgaos] = useState<Orgao[]>([]);
   const [error, setError] = useState<unknown>(null);
 
   useEffect(() => {
     setLicenca(null);
-    Promise.all([id ? buscarLicenca(id) : Promise.resolve(null), listarEmpresas(), listarVinculos()])
-      .then(([l, e, v]) => { setLicenca(l); setEmpresas(e); setVinculos(v); })
+    Promise.all([id ? buscarLicenca(id) : Promise.resolve(null), listarEmpresas(), listarVinculos(), listarOrgaos()])
+      .then(([l, e, v, o]) => { setLicenca(l); setEmpresas(e); setVinculos(v); setOrgaos(o); })
       .catch(setError);
   }, [id]);
 
@@ -128,6 +135,7 @@ export default function LicencaPage() {
         licenca={licenca}
         empresas={empresas}
         vinculos={vinculos}
+        orgaos={orgaos}
         somenteLeitura={!podeLicenciar}
         onSalvo={async (novoId) => {
           if (!licenca) navigate(`/obras/${novoId}`, { replace: true });
@@ -138,8 +146,8 @@ export default function LicencaPage() {
   );
 }
 
-function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
-  licenca: LicencaComTrechos | null; empresas: Empresa[]; vinculos: Vinculo[]; somenteLeitura: boolean;
+function LicencaForm({ licenca, empresas, vinculos, orgaos, somenteLeitura, onSalvo }: {
+  licenca: LicencaComTrechos | null; empresas: Empresa[]; vinculos: Vinculo[]; orgaos: Orgao[]; somenteLeitura: boolean;
   onSalvo: (id: string) => Promise<void>;
 }) {
   const [f, setF] = useState<Form>(licenca ? paraForm(licenca) : VAZIO);
@@ -180,6 +188,10 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
   const drenagem = f.setor === 'drenagem';
   const executoraSemCadastro = f.executora_id === SEM_CADASTRO;
   const contratanteSemCadastro = f.contratante_id === SEM_CADASTRO;
+  // Contratante órgão público: o valor do seletor vem com o prefixo "orgao:".
+  const contratanteOrgaoId = f.contratante_id.startsWith(ORGAO_PREFIXO)
+    ? f.contratante_id.slice(ORGAO_PREFIXO.length) : null;
+  const orgaosDoSetor = orgaos.filter((o) => orgaoNoSetor(o, f.setor));
   // Na drenagem o dono do imóvel pode ser pessoa física: 11 dígitos = CPF.
   const contratanteCpf = drenagem && contratanteSemCadastro && onlyDigits(f.contratante_cnpj).length <= 11
     && f.contratante_cnpj.trim() !== '';
@@ -251,7 +263,8 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
         executora_id: executoraSemCadastro ? null : f.executora_id,
         executora_razao_social: executoraSemCadastro ? n(f.executora_razao_social) : null,
         executora_cnpj: executoraSemCadastro && f.executora_cnpj.trim() ? onlyDigits(f.executora_cnpj) : null,
-        contratante_id: contratanteSemCadastro ? null : n(f.contratante_id),
+        contratante_id: (contratanteSemCadastro || contratanteOrgaoId) ? null : n(f.contratante_id),
+        orgao_contratante_id: contratanteOrgaoId,
         contratante_razao_social: contratanteSemCadastro ? n(f.contratante_razao_social) : null,
         contratante_cnpj: contratanteSemCadastro && !contratanteCpf && f.contratante_cnpj.trim() ? onlyDigits(f.contratante_cnpj) : null,
         contratante_cpf: contratanteSemCadastro && contratanteCpf ? onlyDigits(f.contratante_cnpj) : null,
@@ -298,10 +311,15 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
                       const st = e.target.value as Setor;
                       set('setor', st);
                       // Empresa que não atua no novo setor sai da licença.
-                      const fora = (id: string) => id && id !== SEM_CADASTRO && !atuaNoSetor(porId.get(id)!, st);
+                      const fora = (id: string) => id && id !== SEM_CADASTRO
+                        && !id.startsWith(ORGAO_PREFIXO) && !atuaNoSetor(porId.get(id)!, st);
                       if (fora(f.executora_id)) set('executora_id', '');
-                      if (fora(f.contratante_id)) set('contratante_id', '');
                       if (fora(f.subcontratada_id)) set('subcontratada_id', '');
+                      // Contratante pode ser órgão público; confere pelo setor do órgão.
+                      if (f.contratante_id.startsWith(ORGAO_PREFIXO)) {
+                        const o = orgaos.find((x) => `${ORGAO_PREFIXO}${x.id}` === f.contratante_id);
+                        if (!o || !orgaoNoSetor(o, st)) set('contratante_id', '');
+                      } else if (fora(f.contratante_id)) set('contratante_id', '');
                     }}>
               {SETORES.map((st) => <option key={st} value={st}>{SETOR_LABEL[st]}</option>)}
             </select>
@@ -416,13 +434,24 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
             </select>
           </Field>
           <Field label="Contratante"
-                 hint={executora?.tipo === 'terceirizada' && resolucao ? 'Obrigatória para executora terceirizada.'
+                 hint={executora?.tipo === 'terceirizada' && resolucao ? 'Empresa titular ou órgão público. Obrigatória para executora terceirizada.'
                    : drenagem ? 'Construtora ou o dono do imóvel (sem cadastro). Em branco só quando a própria construtora executa.'
-                   : 'Deixe em branco se a própria titular executa a obra.'}>
+                   : 'Empresa titular, órgão público (contratação direta da administração) ou em branco se a própria titular executa.'}>
             <select className={inputClass} disabled={ro} required={executora?.tipo === 'terceirizada' && resolucao}
                     value={f.contratante_id} onChange={(e) => set('contratante_id', e.target.value)}>
               <option value="">Nenhuma</option>
-              {contratantes.map((e) => <option key={e.id} value={e.id}>{nomeEmpresa(e)}</option>)}
+              {contratantes.length > 0 && (
+                <optgroup label="Empresas">
+                  {contratantes.map((e) => <option key={e.id} value={e.id}>{nomeEmpresa(e)}</option>)}
+                </optgroup>
+              )}
+              {orgaosDoSetor.length > 0 && (
+                <optgroup label="Órgãos públicos">
+                  {orgaosDoSetor.map((o) => (
+                    <option key={o.id} value={`${ORGAO_PREFIXO}${o.id}`}>{nomeOrgao(o)}</option>
+                  ))}
+                </optgroup>
+              )}
               {(anterior || drenagem || contratanteSemCadastro) && (
                 <option value={SEM_CADASTRO}>{drenagem && !anterior ? 'Dono do imóvel ou empresa sem cadastro' : 'Empresa sem cadastro no CADEX'}</option>
               )}
@@ -454,10 +483,11 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
             </select>
           </Field>
         </div>
-        {[f.executora_id, f.contratante_id, f.subcontratada_id].some((i) => i && i !== SEM_CADASTRO) && (
+        {([f.executora_id, f.contratante_id, f.subcontratada_id].some((i) => i && i !== SEM_CADASTRO && !i.startsWith(ORGAO_PREFIXO))
+          || contratanteOrgaoId) && (
           <ul className="mt-4 space-y-1 text-sm">
             {([['Executora', f.executora_id], ['Contratante', f.contratante_id], ['Subcontratada', f.subcontratada_id]] as const)
-              .filter(([, i]) => i && i !== SEM_CADASTRO)
+              .filter(([, i]) => i && i !== SEM_CADASTRO && !i.startsWith(ORGAO_PREFIXO))
               .map(([r, i]) => {
                 const e = porId.get(i)!;
                 return (
@@ -468,6 +498,16 @@ function LicencaForm({ licenca, empresas, vinculos, somenteLeitura, onSalvo }: {
                   </li>
                 );
               })}
+            {contratanteOrgaoId && (() => {
+              const o = orgaos.find((x) => x.id === contratanteOrgaoId);
+              return o ? (
+                <li className="flex flex-wrap items-center gap-2 text-tinta-700">
+                  <span className="w-28 text-tinta-500">Contratante</span>
+                  <Badge>Órgão público</Badge>
+                  <span>{nomeOrgao(o)}</span>
+                </li>
+              ) : null;
+            })()}
           </ul>
         )}
       </Card>

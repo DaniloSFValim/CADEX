@@ -7,7 +7,7 @@ import { onlyDigits } from './cnpj';
  */
 export type Tipo = 'operadora' | 'concessionaria' | 'construtora' | 'terceirizada';
 /** Setores de obras e serviços em via pública. */
-export type Setor = 'telecom' | 'gas' | 'saneamento' | 'drenagem' | 'construcao';
+export type Setor = 'telecom' | 'gas' | 'saneamento' | 'drenagem' | 'construcao' | 'viario';
 /** Perfil que define os documentos exigidos (tipos_documento.perfis). */
 export type Perfil = 'telecom' | 'gas' | 'saneamento' | 'construtora' | 'terceirizada';
 /** Situação da inscrição no CADEX (arts. 7º e 8º). */
@@ -104,6 +104,7 @@ export const SETOR_LABEL: Record<Setor, string> = {
   saneamento: 'Saneamento',
   drenagem: 'Drenagem',
   construcao: 'Construção civil',
+  viario: 'Viário / mobilidade',
 };
 
 export const SETORES = Object.keys(SETOR_LABEL) as Setor[];
