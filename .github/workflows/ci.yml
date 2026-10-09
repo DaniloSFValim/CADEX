@@ -32,7 +32,8 @@ jobs:
       - name: Instalar PostgreSQL
         run: |
           sudo apt-get update
-          sudo apt-get install -y postgresql-16
+          # postgis: usado na detecção de conflito espacial entre obras.
+          sudo apt-get install -y postgresql-16 postgresql-16-postgis-3
       - name: Migrations e testes do banco
         run: sudo -E bash scripts/test-db.sh
         env:
