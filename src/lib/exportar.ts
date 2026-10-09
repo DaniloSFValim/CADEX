@@ -1,7 +1,7 @@
 import { formatCnpj } from './cnpj';
 import {
-  SETOR_LABEL, SITUACAO_LABEL, TIPO_LABEL, descricaoEmpresa, nomeEmpresa, situacaoEfetiva,
-  type Empresa, type Resumo, type Vinculo,
+  SETOR_LABEL, SITUACAO_LABEL, TIPO_LABEL, descricaoEmpresa, nomeEmpresa, rotuloRt, situacaoEfetiva,
+  type Empresa, type Resumo, type RtResumo, type Vinculo,
 } from './empresas';
 import { agrupar, type Relatorio } from './relatorio';
 
@@ -41,6 +41,8 @@ export interface Contexto {
   hoje: string;
   porId: Map<string, Empresa>;
   vinculos: Vinculo[];
+  /** Responsáveis técnicos por empresa (para a relação oficial). */
+  rts?: Map<string, RtResumo[]>;
   /** Só para quem vê documentos (gestor). */
   resumoDocs?: (e: Empresa) => Resumo;
 }
@@ -48,7 +50,7 @@ export interface Contexto {
 export interface Coluna {
   chave: string;
   rotulo: string;
-  grupo: 'Identificação' | 'Inscrição' | 'Contato' | 'Vínculos' | 'Documentação';
+  grupo: 'Identificação' | 'Responsável técnico' | 'Inscrição' | 'Contato' | 'Vínculos' | 'Documentação';
   valor: (e: Empresa, c: Contexto) => string;
   /** Só aparece para quem vê documentos. */
   soGestor?: boolean;
@@ -72,6 +74,10 @@ export const COLUNAS: Coluna[] = [
   { chave: 'fantasia', rotulo: 'Nome fantasia', grupo: 'Identificação', valor: (e) => e.nome_fantasia ?? '' },
   { chave: 'cnpj', rotulo: 'CNPJ', grupo: 'Identificação', valor: (e) => formatCnpj(e.cnpj) },
   { chave: 'tipo', rotulo: 'Tipo', grupo: 'Identificação', valor: (e) => descricaoEmpresa(e) },
+  { chave: 'representante', rotulo: 'Representante legal', grupo: 'Identificação', valor: (e) => e.representante ?? '' },
+
+  { chave: 'responsavel_tecnico', rotulo: 'Responsável técnico (CREA/CAU)', grupo: 'Responsável técnico',
+    valor: (e, c) => (c.rts?.get(e.id) ?? []).map(rotuloRt).join('; ') },
 
   { chave: 'situacao', rotulo: 'Situação', grupo: 'Inscrição',
     valor: (e, c) => SITUACAO_LABEL[situacaoEfetiva(e, c.hoje)] },

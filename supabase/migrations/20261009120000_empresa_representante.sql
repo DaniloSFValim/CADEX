@@ -1,0 +1,11 @@
+-- =====================================================================
+-- CADEX — representante legal da empresa
+--
+-- A relação oficial de executores (padrão do RECAD/SECONSERVA, para anexar
+-- ao processo) traz o representante legal de cada empresa. O CADEX ainda
+-- não guardava esse dado; esta coluna o acrescenta ao cadastro.
+--
+-- É só identificação: sem regra de negócio, sem validação no gatilho. O
+-- preenchimento fica a cargo do gestor, como os demais dados cadastrais.
+-- =====================================================================
+alter table public.empresas add column representante text;
