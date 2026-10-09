@@ -1,8 +1,9 @@
 import { formatCnpj } from './cnpj';
 import {
-  SETOR_LABEL, SITUACAO_LABEL, TIPO_LABEL, descricaoEmpresa, nomeEmpresa, rotuloRt, situacaoEfetiva,
+  SETOR_LABEL, SITUACAO_LABEL, TIPO_LABEL, descricaoEmpresa, nomeEmpresa, rotuloContratante, rotuloRt, situacaoEfetiva,
   type Empresa, type Resumo, type RtResumo, type Vinculo,
 } from './empresas';
+import type { Orgao } from './orgaos';
 import { agrupar, type Relatorio } from './relatorio';
 
 // ---------------------------------------------------------------------
@@ -41,6 +42,8 @@ export interface Contexto {
   hoje: string;
   porId: Map<string, Empresa>;
   vinculos: Vinculo[];
+  /** Órgãos públicos por id, para resolver contratante órgão nos vínculos. */
+  orgaos?: Map<string, Orgao>;
   /** Responsáveis técnicos por empresa (para a relação oficial). */
   rts?: Map<string, RtResumo[]>;
   /** Só para quem vê documentos (gestor). */
@@ -58,10 +61,11 @@ export interface Coluna {
 
 const dataBR = (iso: string | null) => (iso ? iso.split('-').reverse().join('/') : '');
 
-const contratantes = (e: Empresa, c: Contexto) =>
+// Rótulos das contratantes de uma terceirizada: empresas E órgãos públicos.
+const contratantes = (e: Empresa, c: Contexto): string[] =>
   c.vinculos.filter((v) => v.contratada_id === e.id && !v.fim)
-    .map((v) => (v.contratante_id ? c.porId.get(v.contratante_id) : undefined))
-    .filter((x): x is Empresa => Boolean(x));
+    .map((v) => rotuloContratante(v, c.porId, c.orgaos ?? new Map()))
+    .filter((x): x is string => Boolean(x));
 
 const contratadas = (e: Empresa, c: Contexto) =>
   c.vinculos.filter((v) => v.contratante_id === e.id && !v.fim)
@@ -98,7 +102,7 @@ export const COLUNAS: Coluna[] = [
     ].filter(Boolean).join(' – ') },
   { chave: 'observacoes', rotulo: 'Observações', grupo: 'Contato', valor: (e) => e.observacoes ?? '' },
 
-  { chave: 'contratantes', rotulo: 'Contratada por', grupo: 'Vínculos', valor: (e, c) => nomes(contratantes(e, c)) },
+  { chave: 'contratantes', rotulo: 'Contratada por', grupo: 'Vínculos', valor: (e, c) => contratantes(e, c).join(', ') },
   { chave: 'contratadas', rotulo: 'Terceirizadas/subcontratadas', grupo: 'Vínculos', valor: (e, c) => nomes(contratadas(e, c)) },
 
   { chave: 'documentacao', rotulo: 'Documentação', grupo: 'Documentação', soGestor: true,
@@ -152,7 +156,7 @@ function gruposDaEmpresa(e: Empresa, por: AgrupamentoEmpresas, c: Contexto): str
     case 'situacao': return [SITUACAO_LABEL[situacaoEfetiva(e, c.hoje)]];
     case 'contratante': {
       const l = contratantes(e, c);
-      return l.length ? l.map((x) => `${nomeEmpresa(x)} (${x.codigo_cadex})`) : ['Sem contratante vinculado'];
+      return l.length ? l : ['Sem contratante vinculado'];
     }
     default: return [''];
   }

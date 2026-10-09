@@ -7,9 +7,10 @@ import { formatCnpj, formatCpf } from '../lib/cnpj';
 import {
   ESTADO_LABEL, SITUACAO_LABEL, buscarEmpresa, descricaoEmpresa, tiposDaEmpresa, estadoDocumento, hojeISO,
   listarDaEmpresa, listarDocumentos, listarEmpresas, listarHistorico, listarTiposDocumento, listarVinculos,
-  nomeEmpresa, situacaoEfetiva, ultimoPorTipo, urlLogo,
+  nomeEmpresa, rotuloContratante, situacaoEfetiva, ultimoPorTipo, urlLogo,
   type Documento, type Empresa, type Historico, type Registro, type TipoDocumento, type Vinculo,
 } from '../lib/empresas';
+import { listarOrgaos, type Orgao } from '../lib/orgaos';
 
 type Secao = 'cadastro' | 'inscricao' | 'vinculos' | 'rt' | 'pessoal' | 'veiculos' | 'documentos';
 
@@ -27,6 +28,7 @@ interface Dados {
   empresa: Empresa;
   todas: Empresa[];
   vinculos: Vinculo[];
+  orgaos: Orgao[];
   historico: Historico[];
   rt: Registro[];
   pessoal: Registro[];
@@ -51,9 +53,10 @@ export default function Ficha() {
       listarDaEmpresa('veiculos', id),
       podeEditar ? listarTiposDocumento() : Promise.resolve([]),
       podeEditar ? listarDocumentos(id) : Promise.resolve([]),
+      listarOrgaos(),
     ])
-      .then(([empresa, todas, vinculos, historico, rt, pessoal, veiculos, tipos, docs]) => setD({
-        empresa, todas, vinculos, historico,
+      .then(([empresa, todas, vinculos, historico, rt, pessoal, veiculos, tipos, docs, orgaos]) => setD({
+        empresa, todas, vinculos, historico, orgaos,
         rt: rt.filter((r) => r.ativo), pessoal: pessoal.filter((r) => r.ativo),
         veiculos: veiculos.filter((r) => r.ativo), tipos: tiposDaEmpresa(tipos, empresa), docs,
       }))
@@ -66,10 +69,13 @@ export default function Ficha() {
   const { empresa: e } = d;
   const hoje = hojeISO();
   const porId = new Map(d.todas.map((x) => [x.id, x]));
+  const orgaosPorId = new Map(d.orgaos.map((o) => [o.id, o]));
   const ver = (s: Secao) => secoes.includes(s);
   const ativos = d.vinculos.filter((v) => !v.fim);
+  // Contratantes da terceirizada: empresas E órgãos públicos.
   const contratantes = ativos.filter((v) => v.contratada_id === e.id)
-    .map((v) => (v.contratante_id ? porId.get(v.contratante_id) : undefined));
+    .map((v) => rotuloContratante(v, porId, orgaosPorId))
+    .filter((x): x is string => Boolean(x));
   const contratadas = ativos.filter((v) => v.contratante_id === e.id).map((v) => porId.get(v.contratada_id));
   const ultimos = ultimoPorTipo(d.docs);
 
@@ -153,7 +159,7 @@ export default function Ficha() {
         {ver('vinculos') && (
           <Bloco titulo="Vínculos de contratação ativos">
             <Grade itens={[
-              ...(e.tipo === 'terceirizada' ? [['Contratada por', nomesEmpresas(contratantes)] as const] : []),
+              ...(e.tipo === 'terceirizada' ? [['Contratada por', contratantes.join('; ') || '—'] as const] : []),
               [e.tipo === 'terceirizada' ? 'Subcontratadas' : 'Terceirizadas contratadas', nomesEmpresas(contratadas)],
             ]} />
           </Bloco>

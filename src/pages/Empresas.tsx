@@ -7,9 +7,10 @@ import { useAuth } from '../lib/auth';
 import { formatCnpj, onlyDigits } from '../lib/cnpj';
 import {
   FILTRO_SITUACAO, SETORES, SETOR_LABEL, atuaNoSetor, descricaoEmpresa, tiposDaEmpresa, situacoesDoFiltro, hojeISO, situacaoEfetiva, listarDocumentos, listarEmpresas, listarResponsaveis, listarTiposDocumento, listarVinculos,
-  nomeEmpresa, resumoDocumentos, type Documento, type Empresa, type Resumo, type RtResumo, type Setor, type SituacaoEfetiva, type TipoDocumento,
+  nomeEmpresa, resumoDocumentos, rotuloContratante, type Documento, type Empresa, type Resumo, type RtResumo, type Setor, type SituacaoEfetiva, type TipoDocumento,
   type Vinculo,
 } from '../lib/empresas';
+import { listarOrgaos, type Orgao } from '../lib/orgaos';
 
 export function ResumoBadge({ r }: { r: Resumo }) {
   if (r.vencidos > 0) return <Badge tom="ruim">{r.vencidos} vencido{r.vencidos > 1 ? 's' : ''}</Badge>;
@@ -24,6 +25,7 @@ export default function Empresas() {
   const [tipos, setTipos] = useState<TipoDocumento[]>([]);
   const [docs, setDocs] = useState<Documento[]>([]);
   const [vinculos, setVinculos] = useState<Vinculo[]>([]);
+  const [orgaos, setOrgaos] = useState<Orgao[]>([]);
   const [rts, setRts] = useState<RtResumo[]>([]);
   const [error, setError] = useState<unknown>(null);
   const [busca, setBusca] = useState('');
@@ -40,14 +42,16 @@ export default function Empresas() {
       podeEditar ? listarDocumentos() : Promise.resolve([]),
       listarVinculos(),
       listarResponsaveis(),
+      listarOrgaos(),
     ])
-      .then(([e, t, d, v, r]) => { setEmpresas(e); setTipos(t); setDocs(d); setVinculos(v); setRts(r); })
+      .then(([e, t, d, v, r, o]) => { setEmpresas(e); setTipos(t); setDocs(d); setVinculos(v); setRts(r); setOrgaos(o); })
       .catch(setError);
   }, [podeEditar]);
 
   const hoje = hojeISO();
 
   const porId = useMemo(() => new Map((empresas ?? []).map((e) => [e.id, e])), [empresas]);
+  const orgaosPorId = useMemo(() => new Map(orgaos.map((o) => [o.id, o])), [orgaos]);
 
   const rtsPorEmpresa = useMemo(() => {
     const m = new Map<string, RtResumo[]>();
@@ -107,7 +111,7 @@ export default function Empresas() {
         <ExportarRelacao
           empresas={empresas}
           contexto={{
-            hoje, porId, vinculos, rts: rtsPorEmpresa,
+            hoje, porId, vinculos, orgaos: orgaosPorId, rts: rtsPorEmpresa,
             resumoDocs: podeEditar
               ? (e) => resumoDocumentos(tiposDaEmpresa(tipos, e), docs.filter((d) => d.empresa_id === e.id), hoje)
               : undefined,
@@ -163,8 +167,8 @@ export default function Empresas() {
                 {filtradas.map((e) => {
                   const contratantes = vinculos
                     .filter((v) => v.contratada_id === e.id && !v.fim)
-                    .map((v) => (v.contratante_id ? porId.get(v.contratante_id) : undefined))
-                    .filter((o): o is Empresa => Boolean(o));
+                    .map((v) => rotuloContratante(v, porId, orgaosPorId, nomeEmpresa))
+                    .filter((x): x is string => Boolean(x));
                   const r = resumoDocumentos(tiposDaEmpresa(tipos, e), docs.filter((d) => d.empresa_id === e.id), hoje);
                   return (
                     <tr key={e.id} className={tabela.linha}>
@@ -179,7 +183,7 @@ export default function Empresas() {
                       <td className={tabela.td}>
                         {descricaoEmpresa(e)}
                         {contratantes.length > 0 && (
-                          <div className="text-xs text-tinta-500">para {contratantes.map(nomeEmpresa).join(', ')}</div>
+                          <div className="text-xs text-tinta-500">para {contratantes.join(', ')}</div>
                         )}
                       </td>
                       {podeEditar && <td className={tabela.td}><ResumoBadge r={r} /></td>}

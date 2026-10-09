@@ -39,4 +39,16 @@ describe('CSV', () => {
     const csv = relacaoCsv([base], ['situacao'], { hoje: '2027-10-01', porId: new Map(), vinculos: [] });
     expect(csv).toContain('VENCIDA');
   });
+
+  it('contratante órgão público entra na coluna "Contratada por"', () => {
+    const ter = { ...base, id: 't', codigo_cadex: 'CADEX-TER-2026-0009', tipo: 'terceirizada',
+      razao_social: 'Serttel Ltda.' } as Empresa;
+    const orgao = { id: 'o1', nome: 'Secretaria de Mobilidade', sigla: 'SEMOB' } as never;
+    const csv = relacaoCsv([ter], ['contratantes'], {
+      hoje: '2026-10-01', porId: new Map([[ter.id, ter]]),
+      orgaos: new Map([['o1', orgao]]),
+      vinculos: [{ contratante_id: null, orgao_contratante_id: 'o1', contratada_id: 't', fim: null } as never],
+    });
+    expect(csv).toContain('SEMOB — Secretaria de Mobilidade');
+  });
 });
