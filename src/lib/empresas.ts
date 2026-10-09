@@ -35,6 +35,8 @@ export interface Empresa {
   cidade: string | null;
   uf: string | null;
   observacoes: string | null;
+  /** Representante legal da empresa (para a relação oficial de executores). */
+  representante: string | null;
   situacao: Situacao;
   processo_numero: string | null;
   data_requerimento: string | null;
@@ -51,7 +53,7 @@ export interface Empresa {
 /** Dados cadastrais editáveis no formulário da empresa. */
 export type EmpresaInput = Pick<Empresa,
   'cnpj' | 'razao_social' | 'nome_fantasia' | 'tipo' | 'setores' | 'email' | 'telefone' | 'cep' | 'logradouro'
-  | 'numero' | 'complemento' | 'bairro' | 'cidade' | 'uf' | 'observacoes'>;
+  | 'numero' | 'complemento' | 'bairro' | 'cidade' | 'uf' | 'representante' | 'observacoes'>;
 
 /** Dados da inscrição, alterados pela SECONSER. */
 export type InscricaoInput = Pick<Empresa,
@@ -279,6 +281,7 @@ const limpar = (input: EmpresaInput) => {
     bairro: vazioViraNulo(input.bairro),
     cidade: vazioViraNulo(input.cidade),
     uf: vazioViraNulo(input.uf)?.toUpperCase() ?? null,
+    representante: vazioViraNulo(input.representante),
     observacoes: vazioViraNulo(input.observacoes),
   };
 };
@@ -467,6 +470,28 @@ export async function listarDaEmpresa(tabela: Tabela, empresaId: string): Promis
     .eq('empresa_id', empresaId).order('criado_em');
   if (error) throw error;
   return data as Registro[];
+}
+
+/** Responsável técnico, só os campos da relação oficial (nome + conselho). */
+export interface RtResumo {
+  empresa_id: string;
+  nome: string;
+  conselho: string;
+  registro_numero: string;
+  registro_uf: string | null;
+}
+
+/** "Fulano (CREA-RJ 12345)" — nome e registro no conselho, para a relação. */
+export const rotuloRt = (r: RtResumo) =>
+  `${r.nome} (${[r.conselho, r.registro_uf].filter(Boolean).join('-')} ${r.registro_numero})`;
+
+/** Todos os responsáveis técnicos ativos, para montar a coluna da exportação. */
+export async function listarResponsaveis(): Promise<RtResumo[]> {
+  const { data, error } = await supabase.from('responsaveis_tecnicos')
+    .select('empresa_id, nome, conselho, registro_numero, registro_uf')
+    .eq('ativo', true).order('nome');
+  if (error) throw error;
+  return (data ?? []) as RtResumo[];
 }
 
 export async function salvarDaEmpresa(

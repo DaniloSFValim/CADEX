@@ -20,7 +20,7 @@ import { Operacional } from './Operacional';
 const VAZIA: EmpresaInput = {
   cnpj: '', razao_social: '', nome_fantasia: '', tipo: 'operadora', setores: ['telecom'],
   email: '', telefone: '', cep: '', logradouro: '', numero: '', complemento: '',
-  bairro: '', cidade: 'Niterói', uf: 'RJ', observacoes: '',
+  bairro: '', cidade: 'Niterói', uf: 'RJ', representante: '', observacoes: '',
 };
 
 const paraInput = (e: Empresa): EmpresaInput => ({
@@ -28,7 +28,7 @@ const paraInput = (e: Empresa): EmpresaInput => ({
   tipo: e.tipo, setores: e.setores, email: e.email, telefone: e.telefone ?? '',
   cep: e.cep ?? '', logradouro: e.logradouro ?? '', numero: e.numero ?? '',
   complemento: e.complemento ?? '', bairro: e.bairro ?? '', cidade: e.cidade ?? '',
-  uf: e.uf ?? '', observacoes: e.observacoes ?? '',
+  uf: e.uf ?? '', representante: e.representante ?? '', observacoes: e.observacoes ?? '',
 });
 
 export default function EmpresaPage() {
@@ -326,6 +326,11 @@ function EmpresaForm({
       </Field>
       <Field label="UF" className="sm:col-span-1">
         <input id="uf" className={inputClass} maxLength={2} {...text('uf')} />
+      </Field>
+
+      <Field label="Representante legal" className="sm:col-span-6"
+             hint="Nome de quem representa a empresa. Entra na relação oficial de executores.">
+        <input id="representante" className={inputClass} {...text('representante')} />
       </Field>
 
       <Field label="Observações" className="sm:col-span-6">

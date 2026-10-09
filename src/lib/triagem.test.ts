@@ -8,7 +8,7 @@ const emp = (id: string, over: Partial<Empresa> = {}): Empresa => ({
   id, codigo_cadex: `CADEX-${id}`, cnpj: '00000000000191', razao_social: `${id.toUpperCase()} LTDA`,
   nome_fantasia: null, tipo: 'terceirizada', setores: ['telecom'], email: 'x@y.z', telefone: null,
   cep: null, logradouro: null, numero: null, complemento: null, bairro: null, cidade: null, uf: null,
-  observacoes: null, situacao: 'apta', processo_numero: null, data_requerimento: null,
+  representante: null, observacoes: null, situacao: 'apta', processo_numero: null, data_requerimento: null,
   portaria_numero: null, portaria_data: null, validade_ate: '2027-01-01', notificacao_data: null,
   logo_arquivo: null, criado_em: '2026-09-01T00:00:00Z', atualizado_em: '2026-09-01T00:00:00Z', ...over,
 });

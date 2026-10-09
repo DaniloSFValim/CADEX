@@ -6,8 +6,8 @@ import { BARRA, SituacaoBadge } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { formatCnpj, onlyDigits } from '../lib/cnpj';
 import {
-  FILTRO_SITUACAO, SETORES, SETOR_LABEL, atuaNoSetor, descricaoEmpresa, tiposDaEmpresa, situacoesDoFiltro, hojeISO, situacaoEfetiva, listarDocumentos, listarEmpresas, listarTiposDocumento, listarVinculos,
-  nomeEmpresa, resumoDocumentos, type Documento, type Empresa, type Resumo, type Setor, type SituacaoEfetiva, type TipoDocumento,
+  FILTRO_SITUACAO, SETORES, SETOR_LABEL, atuaNoSetor, descricaoEmpresa, tiposDaEmpresa, situacoesDoFiltro, hojeISO, situacaoEfetiva, listarDocumentos, listarEmpresas, listarResponsaveis, listarTiposDocumento, listarVinculos,
+  nomeEmpresa, resumoDocumentos, type Documento, type Empresa, type Resumo, type RtResumo, type Setor, type SituacaoEfetiva, type TipoDocumento,
   type Vinculo,
 } from '../lib/empresas';
 
@@ -24,6 +24,7 @@ export default function Empresas() {
   const [tipos, setTipos] = useState<TipoDocumento[]>([]);
   const [docs, setDocs] = useState<Documento[]>([]);
   const [vinculos, setVinculos] = useState<Vinculo[]>([]);
+  const [rts, setRts] = useState<RtResumo[]>([]);
   const [error, setError] = useState<unknown>(null);
   const [busca, setBusca] = useState('');
   const [tipo, setTipo] = useState('');
@@ -38,14 +39,21 @@ export default function Empresas() {
       podeEditar ? listarTiposDocumento() : Promise.resolve([]),
       podeEditar ? listarDocumentos() : Promise.resolve([]),
       listarVinculos(),
+      listarResponsaveis(),
     ])
-      .then(([e, t, d, v]) => { setEmpresas(e); setTipos(t); setDocs(d); setVinculos(v); })
+      .then(([e, t, d, v, r]) => { setEmpresas(e); setTipos(t); setDocs(d); setVinculos(v); setRts(r); })
       .catch(setError);
   }, [podeEditar]);
 
   const hoje = hojeISO();
 
   const porId = useMemo(() => new Map((empresas ?? []).map((e) => [e.id, e])), [empresas]);
+
+  const rtsPorEmpresa = useMemo(() => {
+    const m = new Map<string, RtResumo[]>();
+    for (const r of rts) m.set(r.empresa_id, [...(m.get(r.empresa_id) ?? []), r]);
+    return m;
+  }, [rts]);
 
   const filtradas = useMemo(() => {
     const q = busca.trim().toLowerCase();
@@ -99,7 +107,7 @@ export default function Empresas() {
         <ExportarRelacao
           empresas={empresas}
           contexto={{
-            hoje, porId, vinculos,
+            hoje, porId, vinculos, rts: rtsPorEmpresa,
             resumoDocs: podeEditar
               ? (e) => resumoDocumentos(tiposDaEmpresa(tipos, e), docs.filter((d) => d.empresa_id === e.id), hoje)
               : undefined,
