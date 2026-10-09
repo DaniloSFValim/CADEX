@@ -97,7 +97,9 @@ function AreaRestrita() {
       <Route path="empresas/:id/ficha" element={<Ficha />} />
       <Route path="obras/:id/placa" element={<PlacaLicenca />} />
       <Route element={<Layout />}>
-        <Route index element={<Empresas />} />
+        {/* Home por papel: o gestor abre no Painel; o CISP, nas Empresas. */}
+        <Route index element={<Navigate to={servidor.papel === 'gestor' ? '/dashboard' : '/empresas'} replace />} />
+        <Route path="empresas" element={<Empresas />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="anatel" element={<CruzamentoAnatel />} />
         <Route path="empresas/nova" element={<EmpresaPage />} />

@@ -60,7 +60,7 @@ export default function EmpresaPage() {
   return (
     <div className="space-y-6">
       <Titulo
-        trilha={<><Link to="/" className="hover:text-marca-700 hover:underline">Empresas</Link> / {empresa ? empresa.codigo_cadex : 'Nova'}</>}
+        trilha={<><Link to="/empresas" className="hover:text-marca-700 hover:underline">Empresas</Link> / {empresa ? empresa.codigo_cadex : 'Nova'}</>}
         titulo={
           <span className="flex items-center gap-4">
             {empresa?.logo_arquivo && (

@@ -135,7 +135,7 @@ export default function Dashboard() {
             : 'Cada empresa e obra que precisa de ação está nas listas abaixo, em ordem de urgência.'}
         </p>
         <nav className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-base" aria-label="Atalhos">
-          <Link to="/" className={linkTexto}>Ver empresas</Link>
+          <Link to="/empresas" className={linkTexto}>Ver empresas</Link>
           <Link to="/obras" className={linkTexto}>Ver obras</Link>
         </nav>
       </header>
