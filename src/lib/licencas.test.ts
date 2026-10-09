@@ -83,10 +83,14 @@ describe('pendências do painel', () => {
     l({ id: 'e', fim_previsto: '2026-12-31' }),                         // em execução: fora
     l({ id: 'f', anterior_resolucao: true, fim_previsto: '2022-05-30' }), // histórica: só conta
     l({ id: 'g', situacao: 'cancelada' }),                              // cancelada: fora
+    l({ id: 'h', concluida_em: '2026-09-15', as_built_sei: '1', recomposicao_data: '2026-09-18' }), // recomposta: fora
   ], hoje);
   it('lista prazo encerrado e sem As Built, mais atrasados primeiro', () => {
     expect(r.prazoEncerrado.map((p) => [p.licenca.id, p.dias])).toEqual([['a', 11], ['b', 1]]);
     expect(r.semAsBuilt.map((p) => [p.licenca.id, p.dias])).toEqual([['c', 16]]);
+  });
+  it('lista recomposição pendente (concluída sem recompor), exclui as já recompostas', () => {
+    expect(r.semRecomposicao.map((p) => p.licenca.id).sort()).toEqual(['c', 'd']);
   });
   it('só conta as anteriores à Resolução', () => {
     expect(r.historicasEmAberto).toBe(1);

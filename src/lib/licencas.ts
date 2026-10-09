@@ -51,6 +51,8 @@ export interface Licenca {
   inicio_previsto: string | null;
   fim_previsto: string | null;
   concluida_em: string | null;
+  /** Recomposição do pavimento (art. 26); a garantia corre a partir dela. */
+  recomposicao_data: string | null;
   as_built_sei: string | null;
   as_built_data: string | null;
   observacoes: string | null;
@@ -231,6 +233,28 @@ export async function excluirLicenca(id: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------
+// Conflito espaço-temporal: obras a até 15 m, no mesmo período (vigente)
+// ou ainda na garantia da recomposição. É aviso, nunca bloqueia.
+// ---------------------------------------------------------------------
+export interface Conflito {
+  tipo: 'vigente' | 'recomposicao';
+  licenca_id: string;
+  numero: string | null;
+  processo_sei: string;
+  executora: string | null;
+  distancia_m: number;
+  logradouro: string | null;
+  /** Fim do cronograma (vigente) ou fim da garantia (recomposição). */
+  ate: string | null;
+}
+
+export async function buscarConflitos(id: string): Promise<Conflito[]> {
+  const { data, error } = await supabase.rpc('conflitos_de_licenca', { p_id: id });
+  if (error) throw error;
+  return (data as Conflito[]) ?? [];
+}
+
+// ---------------------------------------------------------------------
 // Página pública da licença (QR Code da placa, art. 14): sem login
 // ---------------------------------------------------------------------
 export type SituacaoPublica = 'vigente' | 'aguardando_inicio' | 'prazo_encerrado' | 'concluida' | 'cancelada';
@@ -283,8 +307,13 @@ export interface PendenciaLicenca { licenca: LicencaComTrechos; dias: number }
 export function pendenciasLicencas(licencas: LicencaComTrechos[], hoje: string) {
   const prazoEncerrado: PendenciaLicenca[] = [];
   const semAsBuilt: PendenciaLicenca[] = [];
+  const semRecomposicao: PendenciaLicenca[] = [];
   let historicasEmAberto = 0;
   for (const l of licencas) {
+    // Obra concluída sem a recomposição do pavimento registrada (exceto histórica).
+    if (l.concluida_em && !l.recomposicao_data && l.situacao === 'deferida' && !l.anterior_resolucao) {
+      semRecomposicao.push({ licenca: l, dias: diasEntre(l.concluida_em, hoje) });
+    }
     const e = estadoLicenca(l, hoje);
     if (e !== 'prazo_encerrado' && e !== 'concluida_sem_as_built') continue;
     if (l.anterior_resolucao) { historicasEmAberto++; continue; }
@@ -294,5 +323,6 @@ export function pendenciasLicencas(licencas: LicencaComTrechos[], hoje: string) 
   // Mais atrasadas primeiro.
   prazoEncerrado.sort((a, b) => b.dias - a.dias);
   semAsBuilt.sort((a, b) => b.dias - a.dias);
-  return { prazoEncerrado, semAsBuilt, historicasEmAberto };
+  semRecomposicao.sort((a, b) => b.dias - a.dias);
+  return { prazoEncerrado, semAsBuilt, semRecomposicao, historicasEmAberto };
 }

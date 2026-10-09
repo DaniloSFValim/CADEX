@@ -118,7 +118,8 @@ export default function Dashboard() {
 
   const pendencias =
     (sumario?.analises_pendentes || 0) + (sumario?.saneamentos_vencendo || 0) +
-    (sumario?.inscricoes_vencendo || 0) + obras.prazoEncerrado.length + obras.semAsBuilt.length;
+    (sumario?.inscricoes_vencendo || 0) + obras.prazoEncerrado.length + obras.semAsBuilt.length +
+    obras.semRecomposicao.length;
 
   return (
     <div className="flex flex-col gap-14">
@@ -332,10 +333,13 @@ export default function Dashboard() {
         <CabecalhoSecao titulo="Licenças de obra"
                         descricao="Obras cujo acompanhamento está pendente (arts. 24 e 26)."
                         acao={<Link to="/obras" className={`${linkTexto} text-sm`}>Ver todas as licenças</Link>} />
-        <div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-3">
           <Kpi rotulo="Prazos encerrados" valor={obras.prazoEncerrado.length}
                detalhe="cronograma vencido sem conclusão registrada"
                tom={obras.prazoEncerrado.length ? 'baixa' : undefined} />
+          <Kpi rotulo="Recomposição pendente" valor={obras.semRecomposicao.length}
+               detalhe="obra concluída sem o pavimento recomposto"
+               tom={obras.semRecomposicao.length ? 'baixa' : undefined} />
           <Kpi rotulo="Sem As Built" valor={obras.semAsBuilt.length}
                detalhe="obra concluída sem o projeto como construído (art. 26)"
                tom={obras.semAsBuilt.length ? 'atencao' : undefined} />
@@ -346,6 +350,11 @@ export default function Dashboard() {
           vazio="Nenhuma licença com prazo encerrado sem conclusão."
           coluna="Prazo terminou em" data={(l) => l.fim_previsto} sufixo="de atraso" tom="ruim"
           itens={obras.prazoEncerrado} porId={porId} />
+        <TabelaPendencias
+          titulo="Pavimento sem recomposição"
+          vazio="Nenhuma obra concluída aguardando recomposição."
+          coluna="Concluída em" data={(l) => l.concluida_em} sufixo="sem recompor" tom="ruim"
+          itens={obras.semRecomposicao} porId={porId} />
         <TabelaPendencias
           titulo="Obra concluída sem As Built"
           vazio="Nenhuma obra concluída aguardando As Built."

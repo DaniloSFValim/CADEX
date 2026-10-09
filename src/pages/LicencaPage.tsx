@@ -11,10 +11,10 @@ import {
   nomeEmpresa, podeAtuar, situacaoEfetiva, type Empresa, type Registro, type Setor, type Vinculo,
 } from '../lib/empresas';
 import {
-  ESTADO_LICENCA_LABEL, TIPO_OBRA_LABEL, TOM_ESTADO_LICENCA, buscarLicenca,
+  ESTADO_LICENCA_LABEL, TIPO_OBRA_LABEL, TOM_ESTADO_LICENCA, buscarConflitos, buscarLicenca,
   anteriorResolucao, coordenadaTexto, segueResolucao, estadoLicenca, lerCoordenada, linkMapa, salvarLicenca,
   urlPublicaLicenca,
-  type LicencaComTrechos, type LicencaInput, type SituacaoLicenca, type TipoObra, type Trecho,
+  type Conflito, type LicencaComTrechos, type LicencaInput, type SituacaoLicenca, type TipoObra, type Trecho,
 } from '../lib/licencas';
 import { listarOrgaos, nomeOrgao, type Orgao } from '../lib/orgaos';
 
@@ -28,7 +28,8 @@ type Form = {
   contratante_cnpj: string;
   imovel_endereco: string; processo_urbanismo: string;
   art_numero: string; protocolo_data: string; situacao: SituacaoLicenca; decisao_data: string;
-  inicio_previsto: string; fim_previsto: string; concluida_em: string; as_built_sei: string; as_built_data: string;
+  inicio_previsto: string; fim_previsto: string; concluida_em: string; recomposicao_data: string;
+  as_built_sei: string; as_built_data: string;
 };
 
 /** Opção do seletor para empresa sem cadastro (só em licença anterior à Resolução). */
@@ -65,7 +66,7 @@ const VAZIO: Form = {
   executora_razao_social: '', executora_cnpj: '', contratante_razao_social: '', contratante_cnpj: '',
   imovel_endereco: '', processo_urbanismo: '',
   art_numero: '', protocolo_data: '', situacao: 'deferida', decisao_data: '',
-  inicio_previsto: '', fim_previsto: '', concluida_em: '', as_built_sei: '', as_built_data: '',
+  inicio_previsto: '', fim_previsto: '', concluida_em: '', recomposicao_data: '', as_built_sei: '', as_built_data: '',
 };
 
 function paraForm(l: LicencaComTrechos): Form {
@@ -82,7 +83,8 @@ function paraForm(l: LicencaComTrechos): Form {
     subcontratada_id: s(l.subcontratada_id), responsavel_tecnico_id: s(l.responsavel_tecnico_id),
     art_numero: s(l.art_numero), protocolo_data: l.protocolo_data, situacao: l.situacao,
     decisao_data: s(l.decisao_data), inicio_previsto: s(l.inicio_previsto), fim_previsto: s(l.fim_previsto),
-    concluida_em: s(l.concluida_em), as_built_sei: s(l.as_built_sei), as_built_data: s(l.as_built_data),
+    concluida_em: s(l.concluida_em), recomposicao_data: s(l.recomposicao_data),
+    as_built_sei: s(l.as_built_sei), as_built_data: s(l.as_built_data),
   };
 }
 
@@ -130,6 +132,7 @@ export default function LicencaPage() {
           : 'Lance os dados do processo: executora habilitada no setor, trechos da obra e a situação (em execução ou concluída).'}
       />
       {licenca?.situacao === 'deferida' && <Placa licenca={licenca} />}
+      {licenca && <Conflitos key={licenca.atualizado_em} licencaId={licenca.id} />}
       <LicencaForm
         key={licenca?.id ?? 'nova'}
         licenca={licenca}
@@ -285,6 +288,7 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, somenteLeitura, onSa
         inicio_previsto: n(f.inicio_previsto) ?? (deferindo ? n(f.decisao_data) : null),
         fim_previsto: n(f.fim_previsto),
         concluida_em: deferindo ? n(f.concluida_em) : null,
+        recomposicao_data: deferindo && f.concluida_em ? n(f.recomposicao_data) : null,
         as_built_sei: deferindo && f.concluida_em ? n(f.as_built_sei) : null,
         as_built_data: deferindo && f.concluida_em ? n(f.as_built_data) : null,
       },
@@ -596,6 +600,10 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, somenteLeitura, onSa
                      min={f.inicio_previsto || undefined} onChange={(e) => set('concluida_em', e.target.value)} />
             </Field>
             {f.concluida_em && (<>
+              <Field label="Pavimento recomposto em" hint="Quando a via foi reposta; a garantia da recomposição corre a partir daqui.">
+                <input type="date" className={inputClass} disabled={ro} value={f.recomposicao_data}
+                       min={f.concluida_em || undefined} onChange={(e) => set('recomposicao_data', e.target.value)} />
+              </Field>
               <Field label="As Built: nº do documento SEI" hint="Art. 26: projeto como construído, georreferenciado.">
                 <input className={inputClass} disabled={ro} value={f.as_built_sei}
                        required={Boolean(f.as_built_data)} onChange={(e) => set('as_built_sei', e.target.value)} />
@@ -637,6 +645,44 @@ function CoordField({ label, valor, lida, ro, required, onChange }: {
       <input className={`${inputClass} tabular ${valor.trim() && !lida ? 'border-baixa!' : ''}`} disabled={ro}
              value={valor} placeholder="-22.895000, -43.123000" onChange={(e) => onChange(e.target.value)} />
     </Field>
+  );
+}
+
+/**
+ * Aviso de coordenação (nunca bloqueia): outras obras a até 15 m, no mesmo
+ * período (vigente) ou ainda na garantia da recomposição. Inspirado no
+ * Street Manager/811 — evitar abrir a mesma via duas vezes.
+ */
+function Conflitos({ licencaId }: { licencaId: string }) {
+  const [conflitos, setConflitos] = useState<Conflito[]>([]);
+  useEffect(() => { buscarConflitos(licencaId).then(setConflitos).catch(() => setConflitos([])); }, [licencaId]);
+  if (conflitos.length === 0) return null;
+  return (
+    <section className="mb-8 rounded-sm border-l-4 border-atencao bg-atencao/6 px-4 py-3" role="status">
+      <h2 className="text-sm font-semibold text-tinta-900">
+        Atenção: {conflitos.length} obra{conflitos.length > 1 ? 's' : ''} próxima{conflitos.length > 1 ? 's' : ''} (até 15 m)
+      </h2>
+      <ul className="mt-2 space-y-1.5 text-sm text-tinta-700">
+        {conflitos.map((c) => (
+          <li key={c.licenca_id} className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            <Badge tom={c.tipo === 'recomposicao' ? 'ruim' : 'alerta'}>
+              {c.tipo === 'recomposicao' ? 'Via recém-recomposta' : 'Obra vigente'}
+            </Badge>
+            <Link to={`/obras/${c.licenca_id}`} className="font-medium hover:text-marca-700 hover:underline">
+              {c.numero ? `Licença ${c.numero}` : c.processo_sei}
+            </Link>
+            <span className="text-tinta-500">
+              {c.logradouro ? `${c.logradouro} · ` : ''}~{c.distancia_m} m
+              {c.executora ? ` · ${c.executora}` : ''}
+              {c.ate ? (c.tipo === 'recomposicao' ? ` · garantia até ${dataBR(c.ate)}` : ` · até ${dataBR(c.ate)}`) : ''}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2 text-xs text-tinta-500">
+        Aviso de coordenação — não impede o deferimento. Confira se a intervenção se justifica no mesmo local e período.
+      </p>
+    </section>
   );
 }
 
