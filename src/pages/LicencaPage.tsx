@@ -150,7 +150,7 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, somenteLeitura, onSa
   licenca: LicencaComTrechos | null; empresas: Empresa[]; vinculos: Vinculo[]; orgaos: Orgao[]; somenteLeitura: boolean;
   onSalvo: (id: string) => Promise<void>;
 }) {
-  const [f, setF] = useState<Form>(licenca ? paraForm(licenca) : VAZIO);
+  const [f, setF] = useState<Form>(licenca ? paraForm(licenca) : { ...VAZIO, protocolo_data: hojeISO() });
   const [trechos, setTrechos] = useState<TrechoForm[]>(
     licenca?.licenca_trechos.length ? licenca.licenca_trechos.map(trechoParaForm) : [TRECHO_VAZIO]);
   const [rts, setRts] = useState<Registro[]>([]);
@@ -195,6 +195,14 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, somenteLeitura, onSa
   // Na drenagem o dono do imóvel pode ser pessoa física: 11 dígitos = CPF.
   const contratanteCpf = drenagem && contratanteSemCadastro && onlyDigits(f.contratante_cnpj).length <= 11
     && f.contratante_cnpj.trim() !== '';
+  // A contratante só existe quando a executora trabalha para alguém: terceirizada
+  // (sempre, em qualquer setor), drenagem (dono do imóvel) ou registro histórico.
+  // A titular (operadora, concessionária, construtora) executa a própria obra e
+  // não tem contratante. (Boolean(f.contratante_id) mantém o campo visível ao
+  // editar um registro antigo que já traga contratante.)
+  const executoraTerceirizada = executora?.tipo === 'terceirizada';
+  const mostrarContratante = executoraTerceirizada || drenagem || anterior || Boolean(f.contratante_id);
+  const contratanteObrigatoria = executoraTerceirizada && !anterior;
   // Sob a Resolução: só subcontratada com vínculo ativo. Fora dela: qualquer terceirizada do setor.
   const subcontratadas = (!resolucao
     ? empresas.filter((e) => e.tipo === 'terceirizada' && e.id !== f.executora_id)
@@ -272,7 +280,10 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, somenteLeitura, onSa
         processo_urbanismo: drenagem ? n(f.processo_urbanismo) : null,
         subcontratada_id: n(f.subcontratada_id), responsavel_tecnico_id: n(f.responsavel_tecnico_id),
         art_numero: n(f.art_numero), protocolo_data: f.protocolo_data, situacao: f.situacao,
-        decisao_data: n(f.decisao_data), inicio_previsto: n(f.inicio_previsto), fim_previsto: n(f.fim_previsto),
+        decisao_data: n(f.decisao_data),
+        // Início em branco assume a data da decisão (cronograma simplificado).
+        inicio_previsto: n(f.inicio_previsto) ?? (deferindo ? n(f.decisao_data) : null),
+        fim_previsto: n(f.fim_previsto),
         concluida_em: deferindo ? n(f.concluida_em) : null,
         as_built_sei: deferindo && f.concluida_em ? n(f.as_built_sei) : null,
         as_built_data: deferindo && f.concluida_em ? n(f.as_built_data) : null,
@@ -395,8 +406,8 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, somenteLeitura, onSa
         </div>
         {deferindo && (
           <div className="mt-4 grid gap-4 sm:grid-cols-3">
-            <Field label="Início do cronograma" required>
-              <input type="date" className={inputClass} required disabled={ro} value={f.inicio_previsto}
+            <Field label="Início do cronograma" hint="Opcional; em branco, assume a data da decisão.">
+              <input type="date" className={inputClass} disabled={ro} value={f.inicio_previsto}
                      onChange={(e) => set('inicio_previsto', e.target.value)} />
             </Field>
             <Field label="Fim do cronograma" required hint="É a validade da licença (art. 13, parágrafo único).">
@@ -427,17 +438,27 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, somenteLeitura, onSa
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Executora" required>
             <select className={inputClass} required disabled={ro} value={f.executora_id}
-                    onChange={(e) => { set('executora_id', e.target.value); set('subcontratada_id', ''); set('responsavel_tecnico_id', ''); }}>
+                    onChange={(e) => {
+                      const novo = e.target.value;
+                      set('executora_id', novo);
+                      set('subcontratada_id', '');
+                      set('responsavel_tecnico_id', '');
+                      // Titular (não terceirizada) executa a própria obra: sem
+                      // contratante, exceto na drenagem e no registro histórico.
+                      const t = porId.get(novo)?.tipo;
+                      if (t && t !== 'terceirizada' && !drenagem && !anterior) set('contratante_id', '');
+                    }}>
               <option value="">Selecione</option>
               {executoras.map((e) => <option key={e.id} value={e.id}>{nomeEmpresa(e)}</option>)}
               {(anterior || executoraSemCadastro) && <option value={SEM_CADASTRO}>Empresa sem cadastro no CADEX</option>}
             </select>
           </Field>
-          <Field label="Contratante"
-                 hint={executora?.tipo === 'terceirizada' && resolucao ? 'Empresa titular ou órgão público. Obrigatória para executora terceirizada.'
+          {mostrarContratante && (
+          <Field label="Contratante" required={contratanteObrigatoria}
+                 hint={executoraTerceirizada ? 'Empresa titular (operadora, concessionária, construtora) ou órgão público que contratou a terceirizada.'
                    : drenagem ? 'Construtora ou o dono do imóvel (sem cadastro). Em branco só quando a própria construtora executa.'
-                   : 'Empresa titular, órgão público (contratação direta da administração) ou em branco se a própria titular executa.'}>
-            <select className={inputClass} disabled={ro} required={executora?.tipo === 'terceirizada' && resolucao}
+                   : 'Empresa titular, órgão público ou o nome por extenso (registro histórico).'}>
+            <select className={inputClass} disabled={ro} required={contratanteObrigatoria}
                     value={f.contratante_id} onChange={(e) => set('contratante_id', e.target.value)}>
               <option value="">Nenhuma</option>
               {contratantes.length > 0 && (
@@ -457,6 +478,7 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, somenteLeitura, onSa
               )}
             </select>
           </Field>
+          )}
           {executoraSemCadastro && (
             <SemCadastro quem="executora" ro={ro} razao={f.executora_razao_social} cnpj={f.executora_cnpj}
                          onRazao={(v) => set('executora_razao_social', v)} onCnpj={(v) => set('executora_cnpj', v)} />
