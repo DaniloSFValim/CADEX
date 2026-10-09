@@ -163,7 +163,7 @@ export default function Empresas() {
                 {filtradas.map((e) => {
                   const contratantes = vinculos
                     .filter((v) => v.contratada_id === e.id && !v.fim)
-                    .map((v) => porId.get(v.contratante_id))
+                    .map((v) => (v.contratante_id ? porId.get(v.contratante_id) : undefined))
                     .filter((o): o is Empresa => Boolean(o));
                   const r = resumoDocumentos(tiposDaEmpresa(tipos, e), docs.filter((d) => d.empresa_id === e.id), hoje);
                   return (

@@ -62,8 +62,10 @@ export type InscricaoInput = Pick<Empresa,
 /** Terceirizada atendendo uma operadora. Vínculo encerrado tem `fim`. */
 export interface Vinculo {
   id: string;
-  /** Operadora ou terceirizada que contrata. */
-  contratante_id: string;
+  /** Empresa que contrata (operadora, concessionária, construtora ou terceirizada). Nulo quando a contratante é um órgão público. */
+  contratante_id: string | null;
+  /** Órgão público contratante (ex.: SEMOB), alternativa à empresa. */
+  orgao_contratante_id: string | null;
   /** Terceirizada contratada (subcontratada, se a contratante for terceirizada). */
   contratada_id: string;
   inicio: string;
@@ -315,6 +317,13 @@ export async function listarVinculos(): Promise<Vinculo[]> {
 export async function criarVinculo(contratanteId: string, contratadaId: string): Promise<void> {
   const { error } = await supabase.from('vinculos')
     .insert({ contratante_id: contratanteId, contratada_id: contratadaId });
+  if (error) throw error;
+}
+
+/** Vínculo com um órgão público como contratante (ex.: SEMOB contrata a terceirizada). */
+export async function criarVinculoOrgao(orgaoId: string, contratadaId: string): Promise<void> {
+  const { error } = await supabase.from('vinculos')
+    .insert({ orgao_contratante_id: orgaoId, contratada_id: contratadaId });
   if (error) throw error;
 }
 

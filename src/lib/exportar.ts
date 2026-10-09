@@ -60,7 +60,8 @@ const dataBR = (iso: string | null) => (iso ? iso.split('-').reverse().join('/')
 
 const contratantes = (e: Empresa, c: Contexto) =>
   c.vinculos.filter((v) => v.contratada_id === e.id && !v.fim)
-    .map((v) => c.porId.get(v.contratante_id)).filter((x): x is Empresa => Boolean(x));
+    .map((v) => (v.contratante_id ? c.porId.get(v.contratante_id) : undefined))
+    .filter((x): x is Empresa => Boolean(x));
 
 const contratadas = (e: Empresa, c: Contexto) =>
   c.vinculos.filter((v) => v.contratante_id === e.id && !v.fim)
