@@ -5,13 +5,14 @@ import { BARRA, SituacaoBadge } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { formatCnpj, isValidCnpj, onlyDigits } from '../lib/cnpj';
 import {
-  ESTADO_LABEL, SETORES, SETOR_LABEL, TIPO_LABEL, buscarEmpresa, descricaoEmpresa, ehContratante, tiposDaEmpresa, criarEmpresa, criarVinculo, definirFimVinculo,
+  ESTADO_LABEL, SETORES, SETOR_LABEL, TIPO_LABEL, buscarEmpresa, descricaoEmpresa, ehContratante, tiposDaEmpresa, criarEmpresa, criarVinculo, criarVinculoOrgao, definirFimVinculo,
   enviarLogo, estadoDocumento, registrarDocumentos, removerLogo, urlLogo, MAX_LOGO_BYTES, TIPOS_LOGO, hojeISO, listarDocumentos, listarEmpresas,
   listarTiposDocumento, listarVinculos, nomeEmpresa, resumoDocumentos,
   salvarEmpresa, situacaoEfetiva, ultimoPorTipo,
   type Documento, type Empresa, type EmpresaInput, type EstadoDocumento, type Setor, type TipoDocumento,
   type Vinculo,
 } from '../lib/empresas';
+import { listarOrgaos, nomeOrgao, type Orgao } from '../lib/orgaos';
 import { ResumoBadge } from './Empresas';
 import { Inscricao } from './Inscricao';
 import { LicencasDaEmpresa } from './Licencas';
@@ -409,6 +410,7 @@ function Vinculos({
   empresa, todas, podeEditar,
 }: { empresa: Empresa; todas: Empresa[]; podeEditar: boolean }) {
   const [vinculos, setVinculos] = useState<Vinculo[] | null>(null);
+  const [orgaos, setOrgaos] = useState<Orgao[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
@@ -418,6 +420,7 @@ function Vinculos({
       .catch(setError);
 
   useEffect(() => { void recarregar(); }, [empresa.id]);
+  useEffect(() => { listarOrgaos().then(setOrgaos).catch(() => {}); }, []);
 
   const agir = async (fn: () => Promise<void>) => {
     setBusy(true); setError(null);
@@ -434,6 +437,8 @@ function Vinculos({
   // Quem ainda pode entrar em cada lado (o banco recusa ciclos na cadeia).
   const podemContratar = todas.filter((o) =>
     o.id !== empresa.id && !contratadaPor.some((v) => v.contratante_id === o.id));
+  const orgaosPorId = new Map(orgaos.map((o) => [o.id, o]));
+  const podemContratarOrgaos = orgaos.filter((o) => !contratadaPor.some((v) => v.orgao_contratante_id === o.id));
   const podemSerContratadas = todas.filter((o) =>
     o.tipo === 'terceirizada' && o.id !== empresa.id && !contrata.some((v) => v.contratada_id === o.id));
 
@@ -445,16 +450,20 @@ function Vinculos({
           {ehTerceirizada && (
             <LadoVinculo
               titulo="Contratada por"
-              dica="Operadoras, concessionárias, construtoras e, em caso de subcontratação, terceirizadas."
+              dica="Operadoras, concessionárias, construtoras, órgãos públicos e, em caso de subcontratação, terceirizadas."
               vinculos={contratadaPor}
-              outra={(v) => v.contratante_id}
+              outra={(v) => v.contratante_id ?? ''}
               todas={todas}
+              orgaosPorId={orgaosPorId}
               vazio="Nenhuma contratante vinculada."
               podeEditar={podeEditar}
               busy={busy}
               opcoes={podemContratar}
+              opcoesOrgaos={podemContratarOrgaos}
               rotuloIncluir="Vincular contratante…"
-              onIncluir={(id) => agir(() => criarVinculo(id, empresa.id))}
+              onIncluir={(id) => agir(() => id.startsWith('orgao:')
+                ? criarVinculoOrgao(id.slice('orgao:'.length), empresa.id)
+                : criarVinculo(id, empresa.id))}
               onFim={(v) => agir(() => definirFimVinculo(v.id, v.fim ? null : hojeISO()))}
             />
           )}
@@ -481,17 +490,21 @@ function Vinculos({
 }
 
 function LadoVinculo({
-  titulo, dica, vinculos, outra, todas, vazio, podeEditar, busy, opcoes, rotuloIncluir, onIncluir, onFim,
+  titulo, dica, vinculos, outra, todas, orgaosPorId, vazio, podeEditar, busy, opcoes, opcoesOrgaos, rotuloIncluir, onIncluir, onFim,
 }: {
   titulo: string;
   dica?: string;
   vinculos: Vinculo[];
   outra: (v: Vinculo) => string;
   todas: Empresa[];
+  /** Órgãos públicos, para exibir o vínculo cuja contratante é um órgão. */
+  orgaosPorId?: Map<string, Orgao>;
   vazio: string;
   podeEditar: boolean;
   busy: boolean;
   opcoes: Empresa[];
+  /** Órgãos públicos oferecidos no seletor (só no lado "Contratada por"). */
+  opcoesOrgaos?: Orgao[];
   rotuloIncluir: string;
   onIncluir: (id: string) => Promise<void>;
   onFim: (v: Vinculo) => Promise<void>;
@@ -509,16 +522,24 @@ function LadoVinculo({
         <ul className="mt-1 divide-y divide-tinta-100">
           {vinculos.map((v) => {
             const e = porId.get(outra(v));
+            const o = v.orgao_contratante_id ? orgaosPorId?.get(v.orgao_contratante_id) : undefined;
             return (
               <li key={v.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
                 <div>
-                  {e ? (
-                    <Link to={`/empresas/${e.id}`} className="font-medium text-marca-700 hover:underline">
-                      {nomeEmpresa(e)}
-                    </Link>
+                  {o ? (
+                    <>
+                      <span className="font-medium text-tinta-800">{nomeOrgao(o)}</span>
+                      <span className="ml-2"><Badge>Órgão público</Badge></span>
+                    </>
+                  ) : e ? (
+                    <>
+                      <Link to={`/empresas/${e.id}`} className="font-medium text-marca-700 hover:underline">
+                        {nomeEmpresa(e)}
+                      </Link>
+                      <span className="tabular ml-2 text-xs text-tinta-500">{e.codigo_cadex}</span>
+                      <span className="ml-2 text-xs text-tinta-500">{TIPO_LABEL[e.tipo]}</span>
+                    </>
                   ) : '—'}
-                  {e && <span className="tabular ml-2 text-xs text-tinta-500">{e.codigo_cadex}</span>}
-                  {e && <span className="ml-2 text-xs text-tinta-500">{TIPO_LABEL[e.tipo]}</span>}
                   <div className="text-xs text-tinta-500">
                     desde {dataBR(v.inicio)}{v.fim && `, encerrado em ${dataBR(v.fim)}`}
                   </div>
@@ -538,14 +559,29 @@ function LadoVinculo({
           })}
         </ul>
       )}
-      {podeEditar && opcoes.length > 0 && (
+      {podeEditar && (opcoes.length > 0 || (opcoesOrgaos?.length ?? 0) > 0) && (
         <div className="mt-2 flex flex-wrap items-end gap-2">
           <select aria-label={rotuloIncluir} className={`${inputClass} w-auto!`} value={nova}
                   onChange={(e) => setNova(e.target.value)}>
             <option value="">{rotuloIncluir}</option>
-            {opcoes.map((o) => (
-              <option key={o.id} value={o.id}>{nomeEmpresa(o)} ({o.codigo_cadex})</option>
-            ))}
+            {opcoesOrgaos && opcoesOrgaos.length > 0 ? (
+              <>
+                <optgroup label="Empresas">
+                  {opcoes.map((o) => (
+                    <option key={o.id} value={o.id}>{nomeEmpresa(o)} ({o.codigo_cadex})</option>
+                  ))}
+                </optgroup>
+                <optgroup label="Órgãos públicos">
+                  {opcoesOrgaos.map((o) => (
+                    <option key={o.id} value={`orgao:${o.id}`}>{nomeOrgao(o)}</option>
+                  ))}
+                </optgroup>
+              </>
+            ) : (
+              opcoes.map((o) => (
+                <option key={o.id} value={o.id}>{nomeEmpresa(o)} ({o.codigo_cadex})</option>
+              ))
+            )}
           </select>
           <Button variant="secondary" disabled={busy || !nova}
                   onClick={() => void onIncluir(nova).then(() => setNova(''))}>

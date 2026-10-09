@@ -68,7 +68,8 @@ export default function Ficha() {
   const porId = new Map(d.todas.map((x) => [x.id, x]));
   const ver = (s: Secao) => secoes.includes(s);
   const ativos = d.vinculos.filter((v) => !v.fim);
-  const contratantes = ativos.filter((v) => v.contratada_id === e.id).map((v) => porId.get(v.contratante_id));
+  const contratantes = ativos.filter((v) => v.contratada_id === e.id)
+    .map((v) => (v.contratante_id ? porId.get(v.contratante_id) : undefined));
   const contratadas = ativos.filter((v) => v.contratante_id === e.id).map((v) => porId.get(v.contratada_id));
   const ultimos = ultimoPorTipo(d.docs);
 
