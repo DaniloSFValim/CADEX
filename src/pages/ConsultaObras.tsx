@@ -3,12 +3,12 @@ import { Link } from 'react-router-dom';
 import { AbasConsulta } from '../components/AbasConsulta';
 import { Cabecalho, MENU_PUBLICO } from '../components/Cabecalho';
 import { Rodape } from '../components/Rodape';
-import { Empty, ErrorNote, Spinner, inputClass } from '../components/ui';
+import { Empty, ErrorNote, Spinner, inputClass, linkTexto } from '../components/ui';
 import { dataBR } from '../components/Situacao';
 import { SETORES, SETOR_LABEL } from '../lib/empresas';
 import { TIPO_OBRA_LABEL } from '../lib/licencas';
 import {
-  COR_SITUACAO, FILTRO_OBRAS, SITUACAO_PUBLICA_LABEL, anosDasObras, buscarObrasPublicas, filtrarObras,
+  COR_SITUACAO, FILTRO_OBRAS, SITUACAO_PUBLICA_LABEL, anosDasObras, baixarObrasGeojson, buscarObrasPublicas, filtrarObras,
   type ObraPublica,
 } from '../lib/obras';
 
@@ -24,8 +24,17 @@ export default function ConsultaObras() {
   const [setor, setSetor] = useState('');
   const [busca, setBusca] = useState('');
   const [foco, setFoco] = useState<string | null>(null);
+  const [baixando, setBaixando] = useState(false);
 
   useEffect(() => { buscarObrasPublicas().then(setObras).catch(setError); }, []);
+
+  async function baixarGeojson() {
+    setError(null);
+    setBaixando(true);
+    try { await baixarObrasGeojson(); }
+    catch (e) { setError(e); }
+    finally { setBaixando(false); }
+  }
 
   const filtradas = useMemo(() => filtrarObras(obras ?? [], { situacao, ano, busca, setor }), [obras, situacao, ano, busca, setor]);
   const anos = useMemo(() => anosDasObras(obras ?? []), [obras]);
@@ -75,6 +84,12 @@ export default function ConsultaObras() {
               <p className="mt-1 text-xs text-tinta-500">
                 Cada trecho aparece como uma linha reta entre o início e o fim informados na licença, sem seguir o
                 traçado da rua. Para o percurso exato, abra a licença.
+              </p>
+              <p className="mt-2 text-xs text-tinta-500">
+                <button type="button" className={linkTexto} disabled={baixando} onClick={() => void baixarGeojson()}>
+                  {baixando ? 'Preparando…' : 'Dados abertos: baixar GeoJSON'}
+                </button>
+                <span className="text-tinta-400"> — todas as obras licenciadas, para uso livre.</span>
               </p>
             </div>
 
