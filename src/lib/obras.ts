@@ -1,5 +1,6 @@
 import type { Feature, FeatureCollection } from 'geojson';
 import { supabase } from './supabase';
+import { baixarArquivo } from './exportar';
 import type { Setor } from './empresas';
 import type { SituacaoPublica, TipoObra } from './licencas';
 
@@ -28,6 +29,16 @@ export async function buscarObrasPublicas(): Promise<ObraPublica[]> {
   const { data, error } = await supabase.rpc('obras_publicas');
   if (error) throw error;
   return (data as ObraPublica[] | null) ?? [];
+}
+
+/**
+ * Dados abertos: baixa as obras licenciadas como GeoJSON (uma Feature por
+ * trecho). Mesma seleção do mapa público; sem dado interno.
+ */
+export async function baixarObrasGeojson(): Promise<void> {
+  const { data, error } = await supabase.rpc('obras_geojson');
+  if (error) throw error;
+  baixarArquivo('obras-licenciadas-niteroi.geojson', JSON.stringify(data), 'application/geo+json;charset=utf-8');
 }
 
 export const SITUACAO_PUBLICA_LABEL: Record<SituacaoPublica, string> = {
