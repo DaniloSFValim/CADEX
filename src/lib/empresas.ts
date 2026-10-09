@@ -1,5 +1,6 @@
 import { BUCKET, BUCKET_LOGOS, supabase } from './supabase';
 import { onlyDigits } from './cnpj';
+import { nomeOrgao, type Orgao } from './orgaos';
 
 /**
  * Papel da empresa. Operadora (telecom), concessionária (gás ou
@@ -185,6 +186,29 @@ export const podeAtuar = (s: SituacaoEfetiva) =>
 
 export const nomeEmpresa = (e: Pick<Empresa, 'razao_social' | 'nome_fantasia'>) =>
   e.nome_fantasia?.trim() || e.razao_social;
+
+/**
+ * Rótulo da contratante de um vínculo: empresa cadastrada ou órgão público
+ * (a contratante pode ser qualquer um dos dois). Devolve nulo quando a
+ * referência não está nos mapas. `fmtEmpresa` ajusta o formato do nome da
+ * empresa (com ou sem código CADEX); o órgão sai sempre como `nomeOrgao`.
+ */
+export function rotuloContratante(
+  v: Pick<Vinculo, 'contratante_id' | 'orgao_contratante_id'>,
+  empresasPorId: Map<string, Empresa>,
+  orgaosPorId: Map<string, Orgao>,
+  fmtEmpresa: (e: Empresa) => string = (e) => `${nomeEmpresa(e)} (${e.codigo_cadex})`,
+): string | null {
+  if (v.contratante_id) {
+    const e = empresasPorId.get(v.contratante_id);
+    return e ? fmtEmpresa(e) : null;
+  }
+  if (v.orgao_contratante_id) {
+    const o = orgaosPorId.get(v.orgao_contratante_id);
+    return o ? nomeOrgao(o) : null;
+  }
+  return null;
+}
 
 // ---------------------------------------------------------------------
 // Situação de cada documento

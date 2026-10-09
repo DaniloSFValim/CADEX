@@ -12,7 +12,7 @@ export function Cabecalho({ itens, direita }: { itens: ItemMenu[]; direita?: Rea
   return (
     <header className="sticky top-0 z-30 border-b border-tinta-200 bg-white">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
-        <Link to="/consulta" className="flex items-center gap-3" title="CADEX, Cadastro de Executores">
+        <Link to="/consulta/obras" className="flex items-center gap-3" title="CADEX, Cadastro de Executores">
           <img
             src="/logo-prefeitura-seconser.png"
             alt="Prefeitura de Niterói, SECONSER"
@@ -52,6 +52,7 @@ export function Cabecalho({ itens, direita }: { itens: ItemMenu[]; direita?: Rea
 
 /** Menu das páginas abertas ao público. */
 export const MENU_PUBLICO: ItemMenu[] = [
-  { rotulo: 'Consulta pública', para: '/consulta' },
-  { rotulo: 'Área restrita', para: '/', fim: true },
+  { rotulo: 'Obras no mapa', para: '/consulta/obras' },
+  { rotulo: 'Empresas', para: '/consulta', fim: true },
+  { rotulo: 'Área restrita', para: '/entrar' },
 ];

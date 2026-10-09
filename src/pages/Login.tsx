@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Cabecalho, MENU_PUBLICO } from '../components/Cabecalho';
 import { Rodape } from '../components/Rodape';
 import { Button, ErrorNote, Field, inputClass } from '../components/ui';
@@ -7,7 +7,10 @@ import { useAuth } from '../lib/auth';
 import { MENSAGEM_SAIDA, lerMotivo, limparMotivo } from '../lib/sessao';
 
 export default function Login() {
-  const { signIn } = useAuth();
+  const { signIn, session } = useAuth();
+  const navigate = useNavigate();
+  // Autenticou: o roteamento da área restrita assume a partir da raiz.
+  useEffect(() => { if (session) navigate('/', { replace: true }); }, [session, navigate]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<unknown>(null);
