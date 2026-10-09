@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { BotoesExportar, SeletorAgrupamento } from './BotoesExportar';
 import {
-  AGRUPAR_EMPRESAS, COLUNAS, COLUNAS_PADRAO, relacaoEmpresas, type AgrupamentoEmpresas, type Contexto,
+  AGRUPAR_EMPRESAS, COLUNAS, COLUNAS_PADRAO, COLUNAS_SECONSERVA, relacaoEmpresas, type AgrupamentoEmpresas, type Contexto,
 } from '../lib/exportar';
 import {
   SITUACAO_LABEL, TIPO_LABEL, situacaoEfetiva, situacoesDoFiltro, type Empresa, type SituacaoEfetiva, type Tipo,
@@ -80,6 +80,8 @@ export function ExportarRelacao({
                   onClick={() => setColunas(disponiveis.map((c) => c.chave))}>todos</button>
           <button type="button" className="ml-2 normal-case tracking-normal text-marca-700 hover:underline"
                   onClick={() => setColunas(COLUNAS_PADRAO)}>padrão</button>
+          <button type="button" className="ml-2 normal-case tracking-normal text-marca-700 hover:underline"
+                  onClick={() => setColunas(COLUNAS_SECONSERVA)}>relação oficial (SECONSERVA)</button>
         </legend>
         <div className="mt-1 grid gap-3 sm:grid-cols-3">
           {grupos.map((g) => (

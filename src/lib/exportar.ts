@@ -115,6 +115,16 @@ export const COLUNAS: Coluna[] = [
 
 export const COLUNAS_PADRAO = ['codigo', 'razao', 'fantasia', 'cnpj', 'tipo', 'situacao', 'portaria', 'portaria_data', 'validade'];
 
+/**
+ * Relação oficial de executores no padrão do RECAD/SECONSERVA (para anexar
+ * ao processo): identificação da empresa, contato, representante legal e
+ * responsável técnico. O endereço sai no formato do CADEX (logradouro,
+ * bairro, cidade/UF e CEP numa coluna só).
+ */
+export const COLUNAS_SECONSERVA = [
+  'razao', 'fantasia', 'cnpj', 'endereco', 'telefone', 'email', 'representante', 'responsavel_tecnico',
+];
+
 export function relacaoCsv(empresas: Empresa[], chaves: string[], c: Contexto): string {
   const cols = COLUNAS.filter((col) => chaves.includes(col.chave));
   return gerarCsv(cols.map((col) => col.rotulo), empresas.map((e) => cols.map((col) => col.valor(e, c))));
