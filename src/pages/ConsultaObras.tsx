@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { AbasConsulta } from '../components/AbasConsulta';
 import { Cabecalho, MENU_PUBLICO } from '../components/Cabecalho';
 import { Rodape } from '../components/Rodape';
-import { Empty, ErrorNote, Spinner, inputClass } from '../components/ui';
+import { Empty, ErrorNote, Spinner, botaoLink, inputClass } from '../components/ui';
 import { dataBR } from '../components/Situacao';
 import { SETORES, SETOR_LABEL } from '../lib/empresas';
 import { TIPO_OBRA_LABEL } from '../lib/licencas';
@@ -33,15 +33,20 @@ export default function ConsultaObras() {
   return (
     <div className="flex min-h-screen flex-col">
       <Cabecalho itens={MENU_PUBLICO} />
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-12">
-        <header className="max-w-4xl pt-2">
-          <p className="text-sm text-tinta-400">Consulta pública, Resolução Conjunta SECONSER/SEOP nº&nbsp;001/2026</p>
-          <h1 className="mt-3 text-3xl font-semibold leading-[1.15] tracking-[-0.02em] text-tinta-900 sm:text-4xl sm:leading-[1.15] md:text-[3rem] md:leading-[1.1]">
-            Obras licenciadas
-          </h1>
-          <p className="mt-5 max-w-2xl text-lg leading-relaxed text-tinta-500">
-            Onde a SECONSER licenciou obras de infraestrutura nas vias públicas de Niterói, de quem são e até quando valem.
-          </p>
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">
+        <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4 pt-1">
+          <div className="max-w-2xl">
+            <p className="text-sm text-tinta-400">Consulta pública, Resolução Conjunta SECONSER/SEOP nº&nbsp;001/2026</p>
+            <h1 className="mt-2 text-2xl font-semibold leading-tight tracking-[-0.02em] text-tinta-900 sm:text-3xl">
+              Obras licenciadas em Niterói
+            </h1>
+            <p className="mt-2 text-base leading-relaxed text-tinta-500">
+              No mapa, onde a SECONSER licenciou obras de infraestrutura nas vias públicas — de quem são e até quando valem.
+            </p>
+          </div>
+          <Link to="/consulta" className={`${botaoLink.primary} shrink-0`}>
+            Consultar empresas no CADEX →
+          </Link>
         </header>
 
         <AbasConsulta />

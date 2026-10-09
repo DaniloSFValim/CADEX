@@ -4,6 +4,7 @@ import { Layout } from './components/Layout';
 import { Button, Spinner } from './components/ui';
 import { useAuth } from './lib/auth';
 import { isConfigured } from './lib/supabase';
+import { lerMotivo } from './lib/sessao';
 import Consulta from './pages/Consulta';
 import ConsultaObras from './pages/ConsultaObras';
 import Login from './pages/Login';
@@ -31,6 +32,8 @@ export function App() {
       <Route path="consulta/obras" element={<ConsultaObras />} />
       {/* Página da placa do canteiro (art. 14): aberta pelo QR Code, sem login. */}
       <Route path="licenca/:codigo" element={<LicencaPublica />} />
+      {/* Entrada dos servidores (área restrita). O público cai no mapa. */}
+      <Route path="entrar" element={<Login />} />
       <Route path="*" element={<AreaRestrita />} />
     </Routes>
     </>
@@ -48,7 +51,11 @@ function AreaRestrita() {
     );
   }
   if (loading) return <Spinner />;
-  if (!session) return <Login />;
+  // Sem login, a porta de entrada é o mapa público de obras, não a tela de
+  // acesso. Os servidores entram pela "Área restrita" (/entrar). Mas se a
+  // sessão expirou (há um motivo guardado), leva à tela de acesso para
+  // explicar a saída e deixar entrar de novo.
+  if (!session) return <Navigate to={lerMotivo() ? '/entrar' : '/consulta/obras'} replace />;
 
   if (!servidor) {
     return (
