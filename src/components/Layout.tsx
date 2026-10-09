@@ -16,7 +16,7 @@ export function Layout() {
           { rotulo: 'Consulta pública', para: '/consulta' },
         ] : [
           ...(isGestor ? [{ rotulo: 'Painel', para: '/dashboard' }, { rotulo: 'Anatel', para: '/anatel' }] : []),
-          { rotulo: 'Empresas', para: '/', fim: true },
+          { rotulo: 'Empresas', para: '/empresas', fim: true },
           { rotulo: 'Obras', para: '/obras' },
           { rotulo: 'Órgãos', para: '/orgaos' },
           { rotulo: 'Consulta pública', para: '/consulta' },

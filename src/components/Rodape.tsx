@@ -36,7 +36,7 @@ export function Rodape() {
         </dl>
         <ul className="space-y-2">
           <li><Link to="/consulta" className={link}>Consulta pública</Link></li>
-          <li><Link to="/" className={link}>Área restrita</Link></li>
+          <li><Link to="/entrar" className={link}>Área restrita</Link></li>
           <li><a href={SITE_SECONSER} target="_blank" rel="noopener noreferrer" className={link}>Portal da SECONSER</a></li>
         </ul>
       </div>
