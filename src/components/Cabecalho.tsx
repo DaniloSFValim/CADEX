@@ -51,8 +51,8 @@ export function Cabecalho({ itens, direita }: { itens: ItemMenu[]; direita?: Rea
 }
 
 /** Menu das páginas abertas ao público. */
+// A troca Empresas↔Obras é feita pelas abas (AbasConsulta); o menu do topo
+// não a repete. O logo volta para a home (mapa).
 export const MENU_PUBLICO: ItemMenu[] = [
-  { rotulo: 'Obras no mapa', para: '/consulta/obras' },
-  { rotulo: 'Empresas', para: '/consulta', fim: true },
   { rotulo: 'Área restrita', para: '/entrar' },
 ];
