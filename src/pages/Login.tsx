@@ -26,7 +26,8 @@ export default function Login() {
         {/* Painel institucional: a mesma identidade do mapa público. */}
         <aside className="hidden flex-col justify-between bg-marca-900 p-12 text-white lg:flex xl:p-16">
           <p className="flex items-center gap-2.5 text-sm font-medium text-marca-200">
-            Área restrita
+            <span className="h-[2px] w-6 bg-obra-500" aria-hidden />
+            CADEX · Área restrita
           </p>
           <div>
             <h2 className="max-w-[18ch] font-display text-3xl font-bold leading-[1.08] tracking-[-0.01em] xl:text-4xl">

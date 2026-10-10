@@ -143,7 +143,7 @@ function Idc({ rotulo, valor, mono }: { rotulo: string; valor: string; mono?: bo
   return (
     <div className="border-t border-white/10 px-6 py-3.5 first:border-t-0 sm:border-l sm:border-t-0 sm:first:border-l-0">
       <dt className="text-xs text-marca-100/70">{rotulo}</dt>
-      <dd className={`mt-0.5 font-semibold text-white ${mono ? 'tabular' : ''}`}>{valor}</dd>
+      <dd className={`mt-0.5 font-semibold text-white ${mono ? 'font-mono' : ''}`}>{valor}</dd>
     </div>
   );
 }
@@ -156,7 +156,7 @@ function DossieEmpresa({ empresa }: { empresa: Empresa }) {
       <div className="mb-3 text-sm text-tinta-400">
         <Link to="/empresas" className="hover:text-marca-700 hover:underline">Empresas</Link> / {empresa.codigo_cadex}
       </div>
-      <section className="overflow-hidden rounded-xl bg-marca-900 text-white">
+      <section className="overflow-hidden rounded-2xl bg-marca-900 text-white shadow-xs">
         <div className="flex flex-wrap items-start gap-5 p-6">
           {empresa.logo_arquivo ? (
             <img src={urlLogo(empresa.logo_arquivo)} alt=""
@@ -773,7 +773,7 @@ function LinhaDocumento({
           <div className="text-sm font-medium text-tinta-800">{tipo.nome}</div>
           <div className="text-xs text-tinta-500">
             {tipo.obrigatorio ? 'Obrigatório' : 'Quando aplicável'}
-            {doc && <>, última marcação em {dataBR(doc.enviado_em)}</>}
+            {doc && <> · última marcação em {dataBR(doc.enviado_em)}</>}
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
             <label className="flex items-center gap-2 text-sm text-tinta-700">

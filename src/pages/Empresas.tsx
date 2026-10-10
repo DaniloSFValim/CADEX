@@ -183,7 +183,7 @@ export default function Empresas() {
                       <dt className="text-xs text-tinta-500">Tipo</dt>
                       <dd className="text-tinta-800">
                         {descricaoEmpresa(e)}
-                        {contratantes.length > 0 && <span className="block text-tinta-500">para {contratantes.join(', ')}</span>}
+                        {contratantes.length > 0 && <span className="text-tinta-500"> · para {contratantes.join(', ')}</span>}
                       </dd>
                     </div>
                     {podeEditar && (
