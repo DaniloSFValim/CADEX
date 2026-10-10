@@ -3,24 +3,12 @@
 @page { size: A4; margin: 15mm; }
 
 @theme {
+  /* Uma família só (Public Sans), em todos os papéis: texto, títulos e
+     números. Números usam a classe `tabular`. Ver DESIGN.md. */
   --font-sans:
     'Public Sans Variable', Public Sans, ui-sans-serif, system-ui, Segoe UI,
     Roboto, Helvetica, Arial, sans-serif;
-
-  /* Tipografia de exibição (títulos) e de dados (nº de licença, códigos). */
-  --font-display:
-    'Archivo Variable', 'Public Sans Variable', ui-sans-serif, system-ui, sans-serif;
-  --font-mono:
-    'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-
-  /* Âmbar de sinalização de obra: o acento novo da identidade, usado com
-     parcimônia (consulta pública, estado "em execução"). Não substitui a
-     marca teal — convive com ela. */
-  --color-obra-50: #fdf3e6;
-  --color-obra-100: #fae3c4;
-  --color-obra-500: #d9780a;
-  --color-obra-600: #b85f06;
-  --color-obra-700: #8f4a05;
+  --font-display: var(--font-sans);
 
   --color-marca-50: #eef6f6;
   --color-marca-100: #dcedee;

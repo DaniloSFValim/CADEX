@@ -32,7 +32,7 @@ export function Layout() {
         direita={<>
           <Link to="/minha-conta" className="hidden text-right leading-tight hover:underline sm:block" title="Minha conta: trocar senha">
             <span className="block font-semibold">{servidor?.nome ?? session?.user.email}</span>
-            {servidor && <span className="block text-xs text-white/75">{PAPEL_LABEL[servidor.papel]}</span>}
+            {servidor && <span className="block text-xs text-tinta-500">{PAPEL_LABEL[servidor.papel]}</span>}
           </Link>
           <Button variant="secondary" className="px-3! py-1.5!" onClick={() => void signOut()}>Sair</Button>
         </>}
