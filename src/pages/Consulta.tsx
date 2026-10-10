@@ -3,7 +3,18 @@ import { Cabecalho, MENU_PUBLICO } from '../components/Cabecalho';
 import { Rodape } from '../components/Rodape';
 import { useEffect, useMemo, useState } from 'react';
 import { Empty, ErrorNote, Spinner, inputClass } from '../components/ui';
-import { BARRA, SituacaoBadge, dataBR } from '../components/Situacao';
+import { BARRA, dataBR } from '../components/Situacao';
+import { SITUACAO_LABEL, type SituacaoEfetiva } from '../lib/empresas';
+
+/** Fundo suave e selo cheio por situação: a cor do cartão diz a situação de longe. */
+const FUNDO_CARTAO: Record<SituacaoEfetiva, string> = {
+  deferida: 'bg-alta/5', apta: 'bg-alta/5', em_saneamento: 'bg-alta/5',
+  em_analise: 'bg-atencao/5', inapta: 'bg-baixa/5', vencida: 'bg-baixa/5',
+};
+const SELO_CARTAO: Record<SituacaoEfetiva, string> = {
+  deferida: 'bg-alta', apta: 'bg-alta', em_saneamento: 'bg-alta',
+  em_analise: 'bg-atencao', inapta: 'bg-baixa', vencida: 'bg-baixa',
+};
 import { formatCnpj, onlyDigits } from '../lib/cnpj';
 import {
   FILTRO_SITUACAO, SETORES, SETOR_LABEL, atuaNoSetor, consultaPublica, descricaoEmpresa, situacoesDoFiltro, urlLogo,
@@ -119,9 +130,11 @@ export default function Consulta() {
             <ul className="cartao divide-y divide-tinta-100 overflow-hidden">
               {filtradas.map((l) => (
                 <li key={l.codigo_cadex}
-                    className={`grid gap-x-6 gap-y-2 border-l-4 px-5 py-4 lg:grid-cols-[170px_1fr_190px_220px] ${BARRA[l.situacao]}`}>
+                    className={`grid gap-x-6 gap-y-2 border-l-[6px] px-5 py-4 lg:grid-cols-[170px_1fr_190px_220px] ${BARRA[l.situacao]} ${FUNDO_CARTAO[l.situacao]}`}>
                   <div>
-                    <SituacaoBadge s={l.situacao} />
+                    <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-bold text-white ${SELO_CARTAO[l.situacao]}`}>
+                      {SITUACAO_LABEL[l.situacao]}
+                    </span>
                     <div className={`tabular mt-1.5 text-xs ${l.situacao === 'vencida' ? 'font-medium text-baixa' : 'text-tinta-500'}`}>
                       {l.validade_ate ? `Válida até ${dataBR(l.validade_ate)}` : 'Sem validade em curso'}
                     </div>
