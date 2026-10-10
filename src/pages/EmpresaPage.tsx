@@ -79,13 +79,6 @@ export default function EmpresaPage() {
 
       {empresa && licencas && <PanoramaEmpresa empresa={empresa} licencas={licencas} />}
 
-      {empresa && (
-        <Card title="Identidade visual">
-          <LogoEmpresa empresa={empresa} podeEditar={podeEditar}
-                       onChanged={async () => setEmpresa(await buscarEmpresa(empresa.id))} />
-        </Card>
-      )}
-
       <Card title="Dados da empresa">
         <EmpresaForm
           key={empresa?.id ?? 'nova'}
@@ -103,6 +96,12 @@ export default function EmpresaPage() {
             }
           }}
         />
+        {empresa && (
+          <div className="mt-6 border-t border-tinta-100 pt-5">
+            <LogoEmpresa empresa={empresa} podeEditar={podeEditar}
+                         onChanged={async () => setEmpresa(await buscarEmpresa(empresa.id))} />
+          </div>
+        )}
       </Card>
 
       {empresa && <Inscricao empresa={empresa} podeEditar={podeEditar} onSalvo={recarregar} />}
