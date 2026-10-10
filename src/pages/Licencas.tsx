@@ -6,7 +6,7 @@ import { dataBR } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { SETORES, SETOR_LABEL, hojeISO, listarEmpresas, nomeEmpresa, type Empresa } from '../lib/empresas';
 import {
-  ESTADO_LICENCA_LABEL, TIPO_OBRA_LABEL, TOM_ESTADO_LICENCA, desempenhoExecutora, estadoLicenca, listarLicencas, nomeExecutora,
+  ESTADO_LICENCA_LABEL, TIPO_OBRA_LABEL, TOM_ESTADO_LICENCA, desempenhoExecutora, estadoLicenca, listarLicencas, nomeExecutora, pendenciasLicencas,
   type Desempenho, type EstadoLicenca, type LicencaComTrechos, type NivelDesempenho,
 } from '../lib/licencas';
 
@@ -181,25 +181,112 @@ export function TabelaLicencas({ licencas, porId, hoje, semExecutora = false }: 
 }
 
 /** Seção da página da empresa: licenças em que ela é executora, contratante ou subcontratada. */
-export function LicencasDaEmpresa({ empresa, todas }: { empresa: Empresa; todas: Empresa[] }) {
-  const [licencas, setLicencas] = useState<LicencaComTrechos[] | null>(null);
-  const [error, setError] = useState<unknown>(null);
-  useEffect(() => { listarLicencas(empresa.id).then(setLicencas).catch(setError); }, [empresa.id]);
+export function LicencasDaEmpresa({ licencas, error, todas }: {
+  licencas: LicencaComTrechos[] | null; error: unknown; todas: Empresa[];
+}) {
   const porId = useMemo(() => new Map(todas.map((e) => [e.id, e])), [todas]);
   const hoje = hojeISO();
-  const desempenho = useMemo(
-    () => (licencas ? desempenhoExecutora(licencas, empresa.id, hoje) : null),
-    [licencas, empresa.id, hoje]);
+  return (
+    <Card title={`Licenças de obra${licencas ? ` (${licencas.length})` : ''}`} semPadding>
+      <ErrorNote error={error} />
+      {!licencas && !error && <Spinner />}
+      {licencas && licencas.length === 0 && <Empty>Nenhuma licença de obra com esta empresa.</Empty>}
+      {licencas && licencas.length > 0 && <TabelaLicencas licencas={licencas} porId={porId} hoje={hoje} />}
+    </Card>
+  );
+}
+
+/**
+ * Panorama da empresa (visão do gestor): desempenho em obras + o que precisa
+ * de atenção + onde ela atua. Tudo derivado das licenças já carregadas.
+ */
+export function PanoramaEmpresa({ empresa, licencas }: { empresa: Empresa; licencas: LicencaComTrechos[] }) {
+  const hoje = hojeISO();
+  const d = useMemo(() => desempenhoExecutora(licencas, empresa.id, hoje), [licencas, empresa.id, hoje]);
+  const pend = useMemo(() => pendenciasLicencas(licencas, hoje), [licencas, hoje]);
+  const bairros = useMemo(() => contaBairros(licencas), [licencas]);
+  const proximo = useMemo(() => proximoVencimento(licencas, hoje), [licencas, hoje]);
+  if (d.obras === 0) return null;
   return (
     <>
-      {desempenho && desempenho.obras > 0 && <DesempenhoCard d={desempenho} />}
-      <Card title={`Licenças de obra${licencas ? ` (${licencas.length})` : ''}`} semPadding>
-        <ErrorNote error={error} />
-        {!licencas && !error && <Spinner />}
-        {licencas && licencas.length === 0 && <Empty>Nenhuma licença de obra com esta empresa.</Empty>}
-        {licencas && licencas.length > 0 && <TabelaLicencas licencas={licencas} porId={porId} hoje={hoje} />}
-      </Card>
+      <DesempenhoCard d={d} />
+      <div className="mb-6 grid gap-6 lg:grid-cols-2">
+        <AtencaoCard pend={pend} />
+        <OndeAtuaCard bairros={bairros} proximo={proximo} />
+      </div>
     </>
+  );
+}
+
+/** Concentração por bairro (top 4), a partir dos trechos das licenças. */
+function contaBairros(licencas: LicencaComTrechos[]): [string, number][] {
+  const m = new Map<string, number>();
+  for (const l of licencas) {
+    for (const t of l.licenca_trechos) {
+      const b = t.bairro?.trim();
+      if (b) m.set(b, (m.get(b) ?? 0) + 1);
+    }
+  }
+  return [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
+}
+
+/** Licença ativa (em execução ou a começar) com o prazo mais próximo de vencer. */
+function proximoVencimento(licencas: LicencaComTrechos[], hoje: string): LicencaComTrechos | null {
+  return licencas
+    .filter((l) => {
+      const e = estadoLicenca(l, hoje);
+      return (e === 'em_execucao' || e === 'aguardando_inicio') && Boolean(l.fim_previsto);
+    })
+    .sort((a, b) => (a.fim_previsto! < b.fim_previsto! ? -1 : 1))[0] ?? null;
+}
+
+function AtencaoCard({ pend }: { pend: ReturnType<typeof pendenciasLicencas> }) {
+  const itens: { rot: string; n: number; tom: 'ruim' | 'alerta' }[] = [
+    { rot: 'Prazo de cronograma encerrado', n: pend.prazoEncerrado.length, tom: 'ruim' },
+    { rot: 'Concluída sem As Built (art. 26)', n: pend.semAsBuilt.length, tom: 'alerta' },
+    { rot: 'Pavimento sem recomposição', n: pend.semRecomposicao.length, tom: 'ruim' },
+  ];
+  const total = itens.reduce((s, i) => s + i.n, 0);
+  return (
+    <Card title="Precisa de atenção"
+          action={<Badge tom={total ? 'ruim' : 'bom'}>{total ? `${total} ${total === 1 ? 'item' : 'itens'}` : 'Tudo em dia'}</Badge>}
+          semPadding>
+      <ul className="divide-y divide-tinta-100">
+        {itens.map((i) => (
+          <li key={i.rot} className="flex items-center justify-between gap-3 px-5 py-3">
+            <span className={`text-sm ${i.n ? 'text-tinta-800' : 'text-tinta-400'}`}>{i.rot}</span>
+            <Badge tom={i.n ? i.tom : 'neutro'}>{i.n}</Badge>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
+function OndeAtuaCard({ bairros, proximo }: { bairros: [string, number][]; proximo: LicencaComTrechos | null }) {
+  const max = bairros[0]?.[1] ?? 1;
+  return (
+    <Card title="Onde atua">
+      {bairros.length === 0 ? (
+        <p className="text-sm text-tinta-500">Nenhum trecho com bairro informado.</p>
+      ) : (
+        <ul className="space-y-2.5">
+          {bairros.map(([b, n]) => (
+            <li key={b} className="grid grid-cols-[6rem_1fr_1.5rem] items-center gap-3 text-sm">
+              <span className="truncate text-tinta-600">{b}</span>
+              <span className="h-2 rounded-full bg-marca-500" style={{ width: `${Math.max(8, (n / max) * 100)}%` }} aria-hidden />
+              <span className="tabular text-right text-tinta-500">{n}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {proximo && (
+        <p className="mt-4 border-t border-tinta-100 pt-3 text-sm text-tinta-500">
+          Próximo prazo a vencer: <span className="font-mono text-tinta-700">nº {proximo.numero}</span> em{' '}
+          <span className="font-mono text-tinta-700">{dataBR(proximo.fim_previsto)}</span>.
+        </p>
+      )}
+    </Card>
   );
 }
 
