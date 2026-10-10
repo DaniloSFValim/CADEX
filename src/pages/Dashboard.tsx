@@ -124,8 +124,11 @@ export default function Dashboard() {
   return (
     <div className="flex flex-col gap-14">
       <header className="max-w-3xl">
-        <p className="text-sm text-tinta-500">Painel da SECONSER em {dataBR(hojeISO())}</p>
-        <h1 className="mt-2 text-3xl font-semibold leading-[1.15] tracking-[-0.02em] text-tinta-900 sm:text-4xl sm:leading-[1.15]">
+        <p className="flex items-center gap-2.5 text-sm font-medium text-tinta-500">
+          <span className="h-[2px] w-6 bg-obra-500" aria-hidden />
+          Painel · SECONSER · {dataBR(hojeISO())}
+        </p>
+        <h1 className="mt-3 font-display text-3xl font-bold leading-[1.1] tracking-[-0.01em] text-tinta-900 sm:text-4xl">
           {pendencias === 0
             ? 'Nada pede atenção agora.'
             : `${pendencias} ${pendencias === 1 ? 'item pede' : 'itens pedem'} atenção.`}
@@ -171,7 +174,7 @@ export default function Dashboard() {
         {triagem.length === 0 ? (
           <Empty>Nenhuma empresa com pendência de prazo ou de licença agora.</Empty>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-xl border border-tinta-200 bg-white">
             <table className="w-full text-left text-sm">
               <thead className="border-b border-tinta-200 text-tinta-400">
                 <tr>
@@ -218,7 +221,7 @@ export default function Dashboard() {
         {analises.length === 0 ? (
           <Empty>Nenhuma análise pendente há mais de 15 dias.</Empty>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-xl border border-tinta-200 bg-white">
             <table className="w-full text-left text-sm">
               <thead className="border-b border-tinta-200 text-tinta-400">
                 <tr>
@@ -255,7 +258,7 @@ export default function Dashboard() {
         {saneamentos.length === 0 ? (
           <Empty>Nenhum saneamento vencendo nos próximos 7 dias.</Empty>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-xl border border-tinta-200 bg-white">
             <table className="w-full text-left text-sm">
               <thead className="border-b border-tinta-200 text-tinta-400">
                 <tr>
@@ -294,7 +297,7 @@ export default function Dashboard() {
         {inscricoes.length === 0 ? (
           <Empty>Nenhuma inscrição vencendo nos próximos 30 dias.</Empty>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-xl border border-tinta-200 bg-white">
             <table className="w-full text-left text-sm">
               <thead className="border-b border-tinta-200 text-tinta-400">
                 <tr>
@@ -378,7 +381,7 @@ function CabecalhoSecao({ titulo, descricao, acao }: { titulo: string; descricao
   return (
     <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
       <div>
-        <h2 className="text-xl font-semibold tracking-[-0.01em] text-tinta-900">{titulo}</h2>
+        <h2 className="font-display text-xl font-bold tracking-[-0.01em] text-tinta-900">{titulo}</h2>
         <p className="mt-1 text-sm text-tinta-500">{descricao}</p>
       </div>
       {acao}
@@ -397,7 +400,7 @@ function TabelaPendencias({ titulo, vazio, coluna, data, sufixo, tom, itens, por
       {itens.length === 0 ? (
         <Empty>{vazio}</Empty>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-xl border border-tinta-200 bg-white">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-tinta-200 text-tinta-400">
               <tr>

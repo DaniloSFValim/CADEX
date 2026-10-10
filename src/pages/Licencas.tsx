@@ -6,8 +6,8 @@ import { dataBR } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { SETORES, SETOR_LABEL, hojeISO, listarEmpresas, nomeEmpresa, type Empresa } from '../lib/empresas';
 import {
-  ESTADO_LICENCA_LABEL, TIPO_OBRA_LABEL, TOM_ESTADO_LICENCA, estadoLicenca, listarLicencas, nomeExecutora,
-  type EstadoLicenca, type LicencaComTrechos,
+  ESTADO_LICENCA_LABEL, TIPO_OBRA_LABEL, TOM_ESTADO_LICENCA, desempenhoExecutora, estadoLicenca, listarLicencas, nomeExecutora,
+  type Desempenho, type EstadoLicenca, type LicencaComTrechos, type NivelDesempenho,
 } from '../lib/licencas';
 
 const FILTROS: { valor: string; rotulo: string; inclui: EstadoLicenca[] }[] = [
@@ -186,12 +186,55 @@ export function LicencasDaEmpresa({ empresa, todas }: { empresa: Empresa; todas:
   const [error, setError] = useState<unknown>(null);
   useEffect(() => { listarLicencas(empresa.id).then(setLicencas).catch(setError); }, [empresa.id]);
   const porId = useMemo(() => new Map(todas.map((e) => [e.id, e])), [todas]);
+  const hoje = hojeISO();
+  const desempenho = useMemo(
+    () => (licencas ? desempenhoExecutora(licencas, empresa.id, hoje) : null),
+    [licencas, empresa.id, hoje]);
   return (
-    <Card title={`Licenças de obra${licencas ? ` (${licencas.length})` : ''}`} semPadding>
-      <ErrorNote error={error} />
-      {!licencas && !error && <Spinner />}
-      {licencas && licencas.length === 0 && <Empty>Nenhuma licença de obra com esta empresa.</Empty>}
-      {licencas && licencas.length > 0 && <TabelaLicencas licencas={licencas} porId={porId} hoje={hojeISO()} />}
+    <>
+      {desempenho && desempenho.obras > 0 && <DesempenhoCard d={desempenho} />}
+      <Card title={`Licenças de obra${licencas ? ` (${licencas.length})` : ''}`} semPadding>
+        <ErrorNote error={error} />
+        {!licencas && !error && <Spinner />}
+        {licencas && licencas.length === 0 && <Empty>Nenhuma licença de obra com esta empresa.</Empty>}
+        {licencas && licencas.length > 0 && <TabelaLicencas licencas={licencas} porId={porId} hoje={hoje} />}
+      </Card>
+    </>
+  );
+}
+
+const NIVEL_DESEMPENHO: Record<NivelDesempenho, { rotulo: string; tom: 'bom' | 'alerta' | 'ruim' | 'neutro' }> = {
+  bom: { rotulo: 'Bom', tom: 'bom' },
+  alerta: { rotulo: 'Atenção', tom: 'alerta' },
+  ruim: { rotulo: 'Crítico', tom: 'ruim' },
+  sem_dados: { rotulo: 'Sem obras', tom: 'neutro' },
+};
+
+/** Percentual sobre uma base; '—' quando não há base. */
+const pct = (parte: number, base: number) => (base === 0 ? '—' : `${Math.round((parte / base) * 100)}%`);
+
+/** Scorecard de desempenho em obras da executora (visão do gestor). */
+function DesempenhoCard({ d }: { d: Desempenho }) {
+  const n = NIVEL_DESEMPENHO[d.nivel];
+  return (
+    <div className="mb-6">
+    <Card title="Desempenho em obras"
+          action={<Badge tom={n.tom}>{n.rotulo}</Badge>}>
+      <div className="grid grid-cols-2 gap-x-8 gap-y-5 sm:grid-cols-4">
+        <Kpi rotulo="Obras (sob a Resolução)" valor={d.obras} detalhe={`${d.concluidas} concluída${d.concluidas === 1 ? '' : 's'}`} />
+        <Kpi rotulo="Concluídas no prazo" valor={pct(d.noPrazo, d.concluidas)} detalhe="dentro do cronograma"
+             tom={d.concluidas && d.noPrazo < d.concluidas ? 'baixa' : undefined} />
+        <Kpi rotulo="Pavimento recomposto" valor={pct(d.recompostas, d.concluidas)} detalhe="das obras concluídas"
+             tom={d.concluidas && d.recompostas < d.concluidas ? 'baixa' : undefined} />
+        <Kpi rotulo="As Built entregue" valor={pct(d.comAsBuilt, d.concluidas)} detalhe="art. 26"
+             tom={d.concluidas && d.comAsBuilt < d.concluidas ? 'baixa' : undefined} />
+      </div>
+      {d.atrasadas > 0 && (
+        <p className="mt-4 text-sm text-baixa">
+          {d.atrasadas} obra{d.atrasadas === 1 ? '' : 's'} com prazo do cronograma encerrado sem conclusão.
+        </p>
+      )}
     </Card>
+    </div>
   );
 }

@@ -326,3 +326,46 @@ export function pendenciasLicencas(licencas: LicencaComTrechos[], hoje: string) 
   semRecomposicao.sort((a, b) => b.dias - a.dias);
   return { prazoEncerrado, semAsBuilt, semRecomposicao, historicasEmAberto };
 }
+
+// ---------------------------------------------------------------------
+// Desempenho da executora (scorecard) — inspirado nos indicadores de
+// street works do HAUC/GeoPlace (Reino Unido): pontualidade, recomposição
+// e As Built. Alimenta a decisão de manter a inscrição APTA. Só conta as
+// obras sob a Resolução (as históricas vêm sem dados de conclusão).
+//
+// Fica de fora a "taxa de defeito": depende de registro de inspeção, que
+// o CADEX ainda não tem (seria o passo seguinte).
+// ---------------------------------------------------------------------
+export type NivelDesempenho = 'bom' | 'alerta' | 'ruim' | 'sem_dados';
+
+export interface Desempenho {
+  obras: number;        // deferidas como executora, sob a Resolução
+  concluidas: number;
+  noPrazo: number;      // concluída até o fim do cronograma
+  atrasadas: number;    // prazo do cronograma encerrado sem conclusão
+  recompostas: number;  // concluídas com o pavimento recomposto
+  comAsBuilt: number;   // concluídas com As Built (art. 26)
+  nivel: NivelDesempenho;
+}
+
+export function desempenhoExecutora(
+  licencas: Pick<Licenca, 'executora_id' | 'situacao' | 'anterior_resolucao' | 'concluida_em'
+    | 'fim_previsto' | 'inicio_previsto' | 'recomposicao_data' | 'as_built_sei'>[],
+  empresaId: string,
+  hoje: string,
+): Desempenho {
+  const base = licencas.filter((l) => l.executora_id === empresaId && l.situacao === 'deferida' && !l.anterior_resolucao);
+  const concluidas = base.filter((l) => l.concluida_em);
+  const noPrazo = concluidas.filter((l) => l.fim_previsto && l.concluida_em! <= l.fim_previsto).length;
+  const atrasadas = base.filter((l) => estadoLicenca(l, hoje) === 'prazo_encerrado').length;
+  const recompostas = concluidas.filter((l) => l.recomposicao_data).length;
+  const comAsBuilt = concluidas.filter((l) => l.as_built_sei).length;
+
+  let nivel: NivelDesempenho;
+  if (base.length === 0) nivel = 'sem_dados';
+  else if (atrasadas > 0) nivel = 'ruim';
+  else if (recompostas < concluidas.length || comAsBuilt < concluidas.length || noPrazo < concluidas.length) nivel = 'alerta';
+  else nivel = 'bom';
+
+  return { obras: base.length, concluidas: concluidas.length, noPrazo, atrasadas, recompostas, comAsBuilt, nivel };
+}
