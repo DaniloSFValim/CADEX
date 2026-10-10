@@ -50,12 +50,15 @@ export default function LicencaPublica() {
     <div className="flex min-h-screen flex-col">
       <Cabecalho itens={MENU_PUBLICO} />
       <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8">
-        <p className="text-sm text-tinta-500">Licença de obra em via pública</p>
+        <p className="flex items-center gap-2.5 text-sm font-medium text-tinta-500">
+          <span className="h-[2px] w-6 bg-obra-500" aria-hidden />
+          CADEX · Licença de obra em via pública
+        </p>
         <ErrorNote error={error} />
         {d === undefined && !error && <Spinner label="Consultando a licença…" />}
         {d === null && (
-          <div className="mt-4 rounded-sm border-l-4 border-baixa bg-baixa/6 px-4 py-4">
-            <h1 className="text-2xl font-bold text-baixa">Licença não encontrada</h1>
+          <div className="mt-4 rounded-2xl border border-baixa bg-baixa/6 p-5 sm:p-6">
+            <h1 className="font-display text-2xl font-bold text-baixa">Licença não encontrada</h1>
             <p className="mt-2 text-sm text-tinta-700">
               Este código não corresponde a nenhuma licença emitida pela SECONSER. Uma placa com este
               QR Code não comprova autorização para a obra.
@@ -74,14 +77,17 @@ function Conteudo({ d }: { d: Dados }) {
   const sitCadex = d.executora.situacao_cadex as SituacaoEfetiva | null;
   return (
     <>
-      <div className={`mt-3 rounded-sm border-l-4 px-4 py-4 ${v.cor}`} role="status">
-        <h1 className="text-[1.75rem] font-bold leading-tight tracking-[-0.02em]">{v.titulo}</h1>
-        <p className="mt-1 text-base text-tinta-800">{v.frase(d)}</p>
-        <p className="mt-2 text-xs text-tinta-500">Consulta de {dataBR(d.hoje)}, com os dados da SECONSER neste momento.</p>
+      <div className={`mt-4 rounded-2xl border p-5 sm:p-6 ${v.cor}`} role="status">
+        <h1 className="flex items-center gap-3 font-display text-3xl font-bold leading-tight tracking-[-0.01em]">
+          <span className="h-3 w-3 flex-none rounded-full bg-current" aria-hidden />
+          {v.titulo}
+        </h1>
+        <p className="mt-3 text-base text-tinta-800">{v.frase(d)}</p>
+        <p className="mt-3 text-xs text-tinta-500">Consulta de {dataBR(d.hoje)}, com os dados da SECONSER neste momento.</p>
       </div>
 
-      <dl className="mt-8 grid gap-x-6 gap-y-5 sm:grid-cols-2">
-        <Item rotulo="Licença nº"><span className="tabular text-lg font-semibold">{d.numero}</span></Item>
+      <dl className="cartao mt-6 grid gap-x-6 gap-y-5 p-5 sm:grid-cols-2 sm:p-6">
+        <Item rotulo="Licença nº"><span className="font-mono text-lg font-semibold">{d.numero}</span></Item>
         <Item rotulo="Período autorizado">
           <span className="tabular">{dataBR(d.inicio_previsto)} a {dataBR(d.fim_previsto)}</span>
         </Item>
@@ -105,12 +111,12 @@ function Conteudo({ d }: { d: Dados }) {
         <Item rotulo="Escopo" largo>{d.escopo}</Item>
       </dl>
 
-      <h2 className="mt-10 text-lg font-bold text-tinta-900">
+      <h2 className="mt-8 font-display text-lg font-bold text-tinta-900">
         {d.trechos.length > 1 ? `Locais autorizados (${d.trechos.length})` : 'Local autorizado'}
       </h2>
-      <ul className="mt-3 divide-y divide-tinta-100 border-y border-tinta-100">
+      <ul className="cartao mt-3 divide-y divide-tinta-100 overflow-hidden">
         {d.trechos.map((t, i) => (
-          <li key={i} className="py-3">
+          <li key={i} className="px-4 py-3.5">
             <span className="font-medium text-tinta-900">{t.logradouro}</span>
             {t.bairro && <span className="text-tinta-500">, {t.bairro}</span>}
             {t.referencia && <span className="block text-sm text-tinta-600">{t.referencia}</span>}
