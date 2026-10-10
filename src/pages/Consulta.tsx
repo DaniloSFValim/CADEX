@@ -58,7 +58,7 @@ export default function Consulta() {
 
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-12">
         <Titulo
-          trilha={<>Consulta pública · Resolução Conjunta SECONSER/SEOP nº&nbsp;001/2026</>}
+          trilha="Consulta pública · Resolução Conjunta SECONSER/SEOP nº 001/2026"
           titulo="Consultar empresa executora"
           descricao="Antes de uma obra ou serviço na via pública, no subsolo ou na rede aérea, confira se a empresa responsável está com a inscrição APTA."
         />
