@@ -694,7 +694,7 @@ function Placa({ licenca }: { licenca: LicencaComTrechos }) {
     <section className="cartao mb-10 flex flex-wrap items-center gap-6 p-5">
       <QrCode texto={url} tamanho={120} />
       <div className="min-w-0 flex-1">
-        <h2 className="text-xl font-bold tracking-[-0.015em] text-tinta-900">Placa do canteiro</h2>
+        <h2 className="font-display text-xl font-bold tracking-[-0.015em] text-tinta-900">Placa do canteiro</h2>
         <p className="mt-1 max-w-xl text-sm text-tinta-600">
           O QR Code abre a página pública desta licença, onde o fiscal confere se a obra está autorizada hoje (art. 14).
         </p>
