@@ -58,14 +58,30 @@ export default function Consulta() {
 
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-12">
         <Titulo
-          trilha="Consulta pública"
+          trilha="Consulta pública · Resolução Conjunta SECONSER/SEOP nº 001/2026"
           titulo="Consultar empresa executora"
           descricao="Antes de uma obra ou serviço na via pública, no subsolo ou na rede aérea, confira se a empresa responsável está com a inscrição APTA."
         />
 
+        {linhas && (
+          <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+            {[
+              { rotulo: 'Habilitadas', n: linhas.filter((l) => ['deferida', 'apta', 'em_saneamento'].includes(l.situacao)).length, cor: 'text-alta', borda: 'border-alta' },
+              { rotulo: 'Em análise', n: linhas.filter((l) => l.situacao === 'em_analise').length, cor: 'text-atencao', borda: 'border-atencao' },
+              { rotulo: 'Impedidas', n: linhas.filter((l) => l.situacao === 'inapta' || l.situacao === 'vencida').length, cor: 'text-baixa', borda: 'border-baixa' },
+              { rotulo: 'Cadastradas', n: linhas.length, cor: 'text-tinta-900', borda: 'border-tinta-900' },
+            ].map((t) => (
+              <div key={t.rotulo} className={`rounded-xl border-t-4 ${t.borda} bg-white px-4 py-4 shadow-xs`}>
+                <div className="text-sm font-medium text-tinta-500">{t.rotulo}</div>
+                <div className={`tabular font-display text-4xl font-bold leading-none ${t.cor}`}>{t.n}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
         <AbasConsulta />
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_220px_220px]">
+        <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_220px_220px]">
           <input className={`${inputClass} py-3! text-base!`}
                  placeholder="Nome da empresa, CNPJ ou código CADEX"
                  value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar empresa" />

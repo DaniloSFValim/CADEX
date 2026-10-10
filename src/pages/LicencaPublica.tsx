@@ -51,7 +51,8 @@ export default function LicencaPublica() {
       <Cabecalho itens={MENU_PUBLICO} />
       <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8">
         <p className="flex items-center gap-2.5 text-sm font-medium text-tinta-500">
-          Licença de obra em via pública
+          <span className="h-[2px] w-6 bg-obra-500" aria-hidden />
+          CADEX · Licença de obra em via pública
         </p>
         <ErrorNote error={error} />
         {d === undefined && !error && <Spinner label="Consultando a licença…" />}
@@ -86,7 +87,7 @@ function Conteudo({ d }: { d: Dados }) {
       </div>
 
       <dl className="cartao mt-6 grid gap-x-6 gap-y-5 p-5 sm:grid-cols-2 sm:p-6">
-        <Item rotulo="Licença nº"><span className="tabular text-lg font-semibold">{d.numero}</span></Item>
+        <Item rotulo="Licença nº"><span className="font-mono text-lg font-semibold">{d.numero}</span></Item>
         <Item rotulo="Período autorizado">
           <span className="tabular">{dataBR(d.inicio_previsto)} a {dataBR(d.fim_previsto)}</span>
         </Item>

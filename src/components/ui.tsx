@@ -42,7 +42,10 @@ export function Titulo({
     <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0">
         {trilha && (
-          <div className="mb-2 text-sm font-medium text-tinta-500">{trilha}</div>
+          <div className="mb-2 flex items-center gap-2.5 text-sm font-medium text-tinta-500">
+            <span className="h-[2px] w-6 flex-none bg-obra-500" aria-hidden />
+            <span>{trilha}</span>
+          </div>
         )}
         <h1 className="font-display text-3xl font-bold leading-[1.1] tracking-[-0.01em] text-tinta-900 sm:text-4xl">{titulo}</h1>
         {descricao && <div className="mt-1.5 max-w-2xl text-sm text-tinta-500">{descricao}</div>}
