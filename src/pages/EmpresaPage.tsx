@@ -1,21 +1,22 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Badge, Button, Card, ErrorNote, Field, Spinner, Titulo, botaoLink, inputClass, type Tom } from '../components/ui';
-import { BARRA, SituacaoBadge } from '../components/Situacao';
+import { Badge, Button, Card, ErrorNote, Field, Spinner, Titulo, inputClass, type Tom } from '../components/ui';
+import { SituacaoBadge } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { formatCnpj, isValidCnpj, onlyDigits } from '../lib/cnpj';
 import {
   ESTADO_LABEL, SETORES, SETOR_LABEL, TIPO_LABEL, buscarEmpresa, descricaoEmpresa, ehContratante, tiposDaEmpresa, criarEmpresa, criarVinculo, criarVinculoOrgao, definirFimVinculo,
   enviarLogo, estadoDocumento, registrarDocumentos, removerLogo, urlLogo, MAX_LOGO_BYTES, TIPOS_LOGO, hojeISO, listarDocumentos, listarEmpresas,
   listarTiposDocumento, listarVinculos, nomeEmpresa, resumoDocumentos,
-  salvarEmpresa, situacaoEfetiva, ultimoPorTipo,
-  type Documento, type Empresa, type EmpresaInput, type EstadoDocumento, type Setor, type TipoDocumento,
+  salvarEmpresa, situacaoEfetiva, ultimoPorTipo, SITUACAO_LABEL,
+  type Documento, type Empresa, type EmpresaInput, type EstadoDocumento, type Setor, type SituacaoEfetiva, type TipoDocumento,
   type Vinculo,
 } from '../lib/empresas';
+import { listarLicencas, type LicencaComTrechos } from '../lib/licencas';
 import { listarOrgaos, nomeOrgao, type Orgao } from '../lib/orgaos';
 import { ResumoBadge } from './Empresas';
 import { Inscricao } from './Inscricao';
-import { LicencasDaEmpresa } from './Licencas';
+import { LicencasDaEmpresa, PanoramaEmpresa } from './Licencas';
 import { Operacional } from './Operacional';
 
 const VAZIA: EmpresaInput = {
@@ -49,6 +50,14 @@ export default function EmpresaPage() {
       .finally(() => setLoading(false));
   }, [id]);
 
+  const [licencas, setLicencas] = useState<LicencaComTrechos[] | null>(null);
+  const [licErro, setLicErro] = useState<unknown>(null);
+  useEffect(() => {
+    if (!id) { setLicencas(null); setLicErro(null); return; }
+    setLicencas(null); setLicErro(null);
+    listarLicencas(id).then(setLicencas).catch(setLicErro);
+  }, [id]);
+
   if (loading) return <Spinner />;
   if (id && !empresa) return <ErrorNote error={error ?? 'Empresa não encontrada.'} />;
   if (!id && !podeEditar) return <ErrorNote error="Seu perfil é só de consulta." />;
@@ -59,51 +68,16 @@ export default function EmpresaPage() {
 
   return (
     <div className="space-y-6">
-      <Titulo
-        trilha={<><Link to="/empresas" className="hover:text-marca-700 hover:underline">Empresas</Link> / {empresa ? empresa.codigo_cadex : 'Nova'}</>}
-        titulo={
-          <span className="flex items-center gap-4">
-            {empresa?.logo_arquivo && (
-              <img src={urlLogo(empresa.logo_arquivo)} alt=""
-                   className="h-12 w-12 flex-none rounded-sm border border-tinta-200 bg-white object-contain p-1" />
-            )}
-            {empresa ? nomeEmpresa(empresa) : 'Nova empresa'}
-          </span>
-        }
-        acoes={empresa && (
-          <Link to={`/empresas/${empresa.id}/ficha`} className={botaoLink.secondary}>Imprimir ficha</Link>
-        )}
-      >
-        {empresa && (() => {
-          const s = situacaoEfetiva(empresa, hojeISO());
-          return (
-            <dl className="mt-4 grid grid-cols-2 gap-x-8 gap-y-3 text-sm sm:flex sm:flex-wrap">
-              <div className={`border-l-4 pl-3 ${BARRA[s]}`}>
-                <dt className="text-xs text-tinta-500">Situação</dt>
-                <dd className="mt-0.5"><SituacaoBadge s={s} /></dd>
-              </div>
-              <div>
-                <dt className="text-xs text-tinta-500">Código CADEX</dt>
-                <dd className="tabular mt-0.5 font-semibold text-tinta-900">{empresa.codigo_cadex}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-tinta-500">CNPJ</dt>
-                <dd className="tabular mt-0.5 text-tinta-800">{formatCnpj(empresa.cnpj)}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-tinta-500">Tipo</dt>
-                <dd className="mt-0.5 text-tinta-800">{descricaoEmpresa(empresa)}</dd>
-              </div>
-              {empresa.validade_ate && (
-                <div>
-                  <dt className="text-xs text-tinta-500">Válida até</dt>
-                  <dd className={`tabular mt-0.5 ${s === 'vencida' ? 'font-medium text-baixa' : 'text-tinta-800'}`}>{dataBR(empresa.validade_ate)}</dd>
-                </div>
-              )}
-            </dl>
-          );
-        })()}
-      </Titulo>
+      {empresa ? (
+        <DossieEmpresa empresa={empresa} />
+      ) : (
+        <Titulo
+          trilha={<><Link to="/empresas" className="hover:text-marca-700 hover:underline">Empresas</Link> / Nova</>}
+          titulo="Nova empresa"
+        />
+      )}
+
+      {empresa && licencas && <PanoramaEmpresa empresa={empresa} licencas={licencas} />}
 
       <Card title="Dados da empresa">
         {empresa && (
@@ -134,7 +108,7 @@ export default function EmpresaPage() {
 
       {empresa && <Operacional empresa={empresa} operadoras={contratantesTodas} podeEditar={podeEditar} />}
 
-      {empresa && <LicencasDaEmpresa empresa={empresa} todas={todas} />}
+      {empresa && <LicencasDaEmpresa licencas={licencas} error={licErro} todas={todas} />}
 
       {/* Documentos têm dados pessoais de sócios e procuradores: só a SECONSER vê. */}
       {empresa && podeEditar && <Documentos empresa={empresa} />}
@@ -143,6 +117,75 @@ export default function EmpresaPage() {
           Salve os dados para registrar inscrição, vínculos, pessoal, veículos e documentos.
         </p>
       )}
+    </div>
+  );
+}
+
+/** Cor do ponto do selo de situação, legível sobre a faixa escura. */
+function corSelo(s: SituacaoEfetiva): string {
+  if (s === 'apta' || s === 'deferida') return '#51d49a';
+  if (s === 'em_saneamento') return '#f0b24a';
+  if (s === 'em_analise') return '#bcdadd';
+  return '#f08a7a'; // inapta, vencida
+}
+
+/** Iniciais para o selo quando a empresa não tem logo. */
+function iniciais(e: Empresa): string {
+  const base = (e.nome_fantasia?.trim() || e.razao_social).replace(/\b(S\.?A\.?|LTDA\.?|ME|EIRELI)\b/gi, '').trim();
+  const ps = base.split(/\s+/).filter(Boolean);
+  const ini = ((ps[0]?.[0] ?? '') + (ps[1]?.[0] ?? '')).toUpperCase();
+  return ini || base.slice(0, 2).toUpperCase();
+}
+
+function Idc({ rotulo, valor, mono }: { rotulo: string; valor: string; mono?: boolean }) {
+  return (
+    <div className="border-t border-white/10 px-6 py-3.5 first:border-t-0 sm:border-l sm:border-t-0 sm:first:border-l-0">
+      <dt className="text-xs text-marca-100/70">{rotulo}</dt>
+      <dd className={`mt-0.5 font-semibold text-white ${mono ? 'font-mono' : ''}`}>{valor}</dd>
+    </div>
+  );
+}
+
+/** Cabeçalho-dossiê da empresa: identidade e documentos numa faixa institucional. */
+function DossieEmpresa({ empresa }: { empresa: Empresa }) {
+  const s = situacaoEfetiva(empresa, hojeISO());
+  return (
+    <div>
+      <div className="mb-3 text-sm text-tinta-400">
+        <Link to="/empresas" className="hover:text-marca-700 hover:underline">Empresas</Link> / {empresa.codigo_cadex}
+      </div>
+      <section className="overflow-hidden rounded-2xl bg-marca-900 text-white shadow-xs">
+        <div className="flex flex-wrap items-start gap-5 p-6">
+          {empresa.logo_arquivo ? (
+            <img src={urlLogo(empresa.logo_arquivo)} alt=""
+                 className="h-16 w-16 flex-none rounded-xl bg-white object-contain p-1.5" />
+          ) : (
+            <div className="grid h-16 w-16 flex-none place-items-center rounded-xl bg-white font-display text-xl font-bold text-marca-900">
+              {iniciais(empresa)}
+            </div>
+          )}
+          <div className="min-w-0">
+            <h1 className="font-display text-2xl font-bold tracking-[-0.01em] text-white sm:text-3xl">{nomeEmpresa(empresa)}</h1>
+            <p className="mt-1 text-sm text-marca-100/80">{descricaoEmpresa(empresa)}</p>
+            <span className="mt-3 inline-flex items-center gap-2 rounded-full bg-white/12 px-3 py-1 text-sm font-semibold text-white">
+              <span className="h-2 w-2 rounded-full" style={{ background: corSelo(s) }} aria-hidden />
+              {SITUACAO_LABEL[s]}
+            </span>
+          </div>
+          <div className="ml-auto">
+            <Link to={`/empresas/${empresa.id}/ficha`}
+                  className="inline-flex items-center rounded-lg border border-white/20 bg-white/10 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/20">
+              Imprimir ficha
+            </Link>
+          </div>
+        </div>
+        <dl className="grid grid-cols-2 border-t border-white/15 sm:grid-cols-4">
+          <Idc rotulo="Código CADEX" valor={empresa.codigo_cadex} mono />
+          <Idc rotulo="CNPJ" valor={formatCnpj(empresa.cnpj)} mono />
+          <Idc rotulo="Tipo" valor={TIPO_LABEL[empresa.tipo]} />
+          <Idc rotulo="Válida até" valor={empresa.validade_ate ? dataBR(empresa.validade_ate) : '—'} mono />
+        </dl>
+      </section>
     </div>
   );
 }
