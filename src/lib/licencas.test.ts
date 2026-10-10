@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  anteriorResolucao, estadoLicenca, lerCoordenada, linkMapa, nomeExecutora, pendenciasLicencas, urlPublicaLicenca,
+  anteriorResolucao, desempenhoExecutora, estadoLicenca, lerCoordenada, linkMapa, nomeExecutora, pendenciasLicencas, urlPublicaLicenca,
 } from './licencas';
 
 describe('licença anterior à Resolução', () => {
@@ -94,5 +94,36 @@ describe('pendências do painel', () => {
   });
   it('só conta as anteriores à Resolução', () => {
     expect(r.historicasEmAberto).toBe(1);
+  });
+});
+
+describe('desempenho da executora', () => {
+  const l = (o: Record<string, unknown>) => ({
+    executora_id: 'X', situacao: 'deferida', anterior_resolucao: false,
+    inicio_previsto: '2026-09-01', fim_previsto: '2026-09-20', concluida_em: null,
+    recomposicao_data: null, as_built_sei: null, ...o,
+  }) as unknown as Parameters<typeof desempenhoExecutora>[0][number];
+  const hoje = '2026-10-01';
+  const d = desempenhoExecutora([
+    l({ concluida_em: '2026-09-15', recomposicao_data: '2026-09-18', as_built_sei: '1' }), // no prazo, recomposta, as built
+    l({ concluida_em: '2026-09-25' }),                                                     // atrasou a conclusão, sem recomp/as built
+    l({ fim_previsto: '2026-09-10' }),                                                     // prazo encerrado sem conclusão
+    l({ executora_id: 'Y', concluida_em: '2026-09-15' }),                                  // outra executora: fora
+    l({ anterior_resolucao: true, concluida_em: '2026-09-15' }),                           // histórica: fora
+  ], 'X', hoje);
+
+  it('conta obras, conclusões, prazo, recomposição e As Built da executora', () => {
+    expect(d.obras).toBe(3);
+    expect(d.concluidas).toBe(2);
+    expect(d.noPrazo).toBe(1);
+    expect(d.atrasadas).toBe(1);
+    expect(d.recompostas).toBe(1);
+    expect(d.comAsBuilt).toBe(1);
+  });
+  it('é crítico quando há prazo de cronograma encerrado', () => {
+    expect(d.nivel).toBe('ruim');
+  });
+  it('sem obras sob a Resolução, fica sem dados', () => {
+    expect(desempenhoExecutora([], 'X', hoje).nivel).toBe('sem_dados');
   });
 });
