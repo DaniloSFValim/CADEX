@@ -79,11 +79,14 @@ export default function EmpresaPage() {
 
       {empresa && licencas && <PanoramaEmpresa empresa={empresa} licencas={licencas} />}
 
-      <Card title="Dados da empresa">
-        {empresa && (
+      {empresa && (
+        <Card title="Identidade visual">
           <LogoEmpresa empresa={empresa} podeEditar={podeEditar}
                        onChanged={async () => setEmpresa(await buscarEmpresa(empresa.id))} />
-        )}
+        </Card>
+      )}
+
+      <Card title="Dados da empresa">
         <EmpresaForm
           key={empresa?.id ?? 'nova'}
           inicial={empresa ? paraInput(empresa) : VAZIA}
@@ -415,7 +418,7 @@ function LogoEmpresa({
   };
 
   return (
-    <div className="mb-5 flex flex-wrap items-center gap-4 border-b border-tinta-100 pb-5">
+    <div className="flex flex-wrap items-center gap-4">
       <div className="flex h-20 w-20 flex-none items-center justify-center rounded-sm border border-dashed border-tinta-300 bg-tinta-50">
         {empresa.logo_arquivo
           ? <img src={urlLogo(empresa.logo_arquivo)} alt="Logo da empresa" className="h-full w-full object-contain p-1" />
