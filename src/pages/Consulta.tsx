@@ -2,7 +2,7 @@ import { AbasConsulta } from '../components/AbasConsulta';
 import { Cabecalho, MENU_PUBLICO } from '../components/Cabecalho';
 import { Rodape } from '../components/Rodape';
 import { useEffect, useMemo, useState } from 'react';
-import { Empty, ErrorNote, Spinner, inputClass } from '../components/ui';
+import { Empty, ErrorNote, Spinner, Titulo, inputClass } from '../components/ui';
 import { BARRA, dataBR } from '../components/Situacao';
 import { SITUACAO_LABEL, type SituacaoEfetiva } from '../lib/empresas';
 
@@ -57,20 +57,11 @@ export default function Consulta() {
       <Cabecalho itens={MENU_PUBLICO} />
 
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-12">
-        <header className="relative overflow-hidden rounded-2xl border border-tinta-200 bg-white p-6 shadow-xs sm:p-8">
-          <div aria-hidden className="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-marca-600 to-obra-500" />
-          <p className="flex items-center gap-2.5 text-sm font-medium text-tinta-500">
-            <span className="h-[2px] w-6 bg-obra-500" aria-hidden />
-            Consulta pública · Resolução Conjunta SECONSER/SEOP nº&nbsp;001/2026
-          </p>
-          <h1 className="mt-3 font-display text-3xl font-bold leading-[1.08] tracking-[-0.01em] text-tinta-900 sm:text-4xl md:text-5xl">
-            Consultar empresa executora
-          </h1>
-          <p className="mt-4 max-w-2xl text-base leading-relaxed text-tinta-600 sm:text-lg">
-            Antes de uma obra ou serviço na via pública, no subsolo ou na rede aérea, confira se a
-            empresa responsável está com a inscrição APTA.
-          </p>
-        </header>
+        <Titulo
+          trilha={<>Consulta pública · Resolução Conjunta SECONSER/SEOP nº&nbsp;001/2026</>}
+          titulo="Consultar empresa executora"
+          descricao="Antes de uma obra ou serviço na via pública, no subsolo ou na rede aérea, confira se a empresa responsável está com a inscrição APTA."
+        />
 
         {linhas && (
           <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
