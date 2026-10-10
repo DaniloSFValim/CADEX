@@ -84,7 +84,7 @@
 
 @utility cartao {
   /* Superfície de dados: fundo branco e uma linha fina, sem sombra. */
-  @apply rounded-md border border-tinta-200 bg-white;
+  @apply rounded-xl border border-tinta-200 bg-white;
 }
 
 @utility tabular {
