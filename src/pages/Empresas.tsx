@@ -151,7 +151,56 @@ export default function Empresas() {
         )}
 
         {filtradas.length > 0 && (
-          <div className={tabela.moldura}>
+          <ul className="divide-y divide-tinta-100 lg:hidden">
+            {filtradas.map((e) => {
+              const contratantes = vinculos
+                .filter((v) => v.contratada_id === e.id && !v.fim)
+                .map((v) => rotuloContratante(v, porId, orgaosPorId, nomeEmpresa))
+                .filter((x): x is string => Boolean(x));
+              const r = resumoDocumentos(tiposDaEmpresa(tipos, e), docs.filter((d) => d.empresa_id === e.id), hoje);
+              const s = situacaoEfetiva(e, hoje);
+              return (
+                <li key={e.id} className={`border-l-4 px-4 py-4 ${BARRA[s]}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <Link to={`/empresas/${e.id}`} className="font-display text-base font-bold text-tinta-900 hover:text-marca-700 hover:underline">
+                        {nomeEmpresa(e)}
+                      </Link>
+                      {e.nome_fantasia && <div className="text-xs text-tinta-500">{e.razao_social}</div>}
+                    </div>
+                    <SituacaoBadge s={s} />
+                  </div>
+                  <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                    <div>
+                      <dt className="text-xs text-tinta-500">Código CADEX</dt>
+                      <dd className="tabular text-tinta-800">{e.codigo_cadex}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-tinta-500">CNPJ</dt>
+                      <dd className="tabular text-tinta-800">{formatCnpj(e.cnpj)}</dd>
+                    </div>
+                    <div className="col-span-2">
+                      <dt className="text-xs text-tinta-500">Tipo</dt>
+                      <dd className="text-tinta-800">
+                        {descricaoEmpresa(e)}
+                        {contratantes.length > 0 && <span className="text-tinta-500"> · para {contratantes.join(', ')}</span>}
+                      </dd>
+                    </div>
+                    {podeEditar && (
+                      <div className="col-span-2">
+                        <dt className="text-xs text-tinta-500">Documentação</dt>
+                        <dd className="mt-0.5"><ResumoBadge r={r} /></dd>
+                      </div>
+                    )}
+                  </dl>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
+        {filtradas.length > 0 && (
+          <div className={`${tabela.moldura} hidden lg:block`}>
             <table className={tabela.tabela}>
               <thead className={tabela.cabeca}>
                 <tr>
