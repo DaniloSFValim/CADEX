@@ -46,14 +46,16 @@ export default function Consulta() {
       <Cabecalho itens={MENU_PUBLICO} />
 
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-12">
-        <header className="max-w-4xl pt-2">
-          <p className="text-sm text-tinta-400">
-            Consulta pública, Resolução Conjunta SECONSER/SEOP nº&nbsp;001/2026
+        <header className="relative overflow-hidden rounded-2xl border border-tinta-200 bg-white p-6 shadow-xs sm:p-8">
+          <div aria-hidden className="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-marca-600 to-obra-500" />
+          <p className="flex items-center gap-2.5 text-sm font-medium text-tinta-500">
+            <span className="h-[2px] w-6 bg-obra-500" aria-hidden />
+            Consulta pública · Resolução Conjunta SECONSER/SEOP nº&nbsp;001/2026
           </p>
-          <h1 className="mt-3 text-3xl font-semibold leading-[1.15] tracking-[-0.02em] text-tinta-900 sm:text-4xl sm:leading-[1.15] md:text-[3rem] md:leading-[1.1]">
+          <h1 className="mt-3 font-display text-3xl font-bold leading-[1.08] tracking-[-0.01em] text-tinta-900 sm:text-4xl md:text-5xl">
             Consultar empresa executora
           </h1>
-          <p className="mt-5 max-w-2xl text-lg leading-relaxed text-tinta-500">
+          <p className="mt-4 max-w-2xl text-base leading-relaxed text-tinta-600 sm:text-lg">
             Antes de uma obra ou serviço na via pública, no subsolo ou na rede aérea, confira se a
             empresa responsável está com a inscrição APTA.
           </p>
@@ -101,7 +103,7 @@ export default function Consulta() {
             <ul className="cartao divide-y divide-tinta-100 overflow-hidden">
               {filtradas.map((l) => (
                 <li key={l.codigo_cadex}
-                    className={`grid gap-x-6 gap-y-2 border-l-4 px-5 py-4 md:grid-cols-[170px_1fr_190px_220px] ${BARRA[l.situacao]}`}>
+                    className={`grid gap-x-6 gap-y-2 border-l-4 px-5 py-4 lg:grid-cols-[170px_1fr_190px_220px] ${BARRA[l.situacao]}`}>
                   <div>
                     <SituacaoBadge s={l.situacao} />
                     <div className={`tabular mt-1.5 text-xs ${l.situacao === 'vencida' ? 'font-medium text-baixa' : 'text-tinta-500'}`}>
