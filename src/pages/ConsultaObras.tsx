@@ -48,7 +48,6 @@ export default function ConsultaObras() {
       <section className="bg-marca-900 text-white">
         <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:py-14">
           <p className="flex items-center gap-2.5 text-sm font-medium text-marca-200">
-            <span className="h-[2px] w-6 bg-obra-500" aria-hidden />
             Resolução Conjunta SECONSER/SEOP nº&nbsp;001/2026
           </p>
           <h1 className="mt-4 max-w-[17ch] font-display text-3xl font-bold leading-[1.04] tracking-[-0.01em] sm:text-5xl">
@@ -157,7 +156,7 @@ export default function ConsultaObras() {
                                 onClick={() => { setFoco(o.codigo); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
                           Ver no mapa
                         </button>
-                        <Link to={`/licenca/${o.codigo}`} className="font-mono font-medium text-marca-600 hover:underline">
+                        <Link to={`/licenca/${o.codigo}`} className="tabular font-medium text-marca-600 hover:underline">
                           nº&nbsp;{o.numero}
                         </Link>
                       </div>

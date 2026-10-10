@@ -2,7 +2,7 @@ import { AbasConsulta } from '../components/AbasConsulta';
 import { Cabecalho, MENU_PUBLICO } from '../components/Cabecalho';
 import { Rodape } from '../components/Rodape';
 import { useEffect, useMemo, useState } from 'react';
-import { Empty, ErrorNote, Spinner, Titulo, inputClass } from '../components/ui';
+import { Empty, ErrorNote, Kpi, Spinner, Titulo, inputClass } from '../components/ui';
 import { BARRA, dataBR } from '../components/Situacao';
 import { SITUACAO_LABEL, type SituacaoEfetiva } from '../lib/empresas';
 
@@ -58,24 +58,23 @@ export default function Consulta() {
 
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-12">
         <Titulo
-          trilha="Consulta pública · Resolução Conjunta SECONSER/SEOP nº 001/2026"
+          trilha="Consulta pública"
           titulo="Consultar empresa executora"
           descricao="Antes de uma obra ou serviço na via pública, no subsolo ou na rede aérea, confira se a empresa responsável está com a inscrição APTA."
         />
 
         {linhas && (
-          <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-            {[
-              { rotulo: 'Habilitadas', n: linhas.filter((l) => ['deferida', 'apta', 'em_saneamento'].includes(l.situacao)).length, cor: 'text-alta', borda: 'border-alta' },
-              { rotulo: 'Em análise', n: linhas.filter((l) => l.situacao === 'em_analise').length, cor: 'text-atencao', borda: 'border-atencao' },
-              { rotulo: 'Impedidas', n: linhas.filter((l) => l.situacao === 'inapta' || l.situacao === 'vencida').length, cor: 'text-baixa', borda: 'border-baixa' },
-              { rotulo: 'Cadastradas', n: linhas.length, cor: 'text-tinta-900', borda: 'border-tinta-900' },
-            ].map((t) => (
-              <div key={t.rotulo} className={`rounded-xl border-t-4 ${t.borda} bg-white px-4 py-4 shadow-xs`}>
-                <div className="text-sm font-medium text-tinta-500">{t.rotulo}</div>
-                <div className={`tabular font-display text-4xl font-bold leading-none ${t.cor}`}>{t.n}</div>
-              </div>
-            ))}
+          <div className="mt-8 grid grid-cols-2 gap-x-8 gap-y-6 md:grid-cols-4">
+            <Kpi rotulo="Cadastradas" valor={linhas.length} detalhe="empresas no cadastro" />
+            <Kpi rotulo="Habilitadas" tom="alta"
+                 valor={linhas.filter((l) => ['deferida', 'apta', 'em_saneamento'].includes(l.situacao)).length}
+                 detalhe="podem atuar" />
+            <Kpi rotulo="Em análise" tom="atencao"
+                 valor={linhas.filter((l) => l.situacao === 'em_analise').length}
+                 detalhe="aguardando decisão" />
+            <Kpi rotulo="Impedidas" tom="baixa"
+                 valor={linhas.filter((l) => l.situacao === 'inapta' || l.situacao === 'vencida').length}
+                 detalhe="inaptas ou vencidas" />
           </div>
         )}
 

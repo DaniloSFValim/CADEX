@@ -125,8 +125,7 @@ export default function Dashboard() {
     <div className="flex flex-col gap-14">
       <header className="max-w-3xl">
         <p className="flex items-center gap-2.5 text-sm font-medium text-tinta-500">
-          <span className="h-[2px] w-6 bg-obra-500" aria-hidden />
-          Painel · SECONSER · {dataBR(hojeISO())}
+                    Painel da SECONSER, {dataBR(hojeISO())}
         </p>
         <h1 className="mt-3 font-display text-3xl font-bold leading-[1.1] tracking-[-0.01em] text-tinta-900 sm:text-4xl">
           {pendencias === 0
