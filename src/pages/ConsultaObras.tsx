@@ -38,35 +38,23 @@ export default function ConsultaObras() {
 
   const filtradas = useMemo(() => filtrarObras(obras ?? [], { situacao, ano, busca, setor }), [obras, situacao, ano, busca, setor]);
   const anos = useMemo(() => anosDasObras(obras ?? []), [obras]);
-  const stats = useMemo(() => resumo(obras ?? []), [obras]);
 
   return (
     <div className="flex min-h-screen flex-col bg-tinta-50">
       <Cabecalho itens={MENU_PUBLICO} />
 
-      {/* Herói: faixa institucional escura com o mapa de obras como promessa. */}
-      <section className="bg-marca-900 text-white">
-        <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:py-14">
-          <p className="flex items-center gap-2.5 text-sm font-medium text-marca-200">
-            <span className="h-[2px] w-6 bg-obra-500" aria-hidden />
-            Resolução Conjunta SECONSER/SEOP nº&nbsp;001/2026
-          </p>
-          <h1 className="mt-4 max-w-[17ch] font-display text-3xl font-bold leading-[1.04] tracking-[-0.01em] sm:text-5xl">
+      {/* Herói: título e a promessa da página. Sem painel de números: quem
+          quer contagem a encontra na lista, abaixo das abas. */}
+      <section className="border-b border-tinta-200 bg-white">
+        <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:py-12">
+          <p className="text-sm font-medium text-tinta-500">Resolução Conjunta SECONSER/SEOP nº&nbsp;001/2026</p>
+          <h1 className="mt-2 max-w-[22ch] text-3xl font-bold leading-[1.1] tracking-tight text-tinta-900 sm:text-4xl">
             Onde Niterói está com obras nas ruas
           </h1>
-          <p className="mt-4 max-w-2xl text-base leading-relaxed text-marca-100/85 sm:text-lg">
+          <p className="mt-3 max-w-2xl text-base leading-relaxed text-tinta-600">
             Consulte no mapa cada obra de infraestrutura licenciada nas vias públicas da cidade — quem executa,
             em que trecho e até quando o prazo é válido.
           </p>
-
-          {obras && (
-            <dl className="mt-9 grid max-w-3xl grid-cols-2 overflow-hidden rounded-xl border border-white/15 sm:grid-cols-4">
-              <Estat valor={stats.vigentes} rotulo="obras vigentes" destaque />
-              <Estat valor={stats.bairros} rotulo={stats.bairros === 1 ? 'bairro' : 'bairros'} />
-              <Estat valor={stats.execs} rotulo={stats.execs === 1 ? 'executora' : 'executoras'} />
-              <Estat valor={stats.total} rotulo="no cadastro" />
-            </dl>
-          )}
         </div>
       </section>
 
@@ -74,7 +62,7 @@ export default function ConsultaObras() {
         <AbasConsulta />
 
         {/* Filtros numa superfície clara, logo abaixo das abas. */}
-        <div className="mt-5 rounded-xl border border-tinta-200 bg-white p-3 shadow-xs">
+        <div className="mt-5 rounded-xl border border-tinta-200 bg-white p-3">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_190px_240px_140px]">
             <input className={inputClass} value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar obra"
                    placeholder="Rua, bairro, empresa ou nº da licença" />
@@ -100,7 +88,7 @@ export default function ConsultaObras() {
             {/* Coluna do mapa (fixa no desktop enquanto a lista rola). */}
             <div className="lg:sticky lg:top-[84px]">
               <Suspense fallback={<div className="h-[60vh] min-h-[360px] rounded-xl border border-tinta-200 bg-tinta-50" />}>
-                <div className="overflow-hidden rounded-xl border border-tinta-200 shadow-xs">
+                <div className="overflow-hidden rounded-xl border border-tinta-200">
                   <MapaObras obras={filtradas} foco={foco} />
                 </div>
               </Suspense>
@@ -157,7 +145,7 @@ export default function ConsultaObras() {
                                 onClick={() => { setFoco(o.codigo); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
                           Ver no mapa
                         </button>
-                        <Link to={`/licenca/${o.codigo}`} className="font-mono font-medium text-marca-600 hover:underline">
+                        <Link to={`/licenca/${o.codigo}`} className="tabular font-medium text-marca-600 hover:underline">
                           nº&nbsp;{o.numero}
                         </Link>
                       </div>
@@ -175,26 +163,6 @@ export default function ConsultaObras() {
 }
 
 /** Resumo para a faixa de números do herói, a partir das obras carregadas. */
-function resumo(obras: ObraPublica[]) {
-  const bairros = new Set<string>();
-  const execs = new Set<string>();
-  let vigentes = 0;
-  for (const o of obras) {
-    if (o.situacao === 'vigente' || o.situacao === 'aguardando_inicio') vigentes += 1;
-    for (const t of o.trechos) if (t.bairro?.trim()) bairros.add(t.bairro.trim().toLowerCase());
-    if (o.executora?.trim()) execs.add(o.executora.trim().toLowerCase());
-  }
-  return { vigentes, bairros: bairros.size, execs: execs.size, total: obras.length };
-}
-
-function Estat({ valor, rotulo, destaque = false }: { valor: number; rotulo: string; destaque?: boolean }) {
-  return (
-    <div className="border-white/15 bg-white/5 px-4 py-4 [&:not(:last-child)]:border-r [&:nth-child(-n+2)]:border-b sm:[&:nth-child(2)]:border-b-0">
-      <div className={`tabular font-display text-2xl font-bold sm:text-3xl ${destaque ? 'text-obra-500' : 'text-white'}`}>{valor}</div>
-      <div className="mt-0.5 text-xs text-marca-200">{rotulo}</div>
-    </div>
-  );
-}
 
 /** Selo da situação: contorno e cor da própria situação (mesma do mapa). */
 function SeloSituacao({ situacao }: { situacao: ObraPublica['situacao'] }) {

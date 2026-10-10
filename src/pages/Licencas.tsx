@@ -282,8 +282,8 @@ function OndeAtuaCard({ bairros, proximo }: { bairros: [string, number][]; proxi
       )}
       {proximo && (
         <p className="mt-4 border-t border-tinta-100 pt-3 text-sm text-tinta-500">
-          Próximo prazo a vencer: <span className="font-mono text-tinta-700">nº {proximo.numero}</span> em{' '}
-          <span className="font-mono text-tinta-700">{dataBR(proximo.fim_previsto)}</span>.
+          Próximo prazo a vencer: <span className="tabular text-tinta-700">nº {proximo.numero}</span> em{' '}
+          <span className="tabular text-tinta-700">{dataBR(proximo.fim_previsto)}</span>.
         </p>
       )}
     </Card>

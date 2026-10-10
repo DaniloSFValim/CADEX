@@ -672,9 +672,9 @@ function Conflitos({ licencaId }: { licencaId: string }) {
               {c.numero ? `Licença ${c.numero}` : c.processo_sei}
             </Link>
             <span className="text-tinta-500">
-              {c.logradouro ? `${c.logradouro} · ` : ''}~{c.distancia_m} m
-              {c.executora ? ` · ${c.executora}` : ''}
-              {c.ate ? (c.tipo === 'recomposicao' ? ` · garantia até ${dataBR(c.ate)}` : ` · até ${dataBR(c.ate)}`) : ''}
+              {c.logradouro ? `${c.logradouro}, ` : ''}~{c.distancia_m} m
+              {c.executora ? `, ${c.executora}` : ''}
+              {c.ate ? (c.tipo === 'recomposicao' ? `, garantia até ${dataBR(c.ate)}` : `, até ${dataBR(c.ate)}`) : ''}
             </span>
           </li>
         ))}
