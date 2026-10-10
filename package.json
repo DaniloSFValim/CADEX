@@ -13,7 +13,9 @@
     "db:test": "bash scripts/test-db.sh"
   },
   "dependencies": {
+    "@fontsource-variable/archivo": "^5.3.0",
     "@fontsource-variable/public-sans": "^5.3.0",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
     "@protomaps/basemaps": "^5.7.2",
     "@supabase/supabase-js": "^2.116.0",
     "jspdf": "^4.2.1",
