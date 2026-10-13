@@ -8,3 +8,5 @@ supabase/.temp/
 tsconfig.tsbuildinfo
 .env.production
 .vite/
+test-results/
+playwright-report/

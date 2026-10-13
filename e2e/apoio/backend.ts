@@ -1,0 +1,170 @@
+import type { Page, Route } from '@playwright/test';
+import type { Empresa } from '../../src/lib/empresas';
+import type { LicencaComTrechos } from '../../src/lib/licencas';
+import type { Orgao } from '../../src/lib/orgaos';
+import type { Conta } from '../../src/lib/contas';
+import type { EventoAuditoria } from '../../src/lib/auditoria';
+import { empresasPadrao, uuid } from './dados';
+
+// ---------------------------------------------------------------------
+// Supabase simulado, em memória. A aplicação roda de verdade no navegador
+// e fala com um endereço que ninguém atende; este arquivo responde no lugar,
+// guardando o estado (uma empresa desativada continua desativada ao
+// recarregar a lista) e registrando cada chamada que a tela fez, para os
+// testes conferirem o que foi enviado ao backend, e não só o que se vê.
+//
+// Só simula o que as telas testadas usam. Chamada que ninguém simulou
+// devolve lista vazia e fica em `semSimulacao`, para o teste decidir se isso
+// importa.
+// ---------------------------------------------------------------------
+
+export const SB = 'http://localhost:54321';
+
+export type Perfil = 'gestor' | 'cisp' | 'licenciador';
+
+export interface Cenario {
+  perfil: Perfil;
+  administrador: boolean;
+  empresas: Empresa[];
+  licencas: LicencaComTrechos[];
+  orgaos: Orgao[];
+  contas: Conta[];
+  auditoria: EventoAuditoria[];
+}
+
+export interface Chamada {
+  metodo: string;
+  /** Caminho depois de /rest/v1 ou /auth/v1, ex.: "licencas", "rpc/admin_definir_ativo". */
+  caminho: string;
+  /** Parâmetros da URL já decodificados. */
+  consulta: URLSearchParams;
+  corpo: unknown;
+}
+
+export interface Backend {
+  estado: Cenario;
+  chamadas: Chamada[];
+  semSimulacao: string[];
+  /** Chamadas a um caminho (e método, se dado). */
+  de(caminho: string, metodo?: string): Chamada[];
+  /** Faz as leituras daquela tabela falharem (HTTP 500) até `restaurar`. */
+  falhar(tabela: string): void;
+  restaurar(tabela: string): void;
+}
+
+const b64 = (o: unknown) => Buffer.from(JSON.stringify(o)).toString('base64url');
+const ID_USUARIO = uuid(900);
+
+function sessao(email: string) {
+  // Token com o nível aal2 (a verificação em duas etapas já feita); a aplicação lê o nível do próprio token.
+  const jwt = `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64({ sub: ID_USUARIO, aal: 'aal2', role: 'authenticated', exp: 4102444800 })}.sig`;
+  const user = {
+    id: ID_USUARIO, aud: 'authenticated', role: 'authenticated', email, app_metadata: {}, user_metadata: {},
+    factors: [{ id: 'f1', factor_type: 'totp', status: 'verified' }], created_at: '2026-01-01T00:00:00Z',
+  };
+  return { user, session: { access_token: jwt, refresh_token: 'r', expires_in: 3600, expires_at: 4102444800, token_type: 'bearer', user } };
+}
+
+const contaVoce = (administrador: boolean, perfil: Perfil): Conta => ({
+  user_id: ID_USUARIO, email: 'voce@teste', nome: 'Você', papel: perfil, administrador, ativo: true,
+  criado_em: '2026-01-01T00:00:00Z', ultimo_acesso: '2026-10-12T10:00:00Z', mfa_ativa: true,
+});
+
+/** Filtros do PostgREST que as telas usam: coluna=eq.valor e as comparações de data. */
+function filtrar<T extends Record<string, unknown>>(linhas: T[], q: URLSearchParams): T[] {
+  return linhas.filter((l) => {
+    for (const [k, v] of q) {
+      if (['select', 'order', 'offset', 'limit'].includes(k)) continue;
+      const [op, ...resto] = v.split('.');
+      const val = resto.join('.');
+      const campo = l[k];
+      if (op === 'eq' && String(campo) !== val) return false;
+      if (op === 'ilike' && !String(campo ?? '').toLowerCase().includes(val.replace(/\*/g, '').toLowerCase())) return false;
+      if (op === 'gte' && String(campo) < val) return false;
+      if (op === 'lte' && String(campo) > val) return false;
+    }
+    return true;
+  });
+}
+
+export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}): Promise<Backend> {
+  const estado: Cenario = {
+    perfil: 'gestor', administrador: false, empresas: empresasPadrao(), licencas: [], orgaos: [], contas: [], auditoria: [],
+    ...parcial,
+  };
+  const chamadas: Chamada[] = [];
+  const semSimulacao: string[] = [];
+  const falhas = new Set<string>();
+  const { user, session } = sessao('voce@teste');
+
+  await page.addInitScript(([k, v]) => localStorage.setItem(k, v), ['sb-localhost-auth-token', JSON.stringify(session)] as const);
+
+  await page.route(`${SB}/**`, async (route: Route) => {
+    const req = route.request();
+    const url = new URL(req.url());
+    const caminho = url.pathname.replace(/^\/(rest|auth)\/v1\//, '');
+    const unico = (req.headers().accept ?? '').includes('vnd.pgrst.object');
+    const contaExata = (req.headers().prefer ?? '').includes('count=exact');
+    const CORS = { 'access-control-allow-origin': '*', 'access-control-expose-headers': 'content-range' };
+    const responder = (corpo: unknown, extra: Record<string, string> = {}) =>
+      route.fulfill({ status: 200, contentType: 'application/json', headers: { ...CORS, ...extra }, body: JSON.stringify(corpo) });
+    const vazio = () => route.fulfill({ status: 204, headers: CORS });
+    const falha = () => route.fulfill({ status: 500, contentType: 'application/json', headers: CORS, body: JSON.stringify({ message: 'Falha simulada do servidor.' }) });
+
+    if (req.method() === 'OPTIONS') {
+      return route.fulfill({ status: 204, headers: { ...CORS, 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' } });
+    }
+    let corpo: unknown = null;
+    try { corpo = req.postData() ? JSON.parse(req.postData()!) : null; } catch { corpo = req.postData(); }
+    chamadas.push({ metodo: req.method(), caminho, consulta: url.searchParams, corpo });
+
+    /** Lista com paginação e contagem, e objeto único quando a tela pede um só. */
+    const lista = (linhas: Record<string, unknown>[]) => {
+      const dados = filtrar(linhas, url.searchParams);
+      if (unico) return dados[0] ? responder(dados[0]) : route.fulfill({ status: 406, headers: CORS, contentType: 'application/json', body: JSON.stringify({ message: 'Nenhuma linha.' }) });
+      const ini = Number(url.searchParams.get('offset') ?? '0');
+      const lim = Number(url.searchParams.get('limit') ?? '1000');
+      const pagina = dados.slice(ini, ini + lim);
+      return responder(pagina, contaExata ? { 'content-range': `${pagina.length ? `${ini}-${ini + pagina.length - 1}` : '*'}/${dados.length}` } : {});
+    };
+
+    if (req.method() === 'GET' && falhas.has(caminho)) return falha();
+
+    if (caminho === 'user') return responder(user);
+    if (caminho === 'servidores') {
+      const linha = { nome: 'Você', papel: estado.perfil, administrador: estado.administrador, ativo: true };
+      return responder(unico ? linha : [linha]);
+    }
+    if (caminho === 'empresas') {
+      if (req.method() === 'PATCH') {
+        const id = (url.searchParams.get('id') ?? '').replace('eq.', '');
+        estado.empresas = estado.empresas.map((e) => (e.id === id ? { ...e, ...(corpo as object) } : e));
+        return vazio();
+      }
+      return lista(estado.empresas as unknown as Record<string, unknown>[]);
+    }
+    if (caminho === 'licencas') return lista(estado.licencas as unknown as Record<string, unknown>[]);
+    if (caminho === 'orgaos_publicos') return lista(estado.orgaos as unknown as Record<string, unknown>[]);
+    if (caminho === 'auditoria') return lista(estado.auditoria as unknown as Record<string, unknown>[]);
+    if (['vinculos', 'responsaveis_tecnicos', 'documentos', 'tipos_documento', 'funcionarios', 'veiculos'].includes(caminho)) return responder([]);
+
+    if (caminho === 'rpc/admin_listar_contas') return responder([contaVoce(estado.administrador, estado.perfil), ...estado.contas]);
+    if (caminho === 'rpc/admin_definir_ativo') {
+      const { p_user_id, p_ativo } = corpo as { p_user_id: string; p_ativo: boolean };
+      estado.contas = estado.contas.map((c) => (c.user_id === p_user_id ? { ...c, ativo: p_ativo } : c));
+      return vazio();
+    }
+    if (caminho === 'rpc/conflitos_de_licenca') return responder([]);
+    if (caminho === 'rpc/salvar_licenca') return responder(uuid(7777));
+
+    semSimulacao.push(`${req.method()} ${caminho}`);
+    return responder(unico ? {} : []);
+  });
+
+  return {
+    estado, chamadas, semSimulacao,
+    de: (caminho, metodo) => chamadas.filter((c) => c.caminho === caminho && (!metodo || c.metodo === metodo)),
+    falhar: (t) => { falhas.add(t); },
+    restaurar: (t) => { falhas.delete(t); },
+  };
+}
