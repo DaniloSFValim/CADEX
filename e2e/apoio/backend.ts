@@ -50,6 +50,8 @@ export interface Backend {
   /** Faz as leituras daquela tabela falharem (HTTP 500) até `restaurar`. */
   falhar(tabela: string): void;
   restaurar(tabela: string): void;
+  /** A próxima chamadas à função de borda (admin-contas) respondem com este erro, até passar `null`. */
+  funcaoComErro(mensagem: string | null): void;
 }
 
 const b64 = (o: unknown) => Buffer.from(JSON.stringify(o)).toString('base64url');
@@ -97,6 +99,7 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
   const chamadas: Chamada[] = [];
   const semSimulacao: string[] = [];
   const falhas = new Set<string>();
+  let erroFuncao: string | null = null;
   const { user, session } = sessao('voce@teste');
 
   await page.addInitScript(([k, v]) => localStorage.setItem(k, v), ['sb-localhost-auth-token', JSON.stringify(session)] as const);
@@ -104,7 +107,7 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
   await page.route(`${SB}/**`, async (route: Route) => {
     const req = route.request();
     const url = new URL(req.url());
-    const caminho = url.pathname.replace(/^\/(rest|auth)\/v1\//, '');
+    const caminho = url.pathname.replace(/^\/(rest|auth)\/v1\//, '').replace(/^\//, '');
     const unico = (req.headers().accept ?? '').includes('vnd.pgrst.object');
     const contaExata = (req.headers().prefer ?? '').includes('count=exact');
     const CORS = { 'access-control-allow-origin': '*', 'access-control-expose-headers': 'content-range' };
@@ -151,6 +154,15 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
     if (['vinculos', 'responsaveis_tecnicos', 'documentos', 'tipos_documento', 'funcionarios', 'veiculos'].includes(caminho)) return responder([]);
 
     if (caminho === 'rpc/admin_listar_contas') return responder([contaVoce(estado.administrador, estado.perfil), ...estado.contas]);
+    if (caminho === 'rpc/admin_vinculos_da_conta') {
+      return responder({ eventos_auditoria: 7, documentos_enviados: 2, mudancas_de_situacao: 0, licencas_excluidas: 0 });
+    }
+    if (caminho === 'functions/v1/admin-contas') {
+      if (erroFuncao) return route.fulfill({ status: 400, headers: CORS, contentType: 'application/json', body: JSON.stringify({ erro: erroFuncao }) });
+      const { acao, user_id } = corpo as { acao: string; user_id: string };
+      if (acao === 'excluir') estado.contas = estado.contas.filter((c) => c.user_id !== user_id);
+      return responder({ ok: true });
+    }
     if (caminho === 'rpc/admin_definir_ativo') {
       const { p_user_id, p_ativo } = corpo as { p_user_id: string; p_ativo: boolean };
       estado.contas = estado.contas.map((c) => (c.user_id === p_user_id ? { ...c, ativo: p_ativo } : c));
@@ -195,6 +207,7 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
     de: (caminho, metodo) => chamadas.filter((c) => c.caminho === caminho && (!metodo || c.metodo === metodo)),
     falhar: (t) => { falhas.add(t); },
     restaurar: (t) => { falhas.delete(t); },
+    funcaoComErro: (m) => { erroFuncao = m; },
   };
 }
 

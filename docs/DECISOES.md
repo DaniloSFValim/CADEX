@@ -202,3 +202,16 @@ próprio (ex.: analista de licenciamento), as políticas de `licencas` e
   pode lançar de novo o mesmo número. Restaurar é recusado se outra licença ativa já usa o número.
 - Registro na lixeira não passa pelas validações de gravação (o lançado errado pode estar incompleto).
 - Passo destrutivo da migração: a troca das duas restrições únicas por índices parciais (`DROP CONSTRAINT`), que não perde dado.
+
+### Exclusão de usuário (15/10/2026)
+- Só administrador, em "Contas e acessos" (conta com acesso, desativada ou sem acesso): mostra quem é, avisa das consequências,
+  conta os registros ligados à conta e exige digitar o e-mail para confirmar.
+- Duas metades, nesta ordem: o banco (`admin_excluir_conta`) confere as proteções, guarda a identificação em
+  `usuarios_excluidos`, registra na auditoria e **remove o acesso**; depois a função de borda `admin-contas` (ação `excluir`)
+  apaga a conta de login. Se a segunda falhar, a conta fica sem acesso (aparece em "Sem acesso") e a exclusão pode ser repetida.
+- Ninguém exclui a própria conta; o último administrador ativo não é excluído (a segunda proteção é o gatilho de `servidores`).
+- A autoria do histórico fica: a auditoria guarda o id e o **nome no momento** da ação, sem chave estrangeira. Os únicos campos que
+  perdem o vínculo são `documentos.enviado_por` e `historico_situacao.por` (a chave estrangeira os zera ao apagar a conta);
+  a tela informa quantos são antes de confirmar. Desativar continua disponível para quem só quer barrar o acesso e manter o cadastro.
+- A função de borda precisa ser **implantada** junto com a migração (`supabase functions deploy admin-contas`); sem isso o botão
+  responde com erro, sem excluir nada.
