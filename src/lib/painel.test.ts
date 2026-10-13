@@ -28,6 +28,8 @@ function lic(o: Partial<LicencaComTrechos> = {}): LicencaComTrechos {
     subcontratada_id: null, responsavel_tecnico_id: null, art_numero: null, protocolo_data: '2026-09-10',
     situacao: 'deferida', decisao_data: '2026-09-15', inicio_previsto: '2026-10-01', fim_previsto: '2026-10-30',
     concluida_em: null, recomposicao_data: null, as_built_sei: null, as_built_data: null, observacoes: null,
+    tipo_intervencao: 'obra', origem_intervencao: 'concessionaria', contrato_numero: null, processo_administrativo: null,
+    ordem_servico_numero: null, objeto_contrato: null,
     empresas_no_deferimento: null, codigo_publico: `c${seq}`, criado_em: '2026-09-16T10:00:00Z', atualizado_em: '2026-09-16T10:00:00Z',
     licenca_trechos: [], ...o,
   } as LicencaComTrechos;
@@ -68,6 +70,19 @@ describe('filtros', () => {
   const orgao = lic({ contratante_id: null, orgao_contratante_id: 'og1', tipos_obra: ['poste'], executora_id: 'op2' });
   const todas = [programada, andamento, vencida, concluida, cancelada, orgao];
   const f = (p: Partial<typeof SEM_FILTROS>) => aplicarFiltros(todas, { ...SEM_FILTROS, ...p }, HOJE, ctx);
+
+  it('filtra por obra ou serviço e por origem, combinando com os demais', () => {
+    const servico = lic({ tipo_intervencao: 'servico' });
+    const publica = lic({ origem_intervencao: 'municipio', orgao_contratante_id: 'og1', contratante_id: null });
+    const autarquia = lic({ origem_intervencao: 'autarquia', tipo_intervencao: 'servico', orgao_contratante_id: 'og1', contratante_id: null });
+    const g = (p: Partial<typeof SEM_FILTROS>) => aplicarFiltros([servico, publica, autarquia, andamento], { ...SEM_FILTROS, ...p }, HOJE, ctx);
+    expect(g({ intervencao: 'servico' })).toEqual([servico, autarquia]);
+    expect(g({ origem: 'municipio' })).toEqual([publica]);
+    expect(g({ origem: 'autarquia', intervencao: 'servico' })).toEqual([autarquia]);
+    expect(g({ origem: 'autarquia', intervencao: 'obra' })).toEqual([]);
+    expect(g({ origem: 'concessionaria', intervencao: 'obra' })).toEqual([andamento]);
+    expect(temFiltro({ ...SEM_FILTROS, origem: 'municipio' })).toBe(true);
+  });
 
   it('sem filtro devolve tudo', () => {
     expect(f({})).toHaveLength(todas.length);

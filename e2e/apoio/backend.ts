@@ -155,7 +155,18 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
       return vazio();
     }
     if (caminho === 'rpc/conflitos_de_licenca') return responder([]);
-    if (caminho === 'rpc/salvar_licenca') return responder(uuid(7777));
+    if (caminho === 'rpc/salvar_licenca') {
+      // Grava como o banco: a licença e os trechos passam a existir para as outras telas (lista, painel, mapa).
+      const { p_licenca, p_trechos } = corpo as { p_licenca: Record<string, unknown>; p_trechos: Record<string, unknown>[] };
+      const id = (p_licenca.id as string | undefined) ?? uuid(7000 + estado.licencas.length + 1);
+      const trechos = p_trechos.map((t, i) => ({ id: (t.id as string | undefined) ?? uuid(8000 + i), ordem: i + 1, ...t }));
+      const base = estado.licencas.find((l) => l.id === id);
+      const nova = { ...(base ?? { codigo_publico: `c${id.slice(-4)}`, criado_em: new Date().toISOString() }), ...p_licenca, id,
+        atualizado_em: new Date().toISOString(), licenca_trechos: trechos } as unknown as LicencaComTrechos;
+      estado.licencas = base ? estado.licencas.map((l) => (l.id === id ? nova : l)) : [...estado.licencas, nova];
+      return responder(id);
+    }
+    if (caminho === 'rpc/obras_publicas') return responder(obrasPublicas(estado));
 
     semSimulacao.push(`${req.method()} ${caminho}`);
     return responder(unico ? {} : []);
@@ -167,4 +178,27 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
     falhar: (t) => { falhas.add(t); },
     restaurar: (t) => { falhas.delete(t); },
   };
+}
+
+/** Espelha obras_publicas() do banco: só deferidas e canceladas, com a situação derivada das datas. */
+function obrasPublicas(estado: Cenario) {
+  const d = new Date(); const hoje = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const nome = (e?: Empresa) => (e ? (e.nome_fantasia?.trim() || e.razao_social) : null);
+  return estado.licencas.filter((l) => l.situacao === 'deferida' || l.situacao === 'cancelada').map((l) => {
+    const og = estado.orgaos.find((o) => o.id === l.orgao_contratante_id);
+    const situacao = l.situacao === 'cancelada' ? 'cancelada' : l.concluida_em ? 'concluida'
+      : l.inicio_previsto && hoje < l.inicio_previsto ? 'aguardando_inicio'
+        : l.fim_previsto && hoje > l.fim_previsto ? 'prazo_encerrado' : 'vigente';
+    return {
+      codigo: l.codigo_publico, setor: l.setor, numero: l.numero, tipos_obra: l.tipos_obra, tipo_intervencao: l.tipo_intervencao,
+      origem: l.origem_intervencao, escopo: l.escopo, inicio_previsto: l.inicio_previsto, fim_previsto: l.fim_previsto,
+      decisao_data: l.decisao_data, situacao,
+      executora: nome(estado.empresas.find((e) => e.id === l.executora_id)) ?? l.executora_razao_social,
+      contratante: nome(estado.empresas.find((e) => e.id === l.contratante_id)) ?? og?.sigla ?? og?.nome ?? null,
+      trechos: l.licenca_trechos.map((t) => ({
+        logradouro: t.logradouro, bairro: t.bairro, inicio: [t.inicio_lng, t.inicio_lat],
+        fim: t.fim_lat == null ? null : [t.fim_lng, t.fim_lat],
+      })),
+    };
+  });
 }

@@ -2,7 +2,7 @@ import type { Feature, FeatureCollection } from 'geojson';
 import { supabase } from './supabase';
 import { baixarArquivo } from './exportar';
 import type { Setor } from './empresas';
-import type { SituacaoPublica, TipoObra } from './licencas';
+import type { OrigemIntervencao, SituacaoPublica, TipoIntervencao, TipoObra } from './licencas';
 
 // ---------------------------------------------------------------------
 // Mapa público de obras licenciadas: dados da função obras_publicas()
@@ -14,10 +14,14 @@ export interface ObraPublica {
   setor: Setor;
   numero: string;
   tipos_obra: TipoObra[];
+  /** Obra ou serviço, e quem origina (concessionária, Prefeitura, autarquia…). */
+  tipo_intervencao: TipoIntervencao;
+  origem: OrigemIntervencao;
   escopo: string;
-  inicio_previsto: string;
-  fim_previsto: string;
-  decisao_data: string;
+  /** Podem faltar: licença cancelada ou histórica sem cronograma ou sem decisão. */
+  inicio_previsto: string | null;
+  fim_previsto: string | null;
+  decisao_data: string | null;
   situacao: SituacaoPublica;
   executora: string;
   contratante: string | null;
@@ -65,15 +69,17 @@ export const FILTRO_OBRAS: { valor: string; rotulo: string; inclui: SituacaoPubl
   { valor: 'encerradas', rotulo: 'Encerradas, concluídas ou canceladas', inclui: ['prazo_encerrado', 'concluida', 'cancelada'] },
 ];
 
-export interface FiltroObras { situacao: string; ano: string; busca: string; setor?: string }
+export interface FiltroObras { situacao: string; ano: string; busca: string; setor?: string; intervencao?: string; origem?: string }
 
 export function filtrarObras(obras: ObraPublica[], f: FiltroObras): ObraPublica[] {
   const inclui = FILTRO_OBRAS.find((x) => x.valor === f.situacao)?.inclui ?? FILTRO_OBRAS[0].inclui;
   const q = f.busca.trim().toLowerCase();
   return obras.filter((o) =>
     inclui.includes(o.situacao)
-    && (!f.ano || o.decisao_data.startsWith(f.ano))
+    && (!f.ano || (o.decisao_data ?? '').startsWith(f.ano))
     && (!f.setor || o.setor === f.setor)
+    && (!f.intervencao || o.tipo_intervencao === f.intervencao)
+    && (!f.origem || o.origem === f.origem)
     && (!q || [o.numero, o.executora, o.contratante ?? '', o.escopo,
                ...o.trechos.flatMap((t) => [t.logradouro, t.bairro ?? ''])]
       .some((s) => s.toLowerCase().includes(q))));
@@ -81,7 +87,15 @@ export function filtrarObras(obras: ObraPublica[], f: FiltroObras): ObraPublica[
 
 /** Anos de emissão presentes, do mais recente ao mais antigo. */
 export const anosDasObras = (obras: ObraPublica[]) =>
-  [...new Set(obras.map((o) => o.decisao_data.slice(0, 4)))].sort().reverse();
+  [...new Set(obras.flatMap((o) => (o.decisao_data ? [o.decisao_data.slice(0, 4)] : [])))].sort().reverse();
+
+/** Coordenada utilizável no mapa: [longitude, latitude] finitas e dentro do planeta. */
+const coordenadaValida = (c: unknown): c is [number, number] =>
+  Array.isArray(c) && c.length === 2 && c.every((n) => typeof n === 'number' && Number.isFinite(n))
+  && Math.abs(c[0]) <= 180 && Math.abs(c[1]) <= 90;
+
+/** A obra tem ao menos um trecho que o mapa consegue desenhar. */
+export const temLocalizacao = (o: ObraPublica) => o.trechos.some((t) => coordenadaValida(t.inicio));
 
 /**
  * GeoJSON para o mapa: cada trecho vira uma feição. Trecho com fim é uma
@@ -91,14 +105,18 @@ export const anosDasObras = (obras: ObraPublica[]) =>
 export function obrasParaGeoJSON(obras: ObraPublica[]): FeatureCollection {
   return {
     type: 'FeatureCollection',
-    features: obras.flatMap((o) => o.trechos.map((t): Feature => ({
+    // Trecho sem coordenada utilizável não é desenhado (nem inventado): a lista
+    // da consulta avisa que a obra está sem localização.
+    features: obras.flatMap((o) => o.trechos.filter((t) => coordenadaValida(t.inicio)).map((t): Feature => ({
       type: 'Feature',
-      geometry: t.fim
+      geometry: coordenadaValida(t.fim)
         ? { type: 'LineString', coordinates: [t.inicio, t.fim] }
         : { type: 'Point', coordinates: t.inicio },
       properties: {
         codigo: o.codigo, numero: o.numero, situacao: o.situacao, executora: o.executora,
-        logradouro: t.logradouro, bairro: t.bairro ?? '', fim_previsto: o.fim_previsto,
+        contratante: o.contratante ?? '', escopo: o.escopo, tipo_intervencao: o.tipo_intervencao, origem: o.origem,
+        logradouro: t.logradouro, bairro: t.bairro ?? '',
+        inicio_previsto: o.inicio_previsto ?? '', fim_previsto: o.fim_previsto ?? '',
       },
     }))),
   };

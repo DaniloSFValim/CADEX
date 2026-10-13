@@ -15,6 +15,7 @@ const caixa = (page: Page) => page.getByLabel('A própria contratante executará
 /** Preenche o mínimo que o formulário exige, sem escolher contratante nem executora. */
 async function preencherBasico(page: Page) {
   await campo(page, 'Nº do processo').fill('NIT-050120/000900/2026');
+  await lista(page, 'Tipo de intervenção').selectOption('obra');
   await page.locator('label:has-text("Abertura de vala") input').check();
   await campo(page, 'Escopo da obra').fill('Vala para rede');
   await campo(page, 'Data da decisão').fill(dia(0));
@@ -94,10 +95,10 @@ test.describe('registro de licença', () => {
     expect(p_licenca.situacao).toBe('deferida');
   });
 
-  test('desmarcar libera a executora; escolher um órgão público desfaz a marcação', async ({ page }) => {
+  test('desmarcar libera a executora; mudar para origem pública desfaz a execução própria', async ({ page }) => {
     await instalarBackend(page, {
       orgaos: [{ id: 'og1', nome: 'Secretaria de Mobilidade', sigla: 'SEMOB', esfera: 'municipal', cnpj: null, setores: [],
-        criado_em: '2026-01-01', atualizado_em: '2026-01-01' }],
+        natureza: 'administracao_direta', criado_em: '2026-01-01', atualizado_em: '2026-01-01' }],
     });
     await page.goto('/obras/nova');
     await lista(page, 'Contratante').selectOption('op1');
@@ -107,10 +108,12 @@ test.describe('registro de licença', () => {
     await expect(lista(page, 'Executora')).toHaveValue('');
 
     await caixa(page).check();
-    await lista(page, 'Contratante').selectOption('orgao:og1');
-    await expect(caixa(page)).not.toBeChecked();
-    await expect(caixa(page)).toBeDisabled();
+    await lista(page, 'Origem da intervenção').selectOption('municipio');
+    // Em contrato público a execução é da empresa contratada: a opção some e a executora é escolhida de novo.
+    await expect(caixa(page)).toHaveCount(0);
+    await expect(lista(page, 'Contratante')).toHaveValue('');
     await expect(lista(page, 'Executora')).toHaveValue('');
+    await expect(lista(page, 'Contratante').locator('option')).toHaveText(['Selecione', 'SEMOB — Secretaria de Mobilidade']);
   });
 
   test('empresa que não está habilitada não pode ser contratante e executora ao mesmo tempo', async ({ page }) => {
@@ -130,6 +133,66 @@ test.describe('registro de licença', () => {
     await expect(page.getByRole('link', { name: 'Abrir o cadastro' })).toHaveAttribute('href', '/empresas/op3');
     // A executora só pode ser terceirizada: a própria contratante não está na lista.
     await expect(lista(page, 'Executora').locator('option')).toHaveText(['Selecione', 'Terceirizada Alfa Ltda.']);
+  });
+
+  test('tipo de intervenção é obrigatório e vai ao banco; serviço muda o rótulo do escopo', async ({ page }) => {
+    const backend = await instalarBackend(page);
+    await page.goto('/obras/nova');
+    await expect(lista(page, 'Tipo de intervenção').locator('option')).toHaveText(['Selecione', 'Obra', 'Serviço']);
+    await expect(lista(page, 'Origem da intervenção').locator('option')).toHaveText([
+      'Concessionária ou prestadora de serviço', 'Prefeitura ou órgão municipal', 'Autarquia municipal', 'Órgão estadual ou federal']);
+    await lista(page, 'Contratante').selectOption('op1');
+    await lista(page, 'Executora').selectOption('ter1');
+    await preencherBasico(page);
+    await lista(page, 'Tipo de intervenção').selectOption('');
+    await page.getByRole('button', { name: 'Registrar licença' }).click();
+    // Pelo navegador (select obrigatório) e, sem ele, pela regra da aplicação.
+    expect(await lista(page, 'Tipo de intervenção').evaluate((el: HTMLSelectElement) => el.validity.valueMissing)).toBe(true);
+    await page.locator('form').evaluate((f: HTMLFormElement) => { f.noValidate = true; });
+    await page.getByRole('button', { name: 'Registrar licença' }).click();
+    await expect(page.getByRole('alert')).toContainText('Escolha o tipo de intervenção: obra ou serviço.');
+    expect(backend.de('rpc/salvar_licenca')).toHaveLength(0);
+
+    await lista(page, 'Tipo de intervenção').selectOption('servico');
+    await expect(rotulo(page, 'Escopo do serviço')).toBeVisible();
+    await page.getByRole('button', { name: 'Registrar licença' }).click();
+    await expect.poll(() => backend.de('rpc/salvar_licenca').length).toBe(1);
+    const { p_licenca } = backend.de('rpc/salvar_licenca')[0].corpo as { p_licenca: Record<string, unknown> };
+    expect(p_licenca).toMatchObject({ tipo_intervencao: 'servico', origem_intervencao: 'concessionaria' });
+  });
+
+  test('obra pública: o contratante é o órgão certo, a executora é a empreiteira, e há campos de contrato', async ({ page }) => {
+    const backend = await instalarBackend(page, {
+      orgaos: [
+        { id: 'prefeitura', nome: 'Secretaria de Obras', sigla: 'SMO', esfera: 'municipal', cnpj: null, setores: [], natureza: 'administracao_direta', criado_em: '2026-01-01', atualizado_em: '2026-01-01' },
+        { id: 'autarquia', nome: 'Autarquia de Obras', sigla: 'AUTOB', esfera: 'municipal', cnpj: null, setores: [], natureza: 'autarquia', criado_em: '2026-01-01', atualizado_em: '2026-01-01' },
+        { id: 'estado', nome: 'Governo do Estado', sigla: 'GERJ', esfera: 'estadual', cnpj: null, setores: [], natureza: 'administracao_direta', criado_em: '2026-01-01', atualizado_em: '2026-01-01' },
+      ],
+    });
+    await page.goto('/obras/nova');
+    await expect(page.getByRole('heading', { name: 'Contrato público' })).toHaveCount(0);
+
+    await lista(page, 'Origem da intervenção').selectOption('municipio');
+    await expect(lista(page, 'Contratante').locator('option')).toHaveText(['Selecione', 'SMO — Secretaria de Obras']);
+    await lista(page, 'Origem da intervenção').selectOption('autarquia');
+    await expect(lista(page, 'Contratante').locator('option')).toHaveText(['Selecione', 'AUTOB — Autarquia de Obras']);
+    await lista(page, 'Origem da intervenção').selectOption('outro_ente');
+    await expect(lista(page, 'Contratante').locator('option')).toHaveText(['Selecione', 'GERJ — Governo do Estado']);
+
+    await lista(page, 'Origem da intervenção').selectOption('autarquia');
+    await lista(page, 'Contratante').selectOption('orgao:autarquia');
+    await lista(page, 'Executora').selectOption('ter1');
+    await expect(page.getByRole('heading', { name: 'Contrato público' })).toBeVisible();
+    await campo(page, 'Nº do contrato').fill('CT 12/2026');
+    await preencherBasico(page);
+    await page.getByRole('button', { name: 'Registrar licença' }).click();
+
+    await expect.poll(() => backend.de('rpc/salvar_licenca').length).toBe(1);
+    const { p_licenca } = backend.de('rpc/salvar_licenca')[0].corpo as { p_licenca: Record<string, unknown> };
+    expect(p_licenca).toMatchObject({
+      tipo_intervencao: 'obra', origem_intervencao: 'autarquia', orgao_contratante_id: 'autarquia',
+      contratante_id: null, executora_id: 'ter1', contrato_numero: 'CT 12/2026',
+    });
   });
 
   test('havendo contratante, a executora é terceirizada ou a própria contratante', async ({ page }) => {

@@ -17,6 +17,27 @@ export type EstadoLicenca =
   | 'aguardando_inicio' | 'em_execucao' | 'prazo_encerrado'
   | 'concluida_sem_as_built' | 'concluida';
 
+/** Natureza da intervenção: uma obra ou um serviço. */
+export type TipoIntervencao = 'obra' | 'servico';
+/**
+ * Quem origina a intervenção. As públicas exigem o órgão contratante certo
+ * (Prefeitura, autarquia ou, mais raro, órgão estadual ou federal).
+ */
+export type OrigemIntervencao = 'concessionaria' | 'municipio' | 'autarquia' | 'outro_ente';
+
+export const TIPO_INTERVENCAO_LABEL: Record<TipoIntervencao, string> = { obra: 'Obra', servico: 'Serviço' };
+export const TIPOS_INTERVENCAO = Object.keys(TIPO_INTERVENCAO_LABEL) as TipoIntervencao[];
+
+export const ORIGEM_LABEL: Record<OrigemIntervencao, string> = {
+  concessionaria: 'Concessionária ou prestadora de serviço',
+  municipio: 'Prefeitura ou órgão municipal',
+  autarquia: 'Autarquia municipal',
+  outro_ente: 'Órgão estadual ou federal',
+};
+export const ORIGENS = Object.keys(ORIGEM_LABEL) as OrigemIntervencao[];
+/** Origem pública: o contratante é um órgão cadastrado, não uma empresa. */
+export const origemPublica = (o: OrigemIntervencao) => o !== 'concessionaria';
+
 export interface Licenca {
   id: string;
   /** Telecom segue a Resolução nº 001/2026; os demais setores, regras mais leves. */
@@ -56,6 +77,13 @@ export interface Licenca {
   as_built_sei: string | null;
   as_built_data: string | null;
   observacoes: string | null;
+  tipo_intervencao: TipoIntervencao;
+  origem_intervencao: OrigemIntervencao;
+  /** Dados do contrato público (opcionais; não aparecem na consulta pública). */
+  contrato_numero: string | null;
+  processo_administrativo: string | null;
+  ordem_servico_numero: string | null;
+  objeto_contrato: string | null;
   empresas_no_deferimento: Record<string, unknown> | null;
   /** Código aleatório do QR Code da placa (art. 14); não é o id interno. */
   codigo_publico: string;
@@ -310,6 +338,8 @@ export type SituacaoPublica = 'vigente' | 'aguardando_inicio' | 'prazo_encerrado
 
 export interface LicencaPublica {
   setor: Setor;
+  tipo_intervencao: TipoIntervencao;
+  origem: OrigemIntervencao;
   numero: string;
   tipos_obra: TipoObra[];
   escopo: string;

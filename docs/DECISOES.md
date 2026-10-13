@@ -173,3 +173,19 @@ próprio (ex.: analista de licenciamento), as políticas de `licencas` e
   Administração → Licenças aponta esse caso para revisão.
 - Na migração, empresa que já constava como contratante e executora de alguma
   licença foi marcada, para o cadastro refletir o que já estava registrado.
+
+### Tipo e origem da intervenção; obra pública; correção do mapa (15/10/2026)
+- Todo registro tem **tipo de intervenção** (obra ou serviço, obrigatório no formulário) e **origem**
+  (concessionária ou prestadora; Prefeitura ou órgão municipal; autarquia municipal; órgão estadual ou federal).
+  As licenças existentes ficaram como "obra" e "concessionária" (ou pela esfera do órgão, se já tinham órgão).
+  A quarta origem existe porque órgão estadual ou federal já podia contratar; sem ela essas licenças ficariam sem categoria.
+- Origem pública exige o **órgão certo** (cadastro de Órgãos públicos, agora com "natureza": administração direta ou
+  autarquia); concessionária não aceita órgão. O banco confere; a tela só oferece as combinações válidas.
+- Obra pública: contratante = órgão ou autarquia, executora = empresa (empreiteira) do cadastro. **Não existe** "a própria
+  Prefeitura executa": a executora é sempre uma empresa. Se esse caso aparecer, é regra nova a decidir.
+- Dados do contrato (nº do contrato, processo administrativo, ordem de serviço, objeto) são opcionais e **não vão à consulta
+  pública**. Os órgãos e autarquias não foram cadastrados por mim: são dados da Prefeitura (Órgãos públicos).
+- **Mapa.** Causa confirmada de um defeito: licença cancelada sem data de decisão (o banco permite) derrubava a página
+  inteira (`decisao_data.slice` em nulo). Corrigido, com teste que reproduz. Também: o que o filtro inicial esconde
+  agora é avisado ("N fora dos filtros", "Mostrar tudo"); obra sem localização é marcada na lista; coordenada inválida
+  não é desenhada nem inventada; o balão mostra tipo, descrição, contratante, executora, período e situação.

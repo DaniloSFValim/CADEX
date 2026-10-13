@@ -4,12 +4,12 @@ import { formatCnpj, isValidCnpj } from '../lib/cnpj';
 import { SETORES, SETOR_LABEL, type Setor } from '../lib/empresas';
 import { useAuth } from '../lib/auth';
 import {
-  ESFERAS, ESFERA_LABEL, listarOrgaos, nomeOrgao, removerOrgao, salvarOrgao,
-  type Esfera, type Orgao,
+  ESFERAS, ESFERA_LABEL, NATUREZA_LABEL, listarOrgaos, nomeOrgao, removerOrgao, salvarOrgao,
+  type Esfera, type Natureza, type Orgao,
 } from '../lib/orgaos';
 
-interface Form { nome: string; sigla: string; esfera: Esfera; cnpj: string; setores: Setor[] }
-const VAZIO: Form = { nome: '', sigla: '', esfera: 'municipal', cnpj: '', setores: [] };
+interface Form { nome: string; sigla: string; esfera: Esfera; natureza: Natureza; cnpj: string; setores: Setor[] }
+const VAZIO: Form = { nome: '', sigla: '', esfera: 'municipal', natureza: 'administracao_direta', cnpj: '', setores: [] };
 
 export default function Orgaos() {
   const { podeEditar } = useAuth();
@@ -88,6 +88,11 @@ function CamposOrgao({ f, set }: { f: Form; set: <K extends keyof Form>(k: K, v:
           {ESFERAS.map((es) => <option key={es} value={es}>{ESFERA_LABEL[es]}</option>)}
         </select>
       </Field>
+      <Field label="Natureza" required hint="Define se serve como Prefeitura ou órgão municipal, ou como autarquia, ao registrar obra pública.">
+        <select className={inputClass} value={f.natureza} onChange={(e) => set('natureza', e.target.value as Natureza)}>
+          {(Object.keys(NATUREZA_LABEL) as Natureza[]).map((n) => <option key={n} value={n}>{NATUREZA_LABEL[n]}</option>)}
+        </select>
+      </Field>
       <Field label="CNPJ" hint="Opcional.">
         <input className={inputClass} value={f.cnpj} onChange={(e) => set('cnpj', formatCnpj(e.target.value))} />
       </Field>
@@ -121,7 +126,7 @@ function OrgaoForm({ onSalvo }: { onSalvo: () => void }) {
           if (msg) { setError(new Error(msg)); return; }
           setBusy(true); setError(null);
           try {
-            await salvarOrgao({ nome: f.nome, sigla: f.sigla, esfera: f.esfera, cnpj: f.cnpj, setores: f.setores });
+            await salvarOrgao({ nome: f.nome, sigla: f.sigla, esfera: f.esfera, natureza: f.natureza, cnpj: f.cnpj, setores: f.setores });
             setF(VAZIO); onSalvo();
           } catch (err) { setError(err); } finally { setBusy(false); }
         }}
@@ -158,7 +163,7 @@ function LinhaOrgao({ orgao, podeEditar, onMudou }: { orgao: Orgao; podeEditar: 
               e.preventDefault();
               const msg = validar(f);
               if (msg) { setError(new Error(msg)); return; }
-              void agir(() => salvarOrgao({ nome: f.nome, sigla: f.sigla, esfera: f.esfera, cnpj: f.cnpj, setores: f.setores }, orgao.id));
+              void agir(() => salvarOrgao({ nome: f.nome, sigla: f.sigla, esfera: f.esfera, natureza: f.natureza, cnpj: f.cnpj, setores: f.setores }, orgao.id));
             }}
           >
             <CamposOrgao f={f} set={set} />
@@ -178,7 +183,7 @@ function LinhaOrgao({ orgao, podeEditar, onMudou }: { orgao: Orgao; podeEditar: 
       <td className={tabela.td}>
         <div className="font-medium text-tinta-900">{nomeOrgao(orgao)}</div>
       </td>
-      <td className={tabela.td}>{ESFERA_LABEL[orgao.esfera]}</td>
+      <td className={tabela.td}>{ESFERA_LABEL[orgao.esfera]}, {NATUREZA_LABEL[orgao.natureza].toLowerCase()}</td>
       <td className={tabela.td}>
         {orgao.setores.length
           ? <div className="flex flex-wrap gap-1">{orgao.setores.map((s) => <Badge key={s}>{SETOR_LABEL[s]}</Badge>)}</div>
@@ -212,5 +217,5 @@ function LinhaOrgao({ orgao, podeEditar, onMudou }: { orgao: Orgao; podeEditar: 
 }
 
 const paraForm = (o: Orgao): Form => ({
-  nome: o.nome, sigla: o.sigla ?? '', esfera: o.esfera, cnpj: o.cnpj ? formatCnpj(o.cnpj) : '', setores: o.setores,
+  nome: o.nome, sigla: o.sigla ?? '', esfera: o.esfera, natureza: o.natureza, cnpj: o.cnpj ? formatCnpj(o.cnpj) : '', setores: o.setores,
 });

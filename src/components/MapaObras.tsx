@@ -12,7 +12,7 @@ import { Protocol } from 'pmtiles';
 import { useEffect, useRef, useState } from 'react';
 import { dataBR } from './Situacao';
 import { COR_SITUACAO, SITUACAO_PUBLICA_LABEL, obrasParaGeoJSON, type ObraPublica } from '../lib/obras';
-import type { SituacaoPublica } from '../lib/licencas';
+import { ORIGEM_LABEL, TIPO_INTERVENCAO_LABEL, type OrigemIntervencao, type SituacaoPublica, type TipoIntervencao } from '../lib/licencas';
 
 /** Niterói, com folga. */
 const NITEROI: maplibregl.LngLatBoundsLike = [[-43.135, -22.995], [-42.955, -22.865]];
@@ -76,11 +76,17 @@ function balao(p: Record<string, string>): HTMLElement {
     if (classe) el.className = classe;
     div.appendChild(el);
   };
-  linha(SITUACAO_PUBLICA_LABEL[p.situacao as SituacaoPublica] ?? p.situacao, 'font-semibold');
+  const tipo = TIPO_INTERVENCAO_LABEL[p.tipo_intervencao as TipoIntervencao] ?? 'Obra';
+  linha(`${tipo} · ${SITUACAO_PUBLICA_LABEL[p.situacao as SituacaoPublica] ?? p.situacao}`, 'font-semibold');
   linha(`Licença nº ${p.numero}`);
-  linha(p.executora, 'text-tinta-600');
+  if (p.escopo) linha(p.escopo, 'text-tinta-700');
+  if (p.contratante) linha(`Contratante: ${p.contratante}`, 'text-tinta-600');
+  linha(`Executora: ${p.executora}`, 'text-tinta-600');
+  if (p.origem && p.origem !== 'concessionaria') linha(ORIGEM_LABEL[p.origem as OrigemIntervencao] ?? '', 'text-tinta-500');
   linha(p.bairro ? `${p.logradouro}, ${p.bairro}` : p.logradouro, 'text-tinta-600');
-  linha(`Até ${dataBR(p.fim_previsto)}`, 'text-tinta-500');
+  linha(p.inicio_previsto || p.fim_previsto
+    ? `${p.inicio_previsto ? dataBR(p.inicio_previsto) : '—'} a ${p.fim_previsto ? dataBR(p.fim_previsto) : '—'}`
+    : 'Sem período informado', 'text-tinta-500');
   const a = document.createElement('a');
   a.href = `/licenca/${p.codigo}`;
   a.textContent = 'Ver a licença';
@@ -133,7 +139,7 @@ export default function MapaObras({ obras, foco }: { obras: ObraPublica[]; foco?
         m.on('click', camada, (e: maplibregl.MapLayerMouseEvent) => {
           const f = e.features?.[0];
           if (!f) return;
-          new maplibregl.Popup({ maxWidth: '260px' }).setLngLat(e.lngLat)
+          new maplibregl.Popup({ maxWidth: '300px' }).setLngLat(e.lngLat)
             .setDOMContent(balao(f.properties as Record<string, string>)).addTo(m);
         });
         m.on('mouseenter', camada, () => { m.getCanvas().style.cursor = 'pointer'; });
@@ -163,8 +169,11 @@ export default function MapaObras({ obras, foco }: { obras: ObraPublica[]; foco?
     mapa.current.fitBounds(b, { padding: 80, maxZoom: 17, duration: 600 });
   }, [foco, obras, pronto]);
 
+  // Quantos trechos o mapa recebeu. Também serve de ponto de verificação para os testes de tela.
+  const desenhados = obrasParaGeoJSON(obras).features.length;
+
   return (
-    <div className="relative">
+    <div className="relative" data-trechos={desenhados}>
       <div ref={caixa} className="h-[60vh] min-h-[360px] w-full overflow-hidden rounded-sm border border-tinta-200 bg-tinta-50"
            role="region" aria-label="Mapa das obras licenciadas em Niterói" />
       {erro && (
