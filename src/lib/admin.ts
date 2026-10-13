@@ -111,6 +111,10 @@ export function inconsistencias(
     }
     if (!l.executora_id && l.executora_razao_social) p.push('Executora sem cadastro no CADEX (registro histórico).');
 
+    if (exec && l.contratante_id === l.executora_id && !exec.executa_obras) {
+      p.push(`A ${exec.nome_fantasia || exec.razao_social} executa a própria obra, mas o cadastro não marca que ela executa obras ou serviços por conta própria.`);
+    }
+
     for (const [papel, id] of [['executora', l.executora_id], ['contratante', l.contratante_id], ['subcontratada', l.subcontratada_id]] as const) {
       const e = id ? empresas.get(id) : undefined;
       if (e && e.ativa === false) p.push(`A ${papel} (${e.nome_fantasia || e.razao_social}) está com o cadastro desativado.`);

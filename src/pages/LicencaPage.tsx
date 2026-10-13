@@ -214,7 +214,12 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, somenteLeitura, onSa
   // Mesma pessoa jurídica nos dois papéis: um único cadastro, derivado dos dois campos.
   const mesmaEmpresa = mesmaEmpresaNosPapeis({ contratante_id: contratanteEmpresaId || null, executora_id: f.executora_id || null });
   // Só quem pode executar (habilitada e atuante no setor) pode ser contratante e executora.
-  const podeAutoExecutar = Boolean(contratanteEmpresaId) && executoras.some((e) => e.id === contratanteEmpresaId);
+  const contratanteEmpresa = contratanteEmpresaId ? porId.get(contratanteEmpresaId) : undefined;
+  const podeExecutar = Boolean(contratanteEmpresa) && executoras.some((e) => e.id === contratanteEmpresaId);
+  // Além de poder executar, o cadastro da empresa precisa dizer que ela executa obra ou serviço própria.
+  // A licença que já está assim continua editável, mesmo que a marca tenha sido tirada depois.
+  const cadastroHabilita = Boolean(contratanteEmpresa?.executa_obras) || mesmaEmpresa;
+  const podeAutoExecutar = podeExecutar && cadastroHabilita;
   // Fora da drenagem e do histórico, a titular não executa para outra contratante:
   // havendo contratante, a executora é terceirizada ou a própria contratante.
   const titularLivre = drenagem || anterior;
@@ -228,7 +233,8 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, somenteLeitura, onSa
   // Com contratante definida (e fora da drenagem e do histórico), a executora é
   // terceirizada ou a própria contratante; a titular não executa para outra.
   const executorasLista = executoras.filter((e) =>
-    titularLivre || !f.contratante_id || e.tipo === 'terceirizada' || e.id === contratanteEmpresaId);
+    titularLivre || !f.contratante_id || e.tipo === 'terceirizada'
+    || (e.id === contratanteEmpresaId && (e.executa_obras || mesmaEmpresa)));
   const limparPartesDaExecutora = () => { set('subcontratada_id', ''); set('responsavel_tecnico_id', ''); };
   const trocarContratante = (novo: string) => {
     const executoraTitular = executora && executora.tipo !== 'terceirizada';
@@ -236,7 +242,7 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, somenteLeitura, onSa
     if (mesmaEmpresa) {
       // A executora acompanha a contratante; se a nova não pode executar, volta a escolher.
       const nova = porId.get(novo);
-      const serve = nova && ehContratante(nova.tipo) && executoras.some((e) => e.id === nova.id);
+      const serve = nova && ehContratante(nova.tipo) && nova.executa_obras && executoras.some((e) => e.id === nova.id);
       set('executora_id', serve ? novo : '');
       limparPartesDaExecutora();
     } else if (novo && executoraTitular && !titularLivre && novo !== f.executora_id) {
@@ -513,7 +519,11 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, somenteLeitura, onSa
                   <span className="mt-0.5 block text-xs text-tinta-500">
                     {!contratanteEmpresaId
                       ? 'Escolha a contratante entre as empresas cadastradas.'
-                      : 'Esta empresa não está habilitada a executar neste setor.'}
+                      : !podeExecutar ? 'Esta empresa não está habilitada a executar neste setor.'
+                      : 'O cadastro desta empresa não marca que ela executa obras ou serviços por conta própria.'}
+                    {contratanteEmpresaId && podeExecutar && !cadastroHabilita && (
+                      <> <Link className="underline" to={`/empresas/${contratanteEmpresaId}`}>Abrir o cadastro</Link></>
+                    )}
                   </span>
                 )}
               </span>

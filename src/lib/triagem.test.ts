@@ -10,7 +10,7 @@ const emp = (id: string, over: Partial<Empresa> = {}): Empresa => ({
   cep: null, logradouro: null, numero: null, complemento: null, bairro: null, cidade: null, uf: null,
   representante: null, observacoes: null, situacao: 'apta', processo_numero: null, data_requerimento: null,
   portaria_numero: null, portaria_data: null, validade_ate: '2027-01-01', notificacao_data: null,
-  logo_arquivo: null, ativa: true, criado_em: '2026-09-01T00:00:00Z', atualizado_em: '2026-09-01T00:00:00Z', ...over,
+  logo_arquivo: null, ativa: true, executa_obras: false, criado_em: '2026-09-01T00:00:00Z', atualizado_em: '2026-09-01T00:00:00Z', ...over,
 });
 
 const vazio: SinaisTriagem = {

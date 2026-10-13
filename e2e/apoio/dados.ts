@@ -16,7 +16,7 @@ export function empresa(id: string, razao: string, tipo: Empresa['tipo'], extra:
     setores: ['telecom'], email: 'x@y.z', telefone: null, cep: null, logradouro: null, numero: null, complemento: null,
     bairro: null, cidade: null, uf: null, observacoes: null, representante: null, situacao: 'deferida',
     processo_numero: null, data_requerimento: null, portaria_numero: null, portaria_data: null, validade_ate: '2099-12-31',
-    notificacao_data: null, logo_arquivo: null, ativa: true,
+    notificacao_data: null, logo_arquivo: null, ativa: true, executa_obras: false,
     criado_em: '2026-01-01T00:00:00Z', atualizado_em: '2026-01-01T00:00:00Z', ...extra,
   } as Empresa;
 }
@@ -41,8 +41,9 @@ export function licenca(o: Partial<LicencaComTrechos> = {}): LicencaComTrechos {
 
 /** Empresas-padrão dos testes: duas operadoras, uma terceirizada e uma operadora inapta. */
 export const empresasPadrao = () => [
-  empresa('op1', 'Operadora Um S.A.', 'operadora', { nome_fantasia: 'OpUm', cnpj: '33000167000101' }),
-  empresa('op2', 'Operadora Dois S.A.', 'operadora', { cnpj: '44000167000101' }),
+  empresa('op1', 'Operadora Um S.A.', 'operadora', { nome_fantasia: 'OpUm', cnpj: '33000167000101', executa_obras: true }),
+  empresa('op2', 'Operadora Dois S.A.', 'operadora', { cnpj: '44000167000101', executa_obras: true }),
+  empresa('op3', 'Operadora Três S.A.', 'operadora', { nome_fantasia: 'OpTres', cnpj: '55000167000101' }),
   empresa('ter1', 'Terceirizada Alfa Ltda.', 'terceirizada', { cnpj: '55000167000101' }),
   empresa('inap', 'Operadora Inapta S.A.', 'operadora', { cnpj: '66000167000101', situacao: 'inapta', validade_ate: null }),
 ];

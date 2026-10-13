@@ -121,6 +121,17 @@ test.describe('registro de licença', () => {
     await expect(page.getByText('Esta empresa não está habilitada a executar neste setor.')).toBeVisible();
   });
 
+  test('empresa cujo cadastro não marca execução própria não pode ser a própria executora', async ({ page }) => {
+    await instalarBackend(page);
+    await page.goto('/obras/nova');
+    await lista(page, 'Contratante').selectOption('op3');
+    await expect(caixa(page)).toBeDisabled();
+    await expect(page.getByText('O cadastro desta empresa não marca que ela executa obras ou serviços por conta própria.')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Abrir o cadastro' })).toHaveAttribute('href', '/empresas/op3');
+    // A executora só pode ser terceirizada: a própria contratante não está na lista.
+    await expect(lista(page, 'Executora').locator('option')).toHaveText(['Selecione', 'Terceirizada Alfa Ltda.']);
+  });
+
   test('havendo contratante, a executora é terceirizada ou a própria contratante', async ({ page }) => {
     await instalarBackend(page);
     await page.goto('/obras/nova');

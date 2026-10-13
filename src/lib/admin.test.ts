@@ -10,7 +10,7 @@ const emp = (id: string, over: Partial<Empresa> = {}): Empresa => ({
   setores: ['telecom'], email: 'x@y.z', telefone: null, cep: null, logradouro: null, numero: null, complemento: null,
   bairro: null, cidade: null, uf: null, representante: null, observacoes: null, situacao: 'deferida', processo_numero: null,
   data_requerimento: null, portaria_numero: null, portaria_data: null, validade_ate: '2027-12-31', notificacao_data: null,
-  logo_arquivo: null, ativa: true, criado_em: '2026-01-01T00:00:00Z', atualizado_em: '2026-01-01T00:00:00Z', ...over,
+  logo_arquivo: null, ativa: true, executa_obras: false, criado_em: '2026-01-01T00:00:00Z', atualizado_em: '2026-01-01T00:00:00Z', ...over,
 });
 
 let seq = 0;
@@ -92,6 +92,13 @@ describe('inconsistências', () => {
   it('licença em ordem não aparece', () => {
     expect(acha(lic())).toEqual([]);
     expect(acha(lic({ situacao: 'cancelada', concluida_em: null, fim_previsto: '2020-01-01' }))).toEqual([]);
+  });
+  it('contratante = executora sem a marca no cadastro da empresa', () => {
+    const sem = acha(lic({ contratante_id: 'op1', executora_id: 'op1' }));
+    expect(sem.some((t) => t.includes('não marca que ela executa obras'))).toBe(true);
+    const empresasMarcada = new Map([['op1', emp('op1', { executa_obras: true })]]);
+    const com = inconsistencias([lic({ contratante_id: 'op1', executora_id: 'op1' })], HOJE, empresasMarcada)[0]?.problemas ?? [];
+    expect(com.some((t) => t.includes('não marca que ela executa obras'))).toBe(false);
   });
   it('fim vencido sem conclusão', () => {
     expect(acha(lic({ inicio_previsto: '2026-08-01', fim_previsto: '2026-09-01' }))).toContain('Fim da obra ou serviço vencido, sem conclusão registrada.');
