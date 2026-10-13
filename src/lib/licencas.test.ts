@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  anteriorResolucao, desempenhoExecutora, estadoLicenca, lerCoordenada, linkMapa, nomeExecutora, pendenciasLicencas, urlPublicaLicenca,
+  anteriorResolucao, desempenhoExecutora, erroPeriodoObra, estadoLicenca, lerCoordenada, linkMapa, mesmaEmpresaNosPapeis,
+  nomeExecutora, pendenciasLicencas, situacoesRegistraveis, urlPublicaLicenca,
 } from './licencas';
 
 describe('licença anterior à Resolução', () => {
@@ -125,5 +126,50 @@ describe('desempenho da executora', () => {
   });
   it('sem obras sob a Resolução, fica sem dados', () => {
     expect(desempenhoExecutora([], 'X', hoje).nivel).toBe('sem_dados');
+  });
+});
+
+describe('situação "Indeferida"', () => {
+  const todas = ['em_execucao', 'concluida', 'indeferida', 'cancelada'] as const;
+  it('não é oferecida em licença nova nem em outra situação', () => {
+    expect(situacoesRegistraveis(todas, null)).toEqual(['em_execucao', 'concluida', 'cancelada']);
+    expect(situacoesRegistraveis(todas, 'deferida')).toEqual(['em_execucao', 'concluida', 'cancelada']);
+    expect(situacoesRegistraveis(todas, 'cancelada')).not.toContain('indeferida');
+  });
+  it('continua aparecendo na licença que já está indeferida (histórico)', () => {
+    expect(situacoesRegistraveis(todas, 'indeferida')).toContain('indeferida');
+  });
+});
+
+describe('período da obra ou serviço', () => {
+  const base = { deferida: true, decisao: '2026-09-15', inicio: '', fim: '2026-10-30', concluidaEm: '' };
+  it('aceita fim igual ou posterior ao início', () => {
+    expect(erroPeriodoObra({ ...base, inicio: '2026-10-01' })).toBeNull();
+    expect(erroPeriodoObra({ ...base, inicio: '2026-10-30' })).toBeNull();
+  });
+  it('recusa fim anterior ao início', () => {
+    expect(erroPeriodoObra({ ...base, inicio: '2026-11-01' }))
+      .toBe('O fim da obra ou serviço não pode ser anterior ao início.');
+  });
+  it('início em branco vale a data da decisão', () => {
+    expect(erroPeriodoObra({ ...base, fim: '2026-09-14' }))
+      .toBe('O fim da obra ou serviço não pode ser anterior ao início.');
+    expect(erroPeriodoObra(base)).toBeNull();
+  });
+  it('recusa conclusão anterior ao início', () => {
+    expect(erroPeriodoObra({ ...base, inicio: '2026-10-01', concluidaEm: '2026-09-30' }))
+      .toBe('A conclusão não pode ser anterior ao início da obra ou serviço.');
+  });
+  it('não valida o período de licença que não está deferida', () => {
+    expect(erroPeriodoObra({ ...base, deferida: false, inicio: '2026-12-01' })).toBeNull();
+  });
+});
+
+describe('contratante e executora', () => {
+  it('é a mesma empresa só quando as duas são a mesma cadastrada', () => {
+    expect(mesmaEmpresaNosPapeis({ contratante_id: 'a', executora_id: 'a' })).toBe(true);
+    expect(mesmaEmpresaNosPapeis({ contratante_id: 'a', executora_id: 'b' })).toBe(false);
+    expect(mesmaEmpresaNosPapeis({ contratante_id: null, executora_id: null })).toBe(false);
+    expect(mesmaEmpresaNosPapeis({ contratante_id: null, executora_id: 'a' })).toBe(false);
   });
 });

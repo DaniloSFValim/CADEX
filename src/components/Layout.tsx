@@ -17,12 +17,13 @@ export function Layout() {
     { rotulo: 'Obras', para: '/obras', fim: true },
     { rotulo: 'Consulta pública', para: '/consulta' },
   ] : [
-    ...(isGestor ? [{ rotulo: 'Painel', para: '/dashboard' }, { rotulo: 'Anatel', para: '/anatel' }] : []),
+    { rotulo: 'Painel', para: '/dashboard' },
+    ...(isGestor ? [{ rotulo: 'Anatel', para: '/anatel' }] : []),
     { rotulo: 'Empresas', para: '/empresas', fim: true },
     { rotulo: 'Obras', para: '/obras' },
     { rotulo: 'Órgãos', para: '/orgaos' },
     { rotulo: 'Consulta pública', para: '/consulta' },
-    ...(servidor?.administrador ? [{ rotulo: 'Contas', para: '/contas' }] : []),
+    ...(servidor?.administrador ? [{ rotulo: 'Administração', para: '/admin' }] : []),
   ];
 
   return (

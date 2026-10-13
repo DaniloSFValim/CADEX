@@ -1,20 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Badge, Button, Card, Empty, ErrorNote, Field, Spinner, Titulo, inputClass, tabela } from '../components/ui';
+import { Badge, Button, Card, Empty, ErrorNote, Field, Spinner, inputClass, tabela } from '../components/ui';
 import { useAuth, type Papel } from '../lib/auth';
 import {
-  SENHA_MINIMA, criarConta, definirAcesso, gerarSenhaProvisoria, listarContas, redefinirSenha, removerAcesso, zerarMfa,
+  PERFIS, SENHA_MINIMA, criarConta, definirAcesso, definirAtivo, gerarSenhaProvisoria, listarContas, redefinirSenha, zerarMfa,
   type Conta,
 } from '../lib/contas';
-
-const PERFIS: { valor: Papel; rotulo: string; descricao: string }[] = [
-  { valor: 'gestor', rotulo: 'SECONSER', descricao: 'cadastra, altera e decide inscrições' },
-  { valor: 'licenciador', rotulo: 'Licenciamento', descricao: 'só registra licenças de obra' },
-  { valor: 'cisp', rotulo: 'CISP', descricao: 'só consulta, sem ver documentos' },
-];
 
 const dataHora = (iso: string | null) =>
   iso ? new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'nunca entrou';
 
+/** Contas e acessos: aba da Administração. O título e as abas ficam na página que a envolve. */
 export default function Contas() {
   const { servidor, session } = useAuth();
   const [contas, setContas] = useState<Conta[] | null>(null);
@@ -31,16 +26,12 @@ export default function Contas() {
     return <Empty>Só administrador gerencia contas e acessos.</Empty>;
   }
 
-  const comAcesso = (contas ?? []).filter((c) => c.papel);
+  const comAcesso = (contas ?? []).filter((c) => c.papel && c.ativo);
+  const desativados = (contas ?? []).filter((c) => c.papel && !c.ativo);
   const semAcesso = (contas ?? []).filter((c) => !c.papel);
 
   return (
     <>
-      <Titulo
-        titulo="Contas e acessos"
-        descricao="Quem entra na área restrita do CADEX e o que cada um pode fazer. Toda mudança fica registrada na auditoria."
-      />
-
       <div className="flex flex-col gap-10">
         <NovaConta onCriada={(msg) => { setAviso(msg); carregar(); }} />
 
@@ -80,6 +71,23 @@ export default function Contas() {
             </div>
           )}
         </Card>
+
+        {desativados.length > 0 && (
+          <Card title={`Acesso desativado (${desativados.length})`} semPadding>
+            <p className="border-b border-tinta-100 px-4 py-3 text-sm text-tinta-500">
+              Não entram nem leem nada. O nome, o perfil e o histórico ficam guardados; reativar devolve o acesso como era.
+            </p>
+            <div className={tabela.moldura}>
+              <table className={tabela.tabela}>
+                <tbody>
+                  {desativados.map((c) => (
+                    <LinhaDesativada key={c.user_id} conta={c} onMudou={(msg) => { setAviso(msg); carregar(); }} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        )}
 
         {semAcesso.length > 0 && (
           <Card title={`Sem acesso ao CADEX (${semAcesso.length})`} semPadding>
@@ -173,7 +181,7 @@ function LinhaConta({ conta, ehVoce, onMudou }: { conta: Conta; ehVoce: boolean;
   const [nome, setNome] = useState(conta.nome ?? '');
   const [papel, setPapel] = useState<Papel>(conta.papel ?? 'gestor');
   const [administrador, setAdministrador] = useState(conta.administrador);
-  const [modo, setModo] = useState<'normal' | 'remover' | 'senha' | 'zerar'>('normal');
+  const [modo, setModo] = useState<'normal' | 'desativar' | 'senha' | 'zerar'>('normal');
   const [senha, setSenha] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -228,18 +236,20 @@ function LinhaConta({ conta, ehVoce, onMudou }: { conta: Conta; ehVoce: boolean;
               <Button variant="secondary" className="px-3! py-1.5!" onClick={() => setModo('zerar')}>Zerar duas etapas</Button>
             )}
             {!ehVoce && (
-              <Button variant="danger" className="px-3! py-1.5!" onClick={() => setModo('remover')}>Remover acesso</Button>
+              <Button variant="danger" className="px-3! py-1.5!" onClick={() => setModo('desativar')}>Desativar acesso</Button>
             )}
           </div>
         )}
-        {modo === 'remover' && (
+        {modo === 'desativar' && (
           <div className="flex flex-col items-end gap-2 text-right text-sm">
-            <span className="text-tinta-700">{conta.nome} deixa de entrar na área restrita. A conta de login continua existindo.</span>
+            <span className="text-tinta-700">
+              {conta.nome} deixa de entrar e de ler qualquer dado, mesmo com a sessão aberta. O cadastro e o histórico ficam guardados e dá para reativar.
+            </span>
             <div className="flex gap-2">
               <Button variant="secondary" className="px-3! py-1.5!" onClick={() => setModo('normal')}>Cancelar</Button>
               <Button variant="danger" className="px-3! py-1.5!" disabled={busy}
-                      onClick={() => agir(() => removerAcesso(conta.user_id), `Acesso de ${conta.nome} removido.`)}>
-                Confirmar remoção
+                      onClick={() => agir(() => definirAtivo(conta.user_id, false), `Acesso de ${conta.nome} desativado.`)}>
+                Confirmar desativação
               </Button>
             </div>
           </div>
@@ -273,6 +283,32 @@ function LinhaConta({ conta, ehVoce, onMudou }: { conta: Conta; ehVoce: boolean;
             </div>
           </div>
         )}
+        <ErrorNote error={error} />
+      </td>
+    </tr>
+  );
+}
+
+function LinhaDesativada({ conta, onMudou }: { conta: Conta; onMudou: (msg: string) => void }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  return (
+    <tr className={tabela.linha}>
+      <td className={tabela.td}>
+        <div className="font-medium text-tinta-900">{conta.nome}</div>
+        <div className="text-xs text-tinta-500">{conta.email}</div>
+      </td>
+      <td className={tabela.td}>{PERFIS.find((p) => p.valor === conta.papel)?.rotulo ?? conta.papel}</td>
+      <td className={`${tabela.td} tabular whitespace-nowrap text-xs text-tinta-600`}>{dataHora(conta.ultimo_acesso)}</td>
+      <td className={`${tabela.td} text-right`}>
+        <Button variant="secondary" className="px-3! py-1.5!" disabled={busy}
+                onClick={async () => {
+                  setBusy(true); setError(null);
+                  try { await definirAtivo(conta.user_id, true); onMudou(`Acesso de ${conta.nome} reativado.`); }
+                  catch (err) { setError(err); } finally { setBusy(false); }
+                }}>
+          Reativar acesso
+        </Button>
         <ErrorNote error={error} />
       </td>
     </tr>

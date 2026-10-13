@@ -13,6 +13,66 @@ próprio (ex.: analista de licenciamento), as políticas de `licencas` e
 
 ## Decididas
 
+### Painel administrativo (13/10/2026)
+- A gestão de contas já existia (`admin_*` e a Edge Function `admin-contas`) e foi
+  **aproveitada**: nenhuma conta, senha ou perfil foi recriado. Ela passou a ser
+  a aba "Contas e acessos" da Administração (`/admin`); `/contas` redireciona.
+- **Desativar em vez de apagar**: `servidores.ativo`. Desativado, o servidor não
+  passa em `is_servidor`, `is_gestor`, `is_licenciador` nem `is_administrador`,
+  então o banco recusa tudo mesmo com a sessão aberta. A tela passa a tratá-lo
+  como sem acesso. A remoção do acesso (`admin_remover_acesso`) segue no banco,
+  mas a tela só desativa e reativa.
+- **Último administrador ativo protegido** por gatilho em `servidores`, valendo
+  para qualquer caminho (função, atualização direta, exclusão da conta de
+  login) e serializado por bloqueio consultivo. Verificado com duas sessões
+  concorrentes: sem o bloqueio, dois administradores se rebaixam ao mesmo tempo
+  e sobram 0; com ele, a segunda mudança espera e é recusada.
+- **Empresa desativável** (`empresas.ativa`), só pelo administrador (o banco
+  recusa os demais). A empresa desativada não pode ser escolhida em licença nova
+  nem passar a ocupar um papel em licença existente; o que já existe não muda.
+  A consulta pública não foi alterada.
+- **Auditoria imutável e do administrador**: gatilhos recusam alterar, apagar e
+  esvaziar `auditoria`, até com acesso direto ao banco. Para uma retenção legal,
+  só desligando o gatilho de propósito. A leitura passou de "qualquer gestor"
+  para "administrador" (com o código do aplicativo): os valores incluem dados dos
+  documentos e CPFs, e nenhuma outra tela lê a tabela.
+- **Configurações**: mostram o que existe (perfis com a contagem de contas
+  ativas, órgãos públicos, prazos da Resolução). Prazos, categorias de empresa,
+  setores e tipos de obra **não são editáveis**: são regras do modelo e do
+  banco; um campo de tela que o banco recusasse seria enganoso. Mudá-los exige
+  uma migração versionada.
+- Eventos de acesso: a tela mostra o último acesso de cada conta e as mudanças
+  administrativas (auditoria de `servidores`). O registro de logins do Supabase
+  Auth não foi integrado.
+- Reversão da migração `20261013130000`: remover os gatilhos e funções novas,
+  as colunas `servidores.ativo` e `empresas.ativa`, e reaplicar as quatro
+  funções `is_*` sem `and ativo`. Nada existente é alterado: as colunas nascem
+  verdadeiras.
+
+### Painel gerencial (13/10/2026)
+- Visão geral das licenças em `/dashboard` (gestor e CISP); as pendências de ação
+  do gestor ficaram em `/dashboard/pendencias`. Tudo sai do mesmo conjunto
+  filtrado, lido do banco.
+- O CADEX não registra a data efetiva de início da obra, só o período previsto e
+  a conclusão. Por isso nada é dado como começado ou terminado só porque uma data
+  passou: "em execução" é deferida, sem conclusão, com o período previsto em curso.
+
+### Licenças: sem "Indeferida", período da obra e papéis (13/10/2026)
+- A situação **"Indeferida"** deixou de ser registrável. O banco recusa a entrada
+  nova (INSERT ou mudança para "indeferida"); licença que já esteja indeferida
+  permanece no histórico e continua editável sem trocar de situação. Na
+  produção não havia nenhuma licença na data desta decisão.
+- As duas datas do período da intervenção são **"Início da obra ou serviço"** e
+  **"Fim da obra ou serviço"** (colunas `inicio_previsto` e `fim_previsto`, sem
+  coluna nova). O fim não pode ser anterior ao início.
+- **Contratante e executora podem ser a mesma empresa cadastrada**
+  (`contratante_id = executora_id`): a titular (operadora, concessionária,
+  construtora) executando a própria obra. A terceirizada continua exigindo
+  contratante e não contrata a si mesma; a titular continua sem contratante
+  diferente de si fora da drenagem e do registro histórico.
+- Reversão: reaplicar `licencas_antes_de_gravar()` de
+  `20261010120000_recomposicao_e_conflitos.sql`. Nenhum dado é alterado.
+
 ### Licenças de obra (01/10/2026)
 - O CADEX **registra** licenças; o pedido tramita e é decidido no **SEI**.
 - Nº do processo em **texto livre** (01/10/2026): o SEI usa

@@ -101,7 +101,8 @@ export const inputClass =
 
 /** Tabelas de listagem. */
 export const tabela = {
-  moldura: 'overflow-x-auto',
+  // `relative`: o texto só para leitor de tela (sr-only) é absoluto e, sem isto, escapa da rolagem e alarga a página.
+  moldura: 'relative overflow-x-auto',
   tabela: 'w-full text-left text-sm',
   cabeca: 'border-b border-tinta-200 text-left',
   th: 'px-3 py-2.5 font-medium text-tinta-400',

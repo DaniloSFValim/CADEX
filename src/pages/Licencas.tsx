@@ -6,7 +6,7 @@ import { dataBR } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { SETORES, SETOR_LABEL, hojeISO, listarEmpresas, nomeEmpresa, type Empresa } from '../lib/empresas';
 import {
-  ESTADO_LICENCA_LABEL, TIPO_OBRA_LABEL, TOM_ESTADO_LICENCA, desempenhoExecutora, estadoLicenca, listarLicencas, nomeExecutora, pendenciasLicencas,
+  ESTADO_LICENCA_LABEL, TIPO_OBRA_LABEL, TOM_ESTADO_LICENCA, desempenhoExecutora, estadoLicenca, listarLicencas, mesmaEmpresaNosPapeis, nomeExecutora, pendenciasLicencas,
   type Desempenho, type EstadoLicenca, type LicencaComTrechos, type NivelDesempenho,
 } from '../lib/licencas';
 
@@ -15,7 +15,7 @@ const FILTROS: { valor: string; rotulo: string; inclui: EstadoLicenca[] }[] = [
   { valor: 'pendencias', rotulo: 'Com pendência (prazo encerrado ou sem As Built)', inclui: ['prazo_encerrado', 'concluida_sem_as_built'] },
   { valor: 'em_analise', rotulo: 'Em análise', inclui: ['em_analise'] },
   { valor: 'concluida', rotulo: 'Concluídas', inclui: ['concluida'] },
-  { valor: 'encerradas', rotulo: 'Indeferidas ou canceladas', inclui: ['indeferida', 'cancelada'] },
+  { valor: 'encerradas', rotulo: 'Canceladas (inclui indeferidas do histórico)', inclui: ['indeferida', 'cancelada'] },
 ];
 
 export default function Licencas() {
@@ -71,9 +71,9 @@ export default function Licencas() {
 
       {licencas && licencas.length > 0 && (
         <div className="mb-10 grid grid-cols-2 gap-x-8 gap-y-6 md:grid-cols-4">
-          <Kpi rotulo="Em execução" valor={conta(['em_execucao'])} tom="alta" detalhe="dentro do cronograma" />
+          <Kpi rotulo="Em execução" valor={conta(['em_execucao'])} tom="alta" detalhe="dentro do período da obra ou serviço" />
           <Kpi rotulo="Aguardando início" valor={conta(['aguardando_inicio'])} detalhe="deferidas, antes do início" />
-          <Kpi rotulo="Prazo encerrado" valor={conta(['prazo_encerrado'])} tom="baixa" detalhe="cronograma vencido sem conclusão" />
+          <Kpi rotulo="Prazo encerrado" valor={conta(['prazo_encerrado'])} tom="baixa" detalhe="fim da obra ou serviço vencido, sem conclusão" />
           <Kpi rotulo="Sem As Built" valor={conta(['concluida_sem_as_built'])} tom="atencao" detalhe="concluídas, art. 26 pendente" />
         </div>
       )}
@@ -135,7 +135,8 @@ export function TabelaLicencas({ licencas, porId, hoje, semExecutora = false }: 
             <th className={tabela.th}>Licença</th>
             {!semExecutora && <th className={tabela.th}>Executora</th>}
             <th className={tabela.th}>Local</th>
-            <th className={tabela.th}>Cronograma</th>
+            <th className={tabela.th}>Início da obra ou serviço</th>
+            <th className={tabela.th}>Fim da obra ou serviço</th>
             <th className={tabela.th}>Situação</th>
           </tr>
         </thead>
@@ -157,7 +158,9 @@ export function TabelaLicencas({ licencas, porId, hoje, semExecutora = false }: 
                 {!semExecutora && (
                   <td className={tabela.td}>
                     {nomeExecutora(l, porId)}
-                    {nomeContr && <div className="text-xs text-tinta-500">para {nomeContr}</div>}
+                    {mesmaEmpresaNosPapeis(l)
+                      ? <div className="text-xs text-tinta-500">própria contratante</div>
+                      : nomeContr && <div className="text-xs text-tinta-500">para {nomeContr}</div>}
                   </td>
                 )}
                 <td className={tabela.td}>
@@ -168,7 +171,10 @@ export function TabelaLicencas({ licencas, porId, hoje, semExecutora = false }: 
                   </div>
                 </td>
                 <td className={`${tabela.td} tabular whitespace-nowrap text-xs text-tinta-700`}>
-                  {l.inicio_previsto ? `${dataBR(l.inicio_previsto)} a ${dataBR(l.fim_previsto)}` : '—'}
+                  {l.inicio_previsto ? dataBR(l.inicio_previsto) : '—'}
+                </td>
+                <td className={`${tabela.td} tabular whitespace-nowrap text-xs text-tinta-700`}>
+                  {l.fim_previsto ? dataBR(l.fim_previsto) : '—'}
                 </td>
                 <td className={tabela.td}><Badge tom={TOM_ESTADO_LICENCA[estado]}>{ESTADO_LICENCA_LABEL[estado]}</Badge></td>
               </tr>
@@ -242,7 +248,7 @@ function proximoVencimento(licencas: LicencaComTrechos[], hoje: string): Licenca
 
 function AtencaoCard({ pend }: { pend: ReturnType<typeof pendenciasLicencas> }) {
   const itens: { rot: string; n: number; tom: 'ruim' | 'alerta' }[] = [
-    { rot: 'Prazo de cronograma encerrado', n: pend.prazoEncerrado.length, tom: 'ruim' },
+    { rot: 'Fim da obra ou serviço vencido', n: pend.prazoEncerrado.length, tom: 'ruim' },
     { rot: 'Concluída sem As Built (art. 26)', n: pend.semAsBuilt.length, tom: 'alerta' },
     { rot: 'Pavimento sem recomposição', n: pend.semRecomposicao.length, tom: 'ruim' },
   ];
@@ -309,7 +315,7 @@ function DesempenhoCard({ d }: { d: Desempenho }) {
           action={<Badge tom={n.tom}>{n.rotulo}</Badge>}>
       <div className="grid grid-cols-2 gap-x-8 gap-y-5 sm:grid-cols-4">
         <Kpi rotulo="Obras (sob a Resolução)" valor={d.obras} detalhe={`${d.concluidas} concluída${d.concluidas === 1 ? '' : 's'}`} />
-        <Kpi rotulo="Concluídas no prazo" valor={pct(d.noPrazo, d.concluidas)} detalhe="dentro do cronograma"
+        <Kpi rotulo="Concluídas no prazo" valor={pct(d.noPrazo, d.concluidas)} detalhe="até o fim da obra ou serviço"
              tom={d.concluidas && d.noPrazo < d.concluidas ? 'baixa' : undefined} />
         <Kpi rotulo="Pavimento recomposto" valor={pct(d.recompostas, d.concluidas)} detalhe="das obras concluídas"
              tom={d.concluidas && d.recompostas < d.concluidas ? 'baixa' : undefined} />
@@ -318,7 +324,7 @@ function DesempenhoCard({ d }: { d: Desempenho }) {
       </div>
       {d.atrasadas > 0 && (
         <p className="mt-4 text-sm text-baixa">
-          {d.atrasadas} obra{d.atrasadas === 1 ? '' : 's'} com prazo do cronograma encerrado sem conclusão.
+          {d.atrasadas} obra{d.atrasadas === 1 ? '' : 's'} com o fim da obra ou serviço vencido, sem conclusão.
         </p>
       )}
     </Card>

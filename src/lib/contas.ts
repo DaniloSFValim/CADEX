@@ -8,11 +8,20 @@ export interface Conta {
   nome: string | null;
   papel: Papel | null;
   administrador: boolean;
+  /** Acesso ativo. Desativado, o servidor não entra nem lê nada, e o cadastro dele fica guardado. */
+  ativo: boolean;
   criado_em: string;
   ultimo_acesso: string | null;
   /** Já cadastrou o aplicativo autenticador. */
   mfa_ativa: boolean;
 }
+
+/** Perfis de acesso e o que cada um faz no cadastro. Ser administrador acrescenta só a gestão de contas. */
+export const PERFIS: { valor: Papel; rotulo: string; descricao: string }[] = [
+  { valor: 'gestor', rotulo: 'SECONSER', descricao: 'cadastra, altera e decide inscrições' },
+  { valor: 'licenciador', rotulo: 'Licenciamento', descricao: 'só registra licenças de obra' },
+  { valor: 'cisp', rotulo: 'CISP', descricao: 'só consulta, sem ver documentos' },
+];
 
 export const SENHA_MINIMA = 10;
 
@@ -29,8 +38,9 @@ export async function definirAcesso(userId: string, nome: string, papel: Papel, 
   if (error) throw error;
 }
 
-export async function removerAcesso(userId: string) {
-  const { error } = await supabase.rpc('admin_remover_acesso', { p_user_id: userId });
+/** Desativa ou reativa o acesso sem apagar nada. O banco recusa desativar o último administrador. */
+export async function definirAtivo(userId: string, ativo: boolean) {
+  const { error } = await supabase.rpc('admin_definir_ativo', { p_user_id: userId, p_ativo: ativo });
   if (error) throw error;
 }
 

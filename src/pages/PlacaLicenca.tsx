@@ -64,7 +64,7 @@ export default function PlacaLicenca() {
               <dd className="text-sm text-tinta-600">{l.tipos_obra.map((t) => TIPO_OBRA_LABEL[t]).join(', ')}</dd>
             </div>
             <div>
-              <dt className="text-xs font-semibold text-tinta-500">Encerramento previsto</dt>
+              <dt className="text-xs font-semibold text-tinta-500">Fim da obra ou serviço</dt>
               <dd className="tabular text-2xl font-bold text-tinta-900">{dataBR(l.fim_previsto)}</dd>
             </div>
           </dl>

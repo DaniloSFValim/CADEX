@@ -47,10 +47,12 @@ select set_config('cadex.test_user_id', '00000000-0000-4000-8000-000000000041', 
 create temp table ids (nome text primary key, id uuid);
 
 do $$
-declare op uuid; te uuid; sub uuid; rt uuid; lic uuid;
+declare op uuid; op2 uuid; te uuid; sub uuid; rt uuid; lic uuid;
 begin
   insert into empresas (cnpj, razao_social, tipo, email)
   values ('12345678000195', 'Operadora Licença S.A.', 'operadora', 'op@l.test') returning id into op;
+  insert into empresas (cnpj, razao_social, tipo, email)
+  values ('11222333000181', 'Outra Operadora Licença S.A.', 'operadora', 'op2@l.test') returning id into op2;
   insert into empresas (cnpj, razao_social, tipo, email, setores)
   values ('98765432000198', 'Executora Licença Ltda.', 'terceirizada', 'te@l.test', '{telecom}') returning id into te;
   insert into empresas (cnpj, razao_social, tipo, email, setores)
@@ -77,9 +79,10 @@ begin
     values ('telecom', 'NIT-050120/000123/2026', '{vala}', 'x', %L, '2026-09-01')$q$, te),
     'informe a contratante', 'aceitou terceirizada sem contratante');
 
-  -- Executora titular (operadora) não tem contratante: ela executa a própria obra.
+  -- Executora titular (operadora) não tem OUTRA contratante: ela executa a própria obra.
+  -- (A própria titular como contratante é permitida; ver 15_periodo_e_papeis.sql.)
   perform pg_temp.recusa(format($q$insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id, contratante_id, protocolo_data)
-    values ('telecom', 'NIT-050120/000123/2026', '{vala}', 'x', %L, %L, '2026-09-01')$q$, op, op),
+    values ('telecom', 'NIT-050120/000123/2026', '{vala}', 'x', %L, %L, '2026-09-01')$q$, op, op2),
     'só se aplica quando a executora é terceirizada', 'aceitou contratante com executora titular');
 
   -- Tipo de obra fora do art. 10
@@ -134,7 +137,7 @@ begin
 
   perform pg_temp.recusa(format($q$update licencas set situacao = 'deferida', decisao_data = '2026-09-20',
       numero = 'LIC 001/2026', art_numero = 'ART-1', inicio_previsto = '2026-12-31', fim_previsto = '2026-10-01'
-    where id = %L$q$, lic), 'fim do cronograma', 'aceitou cronograma invertido');
+    where id = %L$q$, lic), 'fim da obra ou serviço', 'aceitou período invertido');
 
   -- APTA deixou de ser exigida para deferir (flexibilização). As empresas
   -- são tornadas aptas só para conferir que o deferimento congela a
@@ -173,11 +176,15 @@ begin
     'documento e a data', 'aceitou As Built sem data');
   update licencas set as_built_sei = '123', as_built_data = '2026-12-20' where id = lic;
 
+  -- A leitura da auditoria é do administrador (ver 16_administracao_ativacao.sql); aqui só se
+  -- confere que o gatilho gravou, então lê-se fora da RLS e volta ao papel do app.
+  reset role;
   perform pg_temp.assert((select count(*) from auditoria where tabela = 'licencas' and registro_id = lic) >= 3,
     'alterações da licença sem auditoria');
   perform pg_temp.assert((select te = any(empresas) and op = any(empresas) and sub = any(empresas)
                             from auditoria where tabela = 'licencas' and registro_id = lic and operacao = 'INSERT'),
     'auditoria da licença sem as empresas');
+  set local role cadex_test_app;
 end $$;
 
 -- ---------------------------------------------------------------------

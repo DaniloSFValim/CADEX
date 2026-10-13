@@ -8,11 +8,17 @@ import { lerMotivo } from './lib/sessao';
 import Consulta from './pages/Consulta';
 import ConsultaObras from './pages/ConsultaObras';
 import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
+import Painel from './pages/Painel';
+import Pendencias from './pages/Pendencias';
 import CruzamentoAnatel from './pages/CruzamentoAnatel';
 import Empresas from './pages/Empresas';
 import EmpresaPage from './pages/EmpresaPage';
 import Ficha from './pages/Ficha';
+import Administracao from './pages/Administracao';
+import AdminAuditoria from './pages/AdminAuditoria';
+import AdminConfiguracoes from './pages/AdminConfiguracoes';
+import AdminEmpresas from './pages/AdminEmpresas';
+import AdminLicencas from './pages/AdminLicencas';
 import Contas from './pages/Contas';
 import Orgaos from './pages/Orgaos';
 import MinhaConta from './pages/MinhaConta';
@@ -62,7 +68,7 @@ function AreaRestrita() {
       <div className="mx-auto max-w-md p-8 text-center">
         <p className="text-sm text-tinta-700">
           O usuário <strong>{session.user.email}</strong> entrou, mas não está autorizado
-          a usar o sistema. Peça ao administrador para incluí-lo como servidor.
+          a usar o sistema: o acesso não existe ou foi desativado. Peça ao administrador.
         </p>
         <Button variant="secondary" className="mt-4" onClick={() => void signOut()}>Sair</Button>
       </div>
@@ -100,7 +106,8 @@ function AreaRestrita() {
         {/* Home por papel: o gestor abre no Painel; o CISP, nas Empresas. */}
         <Route index element={<Navigate to={servidor.papel === 'gestor' ? '/dashboard' : '/empresas'} replace />} />
         <Route path="empresas" element={<Empresas />} />
-        <Route path="dashboard" element={<Dashboard />} />
+        <Route path="dashboard" element={<Painel />} />
+        <Route path="dashboard/pendencias" element={<Pendencias />} />
         <Route path="anatel" element={<CruzamentoAnatel />} />
         <Route path="empresas/nova" element={<EmpresaPage />} />
         <Route path="empresas/:id" element={<EmpresaPage />} />
@@ -108,7 +115,14 @@ function AreaRestrita() {
         <Route path="obras/nova" element={<LicencaPage />} />
         <Route path="obras/:id" element={<LicencaPage />} />
         <Route path="orgaos" element={<Orgaos />} />
-        <Route path="contas" element={<Contas />} />
+        <Route path="admin" element={<Administracao />}>
+          <Route index element={<Contas />} />
+          <Route path="empresas" element={<AdminEmpresas />} />
+          <Route path="licencas" element={<AdminLicencas />} />
+          <Route path="configuracoes" element={<AdminConfiguracoes />} />
+          <Route path="auditoria" element={<AdminAuditoria />} />
+        </Route>
+        <Route path="contas" element={<Navigate to="/admin" replace />} />
         <Route path="minha-conta" element={<MinhaConta />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

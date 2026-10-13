@@ -38,6 +38,8 @@ export interface Empresa {
   observacoes: string | null;
   /** Representante legal da empresa (para a relação oficial de executores). */
   representante: string | null;
+  /** Cadastro ativo. Só o administrador desativa; a empresa desativada não entra em licença nova. */
+  ativa: boolean;
   situacao: Situacao;
   processo_numero: string | null;
   data_requerimento: string | null;
@@ -329,6 +331,15 @@ export async function salvarEmpresa(id: string, input: EmpresaInput): Promise<vo
   // CNPJ e tipo não mudam depois do cadastro: o tipo está no código CADEX.
   const { cnpj: _cnpj, tipo: _tipo, ...resto } = limpar(input);
   const { error } = await supabase.from('empresas').update(resto).eq('id', id);
+  if (error) throw error;
+}
+
+/**
+ * Ativa ou desativa o cadastro de uma empresa. Só o administrador consegue: o banco recusa os
+ * demais. A empresa desativada não entra em licença nova; o que já existe não muda.
+ */
+export async function definirEmpresaAtiva(id: string, ativa: boolean): Promise<void> {
+  const { error } = await supabase.from('empresas').update({ ativa }).eq('id', id);
   if (error) throw error;
 }
 

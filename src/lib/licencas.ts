@@ -124,6 +124,34 @@ export const TOM_ESTADO_LICENCA: Record<EstadoLicenca, 'neutro' | 'bom' | 'alert
   concluida: 'bom',
 };
 
+/**
+ * Contratante e executora são a mesma empresa cadastrada: a titular executa a
+ * própria obra. Um só cadastro, nos dois papéis.
+ */
+export const mesmaEmpresaNosPapeis = (l: { contratante_id: string | null; executora_id: string | null }) =>
+  Boolean(l.contratante_id) && l.contratante_id === l.executora_id;
+
+/** Situações que o registro oferece. "Indeferida" só aparece em licença que já está indeferida (histórico). */
+export function situacoesRegistraveis<T extends string>(todas: readonly T[], atual: SituacaoLicenca | null): T[] {
+  return todas.filter((s) => s !== 'indeferida' || atual === 'indeferida');
+}
+
+/**
+ * Período da obra ou serviço (início e fim, em AAAA-MM-DD). O início em branco
+ * vale a data da decisão, como no envio. Devolve a mensagem do erro, ou nulo.
+ */
+export function erroPeriodoObra(p: {
+  deferida: boolean; decisao: string; inicio: string; fim: string; concluidaEm: string;
+}): string | null {
+  if (!p.deferida) return null;
+  const inicio = p.inicio || p.decisao;
+  if (inicio && p.fim && p.fim < inicio) return 'O fim da obra ou serviço não pode ser anterior ao início.';
+  if (inicio && p.concluidaEm && p.concluidaEm < inicio) {
+    return 'A conclusão não pode ser anterior ao início da obra ou serviço.';
+  }
+  return null;
+}
+
 export function estadoLicenca(
   l: Pick<Licenca, 'situacao' | 'inicio_previsto' | 'fim_previsto' | 'concluida_em' | 'as_built_sei'>,
   hoje: string,
@@ -197,14 +225,35 @@ export function linkMapa(t: Pick<Trecho, 'inicio_lat' | 'inicio_lng' | 'fim_lat'
 // ---------------------------------------------------------------------
 // Banco
 // ---------------------------------------------------------------------
+/**
+ * Todas as licenças, em páginas: a API corta a resposta (1000 linhas por
+ * padrão) sem avisar, e um painel de contagens não pode truncar em silêncio.
+ * Avança pelo que veio, não por um tamanho fixo, então vale para qualquer limite
+ * configurado no servidor. A ordem inclui o id para a paginação ser estável.
+ */
 export async function listarLicencas(empresaId?: string): Promise<LicencaComTrechos[]> {
-  let q = supabase.from('licencas').select('*, licenca_trechos(*)').order('protocolo_data', { ascending: false });
-  if (empresaId) {
-    q = q.or(`executora_id.eq.${empresaId},contratante_id.eq.${empresaId},subcontratada_id.eq.${empresaId}`);
+  const todas: LicencaComTrechos[] = [];
+  const vistas = new Set<string>();
+  const TAMANHO = 1000;
+  for (let desde = 0; ; ) {
+    let q = supabase.from('licencas').select('*, licenca_trechos(*)', { count: 'exact' })
+      .order('protocolo_data', { ascending: false }).order('id');
+    if (empresaId) {
+      q = q.or(`executora_id.eq.${empresaId},contratante_id.eq.${empresaId},subcontratada_id.eq.${empresaId}`);
+    }
+    const { data, error, count } = await q.range(desde, desde + TAMANHO - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    // Página sem nenhuma licença nova: o servidor ignorou o deslocamento. Para em vez de repetir.
+    const novas = (data as LicencaComTrechos[]).filter((l) => !vistas.has(l.id));
+    if (novas.length === 0) break;
+    for (const l of novas) vistas.add(l.id);
+    todas.push(...novas);
+    desde += data.length;
+    // Com o total exato, no caso comum (poucas licenças) basta uma requisição.
+    if (count != null && todas.length >= count) break;
   }
-  const { data, error } = await q;
-  if (error) throw error;
-  return (data as LicencaComTrechos[]).map(ordenarTrechos);
+  return todas.map(ordenarTrechos);
 }
 
 export async function buscarLicenca(id: string): Promise<LicencaComTrechos> {

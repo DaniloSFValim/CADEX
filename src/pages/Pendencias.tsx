@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { AbasPainel } from '../components/AbasPainel';
 import { Badge, Empty, ErrorNote, Kpi, Spinner, linkTexto } from '../components/ui';
 import { SituacaoBadge, dataBR } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
@@ -53,7 +54,7 @@ interface Sumario {
   inscricoes_vencendo: number;
 }
 
-export default function Dashboard() {
+export default function Pendencias() {
   const { podeEditar } = useAuth();
   const [sumario, setSumario] = useState<Sumario | null>(null);
   const [analises, setAnalises] = useState<AnalisePendente[]>([]);
@@ -122,6 +123,8 @@ export default function Dashboard() {
     obras.semRecomposicao.length;
 
   return (
+    <>
+    <AbasPainel />
     <div className="flex flex-col gap-14">
       <header className="max-w-3xl">
         <p className="flex items-center gap-2.5 text-sm font-medium text-tinta-500">
@@ -337,7 +340,7 @@ export default function Dashboard() {
                         acao={<Link to="/obras" className={`${linkTexto} text-sm`}>Ver todas as licenças</Link>} />
         <div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-3">
           <Kpi rotulo="Prazos encerrados" valor={obras.prazoEncerrado.length}
-               detalhe="cronograma vencido sem conclusão registrada"
+               detalhe="fim da obra ou serviço vencido, sem conclusão registrada"
                tom={obras.prazoEncerrado.length ? 'baixa' : undefined} />
           <Kpi rotulo="Recomposição pendente" valor={obras.semRecomposicao.length}
                detalhe="obra concluída sem o pavimento recomposto"
@@ -348,7 +351,7 @@ export default function Dashboard() {
         </div>
 
         <TabelaPendencias
-          titulo="Prazo do cronograma encerrado"
+          titulo="Fim da obra ou serviço vencido"
           vazio="Nenhuma licença com prazo encerrado sem conclusão."
           coluna="Prazo terminou em" data={(l) => l.fim_previsto} sufixo="de atraso" tom="ruim"
           itens={obras.prazoEncerrado} porId={porId} />
@@ -372,6 +375,7 @@ export default function Dashboard() {
         )}
       </section>
     </div>
+    </>
   );
 }
 
