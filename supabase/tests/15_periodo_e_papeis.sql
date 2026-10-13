@@ -40,6 +40,7 @@ begin
   insert into empresas (cnpj, razao_social, nome_fantasia, tipo, email)
   values ('12345678000195', 'Operadora Papeis S.A.', 'OpPapeis', 'operadora', 'p1@p.test') returning id into op;
   insert into ids values ('op', op);
+  update empresas set executa_obras = true where id = op;  -- cadastro habilita contratante = executora
 
   alter table licencas disable trigger licencas_antes_de_gravar;
   insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id, protocolo_data, situacao, decisao_data)
@@ -136,6 +137,31 @@ begin
       'setor','telecom','processo_sei','NIT-050120/000507/2026','numero','507/2026','tipos_obra',array['vala'],'escopo','Vala',
       'executora_id',ter,'contratante_id',op,'protocolo_data','2026-09-10','situacao','deferida','decisao_data','2026-09-15',
       'inicio_previsto','2026-10-01','fim_previsto','2026-10-30'), trecho);
+
+  -- 9. A marca "executa obra ou serviço" do cadastro é que habilita contratante = executora.
+  perform pg_temp.assert(not (select executa_obras from empresas where id = op2), 'empresa nova nasceu marcada');
+  perform pg_temp.recusa(format($q$select public.salvar_licenca(jsonb_build_object(
+      'setor','telecom','processo_sei','NIT-050120/000508/2026','numero','508/2026','tipos_obra',array['vala'],'escopo','x',
+      'executora_id','%s','contratante_id','%s','protocolo_data','2026-09-10','situacao','deferida','decisao_data','2026-09-15',
+      'inicio_previsto','2026-10-01','fim_previsto','2026-10-30'), %L::jsonb)$q$, op2, op2, trecho::text),
+    'não está cadastrada como executora', 'empresa sem a marca foi aceita como contratante e executora');
+  -- Também por edição de uma licença existente.
+  lic := public.salvar_licenca(jsonb_build_object(
+      'setor','telecom','processo_sei','NIT-050120/000509/2026','numero','509/2026','tipos_obra',array['vala'],'escopo','Vala',
+      'executora_id',ter,'contratante_id',op2,'protocolo_data','2026-09-10','situacao','deferida','decisao_data','2026-09-15',
+      'inicio_previsto','2026-10-01','fim_previsto','2026-10-30'), trecho);
+  perform pg_temp.recusa(format('update licencas set executora_id = %L where id = %L', op2, lic),
+    'não está cadastrada como executora', 'troca para contratante = executora sem a marca foi aceita');
+  -- Terceirizada não recebe a marca.
+  perform pg_temp.recusa(format('update empresas set executa_obras = true where id = %L', ter),
+    'empresas_executa_obras_so_titular', 'terceirizada foi marcada como executora de obra própria');
+  -- Com a marca no cadastro, a mesma licença passa.
+  update empresas set executa_obras = true where id = op2;
+  update licencas set executora_id = op2 where id = lic;
+  perform pg_temp.assert((select contratante_id = executora_id from licencas where id = lic), 'não passou com a marca');
+  -- Tirar a marca depois não trava a edição de outros campos da licença já registrada.
+  update empresas set executa_obras = false where id = op2;
+  update licencas set observacoes = 'ajuste' where id = lic;
 end $$;
 
 rollback;

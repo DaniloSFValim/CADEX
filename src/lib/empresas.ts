@@ -40,6 +40,9 @@ export interface Empresa {
   representante: string | null;
   /** Cadastro ativo. Só o administrador desativa; a empresa desativada não entra em licença nova. */
   ativa: boolean;
+  /** A titular (operadora, concessionária, construtora) executa obra ou serviço por conta própria.
+   *  Habilita a licença com a mesma empresa como contratante e executora. Terceirizada não usa. */
+  executa_obras: boolean;
   situacao: Situacao;
   processo_numero: string | null;
   data_requerimento: string | null;
@@ -56,7 +59,7 @@ export interface Empresa {
 /** Dados cadastrais editáveis no formulário da empresa. */
 export type EmpresaInput = Pick<Empresa,
   'cnpj' | 'razao_social' | 'nome_fantasia' | 'tipo' | 'setores' | 'email' | 'telefone' | 'cep' | 'logradouro'
-  | 'numero' | 'complemento' | 'bairro' | 'cidade' | 'uf' | 'representante' | 'observacoes'>;
+  | 'numero' | 'complemento' | 'bairro' | 'cidade' | 'uf' | 'representante' | 'observacoes' | 'executa_obras'>;
 
 /** Dados da inscrição, alterados pela SECONSER. */
 export type InscricaoInput = Pick<Empresa,

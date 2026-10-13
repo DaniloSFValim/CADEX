@@ -22,7 +22,7 @@ import { Operacional } from './Operacional';
 const VAZIA: EmpresaInput = {
   cnpj: '', razao_social: '', nome_fantasia: '', tipo: 'operadora', setores: ['telecom'],
   email: '', telefone: '', cep: '', logradouro: '', numero: '', complemento: '',
-  bairro: '', cidade: 'Niterói', uf: 'RJ', representante: '', observacoes: '',
+  bairro: '', cidade: 'Niterói', uf: 'RJ', representante: '', observacoes: '', executa_obras: false,
 };
 
 const paraInput = (e: Empresa): EmpresaInput => ({
@@ -31,6 +31,7 @@ const paraInput = (e: Empresa): EmpresaInput => ({
   cep: e.cep ?? '', logradouro: e.logradouro ?? '', numero: e.numero ?? '',
   complemento: e.complemento ?? '', bairro: e.bairro ?? '', cidade: e.cidade ?? '',
   uf: e.uf ?? '', representante: e.representante ?? '', observacoes: e.observacoes ?? '',
+  executa_obras: e.executa_obras,
 });
 
 export default function EmpresaPage() {
@@ -271,6 +272,7 @@ function EmpresaForm({
                 onChange={(e) => {
                   const t = e.target.value as EmpresaInput['tipo'];
                   set('tipo', t);
+                  if (t === 'terceirizada') set('executa_obras', false);
                   set('setores', t === 'operadora' ? ['telecom'] : t === 'construtora' ? ['construcao']
                     : t === 'concessionaria' ? ['gas'] : []);
                 }}>
@@ -280,6 +282,18 @@ function EmpresaForm({
           <option value="terceirizada">Terceirizada</option>
         </select>
       </Field>
+      {v.tipo !== 'terceirizada' && (
+        <label className="flex items-start gap-2 text-sm text-tinta-800 sm:col-span-6">
+          <input type="checkbox" className="mt-0.5" checked={v.executa_obras}
+                 onChange={(e) => set('executa_obras', e.target.checked)} />
+          <span>
+            Esta empresa também executa obras ou serviços por conta própria.
+            <span className="mt-0.5 block text-xs text-tinta-500">
+              Habilita, no registro da licença, escolher a própria empresa como executora, sem terceirizada.
+            </span>
+          </span>
+        </label>
+      )}
       {v.tipo === 'concessionaria' && (
         <Field label="Setor" required className="sm:col-span-3"
                hint={editando ? 'Faz parte do código CADEX: não pode ser alterado.' : undefined}>

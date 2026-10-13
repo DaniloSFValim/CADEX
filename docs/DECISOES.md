@@ -160,3 +160,16 @@ próprio (ex.: analista de licenciamento), as políticas de `licencas` e
 - O PDF traz cabeçalho da Prefeitura/SECONSER, filtros, total, data e hora da
   emissão, quem emitiu e "Página X de Y". Contratante pessoa física (dono de
   imóvel na drenagem) sai como "Particular".
+
+### Titular que executa a própria obra: marca no cadastro (14/10/2026)
+- O cadastro da empresa (operadora, concessionária, construtora) ganhou a opção
+  "Esta empresa também executa obras ou serviços por conta própria"
+  (`empresas.executa_obras`, padrão desmarcado). Terceirizada não usa: o banco recusa.
+- Só com a marca a licença aceita a mesma empresa como contratante e executora ("A
+  própria contratante executará a obra ou serviço"). Sem ela, a caixa fica
+  desabilitada com o motivo e um atalho para o cadastro; o banco também recusa.
+- A regra vale para a licença nova ou para a que troca de contratante/executora.
+  Licença já registrada continua editável mesmo que a marca seja tirada depois; a
+  Administração → Licenças aponta esse caso para revisão.
+- Na migração, empresa que já constava como contratante e executora de alguma
+  licença foi marcada, para o cadastro refletir o que já estava registrado.

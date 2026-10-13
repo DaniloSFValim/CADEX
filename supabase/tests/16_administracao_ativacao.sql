@@ -37,9 +37,9 @@ insert into servidores (user_id, nome, papel, administrador) values
   ('00000000-0000-4000-8000-000000000033', 'Gestor Comum', 'gestor', false),
   ('00000000-0000-4000-8000-000000000034', 'Consulta', 'cisp', false);
 
-insert into empresas (cnpj, razao_social, nome_fantasia, tipo, email, setores) values
-  ('12345678000195', 'Operadora Ativa S.A.', 'OpAtiva', 'operadora', 'a@t.test', '{telecom}'),
-  ('11222333000181', 'Operadora Parada S.A.', 'OpParada', 'operadora', 'p@t.test', '{telecom}');
+insert into empresas (cnpj, razao_social, nome_fantasia, tipo, email, setores, executa_obras) values
+  ('12345678000195', 'Operadora Ativa S.A.', 'OpAtiva', 'operadora', 'a@t.test', '{telecom}', true),
+  ('11222333000181', 'Operadora Parada S.A.', 'OpParada', 'operadora', 'p@t.test', '{telecom}', true);
 
 do $$
 begin
