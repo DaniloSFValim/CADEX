@@ -80,6 +80,8 @@ function filtrar<T extends Record<string, unknown>>(linhas: T[], q: URLSearchPar
       const campo = l[k];
       if (op === 'eq' && String(campo) !== val) return false;
       if (op === 'ilike' && !String(campo ?? '').toLowerCase().includes(val.replace(/\*/g, '').toLowerCase())) return false;
+      if (op === 'is' && val === 'null' && campo != null) return false;
+      if (op === 'not' && val === 'is.null' && campo == null) return false;
       if (op === 'gte' && String(campo) < val) return false;
       if (op === 'lte' && String(campo) > val) return false;
     }
@@ -166,6 +168,22 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
       estado.licencas = base ? estado.licencas.map((l) => (l.id === id ? nova : l)) : [...estado.licencas, nova];
       return responder(id);
     }
+    if (caminho === 'rpc/admin_excluir_licenca' || caminho === 'rpc/admin_restaurar_licenca' || caminho === 'rpc/admin_excluir_licenca_definitivamente') {
+      const { p_id, p_motivo } = corpo as { p_id: string; p_motivo?: string | null };
+      const l = estado.licencas.find((x) => x.id === p_id);
+      if (!l) return route.fulfill({ status: 400, headers: CORS, contentType: 'application/json', body: JSON.stringify({ message: 'Licença não encontrada.' }) });
+      if (caminho === 'rpc/admin_excluir_licenca') {
+        estado.licencas = estado.licencas.map((x) => (x.id === p_id
+          ? { ...x, excluida_em: new Date().toISOString(), excluida_por: ID_USUARIO, excluida_motivo: p_motivo ?? null } : x));
+        return vazio();
+      }
+      if (caminho === 'rpc/admin_restaurar_licenca') {
+        estado.licencas = estado.licencas.map((x) => (x.id === p_id ? { ...x, excluida_em: null, excluida_por: null, excluida_motivo: null } : x));
+        return vazio();
+      }
+      estado.licencas = estado.licencas.filter((x) => x.id !== p_id);
+      return responder({ numero: l.numero, processo_sei: l.processo_sei, trechos_apagados: l.licenca_trechos.length });
+    }
     if (caminho === 'rpc/obras_publicas') return responder(obrasPublicas(estado));
 
     semSimulacao.push(`${req.method()} ${caminho}`);
@@ -184,7 +202,7 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
 function obrasPublicas(estado: Cenario) {
   const d = new Date(); const hoje = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const nome = (e?: Empresa) => (e ? (e.nome_fantasia?.trim() || e.razao_social) : null);
-  return estado.licencas.filter((l) => l.situacao === 'deferida' || l.situacao === 'cancelada').map((l) => {
+  return estado.licencas.filter((l) => !l.excluida_em && (l.situacao === 'deferida' || l.situacao === 'cancelada')).map((l) => {
     const og = estado.orgaos.find((o) => o.id === l.orgao_contratante_id);
     const situacao = l.situacao === 'cancelada' ? 'cancelada' : l.concluida_em ? 'concluida'
       : l.inicio_previsto && hoje < l.inicio_previsto ? 'aguardando_inicio'

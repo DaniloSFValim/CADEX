@@ -107,7 +107,7 @@ begin
 
   perform pg_temp.recusa(format($q$insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id, contratante_id, protocolo_data)
     values ('telecom', 'NIT-050120/000123/2026', '{vala}', 'x', %L, %L, '2026-09-01')$q$, te, op),
-    'licencas_processo_sei_key', 'aceitou processo SEI repetido');
+    'licencas_processo_sei_ativo', 'aceitou processo SEI repetido');
 
   -- Trecho com latitude e longitude trocadas
   perform pg_temp.recusa(format($q$insert into licenca_trechos (licenca_id, logradouro, inicio_lat, inicio_lng)
@@ -160,7 +160,7 @@ begin
 
   perform pg_temp.recusa(format($q$insert into licencas (setor, processo_sei, numero, tipos_obra, escopo, executora_id, contratante_id, protocolo_data)
     values ('telecom', 'NIT-050120/000999/2026', 'LIC 001/2026', '{poste}', 'x', %L, %L, '2026-09-01')$q$, te, op),
-    'licencas_numero_key', 'aceitou número de licença repetido');
+    'licencas_numero_ativo', 'aceitou número de licença repetido');
 
   perform pg_temp.recusa(format($q$update licencas set situacao = 'em_analise' where id = %L$q$, lic),
     'só pode ser cancelada', 'deferida voltou para análise');

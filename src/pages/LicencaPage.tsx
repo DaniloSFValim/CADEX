@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Badge, Button, Card, ErrorNote, Field, Spinner, Titulo, botaoLink, inputClass, linkTexto } from '../components/ui';
 import { QrCode } from '../components/QrCode';
+import { ExcluirLicenca } from '../components/ExclusaoLicenca';
 import { SituacaoBadge, dataBR } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { formatCnpj, formatCpf, isValidCnpj, isValidCpf, onlyDigits } from '../lib/cnpj';
@@ -106,7 +107,8 @@ const trechoParaForm = (t: Trecho & { id: string }): TrechoForm => ({
 export default function LicencaPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { podeLicenciar } = useAuth();
+  const { podeLicenciar, servidor } = useAuth();
+  const administrador = Boolean(servidor?.administrador);
   const [licenca, setLicenca] = useState<LicencaComTrechos | null>(null);
   const [empresas, setEmpresas] = useState<Empresa[] | null>(null);
   const [vinculos, setVinculos] = useState<Vinculo[]>([]);
@@ -130,6 +132,10 @@ export default function LicencaPage() {
     <>
       <Titulo
         trilha={<><Link to="/obras" className="hover:underline">Obras</Link> / {licenca ? licenca.processo_sei : 'nova'}</>}
+        acoes={licenca && administrador && !licenca.excluida_em && (
+          <ExcluirLicenca licenca={licenca} empresas={new Map(empresas.map((e) => [e.id, e]))} orgaos={orgaos} hoje={hoje}
+                          onExcluida={(aviso) => navigate('/admin/licencas', { state: { aviso } })} />
+        )}
         titulo={licenca ? (licenca.numero ? `Licença ${licenca.numero}` : 'Pedido de licença') : 'Registrar licença'}
         descricao={licenca
           ? <span className="inline-flex flex-wrap items-center gap-2">
@@ -140,7 +146,14 @@ export default function LicencaPage() {
             </span>
           : 'Lance os dados do processo: executora habilitada no setor, trechos da obra e a situação (em execução ou concluída).'}
       />
-      {licenca?.situacao === 'deferida' && <Placa licenca={licenca} />}
+      {licenca?.excluida_em && (
+        <p role="status" className="mb-6 rounded-sm border-l-4 border-baixa bg-baixa/6 px-3 py-2 text-sm text-tinta-800">
+          Esta licença está na lixeira (excluída em {dataBR(licenca.excluida_em.slice(0, 10))}
+          {licenca.excluida_motivo && `: ${licenca.excluida_motivo}`}). Não aparece nas listas, no mapa nem na consulta pública.{' '}
+          <Link to="/admin/licencas" className="font-semibold underline">Ir para a lixeira</Link>
+        </p>
+      )}
+      {licenca?.situacao === 'deferida' && !licenca.excluida_em && <Placa licenca={licenca} />}
       {licenca && <Conflitos key={licenca.atualizado_em} licencaId={licenca.id} />}
       <LicencaForm
         key={licenca?.id ?? 'nova'}
@@ -148,7 +161,7 @@ export default function LicencaPage() {
         empresas={empresas}
         vinculos={vinculos}
         orgaos={orgaos}
-        somenteLeitura={!podeLicenciar}
+        somenteLeitura={!podeLicenciar || Boolean(licenca?.excluida_em)}
         onSalvo={async (novoId) => {
           if (!licenca) navigate(`/obras/${novoId}`, { replace: true });
           else setLicenca(await buscarLicenca(novoId));
