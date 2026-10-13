@@ -225,14 +225,35 @@ export function linkMapa(t: Pick<Trecho, 'inicio_lat' | 'inicio_lng' | 'fim_lat'
 // ---------------------------------------------------------------------
 // Banco
 // ---------------------------------------------------------------------
+/**
+ * Todas as licenças, em páginas: a API corta a resposta (1000 linhas por
+ * padrão) sem avisar, e um painel de contagens não pode truncar em silêncio.
+ * Avança pelo que veio, não por um tamanho fixo, então vale para qualquer limite
+ * configurado no servidor. A ordem inclui o id para a paginação ser estável.
+ */
 export async function listarLicencas(empresaId?: string): Promise<LicencaComTrechos[]> {
-  let q = supabase.from('licencas').select('*, licenca_trechos(*)').order('protocolo_data', { ascending: false });
-  if (empresaId) {
-    q = q.or(`executora_id.eq.${empresaId},contratante_id.eq.${empresaId},subcontratada_id.eq.${empresaId}`);
+  const todas: LicencaComTrechos[] = [];
+  const vistas = new Set<string>();
+  const TAMANHO = 1000;
+  for (let desde = 0; ; ) {
+    let q = supabase.from('licencas').select('*, licenca_trechos(*)', { count: 'exact' })
+      .order('protocolo_data', { ascending: false }).order('id');
+    if (empresaId) {
+      q = q.or(`executora_id.eq.${empresaId},contratante_id.eq.${empresaId},subcontratada_id.eq.${empresaId}`);
+    }
+    const { data, error, count } = await q.range(desde, desde + TAMANHO - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    // Página sem nenhuma licença nova: o servidor ignorou o deslocamento. Para em vez de repetir.
+    const novas = (data as LicencaComTrechos[]).filter((l) => !vistas.has(l.id));
+    if (novas.length === 0) break;
+    for (const l of novas) vistas.add(l.id);
+    todas.push(...novas);
+    desde += data.length;
+    // Com o total exato, no caso comum (poucas licenças) basta uma requisição.
+    if (count != null && todas.length >= count) break;
   }
-  const { data, error } = await q;
-  if (error) throw error;
-  return (data as LicencaComTrechos[]).map(ordenarTrechos);
+  return todas.map(ordenarTrechos);
 }
 
 export async function buscarLicenca(id: string): Promise<LicencaComTrechos> {

@@ -8,7 +8,8 @@ import { lerMotivo } from './lib/sessao';
 import Consulta from './pages/Consulta';
 import ConsultaObras from './pages/ConsultaObras';
 import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
+import Painel from './pages/Painel';
+import Pendencias from './pages/Pendencias';
 import CruzamentoAnatel from './pages/CruzamentoAnatel';
 import Empresas from './pages/Empresas';
 import EmpresaPage from './pages/EmpresaPage';
@@ -100,7 +101,8 @@ function AreaRestrita() {
         {/* Home por papel: o gestor abre no Painel; o CISP, nas Empresas. */}
         <Route index element={<Navigate to={servidor.papel === 'gestor' ? '/dashboard' : '/empresas'} replace />} />
         <Route path="empresas" element={<Empresas />} />
-        <Route path="dashboard" element={<Dashboard />} />
+        <Route path="dashboard" element={<Painel />} />
+        <Route path="dashboard/pendencias" element={<Pendencias />} />
         <Route path="anatel" element={<CruzamentoAnatel />} />
         <Route path="empresas/nova" element={<EmpresaPage />} />
         <Route path="empresas/:id" element={<EmpresaPage />} />
