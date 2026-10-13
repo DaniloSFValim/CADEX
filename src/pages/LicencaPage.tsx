@@ -166,11 +166,14 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, somenteLeitura, onSa
   const set = <K extends keyof Form>(k: K, v: Form[K]) => { setF((x) => ({ ...x, [k]: v })); setSalvo(false); };
   const porId = useMemo(() => new Map(empresas.map((e) => [e.id, e])), [empresas]);
   const executora = porId.get(f.executora_id);
+  // Empresa desativada (Administração) não entra em licença nova; a que esta licença já usa continua listada.
+  const jaUsadas = new Set([licenca?.executora_id, licenca?.contratante_id, licenca?.subcontratada_id].filter(Boolean));
+  const ativaOuJaUsada = (e: Empresa) => e.ativa || jaUsadas.has(e.id);
   // Executora: empresa HABILITADA (deferida/apta) que atua no setor da licença.
-  const executoras = empresas.filter((e) => atuaNoSetor(e, f.setor) && podeAtuar(situacaoEfetiva(e, hoje)));
+  const executoras = empresas.filter((e) => ativaOuJaUsada(e) && atuaNoSetor(e, f.setor) && podeAtuar(situacaoEfetiva(e, hoje)));
   // Contratante: titular (operadora, concessionária ou construtora) do setor. Inclui a
   // própria executora: a titular que executa a própria obra é contratante e executora.
-  const contratantes = empresas.filter((e) => ehContratante(e.tipo) && atuaNoSetor(e, f.setor));
+  const contratantes = empresas.filter((e) => ativaOuJaUsada(e) && ehContratante(e.tipo) && atuaNoSetor(e, f.setor));
 
   // Responsáveis técnicos da executora e da subcontratada.
   useEffect(() => {
@@ -217,11 +220,11 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, somenteLeitura, onSa
   const titularLivre = drenagem || anterior;
   // Sob a Resolução: só subcontratada com vínculo ativo. Fora dela: qualquer terceirizada do setor.
   const subcontratadas = (!resolucao
-    ? empresas.filter((e) => e.tipo === 'terceirizada' && e.id !== f.executora_id)
+    ? empresas.filter((e) => ativaOuJaUsada(e) && e.tipo === 'terceirizada' && e.id !== f.executora_id)
     : vinculos
       .filter((v) => v.contratante_id === f.executora_id && !v.fim)
       .map((v) => porId.get(v.contratada_id))
-      .filter((e): e is Empresa => Boolean(e))).filter((e) => atuaNoSetor(e, f.setor));
+      .filter((e): e is Empresa => Boolean(e))).filter((e) => ativaOuJaUsada(e) && atuaNoSetor(e, f.setor));
   // Com contratante definida (e fora da drenagem e do histórico), a executora é
   // terceirizada ou a própria contratante; a titular não executa para outra.
   const executorasLista = executoras.filter((e) =>

@@ -23,7 +23,7 @@ export function Layout() {
     { rotulo: 'Obras', para: '/obras' },
     { rotulo: 'Órgãos', para: '/orgaos' },
     { rotulo: 'Consulta pública', para: '/consulta' },
-    ...(servidor?.administrador ? [{ rotulo: 'Contas', para: '/contas' }] : []),
+    ...(servidor?.administrador ? [{ rotulo: 'Administração', para: '/admin' }] : []),
   ];
 
   return (

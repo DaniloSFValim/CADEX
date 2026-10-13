@@ -176,11 +176,15 @@ begin
     'documento e a data', 'aceitou As Built sem data');
   update licencas set as_built_sei = '123', as_built_data = '2026-12-20' where id = lic;
 
+  -- A leitura da auditoria é do administrador (ver 16_administracao_ativacao.sql); aqui só se
+  -- confere que o gatilho gravou, então lê-se fora da RLS e volta ao papel do app.
+  reset role;
   perform pg_temp.assert((select count(*) from auditoria where tabela = 'licencas' and registro_id = lic) >= 3,
     'alterações da licença sem auditoria');
   perform pg_temp.assert((select te = any(empresas) and op = any(empresas) and sub = any(empresas)
                             from auditoria where tabela = 'licencas' and registro_id = lic and operacao = 'INSERT'),
     'auditoria da licença sem as empresas');
+  set local role cadex_test_app;
 end $$;
 
 -- ---------------------------------------------------------------------

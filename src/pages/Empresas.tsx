@@ -166,6 +166,7 @@ export default function Empresas() {
                       <Link to={`/empresas/${e.id}`} className="font-display text-base font-bold text-tinta-900 hover:text-marca-700 hover:underline">
                         {nomeEmpresa(e)}
                       </Link>
+                      {!e.ativa && <span className="ml-2 align-middle"><Badge tom="alerta">Desativada</Badge></span>}
                       {e.nome_fantasia && <div className="text-xs text-tinta-500">{e.razao_social}</div>}
                     </div>
                     <SituacaoBadge s={s} />
@@ -225,6 +226,7 @@ export default function Empresas() {
                         <Link to={`/empresas/${e.id}`} className="font-medium text-tinta-900 hover:text-marca-700 hover:underline">
                           {nomeEmpresa(e)}
                         </Link>
+                        {!e.ativa && <span className="ml-2 align-middle"><Badge tom="alerta">Desativada</Badge></span>}
                         {e.nome_fantasia && <div className="text-xs text-tinta-500">{e.razao_social}</div>}
                       </td>
                       <td className={`${tabela.td} tabular whitespace-nowrap text-xs text-tinta-700`}>{e.codigo_cadex}</td>
