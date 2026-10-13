@@ -2,8 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { Badge, Button, Card, Empty, ErrorNote, Field, Spinner, inputClass, tabela } from '../components/ui';
 import { useAuth, type Papel } from '../lib/auth';
 import {
-  PERFIS, SENHA_MINIMA, criarConta, definirAcesso, definirAtivo, gerarSenhaProvisoria, listarContas, redefinirSenha, zerarMfa,
-  type Conta,
+  PERFIS, SENHA_MINIMA, criarConta, definirAcesso, definirAtivo, excluirConta, gerarSenhaProvisoria, listarContas, redefinirSenha,
+  vinculosDaConta, zerarMfa, type Conta, type VinculosDaConta,
 } from '../lib/contas';
 
 const dataHora = (iso: string | null) =>
@@ -181,7 +181,7 @@ function LinhaConta({ conta, ehVoce, onMudou }: { conta: Conta; ehVoce: boolean;
   const [nome, setNome] = useState(conta.nome ?? '');
   const [papel, setPapel] = useState<Papel>(conta.papel ?? 'gestor');
   const [administrador, setAdministrador] = useState(conta.administrador);
-  const [modo, setModo] = useState<'normal' | 'desativar' | 'senha' | 'zerar'>('normal');
+  const [modo, setModo] = useState<'normal' | 'desativar' | 'senha' | 'zerar' | 'excluir'>('normal');
   const [senha, setSenha] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -238,6 +238,9 @@ function LinhaConta({ conta, ehVoce, onMudou }: { conta: Conta; ehVoce: boolean;
             {!ehVoce && (
               <Button variant="danger" className="px-3! py-1.5!" onClick={() => setModo('desativar')}>Desativar acesso</Button>
             )}
+            {!ehVoce && (
+              <Button variant="danger" className="px-3! py-1.5!" onClick={() => setModo('excluir')}>Excluir usuário</Button>
+            )}
           </div>
         )}
         {modo === 'desativar' && (
@@ -253,6 +256,9 @@ function LinhaConta({ conta, ehVoce, onMudou }: { conta: Conta; ehVoce: boolean;
               </Button>
             </div>
           </div>
+        )}
+        {modo === 'excluir' && (
+          <PainelExclusao conta={conta} onCancelar={() => setModo('normal')} onExcluida={onMudou} />
         )}
         {modo === 'zerar' && (
           <div className="flex flex-col items-end gap-2 text-right text-sm">
@@ -290,6 +296,7 @@ function LinhaConta({ conta, ehVoce, onMudou }: { conta: Conta; ehVoce: boolean;
 }
 
 function LinhaDesativada({ conta, onMudou }: { conta: Conta; onMudou: (msg: string) => void }) {
+  const [excluindo, setExcluindo] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   return (
@@ -308,7 +315,9 @@ function LinhaDesativada({ conta, onMudou }: { conta: Conta; onMudou: (msg: stri
                   catch (err) { setError(err); } finally { setBusy(false); }
                 }}>
           Reativar acesso
-        </Button>
+        </Button>{' '}
+        <Button variant="danger" className="px-3! py-1.5!" onClick={() => setExcluindo(true)}>Excluir usuário</Button>
+        {excluindo && <PainelExclusao conta={conta} onCancelar={() => setExcluindo(false)} onExcluida={onMudou} />}
         <ErrorNote error={error} />
       </td>
     </tr>
@@ -316,6 +325,7 @@ function LinhaDesativada({ conta, onMudou }: { conta: Conta; onMudou: (msg: stri
 }
 
 function LinhaSemAcesso({ conta, onMudou }: { conta: Conta; onMudou: (msg: string) => void }) {
+  const [excluindo, setExcluindo] = useState(false);
   const [nome, setNome] = useState('');
   const [papel, setPapel] = useState<Papel>('cisp');
   const [busy, setBusy] = useState(false);
@@ -340,9 +350,68 @@ function LinhaSemAcesso({ conta, onMudou }: { conta: Conta; onMudou: (msg: strin
                   catch (err) { setError(err); } finally { setBusy(false); }
                 }}>
           Dar acesso
-        </Button>
+        </Button>{' '}
+        <Button variant="danger" className="px-3! py-1.5!" onClick={() => setExcluindo(true)}>Excluir usuário</Button>
+        {excluindo && <PainelExclusao conta={conta} onCancelar={() => setExcluindo(false)} onExcluida={onMudou} />}
         <ErrorNote error={error} />
       </td>
     </tr>
+  );
+}
+
+/**
+ * Confirmação da exclusão de usuário: mostra quem é, o que a conta tem de registros e o que acontece,
+ * e só exclui depois de digitar o e-mail da conta. A autorização é conferida no banco, não aqui.
+ */
+function PainelExclusao({ conta, onCancelar, onExcluida }: {
+  conta: Conta; onCancelar: () => void; onExcluida: (msg: string) => void;
+}) {
+  const [vinculos, setVinculos] = useState<VinculosDaConta | null>(null);
+  const [digitado, setDigitado] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  const quem = conta.nome ?? conta.email;
+
+  useEffect(() => { vinculosDaConta(conta.user_id).then(setVinculos).catch(setError); }, [conta.user_id]);
+
+  const confirmar = async () => {
+    setBusy(true); setError(null);
+    try { await excluirConta(conta.user_id); onExcluida(`Usuário ${quem} excluído. O acesso foi removido e a conta de login apagada.`); }
+    catch (err) { setError(err); } finally { setBusy(false); }
+  };
+
+  return (
+    <div role="group" aria-label="Confirmar exclusão do usuário"
+         className="mt-3 w-full max-w-md rounded-sm border border-baixa/40 bg-baixa/4 p-4 text-left text-sm">
+      <dl className="grid gap-1">
+        <div className="flex gap-2"><dt className="w-24 flex-none text-tinta-500">Nome</dt><dd>{conta.nome ?? 'Sem acesso ao CADEX'}</dd></div>
+        <div className="flex gap-2"><dt className="w-24 flex-none text-tinta-500">E-mail</dt><dd className="min-w-0 break-all">{conta.email}</dd></div>
+        <div className="flex gap-2"><dt className="w-24 flex-none text-tinta-500">Perfil</dt>
+          <dd>{PERFIS.find((p) => p.valor === conta.papel)?.rotulo ?? '—'}{conta.administrador && ', administrador'}</dd></div>
+        <div className="flex gap-2"><dt className="w-24 flex-none text-tinta-500">Último acesso</dt><dd>{dataHora(conta.ultimo_acesso)}</dd></div>
+      </dl>
+      <p className="mt-3 text-tinta-700">
+        A conta de login é apagada e o acesso ao CADEX, removido na hora, mesmo com a sessão aberta. <strong>Não dá para desfazer.</strong>{' '}
+        O que {quem} fez continua na auditoria, com o nome.
+        {vinculos && (vinculos.documentos_enviados + vinculos.mudancas_de_situacao > 0) && (
+          <> {vinculos.documentos_enviados > 0 && `${vinculos.documentos_enviados} documento${vinculos.documentos_enviados === 1 ? '' : 's'} enviado${vinculos.documentos_enviados === 1 ? '' : 's'}`}
+            {vinculos.documentos_enviados > 0 && vinculos.mudancas_de_situacao > 0 && ' e '}
+            {vinculos.mudancas_de_situacao > 0 && `${vinculos.mudancas_de_situacao} mudança${vinculos.mudancas_de_situacao === 1 ? '' : 's'} de situação`} perdem o campo "enviado por" / "feito por".</>
+        )}
+      </p>
+      {vinculos && <p className="mt-1 text-xs text-tinta-500">{vinculos.eventos_auditoria} evento{vinculos.eventos_auditoria === 1 ? '' : 's'} na auditoria.</p>}
+      <Field label="Para confirmar, digite o e-mail da conta" className="mt-3">
+        <input className={inputClass} value={digitado} onChange={(e) => setDigitado(e.target.value)} autoComplete="off" />
+      </Field>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button variant="secondary" className="px-3! py-1.5!" onClick={onCancelar}>Cancelar</Button>
+        <Button variant="danger" className="px-3! py-1.5!"
+                disabled={busy || !vinculos || digitado.trim().toLowerCase() !== conta.email.toLowerCase()}
+                onClick={() => void confirmar()}>
+          {busy ? 'Excluindo…' : 'Confirmar exclusão'}
+        </Button>
+      </div>
+      <ErrorNote error={error} />
+    </div>
   );
 }

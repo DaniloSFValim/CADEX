@@ -1,5 +1,5 @@
-// CADEX — criação de contas de login, redefinição de senha e zerar a
-// verificação em duas etapas (celular perdido).
+// CADEX — criação de contas de login, redefinição de senha, zerar a
+// verificação em duas etapas (celular perdido) e exclusão de conta.
 //
 // Só isto precisa da chave de serviço do Supabase, que nunca vai ao
 // navegador. Quem chama tem de ser administrador (is_administrador(), com
@@ -59,6 +59,25 @@ Deno.serve(async (req) => {
     for (const f of data?.factors ?? []) {
       const r = await admin.auth.admin.mfa.deleteFactor({ id: f.id, userId });
       if (r.error) return resposta(400, { erro: `Não foi possível zerar a verificação: ${r.error.message}` });
+    }
+    return resposta(200, { ok: true });
+  }
+
+  if (corpo.acao === 'excluir') {
+    const userId = typeof corpo.user_id === 'string' ? corpo.user_id : '';
+    if (!userId) return resposta(400, { erro: 'Conta não informada.' });
+    // 1ª metade, com o token de quem chamou (a auditoria registra o administrador): confere as
+    // proteções (só administrador, nunca a si mesmo, nunca o último administrador ativo), guarda a
+    // identificação e REMOVE O ACESSO ao CADEX.
+    const r = await comoQuemChamou.rpc('admin_excluir_conta', { p_user_id: userId });
+    if (r.error) return resposta(400, { erro: r.error.message });
+    // 2ª metade, com a chave de serviço: apaga a conta de login (credenciais e sessões). Se falhar, a
+    // conta já está sem acesso; o administrador pode repetir a exclusão.
+    const apagado = await admin.auth.admin.deleteUser(userId);
+    if (apagado.error && !/not.?found/i.test(apagado.error.message)) {
+      return resposta(502, {
+        erro: `O acesso ao CADEX foi removido, mas a conta de login não pôde ser apagada (${apagado.error.message}). Tente excluir de novo.`,
+      });
     }
     return resposta(200, { ok: true });
   }

@@ -6,8 +6,9 @@ import { dataBR } from '../components/Situacao';
 import { Button, Empty, ErrorNote, Spinner, Titulo, inputClass } from '../components/ui';
 import { hojeISO, listarEmpresas, somaDias, type Empresa } from '../lib/empresas';
 import {
-  ESTADO_LICENCA_LABEL, SITUACAO_LICENCA_LABEL, TIPO_OBRA_LABEL, estadoLicenca, listarLicencas, nomeExecutora,
-  type LicencaComTrechos, type SituacaoLicenca, type TipoObra,
+  ESTADO_LICENCA_LABEL, ORIGENS, ORIGEM_LABEL, SITUACAO_LICENCA_LABEL, TIPOS_INTERVENCAO, TIPO_INTERVENCAO_LABEL, TIPO_OBRA_LABEL,
+  estadoLicenca, listarLicencas, nomeExecutora,
+  type LicencaComTrechos, type OrigemIntervencao, type SituacaoLicenca, type TipoIntervencao, type TipoObra,
 } from '../lib/licencas';
 import { listarOrgaos, type Orgao } from '../lib/orgaos';
 import {
@@ -190,6 +191,18 @@ export default function Painel() {
             </select>
           </label>
           <label className="block text-[13px] font-medium text-tinta-700">Tipo de intervenção
+            <select className={`${inputClass} mt-1`} value={filtros.intervencao} onChange={(e) => set('intervencao', e.target.value as TipoIntervencao | '')}>
+              <option value="">Todos</option>
+              {TIPOS_INTERVENCAO.map((t) => <option key={t} value={t}>{TIPO_INTERVENCAO_LABEL[t]}</option>)}
+            </select>
+          </label>
+          <label className="block text-[13px] font-medium text-tinta-700">Origem da intervenção
+            <select className={`${inputClass} mt-1`} value={filtros.origem} onChange={(e) => set('origem', e.target.value as OrigemIntervencao | '')}>
+              <option value="">Todas</option>
+              {ORIGENS.map((o) => <option key={o} value={o}>{ORIGEM_LABEL[o]}</option>)}
+            </select>
+          </label>
+          <label className="block text-[13px] font-medium text-tinta-700">Tipo de obra
             <select className={`${inputClass} mt-1`} value={filtros.tipo} onChange={(e) => set('tipo', e.target.value as TipoObra | '')}>
               <option value="">Todos</option>
               {(Object.keys(TIPO_OBRA_LABEL) as TipoObra[]).map((t) => <option key={t} value={t}>{TIPO_OBRA_LABEL[t]}</option>)}

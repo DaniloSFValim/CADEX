@@ -50,6 +50,8 @@ export interface Backend {
   /** Faz as leituras daquela tabela falharem (HTTP 500) até `restaurar`. */
   falhar(tabela: string): void;
   restaurar(tabela: string): void;
+  /** A próxima chamadas à função de borda (admin-contas) respondem com este erro, até passar `null`. */
+  funcaoComErro(mensagem: string | null): void;
 }
 
 const b64 = (o: unknown) => Buffer.from(JSON.stringify(o)).toString('base64url');
@@ -80,6 +82,8 @@ function filtrar<T extends Record<string, unknown>>(linhas: T[], q: URLSearchPar
       const campo = l[k];
       if (op === 'eq' && String(campo) !== val) return false;
       if (op === 'ilike' && !String(campo ?? '').toLowerCase().includes(val.replace(/\*/g, '').toLowerCase())) return false;
+      if (op === 'is' && val === 'null' && campo != null) return false;
+      if (op === 'not' && val === 'is.null' && campo == null) return false;
       if (op === 'gte' && String(campo) < val) return false;
       if (op === 'lte' && String(campo) > val) return false;
     }
@@ -95,6 +99,7 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
   const chamadas: Chamada[] = [];
   const semSimulacao: string[] = [];
   const falhas = new Set<string>();
+  let erroFuncao: string | null = null;
   const { user, session } = sessao('voce@teste');
 
   await page.addInitScript(([k, v]) => localStorage.setItem(k, v), ['sb-localhost-auth-token', JSON.stringify(session)] as const);
@@ -102,7 +107,7 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
   await page.route(`${SB}/**`, async (route: Route) => {
     const req = route.request();
     const url = new URL(req.url());
-    const caminho = url.pathname.replace(/^\/(rest|auth)\/v1\//, '');
+    const caminho = url.pathname.replace(/^\/(rest|auth)\/v1\//, '').replace(/^\//, '');
     const unico = (req.headers().accept ?? '').includes('vnd.pgrst.object');
     const contaExata = (req.headers().prefer ?? '').includes('count=exact');
     const CORS = { 'access-control-allow-origin': '*', 'access-control-expose-headers': 'content-range' };
@@ -149,13 +154,49 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
     if (['vinculos', 'responsaveis_tecnicos', 'documentos', 'tipos_documento', 'funcionarios', 'veiculos'].includes(caminho)) return responder([]);
 
     if (caminho === 'rpc/admin_listar_contas') return responder([contaVoce(estado.administrador, estado.perfil), ...estado.contas]);
+    if (caminho === 'rpc/admin_vinculos_da_conta') {
+      return responder({ eventos_auditoria: 7, documentos_enviados: 2, mudancas_de_situacao: 0, licencas_excluidas: 0 });
+    }
+    if (caminho === 'functions/v1/admin-contas') {
+      if (erroFuncao) return route.fulfill({ status: 400, headers: CORS, contentType: 'application/json', body: JSON.stringify({ erro: erroFuncao }) });
+      const { acao, user_id } = corpo as { acao: string; user_id: string };
+      if (acao === 'excluir') estado.contas = estado.contas.filter((c) => c.user_id !== user_id);
+      return responder({ ok: true });
+    }
     if (caminho === 'rpc/admin_definir_ativo') {
       const { p_user_id, p_ativo } = corpo as { p_user_id: string; p_ativo: boolean };
       estado.contas = estado.contas.map((c) => (c.user_id === p_user_id ? { ...c, ativo: p_ativo } : c));
       return vazio();
     }
     if (caminho === 'rpc/conflitos_de_licenca') return responder([]);
-    if (caminho === 'rpc/salvar_licenca') return responder(uuid(7777));
+    if (caminho === 'rpc/salvar_licenca') {
+      // Grava como o banco: a licença e os trechos passam a existir para as outras telas (lista, painel, mapa).
+      const { p_licenca, p_trechos } = corpo as { p_licenca: Record<string, unknown>; p_trechos: Record<string, unknown>[] };
+      const id = (p_licenca.id as string | undefined) ?? uuid(7000 + estado.licencas.length + 1);
+      const trechos = p_trechos.map((t, i) => ({ id: (t.id as string | undefined) ?? uuid(8000 + i), ordem: i + 1, ...t }));
+      const base = estado.licencas.find((l) => l.id === id);
+      const nova = { ...(base ?? { codigo_publico: `c${id.slice(-4)}`, criado_em: new Date().toISOString() }), ...p_licenca, id,
+        atualizado_em: new Date().toISOString(), licenca_trechos: trechos } as unknown as LicencaComTrechos;
+      estado.licencas = base ? estado.licencas.map((l) => (l.id === id ? nova : l)) : [...estado.licencas, nova];
+      return responder(id);
+    }
+    if (caminho === 'rpc/admin_excluir_licenca' || caminho === 'rpc/admin_restaurar_licenca' || caminho === 'rpc/admin_excluir_licenca_definitivamente') {
+      const { p_id, p_motivo } = corpo as { p_id: string; p_motivo?: string | null };
+      const l = estado.licencas.find((x) => x.id === p_id);
+      if (!l) return route.fulfill({ status: 400, headers: CORS, contentType: 'application/json', body: JSON.stringify({ message: 'Licença não encontrada.' }) });
+      if (caminho === 'rpc/admin_excluir_licenca') {
+        estado.licencas = estado.licencas.map((x) => (x.id === p_id
+          ? { ...x, excluida_em: new Date().toISOString(), excluida_por: ID_USUARIO, excluida_motivo: p_motivo ?? null } : x));
+        return vazio();
+      }
+      if (caminho === 'rpc/admin_restaurar_licenca') {
+        estado.licencas = estado.licencas.map((x) => (x.id === p_id ? { ...x, excluida_em: null, excluida_por: null, excluida_motivo: null } : x));
+        return vazio();
+      }
+      estado.licencas = estado.licencas.filter((x) => x.id !== p_id);
+      return responder({ numero: l.numero, processo_sei: l.processo_sei, trechos_apagados: l.licenca_trechos.length });
+    }
+    if (caminho === 'rpc/obras_publicas') return responder(obrasPublicas(estado));
 
     semSimulacao.push(`${req.method()} ${caminho}`);
     return responder(unico ? {} : []);
@@ -166,5 +207,29 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
     de: (caminho, metodo) => chamadas.filter((c) => c.caminho === caminho && (!metodo || c.metodo === metodo)),
     falhar: (t) => { falhas.add(t); },
     restaurar: (t) => { falhas.delete(t); },
+    funcaoComErro: (m) => { erroFuncao = m; },
   };
+}
+
+/** Espelha obras_publicas() do banco: só deferidas e canceladas, com a situação derivada das datas. */
+function obrasPublicas(estado: Cenario) {
+  const d = new Date(); const hoje = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const nome = (e?: Empresa) => (e ? (e.nome_fantasia?.trim() || e.razao_social) : null);
+  return estado.licencas.filter((l) => !l.excluida_em && (l.situacao === 'deferida' || l.situacao === 'cancelada')).map((l) => {
+    const og = estado.orgaos.find((o) => o.id === l.orgao_contratante_id);
+    const situacao = l.situacao === 'cancelada' ? 'cancelada' : l.concluida_em ? 'concluida'
+      : l.inicio_previsto && hoje < l.inicio_previsto ? 'aguardando_inicio'
+        : l.fim_previsto && hoje > l.fim_previsto ? 'prazo_encerrado' : 'vigente';
+    return {
+      codigo: l.codigo_publico, setor: l.setor, numero: l.numero, tipos_obra: l.tipos_obra, tipo_intervencao: l.tipo_intervencao,
+      origem: l.origem_intervencao, escopo: l.escopo, inicio_previsto: l.inicio_previsto, fim_previsto: l.fim_previsto,
+      decisao_data: l.decisao_data, situacao,
+      executora: nome(estado.empresas.find((e) => e.id === l.executora_id)) ?? l.executora_razao_social,
+      contratante: nome(estado.empresas.find((e) => e.id === l.contratante_id)) ?? og?.sigla ?? og?.nome ?? null,
+      trechos: l.licenca_trechos.map((t) => ({
+        logradouro: t.logradouro, bairro: t.bairro, inicio: [t.inicio_lng, t.inicio_lat],
+        fim: t.fim_lat == null ? null : [t.fim_lng, t.fim_lat],
+      })),
+    };
+  });
 }

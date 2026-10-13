@@ -17,6 +17,27 @@ export type EstadoLicenca =
   | 'aguardando_inicio' | 'em_execucao' | 'prazo_encerrado'
   | 'concluida_sem_as_built' | 'concluida';
 
+/** Natureza da intervenção: uma obra ou um serviço. */
+export type TipoIntervencao = 'obra' | 'servico';
+/**
+ * Quem origina a intervenção. As públicas exigem o órgão contratante certo
+ * (Prefeitura, autarquia ou, mais raro, órgão estadual ou federal).
+ */
+export type OrigemIntervencao = 'concessionaria' | 'municipio' | 'autarquia' | 'outro_ente';
+
+export const TIPO_INTERVENCAO_LABEL: Record<TipoIntervencao, string> = { obra: 'Obra', servico: 'Serviço' };
+export const TIPOS_INTERVENCAO = Object.keys(TIPO_INTERVENCAO_LABEL) as TipoIntervencao[];
+
+export const ORIGEM_LABEL: Record<OrigemIntervencao, string> = {
+  concessionaria: 'Concessionária ou prestadora de serviço',
+  municipio: 'Prefeitura ou órgão municipal',
+  autarquia: 'Autarquia municipal',
+  outro_ente: 'Órgão estadual ou federal',
+};
+export const ORIGENS = Object.keys(ORIGEM_LABEL) as OrigemIntervencao[];
+/** Origem pública: o contratante é um órgão cadastrado, não uma empresa. */
+export const origemPublica = (o: OrigemIntervencao) => o !== 'concessionaria';
+
 export interface Licenca {
   id: string;
   /** Telecom segue a Resolução nº 001/2026; os demais setores, regras mais leves. */
@@ -56,6 +77,17 @@ export interface Licenca {
   as_built_sei: string | null;
   as_built_data: string | null;
   observacoes: string | null;
+  tipo_intervencao: TipoIntervencao;
+  origem_intervencao: OrigemIntervencao;
+  /** Dados do contrato público (opcionais; não aparecem na consulta pública). */
+  contrato_numero: string | null;
+  processo_administrativo: string | null;
+  ordem_servico_numero: string | null;
+  objeto_contrato: string | null;
+  /** Na lixeira (só o administrador vê): quando, por quem e por quê foi excluída. */
+  excluida_em: string | null;
+  excluida_por: string | null;
+  excluida_motivo: string | null;
   empresas_no_deferimento: Record<string, unknown> | null;
   /** Código aleatório do QR Code da placa (art. 14); não é o id interno. */
   codigo_publico: string;
@@ -236,8 +268,10 @@ export async function listarLicencas(empresaId?: string): Promise<LicencaComTrec
   const vistas = new Set<string>();
   const TAMANHO = 1000;
   for (let desde = 0; ; ) {
+    // A lixeira (excluida_em preenchida) fica de fora: o banco já a esconde de quem não é administrador,
+    // e para o administrador as listas também só mostram o que está ativo.
     let q = supabase.from('licencas').select('*, licenca_trechos(*)', { count: 'exact' })
-      .order('protocolo_data', { ascending: false }).order('id');
+      .is('excluida_em', null).order('protocolo_data', { ascending: false }).order('id');
     if (empresaId) {
       q = q.or(`executora_id.eq.${empresaId},contratante_id.eq.${empresaId},subcontratada_id.eq.${empresaId}`);
     }
@@ -267,7 +301,8 @@ function ordenarTrechos(l: LicencaComTrechos): LicencaComTrechos {
 }
 
 export type LicencaInput = Omit<Licenca,
-  'id' | 'empresas_no_deferimento' | 'codigo_publico' | 'anterior_resolucao' | 'criado_em' | 'atualizado_em'> & { id?: string };
+  'id' | 'empresas_no_deferimento' | 'codigo_publico' | 'anterior_resolucao' | 'criado_em' | 'atualizado_em'
+  | 'excluida_em' | 'excluida_por' | 'excluida_motivo'> & { id?: string };
 
 /** Grava licença e trechos numa só transação (função salvar_licenca). */
 export async function salvarLicenca(licenca: LicencaInput, trechos: Trecho[]): Promise<string> {
@@ -276,9 +311,30 @@ export async function salvarLicenca(licenca: LicencaInput, trechos: Trecho[]): P
   return data as string;
 }
 
-export async function excluirLicenca(id: string): Promise<void> {
-  const { error } = await supabase.from('licencas').delete().eq('id', id);
+/** Lixeira: o que o administrador excluiu e ainda pode restaurar ou apagar de vez. */
+export async function listarLicencasExcluidas(): Promise<LicencaComTrechos[]> {
+  const { data, error } = await supabase.from('licencas').select('*, licenca_trechos(*)')
+    .not('excluida_em', 'is', null).order('excluida_em', { ascending: false });
   if (error) throw error;
+  return ((data ?? []) as LicencaComTrechos[]).map(ordenarTrechos);
+}
+
+/** Envia a licença para a lixeira. Só administrador; o banco confere. */
+export async function excluirLicenca(id: string, motivo: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_excluir_licenca', { p_id: id, p_motivo: motivo.trim() || null });
+  if (error) throw error;
+}
+
+export async function restaurarLicenca(id: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_restaurar_licenca', { p_id: id });
+  if (error) throw error;
+}
+
+/** Apaga de vez uma licença que já está na lixeira (e seus trechos). A auditoria permanece. */
+export async function excluirLicencaDefinitivamente(id: string): Promise<{ numero: string | null; processo_sei: string; trechos_apagados: number }> {
+  const { data, error } = await supabase.rpc('admin_excluir_licenca_definitivamente', { p_id: id });
+  if (error) throw error;
+  return data as { numero: string | null; processo_sei: string; trechos_apagados: number };
 }
 
 // ---------------------------------------------------------------------
@@ -310,6 +366,8 @@ export type SituacaoPublica = 'vigente' | 'aguardando_inicio' | 'prazo_encerrado
 
 export interface LicencaPublica {
   setor: Setor;
+  tipo_intervencao: TipoIntervencao;
+  origem: OrigemIntervencao;
   numero: string;
   tipos_obra: TipoObra[];
   escopo: string;

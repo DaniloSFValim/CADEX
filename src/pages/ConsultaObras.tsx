@@ -6,9 +6,9 @@ import { Rodape } from '../components/Rodape';
 import { Empty, ErrorNote, Spinner, inputClass, linkTexto } from '../components/ui';
 import { dataBR } from '../components/Situacao';
 import { SETORES, SETOR_LABEL } from '../lib/empresas';
-import { TIPO_OBRA_LABEL } from '../lib/licencas';
+import { ORIGENS, ORIGEM_LABEL, TIPOS_INTERVENCAO, TIPO_INTERVENCAO_LABEL, TIPO_OBRA_LABEL, origemPublica } from '../lib/licencas';
 import {
-  COR_SITUACAO, FILTRO_OBRAS, SITUACAO_PUBLICA_LABEL, anosDasObras, baixarObrasGeojson, buscarObrasPublicas, filtrarObras,
+  COR_SITUACAO, FILTRO_OBRAS, SITUACAO_PUBLICA_LABEL, anosDasObras, baixarObrasGeojson, buscarObrasPublicas, filtrarObras, temLocalizacao,
   type ObraPublica,
 } from '../lib/obras';
 
@@ -22,6 +22,8 @@ export default function ConsultaObras() {
   const [situacao, setSituacao] = useState('vigentes');
   const [ano, setAno] = useState('');
   const [setor, setSetor] = useState('');
+  const [intervencao, setIntervencao] = useState('');
+  const [origem, setOrigem] = useState('');
   const [busca, setBusca] = useState('');
   const [foco, setFoco] = useState<string | null>(null);
   const [baixando, setBaixando] = useState(false);
@@ -36,7 +38,8 @@ export default function ConsultaObras() {
     finally { setBaixando(false); }
   }
 
-  const filtradas = useMemo(() => filtrarObras(obras ?? [], { situacao, ano, busca, setor }), [obras, situacao, ano, busca, setor]);
+  const filtradas = useMemo(() => filtrarObras(obras ?? [], { situacao, ano, busca, setor, intervencao, origem }),
+    [obras, situacao, ano, busca, setor, intervencao, origem]);
   const anos = useMemo(() => anosDasObras(obras ?? []), [obras]);
   const stats = useMemo(() => resumo(obras ?? []), [obras]);
 
@@ -74,12 +77,20 @@ export default function ConsultaObras() {
 
         {/* Filtros numa superfície clara, logo abaixo das abas. */}
         <div className="mt-5 rounded-xl border border-tinta-200 bg-white p-3 shadow-xs">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_190px_240px_140px]">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_repeat(5,auto)]">
             <input className={inputClass} value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar obra"
                    placeholder="Rua, bairro, empresa ou nº da licença" />
             <select className={inputClass} value={setor} onChange={(e) => setSetor(e.target.value)} aria-label="Setor">
               <option value="">Todos os setores</option>
               {SETORES.map((st) => <option key={st} value={st}>{SETOR_LABEL[st]}</option>)}
+            </select>
+            <select className={inputClass} value={intervencao} onChange={(e) => setIntervencao(e.target.value)} aria-label="Tipo de intervenção">
+              <option value="">Obras e serviços</option>
+              {TIPOS_INTERVENCAO.map((t) => <option key={t} value={t}>{TIPO_INTERVENCAO_LABEL[t]}s</option>)}
+            </select>
+            <select className={inputClass} value={origem} onChange={(e) => setOrigem(e.target.value)} aria-label="Origem da intervenção">
+              <option value="">Todas as origens</option>
+              {ORIGENS.map((o) => <option key={o} value={o}>{ORIGEM_LABEL[o]}</option>)}
             </select>
             <select className={inputClass} value={situacao} onChange={(e) => setSituacao(e.target.value)} aria-label="Situação">
               {FILTRO_OBRAS.map((f) => <option key={f.valor} value={f.valor}>{f.rotulo}</option>)}
@@ -119,11 +130,21 @@ export default function ConsultaObras() {
             {/* Coluna da lista, viva ao lado do mapa. */}
             <section aria-live="polite">
               <div className="mb-3 flex items-baseline justify-between gap-3">
-                <h2 className="font-display text-lg font-bold tracking-[-0.01em] text-tinta-900">Obras licenciadas</h2>
+                <h2 className="font-display text-lg font-bold tracking-[-0.01em] text-tinta-900">Obras e serviços licenciados</h2>
                 <span className="text-sm text-tinta-500">
                   {filtradas.length}{filtradas.length !== obras.length && ` de ${obras.length}`}
                 </span>
               </div>
+              {filtradas.length < obras.length && (
+                <p className="mb-3 text-xs text-tinta-500">
+                  {obras.length - filtradas.length} fora dos filtros atuais
+                  {situacao === 'vigentes' && ' (a lista começa só com o que está vigente ou a começar)'}.{' '}
+                  <button type="button" className={linkTexto}
+                          onClick={() => { setSituacao('todas'); setAno(''); setSetor(''); setBusca(''); setIntervencao(''); setOrigem(''); }}>
+                    Mostrar tudo
+                  </button>
+                </p>
+              )}
 
               {filtradas.length === 0 ? (
                 <div className="rounded-xl border border-tinta-200 bg-white">
@@ -150,12 +171,22 @@ export default function ConsultaObras() {
                         {o.executora}{o.contratante && `, para ${o.contratante}`}
                         <span className="text-tinta-500">; {o.tipos_obra.map((t) => TIPO_OBRA_LABEL[t].toLowerCase()).join(', ')}</span>
                       </p>
+                      <p className="mt-0.5 text-xs text-tinta-500">
+                        {TIPO_INTERVENCAO_LABEL[o.tipo_intervencao]}
+                        {origemPublica(o.origem) && ` pública · ${ORIGEM_LABEL[o.origem].toLowerCase()}`}
+                      </p>
                       <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
-                        <span className="tabular text-tinta-500">{dataBR(o.inicio_previsto)} a {dataBR(o.fim_previsto)}</span>
-                        <button type="button" className="font-semibold text-marca-600 hover:underline"
-                                onClick={() => { setFoco(o.codigo); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
-                          Ver no mapa
-                        </button>
+                        <span className="tabular text-tinta-500">
+                          {o.inicio_previsto || o.fim_previsto
+                            ? `${o.inicio_previsto ? dataBR(o.inicio_previsto) : '—'} a ${o.fim_previsto ? dataBR(o.fim_previsto) : '—'}`
+                            : 'Sem período informado'}
+                        </span>
+                        {temLocalizacao(o)
+                          ? <button type="button" className="font-semibold text-marca-600 hover:underline"
+                                    onClick={() => { setFoco(o.codigo); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+                              Ver no mapa
+                            </button>
+                          : <span className="text-tinta-500">Sem localização no mapa</span>}
                         <Link to={`/licenca/${o.codigo}`} className="tabular font-medium text-marca-600 hover:underline">
                           nº&nbsp;{o.numero}
                         </Link>

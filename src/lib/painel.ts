@@ -1,6 +1,6 @@
 import { somaDias } from './empresas';
 import {
-  estadoLicenca, type EstadoLicenca, type LicencaComTrechos, type SituacaoLicenca, type TipoObra,
+  estadoLicenca, type EstadoLicenca, type LicencaComTrechos, type OrigemIntervencao, type SituacaoLicenca, type TipoIntervencao, type TipoObra,
 } from './licencas';
 
 // ---------------------------------------------------------------------
@@ -30,9 +30,12 @@ export interface Filtros {
   contratante: string;
   executora: string;
   tipo: TipoObra | '';
+  /** Obra ou serviço. */
+  intervencao: TipoIntervencao | '';
+  origem: OrigemIntervencao | '';
 }
 
-export const SEM_FILTROS: Filtros = { de: '', ate: '', status: '', contratante: '', executora: '', tipo: '' };
+export const SEM_FILTROS: Filtros = { de: '', ate: '', status: '', contratante: '', executora: '', tipo: '', intervencao: '', origem: '' };
 
 export const temFiltro = (f: Filtros) => Object.values(f).some(Boolean);
 
@@ -122,6 +125,8 @@ export function aplicarFiltros(
     if (f.contratante && parteDe(l, 'contratante', c)?.chave !== f.contratante) return false;
     if (f.executora && parteDe(l, 'executora', c)?.chave !== f.executora) return false;
     if (f.tipo && !l.tipos_obra.includes(f.tipo)) return false;
+    if (f.intervencao && l.tipo_intervencao !== f.intervencao) return false;
+    if (f.origem && l.origem_intervencao !== f.origem) return false;
     return true;
   });
 }

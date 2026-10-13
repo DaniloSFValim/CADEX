@@ -70,6 +70,28 @@ export function zerarMfa(userId: string) {
   return chamarAdmin({ acao: 'zerar_mfa', user_id: userId });
 }
 
+/** Registros ligados à conta, para o administrador conferir antes de excluir. */
+export interface VinculosDaConta {
+  eventos_auditoria: number;
+  documentos_enviados: number;
+  mudancas_de_situacao: number;
+  licencas_excluidas: number;
+}
+
+export async function vinculosDaConta(userId: string): Promise<VinculosDaConta> {
+  const { data, error } = await supabase.rpc('admin_vinculos_da_conta', { p_user_id: userId });
+  if (error) throw error;
+  return data as VinculosDaConta;
+}
+
+/**
+ * Exclui a conta: remove o acesso ao CADEX e apaga o login (credenciais e sessões). O histórico de
+ * quem fez o quê continua na auditoria. O banco recusa a própria conta e o último administrador ativo.
+ */
+export function excluirConta(userId: string) {
+  return chamarAdmin({ acao: 'excluir', user_id: userId });
+}
+
 /** Senha provisória legível para ditar ou copiar: sem 0/O, 1/l/I. */
 export function gerarSenhaProvisoria(tamanho = 12): string {
   const letras = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';

@@ -6,7 +6,7 @@ import { ErrorNote, Spinner, linkTexto } from '../components/ui';
 import { dataBR } from '../components/Situacao';
 import { SETOR_LABEL, SITUACAO_LABEL, type SituacaoEfetiva } from '../lib/empresas';
 import {
-  TIPO_OBRA_LABEL, buscarLicencaPublica, linkMapa, type LicencaPublica as Dados, type SituacaoPublica,
+  ORIGEM_LABEL, TIPO_INTERVENCAO_LABEL, TIPO_OBRA_LABEL, buscarLicencaPublica, linkMapa, type LicencaPublica as Dados, type SituacaoPublica,
 } from '../lib/licencas';
 
 /**
@@ -107,6 +107,8 @@ function Conteudo({ d }: { d: Dados }) {
             {d.contratante.codigo_cadex && <span className="block text-sm text-tinta-500">{d.contratante.codigo_cadex}</span>}
           </Item>
         )}
+        <Item rotulo="Tipo de intervenção">{TIPO_INTERVENCAO_LABEL[d.tipo_intervencao]}</Item>
+        <Item rotulo="Origem">{ORIGEM_LABEL[d.origem]}</Item>
         <Item rotulo="Setor">{SETOR_LABEL[d.setor]}</Item>
         {d.imovel_endereco && <Item rotulo="Imóvel atendido" largo>{d.imovel_endereco}</Item>}
         <Item rotulo="Tipo de obra">{d.tipos_obra.map((t) => TIPO_OBRA_LABEL[t]).join(', ')}</Item>

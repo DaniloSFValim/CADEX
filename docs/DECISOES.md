@@ -173,3 +173,45 @@ próprio (ex.: analista de licenciamento), as políticas de `licencas` e
   Administração → Licenças aponta esse caso para revisão.
 - Na migração, empresa que já constava como contratante e executora de alguma
   licença foi marcada, para o cadastro refletir o que já estava registrado.
+
+### Tipo e origem da intervenção; obra pública; correção do mapa (15/10/2026)
+- Todo registro tem **tipo de intervenção** (obra ou serviço, obrigatório no formulário) e **origem**
+  (concessionária ou prestadora; Prefeitura ou órgão municipal; autarquia municipal; órgão estadual ou federal).
+  As licenças existentes ficaram como "obra" e "concessionária" (ou pela esfera do órgão, se já tinham órgão).
+  A quarta origem existe porque órgão estadual ou federal já podia contratar; sem ela essas licenças ficariam sem categoria.
+- Origem pública exige o **órgão certo** (cadastro de Órgãos públicos, agora com "natureza": administração direta ou
+  autarquia); concessionária não aceita órgão. O banco confere; a tela só oferece as combinações válidas.
+- Obra pública: contratante = órgão ou autarquia, executora = empresa (empreiteira) do cadastro. **Não existe** "a própria
+  Prefeitura executa": a executora é sempre uma empresa. Se esse caso aparecer, é regra nova a decidir.
+- Dados do contrato (nº do contrato, processo administrativo, ordem de serviço, objeto) são opcionais e **não vão à consulta
+  pública**. Os órgãos e autarquias não foram cadastrados por mim: são dados da Prefeitura (Órgãos públicos).
+- **Mapa.** Causa confirmada de um defeito: licença cancelada sem data de decisão (o banco permite) derrubava a página
+  inteira (`decisao_data.slice` em nulo). Corrigido, com teste que reproduz. Também: o que o filtro inicial esconde
+  agora é avisado ("N fora dos filtros", "Mostrar tudo"); obra sem localização é marcada na lista; coordenada inválida
+  não é desenhada nem inventada; o balão mostra tipo, descrição, contratante, executora, período e situação.
+
+### Exclusão de licenças: lixeira e exclusão definitiva (15/10/2026)
+- Só o administrador exclui, em duas etapas: **Excluir** (vai para a lixeira, com motivo, quem e quando) e, dali,
+  **Restaurar** ou **Apagar de vez**. Não se apaga definitivamente o que não passou pela lixeira.
+- Na lixeira a licença sai das listas, do painel, dos gráficos, do mapa, dos dados abertos, da consulta pública e da
+  checagem de conflito de obras. Gestor e licenciador deixam de enxergá-la e de editá-la (RLS); o banco recusa marcar,
+  restaurar ou apagar por fora das funções do administrador (gatilho), então a regra não depende da tela.
+- Empresas, órgãos e demais cadastros nunca são apagados com a licença. Os trechos acompanham a licença na exclusão definitiva.
+  A licença não tem documentos nem arquivos próprios. A auditoria guarda cada passo, inclusive o estado completo antes da exclusão definitiva.
+- O nº do processo e o nº da licença passam a ser únicos só entre as licenças fora da lixeira: quem lançou por engano
+  pode lançar de novo o mesmo número. Restaurar é recusado se outra licença ativa já usa o número.
+- Registro na lixeira não passa pelas validações de gravação (o lançado errado pode estar incompleto).
+- Passo destrutivo da migração: a troca das duas restrições únicas por índices parciais (`DROP CONSTRAINT`), que não perde dado.
+
+### Exclusão de usuário (15/10/2026)
+- Só administrador, em "Contas e acessos" (conta com acesso, desativada ou sem acesso): mostra quem é, avisa das consequências,
+  conta os registros ligados à conta e exige digitar o e-mail para confirmar.
+- Duas metades, nesta ordem: o banco (`admin_excluir_conta`) confere as proteções, guarda a identificação em
+  `usuarios_excluidos`, registra na auditoria e **remove o acesso**; depois a função de borda `admin-contas` (ação `excluir`)
+  apaga a conta de login. Se a segunda falhar, a conta fica sem acesso (aparece em "Sem acesso") e a exclusão pode ser repetida.
+- Ninguém exclui a própria conta; o último administrador ativo não é excluído (a segunda proteção é o gatilho de `servidores`).
+- A autoria do histórico fica: a auditoria guarda o id e o **nome no momento** da ação, sem chave estrangeira. Os únicos campos que
+  perdem o vínculo são `documentos.enviado_por` e `historico_situacao.por` (a chave estrangeira os zera ao apagar a conta);
+  a tela informa quantos são antes de confirmar. Desativar continua disponível para quem só quer barrar o acesso e manter o cadastro.
+- A função de borda precisa ser **implantada** junto com a migração (`supabase functions deploy admin-contas`); sem isso o botão
+  responde com erro, sem excluir nada.

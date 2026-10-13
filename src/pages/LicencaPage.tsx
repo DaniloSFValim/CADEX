@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Badge, Button, Card, ErrorNote, Field, Spinner, Titulo, botaoLink, inputClass, linkTexto } from '../components/ui';
 import { QrCode } from '../components/QrCode';
+import { ExcluirLicenca } from '../components/ExclusaoLicenca';
 import { SituacaoBadge, dataBR } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { formatCnpj, formatCpf, isValidCnpj, isValidCpf, onlyDigits } from '../lib/cnpj';
@@ -11,18 +12,21 @@ import {
   nomeEmpresa, podeAtuar, situacaoEfetiva, type Empresa, type Registro, type Setor, type Vinculo,
 } from '../lib/empresas';
 import {
-  ESTADO_LICENCA_LABEL, TIPO_OBRA_LABEL, TOM_ESTADO_LICENCA, buscarConflitos, buscarLicenca,
+  ESTADO_LICENCA_LABEL, ORIGENS, ORIGEM_LABEL, TIPOS_INTERVENCAO, TIPO_INTERVENCAO_LABEL, TIPO_OBRA_LABEL, origemPublica, TOM_ESTADO_LICENCA, buscarConflitos, buscarLicenca,
   anteriorResolucao, coordenadaTexto, segueResolucao, estadoLicenca, lerCoordenada, linkMapa, salvarLicenca,
   erroPeriodoObra, mesmaEmpresaNosPapeis, situacoesRegistraveis,
   urlPublicaLicenca,
-  type Conflito, type LicencaComTrechos, type LicencaInput, type SituacaoLicenca, type TipoObra, type Trecho,
+  type Conflito, type LicencaComTrechos, type LicencaInput, type OrigemIntervencao, type SituacaoLicenca, type TipoIntervencao, type TipoObra, type Trecho,
 } from '../lib/licencas';
-import { listarOrgaos, nomeOrgao, type Orgao } from '../lib/orgaos';
+import { listarOrgaos, nomeOrgao, orgaoServeOrigem, type Orgao } from '../lib/orgaos';
 
 interface TrechoForm { id?: string; cep: string; logradouro: string; bairro: string; referencia: string; inicio: string; fim: string }
 
 type Form = {
   setor: Setor; processo_sei: string; numero: string; tipos_obra: TipoObra[]; escopo: string; observacoes: string;
+  /** Vazio até o usuário escolher: o campo é obrigatório. */
+  tipo_intervencao: TipoIntervencao | ''; origem_intervencao: OrigemIntervencao;
+  contrato_numero: string; processo_administrativo: string; ordem_servico_numero: string; objeto_contrato: string;
   executora_id: string; contratante_id: string; subcontratada_id: string; responsavel_tecnico_id: string;
   executora_razao_social: string; executora_cnpj: string; contratante_razao_social: string;
   /** CNPJ, ou CPF do dono do imóvel na drenagem. */
@@ -63,6 +67,8 @@ const TRECHO_VAZIO: TrechoForm = { cep: '', logradouro: '', bairro: '', referenc
 
 const VAZIO: Form = {
   setor: 'telecom', processo_sei: '', numero: '', tipos_obra: [], escopo: '', observacoes: '',
+  tipo_intervencao: '', origem_intervencao: 'concessionaria',
+  contrato_numero: '', processo_administrativo: '', ordem_servico_numero: '', objeto_contrato: '',
   executora_id: '', contratante_id: '', subcontratada_id: '', responsavel_tecnico_id: '',
   executora_razao_social: '', executora_cnpj: '', contratante_razao_social: '', contratante_cnpj: '',
   imovel_endereco: '', processo_urbanismo: '',
@@ -75,6 +81,9 @@ function paraForm(l: LicencaComTrechos): Form {
   return {
     setor: l.setor, processo_sei: l.processo_sei, numero: s(l.numero), tipos_obra: l.tipos_obra, escopo: l.escopo,
     observacoes: s(l.observacoes),
+    tipo_intervencao: l.tipo_intervencao, origem_intervencao: l.origem_intervencao,
+    contrato_numero: s(l.contrato_numero), processo_administrativo: s(l.processo_administrativo),
+    ordem_servico_numero: s(l.ordem_servico_numero), objeto_contrato: s(l.objeto_contrato),
     executora_id: l.executora_id ?? (l.executora_razao_social ? SEM_CADASTRO : ''),
     contratante_id: l.orgao_contratante_id ? `${ORGAO_PREFIXO}${l.orgao_contratante_id}`
       : l.contratante_id ?? (l.contratante_razao_social ? SEM_CADASTRO : ''),
@@ -98,7 +107,8 @@ const trechoParaForm = (t: Trecho & { id: string }): TrechoForm => ({
 export default function LicencaPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { podeLicenciar } = useAuth();
+  const { podeLicenciar, servidor } = useAuth();
+  const administrador = Boolean(servidor?.administrador);
   const [licenca, setLicenca] = useState<LicencaComTrechos | null>(null);
   const [empresas, setEmpresas] = useState<Empresa[] | null>(null);
   const [vinculos, setVinculos] = useState<Vinculo[]>([]);
@@ -122,6 +132,10 @@ export default function LicencaPage() {
     <>
       <Titulo
         trilha={<><Link to="/obras" className="hover:underline">Obras</Link> / {licenca ? licenca.processo_sei : 'nova'}</>}
+        acoes={licenca && administrador && !licenca.excluida_em && (
+          <ExcluirLicenca licenca={licenca} empresas={new Map(empresas.map((e) => [e.id, e]))} orgaos={orgaos} hoje={hoje}
+                          onExcluida={(aviso) => navigate('/admin/licencas', { state: { aviso } })} />
+        )}
         titulo={licenca ? (licenca.numero ? `Licença ${licenca.numero}` : 'Pedido de licença') : 'Registrar licença'}
         descricao={licenca
           ? <span className="inline-flex flex-wrap items-center gap-2">
@@ -132,7 +146,14 @@ export default function LicencaPage() {
             </span>
           : 'Lance os dados do processo: executora habilitada no setor, trechos da obra e a situação (em execução ou concluída).'}
       />
-      {licenca?.situacao === 'deferida' && <Placa licenca={licenca} />}
+      {licenca?.excluida_em && (
+        <p role="status" className="mb-6 rounded-sm border-l-4 border-baixa bg-baixa/6 px-3 py-2 text-sm text-tinta-800">
+          Esta licença está na lixeira (excluída em {dataBR(licenca.excluida_em.slice(0, 10))}
+          {licenca.excluida_motivo && `: ${licenca.excluida_motivo}`}). Não aparece nas listas, no mapa nem na consulta pública.{' '}
+          <Link to="/admin/licencas" className="font-semibold underline">Ir para a lixeira</Link>
+        </p>
+      )}
+      {licenca?.situacao === 'deferida' && !licenca.excluida_em && <Placa licenca={licenca} />}
       {licenca && <Conflitos key={licenca.atualizado_em} licencaId={licenca.id} />}
       <LicencaForm
         key={licenca?.id ?? 'nova'}
@@ -140,7 +161,7 @@ export default function LicencaPage() {
         empresas={empresas}
         vinculos={vinculos}
         orgaos={orgaos}
-        somenteLeitura={!podeLicenciar}
+        somenteLeitura={!podeLicenciar || Boolean(licenca?.excluida_em)}
         onSalvo={async (novoId) => {
           if (!licenca) navigate(`/obras/${novoId}`, { replace: true });
           else setLicenca(await buscarLicenca(novoId));
@@ -171,9 +192,11 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, somenteLeitura, onSa
   const ativaOuJaUsada = (e: Empresa) => e.ativa || jaUsadas.has(e.id);
   // Executora: empresa HABILITADA (deferida/apta) que atua no setor da licença.
   const executoras = empresas.filter((e) => ativaOuJaUsada(e) && atuaNoSetor(e, f.setor) && podeAtuar(situacaoEfetiva(e, hoje)));
+  const publica = origemPublica(f.origem_intervencao);
   // Contratante: titular (operadora, concessionária ou construtora) do setor. Inclui a
   // própria executora: a titular que executa a própria obra é contratante e executora.
-  const contratantes = empresas.filter((e) => ativaOuJaUsada(e) && ehContratante(e.tipo) && atuaNoSetor(e, f.setor));
+  const contratantes = publica ? []
+    : empresas.filter((e) => ativaOuJaUsada(e) && ehContratante(e.tipo) && atuaNoSetor(e, f.setor));
 
   // Responsáveis técnicos da executora e da subcontratada.
   useEffect(() => {
@@ -199,7 +222,9 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, somenteLeitura, onSa
   // Contratante órgão público: o valor do seletor vem com o prefixo "orgao:".
   const contratanteOrgaoId = f.contratante_id.startsWith(ORGAO_PREFIXO)
     ? f.contratante_id.slice(ORGAO_PREFIXO.length) : null;
-  const orgaosDoSetor = orgaos.filter((o) => orgaoNoSetor(o, f.setor));
+  // Origem pública: só os órgãos que servem a ela. Concessionária: só empresas, nenhum órgão.
+  const orgaosDoSetor = publica
+    ? orgaos.filter((o) => orgaoNoSetor(o, f.setor) && orgaoServeOrigem(o, f.origem_intervencao)) : [];
   // Na drenagem o dono do imóvel pode ser pessoa física: 11 dígitos = CPF.
   const contratanteCpf = drenagem && contratanteSemCadastro && onlyDigits(f.contratante_cnpj).length <= 11
     && f.contratante_cnpj.trim() !== '';
@@ -207,7 +232,7 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, somenteLeitura, onSa
   // concessionária, construtora) executa a própria obra: sem contratante, ou ela
   // mesma como contratante (a opção "a própria contratante executará").
   const executoraTerceirizada = executora?.tipo === 'terceirizada';
-  const contratanteObrigatoria = executoraTerceirizada && !anterior;
+  const contratanteObrigatoria = publica || (executoraTerceirizada && !anterior);
   // Contratante empresa cadastrada (nem órgão público, nem empresa sem cadastro).
   const contratanteEmpresaId = f.contratante_id && f.contratante_id !== SEM_CADASTRO
     && !f.contratante_id.startsWith(ORGAO_PREFIXO) ? f.contratante_id : '';
@@ -251,6 +276,15 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, somenteLeitura, onSa
       limparPartesDaExecutora();
     }
   };
+  const trocarOrigem = (nova: OrigemIntervencao) => {
+    set('origem_intervencao', nova);
+    // Contratante de outra natureza sai; a execução própria não existe em contrato público.
+    if (origemPublica(nova)) {
+      if (mesmaEmpresa) { set('executora_id', ''); limparPartesDaExecutora(); }
+      const o = orgaos.find((x) => `${ORGAO_PREFIXO}${x.id}` === f.contratante_id);
+      if (!o || !orgaoServeOrigem(o, nova)) set('contratante_id', '');
+    } else if (contratanteOrgaoId) set('contratante_id', '');
+  };
   const marcarAutoExecucao = (marcado: boolean) => {
     set('executora_id', marcado ? contratanteEmpresaId : '');
     limparPartesDaExecutora();
@@ -274,6 +308,8 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, somenteLeitura, onSa
 
   function montar(): { licenca: LicencaInput; trechos: Trecho[] } | string {
     if (!f.processo_sei.trim()) return 'Informe o número do processo.';
+    if (!f.tipo_intervencao) return 'Escolha o tipo de intervenção: obra ou serviço.';
+    if (publica && !contratanteOrgaoId) return 'Obra ou serviço público: escolha o órgão ou a autarquia contratante.';
     if (executoraSemCadastro && !anterior) {
       return 'Executora sem cadastro no CADEX só em licença com decisão anterior a 09/09/2026. Cadastre a empresa ou corrija a data da decisão.';
     }
@@ -317,6 +353,12 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, somenteLeitura, onSa
         ...(licenca ? { id: licenca.id } : {}),
         setor: f.setor, processo_sei: f.processo_sei, numero: n(f.numero), tipos_obra: f.tipos_obra, escopo: f.escopo.trim(),
         observacoes: n(f.observacoes),
+        tipo_intervencao: f.tipo_intervencao as TipoIntervencao,
+        origem_intervencao: f.origem_intervencao,
+        contrato_numero: publica ? n(f.contrato_numero) : null,
+        processo_administrativo: publica ? n(f.processo_administrativo) : null,
+        ordem_servico_numero: publica ? n(f.ordem_servico_numero) : null,
+        objeto_contrato: publica ? n(f.objeto_contrato) : null,
         executora_id: executoraSemCadastro ? null : f.executora_id,
         executora_razao_social: executoraSemCadastro ? n(f.executora_razao_social) : null,
         executora_cnpj: executoraSemCadastro && f.executora_cnpj.trim() ? onlyDigits(f.executora_cnpj) : null,
@@ -394,6 +436,23 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, somenteLeitura, onSa
                    onChange={(e) => set('protocolo_data', e.target.value)} />
           </Field>
         </div>
+        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          <Field label="Tipo de intervenção" required hint="A natureza do que será feito: uma obra ou um serviço.">
+            <select className={inputClass} required disabled={ro} value={f.tipo_intervencao}
+                    onChange={(e) => set('tipo_intervencao', e.target.value as TipoIntervencao)}>
+              <option value="">Selecione</option>
+              {TIPOS_INTERVENCAO.map((t) => <option key={t} value={t}>{TIPO_INTERVENCAO_LABEL[t]}</option>)}
+            </select>
+          </Field>
+          <Field label="Origem da intervenção" required className="sm:col-span-2"
+                 hint={publica ? 'Obra ou serviço público: o contratante é o órgão ou a autarquia, e a executora é a empresa contratada.'
+                   : 'Concessionárias e prestadoras de serviço, com ou sem terceirizada.'}>
+            <select className={inputClass} required disabled={ro} value={f.origem_intervencao}
+                    onChange={(e) => trocarOrigem(e.target.value as OrigemIntervencao)}>
+              {ORIGENS.map((o) => <option key={o} value={o}>{ORIGEM_LABEL[o]}</option>)}
+            </select>
+          </Field>
+        </div>
         <fieldset className="mt-5">
           <legend className="text-[13px] font-medium text-tinta-700">
             Tipo de obra <span className="text-baixa" aria-hidden>*</span>
@@ -413,7 +472,7 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, somenteLeitura, onSa
             ))}
           </div>
         </fieldset>
-        <Field label="Escopo da obra" required className="mt-5" hint="O que será feito, como aparecerá na placa do canteiro (art. 14).">
+        <Field label={f.tipo_intervencao === 'servico' ? 'Escopo do serviço' : f.tipo_intervencao === 'obra' ? 'Escopo da obra' : 'Escopo da obra ou serviço'} required className="mt-5" hint="O que será feito, como aparecerá na placa do canteiro (art. 14).">
           <textarea className={inputClass} rows={2} required disabled={ro} value={f.escopo}
                     onChange={(e) => set('escopo', e.target.value)} />
         </Field>
@@ -486,12 +545,15 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, somenteLeitura, onSa
       <Card title="Empresas">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Contratante" required={contratanteObrigatoria}
-                 hint={executoraTerceirizada ? 'Empresa titular (operadora, concessionária, construtora) ou órgão público que contratou a terceirizada.'
+                 hint={publica ? (orgaosDoSetor.length === 0
+                     ? 'Nenhum órgão cadastrado serve a esta origem neste setor. Cadastre em Órgãos públicos, informando a natureza (administração direta ou autarquia).'
+                     : 'Órgão ou autarquia que contratou a empresa executora.')
+                   : executoraTerceirizada ? 'Empresa titular (operadora, concessionária, construtora) ou órgão público que contratou a terceirizada.'
                    : drenagem ? 'Construtora ou o dono do imóvel (sem cadastro). Em branco só quando a própria construtora executa.'
                    : 'Empresa titular ou órgão público que contratou a obra ou o serviço. Se a própria titular executa, marque a opção ao lado.'}>
             <select className={inputClass} disabled={ro} required={contratanteObrigatoria}
                     value={f.contratante_id} onChange={(e) => trocarContratante(e.target.value)}>
-              <option value="">Nenhuma</option>
+              <option value="">{publica ? 'Selecione' : 'Nenhuma'}</option>
               {contratantes.length > 0 && (
                 <optgroup label="Empresas">
                   {contratantes.map((e) => <option key={e.id} value={e.id}>{nomeEmpresa(e)}</option>)}
@@ -504,12 +566,12 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, somenteLeitura, onSa
                   ))}
                 </optgroup>
               )}
-              {(anterior || drenagem || contratanteSemCadastro) && (
+              {!publica && (anterior || drenagem || contratanteSemCadastro) && (
                 <option value={SEM_CADASTRO}>{drenagem && !anterior ? 'Dono do imóvel ou empresa sem cadastro' : 'Empresa sem cadastro no CADEX'}</option>
               )}
             </select>
           </Field>
-          <div className="sm:pt-6">
+          {!publica && <div className="sm:pt-6">
             <label className={`flex items-start gap-2 text-sm ${podeAutoExecutar && !ro ? 'text-tinta-800' : 'text-tinta-500'}`}>
               <input type="checkbox" className="mt-0.5" disabled={ro || !podeAutoExecutar} checked={mesmaEmpresa}
                      onChange={(e) => marcarAutoExecucao(e.target.checked)} />
@@ -528,7 +590,7 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, somenteLeitura, onSa
                 )}
               </span>
             </label>
-          </div>
+          </div>}
           {contratanteSemCadastro && (
             <SemCadastro quem="contratante" ro={ro} razao={f.contratante_razao_social} cnpj={f.contratante_cnpj}
                          donoImovel={drenagem}
@@ -594,6 +656,33 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, somenteLeitura, onSa
           </ul>
         )}
       </Card>
+
+      {publica && (
+        <Card title="Contrato público">
+          <p className="mb-4 text-sm text-tinta-500">
+            Dados do contrato administrativo, para fiscalização. Todos opcionais e restritos a quem trabalha no CADEX:
+            não aparecem na consulta pública.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Field label="Nº do contrato">
+              <input className={`${inputClass} tabular`} disabled={ro} value={f.contrato_numero}
+                     onChange={(e) => set('contrato_numero', e.target.value)} />
+            </Field>
+            <Field label="Processo administrativo">
+              <input className={`${inputClass} tabular`} disabled={ro} value={f.processo_administrativo}
+                     onChange={(e) => set('processo_administrativo', e.target.value)} />
+            </Field>
+            <Field label="Ordem de serviço">
+              <input className={`${inputClass} tabular`} disabled={ro} value={f.ordem_servico_numero}
+                     onChange={(e) => set('ordem_servico_numero', e.target.value)} />
+            </Field>
+          </div>
+          <Field label="Objeto do contrato" className="mt-4" hint="Resumo do que foi contratado.">
+            <textarea className={inputClass} rows={2} disabled={ro} value={f.objeto_contrato}
+                      onChange={(e) => set('objeto_contrato', e.target.value)} />
+          </Field>
+        </Card>
+      )}
 
       <Card title={`Trechos (${trechos.length})`}
             action={!ro && <Button variant="secondary" className="px-3! py-1.5!"
