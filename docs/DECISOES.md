@@ -13,6 +13,22 @@ próprio (ex.: analista de licenciamento), as políticas de `licencas` e
 
 ## Decididas
 
+### Licenças: sem "Indeferida", período da obra e papéis (13/10/2026)
+- A situação **"Indeferida"** deixou de ser registrável. O banco recusa a entrada
+  nova (INSERT ou mudança para "indeferida"); licença que já esteja indeferida
+  permanece no histórico e continua editável sem trocar de situação. Na
+  produção não havia nenhuma licença na data desta decisão.
+- As duas datas do período da intervenção são **"Início da obra ou serviço"** e
+  **"Fim da obra ou serviço"** (colunas `inicio_previsto` e `fim_previsto`, sem
+  coluna nova). O fim não pode ser anterior ao início.
+- **Contratante e executora podem ser a mesma empresa cadastrada**
+  (`contratante_id = executora_id`): a titular (operadora, concessionária,
+  construtora) executando a própria obra. A terceirizada continua exigindo
+  contratante e não contrata a si mesma; a titular continua sem contratante
+  diferente de si fora da drenagem e do registro histórico.
+- Reversão: reaplicar `licencas_antes_de_gravar()` de
+  `20261010120000_recomposicao_e_conflitos.sql`. Nenhum dado é alterado.
+
 ### Licenças de obra (01/10/2026)
 - O CADEX **registra** licenças; o pedido tramita e é decidido no **SEI**.
 - Nº do processo em **texto livre** (01/10/2026): o SEI usa

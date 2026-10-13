@@ -24,7 +24,7 @@ const VEREDITO: Record<SituacaoPublica, { titulo: string; cor: string; frase: (d
   },
   prazo_encerrado: {
     titulo: 'Prazo encerrado', cor: 'border-baixa bg-baixa/6 text-baixa',
-    frase: (d) => `O cronograma terminou em ${dataBR(d.fim_previsto)}. A obra não está mais autorizada.`,
+    frase: (d) => `O período da obra ou serviço terminou em ${dataBR(d.fim_previsto)}. A obra não está mais autorizada.`,
   },
   concluida: {
     titulo: 'Obra concluída', cor: 'border-tinta-400 bg-tinta-50 text-tinta-700',
@@ -87,8 +87,11 @@ function Conteudo({ d }: { d: Dados }) {
 
       <dl className="cartao mt-6 grid gap-x-6 gap-y-5 p-5 sm:grid-cols-2 sm:p-6">
         <Item rotulo="Licença nº"><span className="tabular text-lg font-semibold">{d.numero}</span></Item>
-        <Item rotulo="Período autorizado">
-          <span className="tabular">{dataBR(d.inicio_previsto)} a {dataBR(d.fim_previsto)}</span>
+        <Item rotulo="Início da obra ou serviço">
+          <span className="tabular">{dataBR(d.inicio_previsto)}</span>
+        </Item>
+        <Item rotulo="Fim da obra ou serviço">
+          <span className="tabular">{dataBR(d.fim_previsto)}</span>
         </Item>
         <Item rotulo="Empresa executora" largo>
           {nome(d.executora)}

@@ -124,6 +124,34 @@ export const TOM_ESTADO_LICENCA: Record<EstadoLicenca, 'neutro' | 'bom' | 'alert
   concluida: 'bom',
 };
 
+/**
+ * Contratante e executora são a mesma empresa cadastrada: a titular executa a
+ * própria obra. Um só cadastro, nos dois papéis.
+ */
+export const mesmaEmpresaNosPapeis = (l: { contratante_id: string | null; executora_id: string | null }) =>
+  Boolean(l.contratante_id) && l.contratante_id === l.executora_id;
+
+/** Situações que o registro oferece. "Indeferida" só aparece em licença que já está indeferida (histórico). */
+export function situacoesRegistraveis<T extends string>(todas: readonly T[], atual: SituacaoLicenca | null): T[] {
+  return todas.filter((s) => s !== 'indeferida' || atual === 'indeferida');
+}
+
+/**
+ * Período da obra ou serviço (início e fim, em AAAA-MM-DD). O início em branco
+ * vale a data da decisão, como no envio. Devolve a mensagem do erro, ou nulo.
+ */
+export function erroPeriodoObra(p: {
+  deferida: boolean; decisao: string; inicio: string; fim: string; concluidaEm: string;
+}): string | null {
+  if (!p.deferida) return null;
+  const inicio = p.inicio || p.decisao;
+  if (inicio && p.fim && p.fim < inicio) return 'O fim da obra ou serviço não pode ser anterior ao início.';
+  if (inicio && p.concluidaEm && p.concluidaEm < inicio) {
+    return 'A conclusão não pode ser anterior ao início da obra ou serviço.';
+  }
+  return null;
+}
+
 export function estadoLicenca(
   l: Pick<Licenca, 'situacao' | 'inicio_previsto' | 'fim_previsto' | 'concluida_em' | 'as_built_sei'>,
   hoje: string,

@@ -83,7 +83,7 @@ begin
   -- Executora nos dois formatos ao mesmo tempo, ou em nenhum
   perform pg_temp.recusa(format($q$insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id,
       executora_razao_social, protocolo_data, decisao_data, situacao)
-    values ('telecom', 'X-1', '{vala}', 'x', %L, 'Duplicada', '2022-01-01', '2022-01-02', 'indeferida')$q$, ex),
+    values ('telecom', 'X-1', '{vala}', 'x', %L, 'Duplicada', '2022-01-01', '2022-01-02', 'em_analise')$q$, ex),
     'licencas_executora_check', 'aceitou executora cadastrada e digitada juntas');
   perform pg_temp.recusa($q$insert into licencas (setor, processo_sei, tipos_obra, escopo, protocolo_data)
     values ('telecom', 'X-2', '{vala}', 'x', '2022-01-01')$q$, 'licencas_executora_check', 'aceitou licença sem executora');

@@ -34,8 +34,8 @@ export const COLUNAS_LICENCA: ColunaLicenca[] = [
   { chave: 'local', rotulo: 'Local',
     valor: (l) => l.licenca_trechos.map((t) => [t.logradouro, t.bairro].filter(Boolean).join(', ')).join('; ') },
   { chave: 'imovel', rotulo: 'Imóvel atendido', valor: (l) => l.imovel_endereco ?? '' },
-  { chave: 'cronograma', rotulo: 'Cronograma',
-    valor: (l) => (l.inicio_previsto ? `${dataBR(l.inicio_previsto)} a ${dataBR(l.fim_previsto)}` : '') },
+  { chave: 'inicio', rotulo: 'Início da obra ou serviço', valor: (l) => dataBR(l.inicio_previsto) },
+  { chave: 'fim', rotulo: 'Fim da obra ou serviço', valor: (l) => dataBR(l.fim_previsto) },
   { chave: 'decisao', rotulo: 'Decisão', valor: (l) => dataBR(l.decisao_data) },
   { chave: 'situacao', rotulo: 'Situação', valor: (l, c) => ESTADO_LICENCA_LABEL[estadoLicenca(l, c.hoje)] },
   { chave: 'art', rotulo: 'ART/RRT', valor: (l) => l.art_numero ?? '' },
@@ -44,7 +44,7 @@ export const COLUNAS_LICENCA: ColunaLicenca[] = [
     valor: (l) => (l.as_built_sei ? `${l.as_built_sei} (${dataBR(l.as_built_data)})` : '') },
 ];
 
-export const COLUNAS_LICENCA_PADRAO = ['numero', 'processo', 'setor', 'executora', 'local', 'cronograma', 'situacao'];
+export const COLUNAS_LICENCA_PADRAO = ['numero', 'processo', 'setor', 'executora', 'local', 'inicio', 'fim', 'situacao'];
 
 export const AGRUPAR_LICENCAS = [
   { valor: '', rotulo: 'Sem agrupamento' },
