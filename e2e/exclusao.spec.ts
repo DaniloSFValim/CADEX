@@ -20,6 +20,17 @@ test.describe('exclusão de licenças', () => {
     await expect(page.getByRole('button', { name: 'Excluir licença' })).toHaveCount(0);
   });
 
+  test('na lista de obras, só o administrador vê "Excluir" em cada linha', async ({ page }) => {
+    await instalarBackend(page, cenario());
+    await page.goto('/obras');
+    await expect(page.getByRole('button', { name: 'Excluir' })).toHaveCount(2);
+
+    await instalarBackend(page, { ...cenario(), administrador: false });
+    await page.goto('/obras');
+    await expect(page.getByRole('link', { name: '501/2026' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Excluir' })).toHaveCount(0);
+  });
+
   test('o administrador confere os dados, cancela, confirma, e a licença sai das listas, do painel e do mapa', async ({ page }) => {
     const backend = await instalarBackend(page, cenario());
     await page.goto('/admin/licencas');
