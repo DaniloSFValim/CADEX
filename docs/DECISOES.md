@@ -232,4 +232,4 @@ próprio (ex.: analista de licenciamento), as políticas de `licencas` e
 - Situação própria (em execução, concluída, cancelada). Regularização posterior pelo vínculo `licenca_id`.
 - Pendente de decisão da SECONSER: a base legal da dispensa de licença quando a obra é própria da Prefeitura. Não há presunção no sistema.
 - Sem exclusão nesta entrega (decidir se haverá lixeira).
-- Migração `20261019120000` precisa ser aplicada em produção antes do merge.
+- Migração `20261019120000` aplicada em produção (14/10/2026), antes do merge.
