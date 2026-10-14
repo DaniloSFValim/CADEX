@@ -35,7 +35,7 @@ export default function SemLicenca() {
       <Titulo
         trilha={<><Link to="/obras" className="hover:underline">Obras</Link> / Sem licença</>}
         titulo="Obras e serviços sem licença"
-        descricao="Intervenções que não passam pelo processo de licença. Ficam fora das licenças, da consulta pública e dos dados abertos."
+        descricao="Intervenções que não passam pelo processo de licença de obra. Ficam fora das licenças, da consulta pública e dos dados abertos."
         acoes={podeLicenciar && <Link to="/obras/sem-licenca/nova" className={botaoLink.primary}>Registrar sem licença</Link>}
       />
       {aviso && <p role="status" className="mb-4 border-l-4 border-alta bg-alta/6 px-4 py-2 text-sm text-tinta-800">{aviso}</p>}
