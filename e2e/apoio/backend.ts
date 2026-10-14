@@ -30,6 +30,8 @@ export interface Cenario {
   orgaos: Orgao[];
   contas: Conta[];
   auditoria: EventoAuditoria[];
+  /** Obras e serviços sem licença (tabela intervencoes_sem_licenca). */
+  semLicenca?: Record<string, unknown>[];
 }
 
 export interface Chamada {
@@ -149,6 +151,19 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
       return lista(estado.empresas as unknown as Record<string, unknown>[]);
     }
     if (caminho === 'licencas') return lista(estado.licencas as unknown as Record<string, unknown>[]);
+    if (caminho === 'intervencoes_sem_licenca') {
+      if (req.method() === 'POST') {
+        const nova = { id: uuid(9000 + (estado.semLicenca?.length ?? 0) + 1), ...(corpo as object), atualizado_em: new Date().toISOString() };
+        estado.semLicenca = [...(estado.semLicenca ?? []), nova];
+        return vazio();
+      }
+      if (req.method() === 'PATCH') {
+        const id = (url.searchParams.get('id') ?? '').replace('eq.', '');
+        estado.semLicenca = (estado.semLicenca ?? []).map((x) => (x.id === id ? { ...x, ...(corpo as object) } : x));
+        return vazio();
+      }
+      return lista(estado.semLicenca ?? []);
+    }
     if (caminho === 'orgaos_publicos') return lista(estado.orgaos as unknown as Record<string, unknown>[]);
     if (caminho === 'auditoria') return lista(estado.auditoria as unknown as Record<string, unknown>[]);
     if (['vinculos', 'responsaveis_tecnicos', 'documentos', 'tipos_documento', 'funcionarios', 'veiculos'].includes(caminho)) return responder([]);
