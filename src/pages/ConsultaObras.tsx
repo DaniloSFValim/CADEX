@@ -1,11 +1,13 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AbasConsulta } from '../components/AbasConsulta';
+import FaixaDoTempo from '../components/FaixaDoTempo';
+import FichaObra from '../components/FichaObra';
 import { Cabecalho, MENU_PUBLICO } from '../components/Cabecalho';
 import { Rodape } from '../components/Rodape';
 import { Empty, ErrorNote, Spinner, inputClass, linkTexto } from '../components/ui';
 import { dataBR } from '../components/Situacao';
-import { SETORES, SETOR_LABEL } from '../lib/empresas';
+import { SETORES, SETOR_LABEL, hojeISO } from '../lib/empresas';
 import { ORIGENS, ORIGEM_LABEL, TIPOS_INTERVENCAO, TIPO_INTERVENCAO_LABEL, TIPO_OBRA_LABEL, origemPublica } from '../lib/licencas';
 import {
   COR_SITUACAO, FILTRO_OBRAS, SITUACAO_PUBLICA_LABEL, anosDasObras, baixarObrasGeojson, buscarObrasPublicas, filtrarObras, temLocalizacao,
@@ -42,6 +44,7 @@ export default function ConsultaObras() {
     [obras, situacao, ano, busca, setor, intervencao, origem]);
   const anos = useMemo(() => anosDasObras(obras ?? []), [obras]);
   const stats = useMemo(() => resumo(obras ?? []), [obras]);
+  const selecionada = useMemo(() => (obras ?? []).find((o) => o.codigo === foco) ?? null, [obras, foco]);
 
   return (
     <div className="flex min-h-screen flex-col bg-tinta-50">
@@ -106,12 +109,13 @@ export default function ConsultaObras() {
         {!obras && !error && <Spinner label="Carregando as obras…" />}
 
         {obras && (
-          <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] lg:items-start">
-            {/* Coluna do mapa (fixa no desktop enquanto a lista rola). */}
-            <div className="lg:sticky lg:top-[84px]">
+          <div className="mt-6 flex flex-col gap-6">
+            {/* Mapa em largura total; a ficha da obra selecionada fica sobre ele. */}
+            <div>
               <Suspense fallback={<div className="h-[60vh] min-h-[360px] rounded-xl border border-tinta-200 bg-tinta-50" />}>
-                <div className="overflow-hidden rounded-xl border border-tinta-200 shadow-xs">
-                  <MapaObras obras={filtradas} foco={foco} />
+                <div className="relative overflow-hidden rounded-xl border border-tinta-200 shadow-xs">
+                  <MapaObras obras={filtradas} foco={foco} onSelecionar={setFoco} />
+                  {selecionada && <FichaObra obra={selecionada} onFechar={() => setFoco(null)} />}
                 </div>
               </Suspense>
               <Legenda />
@@ -127,8 +131,10 @@ export default function ConsultaObras() {
               </p>
             </div>
 
-            {/* Coluna da lista, viva ao lado do mapa. */}
-            <section aria-live="polite">
+            <FaixaDoTempo obras={filtradas} ano={new Date().getFullYear()} hoje={hojeISO()} foco={foco} onSelecionar={setFoco} />
+
+            {/* Lista das obras, abaixo da faixa do tempo. */}
+            <section aria-live="polite" aria-label="Lista das obras e serviços licenciados">
               <div className="mb-3 flex items-baseline justify-between gap-3">
                 <h2 className="font-display text-lg font-bold tracking-[-0.01em] text-tinta-900">Obras e serviços licenciados</h2>
                 <span className="text-sm text-tinta-500">

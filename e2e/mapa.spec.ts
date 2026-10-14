@@ -117,3 +117,35 @@ test.describe('mapa de consulta', () => {
     await expect(noMapa(page)).toHaveAttribute('data-trechos', '1');
   });
 });
+
+test.describe('faixa do tempo e ficha da obra', () => {
+  const faixa = (page: Page) => page.locator('section[aria-label="Faixa do tempo das obras"]');
+  const ficha = (page: Page) => page.locator('article[aria-label="Ficha da obra selecionada"]');
+
+  test('clicar numa barra da faixa abre a ficha da obra; "Fechar" esconde', async ({ page }) => {
+    await instalarBackend(page, {
+      licencas: [licenca({ escopo: 'Rede óptica' }), licenca({ tipo_intervencao: 'servico', escopo: 'Manutenção de poste' })],
+    });
+    await page.goto('/consulta/obras');
+    await expect(faixa(page).getByRole('button')).toHaveCount(2);
+    await expect(ficha(page)).toHaveCount(0);
+
+    await faixa(page).getByRole('button').first().click();
+    await expect(ficha(page)).toBeVisible();
+    await expect(ficha(page)).toContainText('Rede óptica');
+    await expect(ficha(page)).toContainText('Executora');
+    await expect(faixa(page).getByRole('button').first()).toHaveAttribute('aria-pressed', 'true');
+
+    await ficha(page).getByRole('button', { name: 'Fechar' }).click();
+    await expect(ficha(page)).toHaveCount(0);
+  });
+
+  test('sem obra com período no ano, a faixa diz isso em vez de ficar vazia', async ({ page }) => {
+    await instalarBackend(page, {
+      licencas: [licenca({ inicio_previsto: '2019-01-01', fim_previsto: '2019-02-01', decisao_data: '2018-12-20' })],
+    });
+    await page.goto('/consulta/obras');
+    await expect(faixa(page)).toContainText('Nenhuma obra com período neste ano');
+    await expect(faixa(page).getByRole('button')).toHaveCount(0);
+  });
+});

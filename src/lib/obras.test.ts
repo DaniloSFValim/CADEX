@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { anosDasObras, filtrarObras, obrasParaGeoJSON, temLocalizacao, type ObraPublica } from './obras';
+import { anosDasObras, barraNoAno, filtrarObras, fracaoDoAno, obrasParaGeoJSON, temLocalizacao, type ObraPublica } from './obras';
 
 const obra = (o: Partial<ObraPublica>): ObraPublica => ({
   codigo: 'c1', setor: 'telecom', numero: '001/2026', tipos_obra: ['vala'], tipo_intervencao: 'obra', origem: 'concessionaria', escopo: 'Rede', inicio_previsto: '2026-10-01',
@@ -89,5 +89,30 @@ describe('fim igual ao início', () => {
   it('vira ponto, porque a linha de comprimento zero não aparece no mapa', () => {
     const fc = obrasParaGeoJSON([obra({ trechos: [{ logradouro: 'Av. X', bairro: null, inicio: [-43.11156, -22.907928], fim: [-43.11156, -22.907928] }] })]);
     expect(fc.features[0].geometry).toEqual({ type: 'Point', coordinates: [-43.11156, -22.907928] });
+  });
+});
+
+describe('faixa do tempo', () => {
+  it('fração do ano: 1º de janeiro é 0, e o meio do ano fica perto de 0,5', () => {
+    expect(fracaoDoAno('2026-01-01', 2026)).toBe(0);
+    expect(fracaoDoAno('2026-07-02', 2026)).toBeCloseTo(0.5, 1);
+  });
+  it('barra de uma obra dentro do ano', () => {
+    const b = barraNoAno({ inicio_previsto: '2026-04-01', fim_previsto: '2026-06-30' }, 2026)!;
+    expect(b.esquerda).toBeCloseTo(fracaoDoAno('2026-04-01', 2026));
+    expect(b.largura).toBeGreaterThan(0.2);
+    expect(b.largura).toBeLessThan(0.3);
+  });
+  it('obra que começa antes e termina depois do ano é cortada nas bordas', () => {
+    expect(barraNoAno({ inicio_previsto: '2025-06-01', fim_previsto: '2027-02-01' }, 2026)).toEqual({ esquerda: 0, largura: 1 });
+  });
+  it('fora do ano, sem período ou só com uma data: sem barra', () => {
+    expect(barraNoAno({ inicio_previsto: '2024-01-01', fim_previsto: '2024-02-01' }, 2026)).toBeNull();
+    expect(barraNoAno({ inicio_previsto: null, fim_previsto: '2026-02-01' }, 2026)).toBeNull();
+    expect(barraNoAno({ inicio_previsto: '2026-02-01', fim_previsto: null }, 2026)).toBeNull();
+  });
+  it('obra de um dia só ainda aparece', () => {
+    const b = barraNoAno({ inicio_previsto: '2026-03-10', fim_previsto: '2026-03-10' }, 2026)!;
+    expect(b.largura).toBeGreaterThan(0);
   });
 });

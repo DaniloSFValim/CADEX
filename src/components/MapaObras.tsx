@@ -10,9 +10,8 @@ maplibregl.setWorkerUrl(workerUrl);
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { Protocol } from 'pmtiles';
 import { useEffect, useRef, useState } from 'react';
-import { dataBR } from './Situacao';
-import { COR_SITUACAO, SITUACAO_PUBLICA_LABEL, obrasParaGeoJSON, type ObraPublica } from '../lib/obras';
-import { ORIGEM_LABEL, TIPO_INTERVENCAO_LABEL, type OrigemIntervencao, type SituacaoPublica, type TipoIntervencao } from '../lib/licencas';
+import { COR_SITUACAO, obrasParaGeoJSON, type ObraPublica } from '../lib/obras';
+import type { SituacaoPublica } from '../lib/licencas';
 
 /** Niterói, com folga. */
 const NITEROI: maplibregl.LngLatBoundsLike = [[-43.135, -22.995], [-42.955, -22.865]];
@@ -67,39 +66,17 @@ const corPorSituacao = [
 ] as unknown as maplibregl.ExpressionSpecification;
 
 /** Conteúdo do balão: montado com nós de texto, nunca com HTML vindo do banco. */
-function balao(p: Record<string, string>): HTMLElement {
-  const div = document.createElement('div');
-  div.className = 'text-sm leading-snug';
-  const linha = (texto: string, classe = '') => {
-    const el = document.createElement('div');
-    el.textContent = texto;
-    if (classe) el.className = classe;
-    div.appendChild(el);
-  };
-  const tipo = TIPO_INTERVENCAO_LABEL[p.tipo_intervencao as TipoIntervencao] ?? 'Obra';
-  linha(`${tipo} · ${SITUACAO_PUBLICA_LABEL[p.situacao as SituacaoPublica] ?? p.situacao}`, 'font-semibold');
-  linha(`Licença nº ${p.numero}`);
-  if (p.escopo) linha(p.escopo, 'text-tinta-700');
-  if (p.contratante) linha(`Contratante: ${p.contratante}`, 'text-tinta-600');
-  linha(`Executora: ${p.executora}`, 'text-tinta-600');
-  if (p.origem && p.origem !== 'concessionaria') linha(ORIGEM_LABEL[p.origem as OrigemIntervencao] ?? '', 'text-tinta-500');
-  linha(p.bairro ? `${p.logradouro}, ${p.bairro}` : p.logradouro, 'text-tinta-600');
-  linha(p.inicio_previsto || p.fim_previsto
-    ? `${p.inicio_previsto ? dataBR(p.inicio_previsto) : '—'} a ${p.fim_previsto ? dataBR(p.fim_previsto) : '—'}`
-    : 'Sem período informado', 'text-tinta-500');
-  const a = document.createElement('a');
-  a.href = `/licenca/${p.codigo}`;
-  a.textContent = 'Ver a licença';
-  a.className = 'mt-1 inline-block font-semibold text-marca-600 underline';
-  div.appendChild(a);
-  return div;
-}
-
-export default function MapaObras({ obras, foco }: { obras: ObraPublica[]; foco?: string | null }) {
+/** Mapa das obras. Clicar numa obra avisa quem chamou (a ficha aparece ao lado), sem balão. */
+export default function MapaObras({ obras, foco, onSelecionar }: {
+  obras: ObraPublica[]; foco?: string | null; onSelecionar?: (codigo: string) => void;
+}) {
   const caixa = useRef<HTMLDivElement>(null);
   const mapa = useRef<maplibregl.Map | null>(null);
   const [pronto, setPronto] = useState(false);
   const [erro, setErro] = useState('');
+  // O evento de clique é registrado uma vez; a referência garante que ele use a função atual.
+  const onSelecionarRef = useRef(onSelecionar);
+  onSelecionarRef.current = onSelecionar;
 
   useEffect(() => {
     let vivo = true;
@@ -137,10 +114,8 @@ export default function MapaObras({ obras, foco }: { obras: ObraPublica[]; foco?
       });
       for (const camada of ['obras-linhas', 'obras-pontos']) {
         m.on('click', camada, (e: maplibregl.MapLayerMouseEvent) => {
-          const f = e.features?.[0];
-          if (!f) return;
-          new maplibregl.Popup({ maxWidth: '300px' }).setLngLat(e.lngLat)
-            .setDOMContent(balao(f.properties as Record<string, string>)).addTo(m);
+          const codigo = e.features?.[0]?.properties?.codigo;
+          if (typeof codigo === 'string') onSelecionarRef.current?.(codigo);
         });
         m.on('mouseenter', camada, () => { m.getCanvas().style.cursor = 'pointer'; });
         m.on('mouseleave', camada, () => { m.getCanvas().style.cursor = ''; });

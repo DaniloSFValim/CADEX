@@ -124,3 +124,30 @@ export function obrasParaGeoJSON(obras: ObraPublica[]): FeatureCollection {
     }))),
   };
 }
+
+// ---------------------------------------------------------------------
+// Faixa do tempo: cada obra vira uma barra no ano, cortada nas bordas.
+// ---------------------------------------------------------------------
+
+/** Fração do ano (0 = 1º de janeiro, 1 = fim de dezembro) de uma data ISO. */
+export function fracaoDoAno(iso: string, ano: number): number {
+  const inicio = Date.UTC(ano, 0, 1);
+  const fim = Date.UTC(ano + 1, 0, 1);
+  return (Date.parse(`${iso}T00:00:00Z`) - inicio) / (fim - inicio);
+}
+
+/**
+ * Onde a obra cai no ano: esquerda e largura em fração do ano, já cortadas
+ * para caber. Nulo quando não há período ou quando a obra não toca o ano.
+ */
+export function barraNoAno(o: Pick<ObraPublica, 'inicio_previsto' | 'fim_previsto'>, ano: number)
+  : { esquerda: number; largura: number } | null {
+  if (!o.inicio_previsto || !o.fim_previsto) return null;
+  const a = fracaoDoAno(o.inicio_previsto, ano);
+  const b = fracaoDoAno(o.fim_previsto, ano);
+  const esq = Math.max(a, 0);
+  const dir = Math.min(b, 1);
+  if (dir <= 0 || esq >= 1 || dir < esq) return null;
+  // Obra de um dia só ainda aparece como barra fina.
+  return { esquerda: esq, largura: Math.max(dir - esq, 0.002) };
+}
