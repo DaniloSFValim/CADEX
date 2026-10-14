@@ -84,3 +84,10 @@ describe('tipo e origem da intervenção', () => {
       inicio_previsto: '2026-10-01', fim_previsto: '2026-10-30' });
   });
 });
+
+describe('fim igual ao início', () => {
+  it('vira ponto, porque a linha de comprimento zero não aparece no mapa', () => {
+    const fc = obrasParaGeoJSON([obra({ trechos: [{ logradouro: 'Av. X', bairro: null, inicio: [-43.11156, -22.907928], fim: [-43.11156, -22.907928] }] })]);
+    expect(fc.features[0].geometry).toEqual({ type: 'Point', coordinates: [-43.11156, -22.907928] });
+  });
+});

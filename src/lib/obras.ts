@@ -94,6 +94,8 @@ const coordenadaValida = (c: unknown): c is [number, number] =>
   Array.isArray(c) && c.length === 2 && c.every((n) => typeof n === 'number' && Number.isFinite(n))
   && Math.abs(c[0]) <= 180 && Math.abs(c[1]) <= 90;
 
+const mesmoPonto = (a: [number, number], b: [number, number]) => a[0] === b[0] && a[1] === b[1];
+
 /** A obra tem ao menos um trecho que o mapa consegue desenhar. */
 export const temLocalizacao = (o: ObraPublica) => o.trechos.some((t) => coordenadaValida(t.inicio));
 
@@ -109,7 +111,8 @@ export function obrasParaGeoJSON(obras: ObraPublica[]): FeatureCollection {
     // da consulta avisa que a obra está sem localização.
     features: obras.flatMap((o) => o.trechos.filter((t) => coordenadaValida(t.inicio)).map((t): Feature => ({
       type: 'Feature',
-      geometry: coordenadaValida(t.fim)
+      // Fim igual ao início é um ponto: a linha de comprimento zero não aparece no mapa.
+      geometry: coordenadaValida(t.fim) && !mesmoPonto(t.inicio, t.fim)
         ? { type: 'LineString', coordinates: [t.inicio, t.fim] }
         : { type: 'Point', coordinates: t.inicio },
       properties: {
