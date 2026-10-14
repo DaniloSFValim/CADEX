@@ -4,6 +4,8 @@ import { ExportarLicencas } from '../components/ExportarLicencas';
 import { Badge, Button, Card, Empty, ErrorNote, Kpi, Spinner, Titulo, botaoLink, inputClass, tabela } from '../components/ui';
 import { dataBR } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
+import { ExcluirLicenca } from '../components/ExclusaoLicenca';
+import { listarOrgaos, type Orgao } from '../lib/orgaos';
 import { SETORES, SETOR_LABEL, hojeISO, listarEmpresas, nomeEmpresa, type Empresa } from '../lib/empresas';
 import {
   ESTADO_LICENCA_LABEL, ORIGENS, ORIGEM_LABEL, TIPOS_INTERVENCAO, TIPO_INTERVENCAO_LABEL, TIPO_OBRA_LABEL, origemPublica, TOM_ESTADO_LICENCA, desempenhoExecutora, estadoLicenca, listarLicencas, mesmaEmpresaNosPapeis, nomeExecutora, pendenciasLicencas,
@@ -19,7 +21,10 @@ const FILTROS: { valor: string; rotulo: string; inclui: EstadoLicenca[] }[] = [
 ];
 
 export default function Licencas() {
-  const { podeLicenciar } = useAuth();
+  const { podeLicenciar, servidor } = useAuth();
+  const administrador = servidor?.administrador === true;
+  const [orgaos, setOrgaos] = useState<Orgao[]>([]);
+  const [aviso, setAviso] = useState('');
   const [licencas, setLicencas] = useState<LicencaComTrechos[] | null>(null);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [error, setError] = useState<unknown>(null);
@@ -31,11 +36,12 @@ export default function Licencas() {
   const [exportando, setExportando] = useState(false);
   const hoje = hojeISO();
 
-  useEffect(() => {
-    Promise.all([listarLicencas(), listarEmpresas()])
-      .then(([l, e]) => { setLicencas(l); setEmpresas(e); })
-      .catch(setError);
-  }, []);
+  const carregar = () => Promise.all([listarLicencas(), listarEmpresas(), administrador ? listarOrgaos() : Promise.resolve([])])
+    .then(([l, e, o]) => { setLicencas(l); setEmpresas(e); setOrgaos(o); })
+    .catch(setError);
+  useEffect(() => { void carregar(); }, [administrador]);
+  // Exclusão só para o administrador; a lixeira fica em Administração → Licenças.
+  const excluir = administrador ? { orgaos, hoje: hojeISO(), onExcluida: (m: string) => { setAviso(m); void carregar(); } } : undefined;
 
   const porId = useMemo(() => new Map(empresas.map((e) => [e.id, e])), [empresas]);
 
@@ -125,7 +131,8 @@ export default function Licencas() {
               : 'Nenhuma licença corresponde à busca.'}
           </Empty>
         )}
-        {filtradas.length > 0 && <TabelaLicencas licencas={filtradas} porId={porId} hoje={hoje} />}
+        {aviso && <p role="status" className="border-l-4 border-alta bg-alta/6 px-4 py-2 text-sm text-tinta-800">{aviso}</p>}
+        {filtradas.length > 0 && <TabelaLicencas licencas={filtradas} porId={porId} hoje={hoje} excluir={excluir} />}
         {licencas && licencas.length > 0 && (
           <div className="border-t border-tinta-200 px-4 py-2.5 text-xs text-tinta-500">
             {filtradas.length} de {licencas.length} licença{licencas.length === 1 ? '' : 's'}
@@ -136,8 +143,10 @@ export default function Licencas() {
   );
 }
 
-export function TabelaLicencas({ licencas, porId, hoje, semExecutora = false }: {
+export function TabelaLicencas({ licencas, porId, hoje, semExecutora = false, excluir }: {
   licencas: LicencaComTrechos[]; porId: Map<string, Empresa>; hoje: string; semExecutora?: boolean;
+  /** Presente só para o administrador: mostra "Excluir" em cada linha. */
+  excluir?: { orgaos: Orgao[]; hoje: string; onExcluida: (mensagem: string) => void };
 }) {
   return (
     <div className={tabela.moldura}>
@@ -150,6 +159,7 @@ export function TabelaLicencas({ licencas, porId, hoje, semExecutora = false }: 
             <th className={tabela.th}>Início da obra ou serviço</th>
             <th className={tabela.th}>Fim da obra ou serviço</th>
             <th className={tabela.th}>Situação</th>
+            {excluir && <th className={tabela.th}><span className="sr-only">Ações</span></th>}
           </tr>
         </thead>
         <tbody>
@@ -189,6 +199,12 @@ export function TabelaLicencas({ licencas, porId, hoje, semExecutora = false }: 
                   {l.fim_previsto ? dataBR(l.fim_previsto) : '—'}
                 </td>
                 <td className={tabela.td}><Badge tom={TOM_ESTADO_LICENCA[estado]}>{ESTADO_LICENCA_LABEL[estado]}</Badge></td>
+                {excluir && (
+                  <td className={`${tabela.td} text-right`}>
+                    <ExcluirLicenca licenca={l} empresas={porId} orgaos={excluir.orgaos} hoje={excluir.hoje}
+                                    onExcluida={excluir.onExcluida} rotulo="Excluir" />
+                  </td>
+                )}
               </tr>
             );
           })}

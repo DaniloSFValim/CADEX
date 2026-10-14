@@ -215,3 +215,10 @@ próprio (ex.: analista de licenciamento), as políticas de `licencas` e
   a tela informa quantos são antes de confirmar. Desativar continua disponível para quem só quer barrar o acesso e manter o cadastro.
 - A função de borda precisa ser **implantada** junto com a migração (`supabase functions deploy admin-contas`); sem isso o botão
   responde com erro, sem excluir nada.
+
+### Mapa de obras: carta de trabalho (14/10/2026)
+- O mapa ocupa a largura toda. Clicar numa obra abre a ficha sobre o mapa (no celular, na parte de baixo); o balão antigo saiu.
+- Faixa do tempo do ano corrente: uma linha por obra, barra na cor da situação, cortada nas bordas do ano, com a linha de hoje. Mostra até 30 obras; o resto fica na lista, com aviso.
+- Cores de situação mantidas (iguais ao restante do sistema). Situação também aparece em texto, não só na cor.
+- A faixa usa os mesmos filtros da lista. Sem obra com período no ano, a faixa diz isso.
+- Limites: as barras não trazem rótulo visível (o nome aparece na ficha e na lista); a renderização do mapa (canvas) não é coberta por teste automatizado.
