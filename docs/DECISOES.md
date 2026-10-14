@@ -222,3 +222,14 @@ próprio (ex.: analista de licenciamento), as políticas de `licencas` e
 - Cores de situação mantidas (iguais ao restante do sistema). Situação também aparece em texto, não só na cor.
 - A faixa usa os mesmos filtros da lista. Sem obra com período no ano, a faixa diz isso.
 - Limites: as barras não trazem rótulo visível (o nome aparece na ficha e na lista); a renderização do mapa (canvas) não é coberta por teste automatizado.
+
+### Obras e serviços sem licença (14/10/2026)
+- Acréscimo ao fluxo de obras licenciadas, que não muda: tabela própria `intervencoes_sem_licenca`, sem alterar `licencas` nem `obras_publicas`.
+- Não aparece como licenciada no mapa público nem nos dados abertos, e não entra nas contagens das licenças.
+- Campos obrigatórios: setor, tipo (obra ou serviço), órgão contratante, executora, local (coordenadas dentro de Niterói) e escopo.
+  Período e processo SEI são opcionais.
+- Executora em três modos: o próprio órgão; empresa cadastrada (deve atuar no setor); empresa fora do cadastro (razão social e CNPJ de 14 dígitos).
+- Situação própria (em execução, concluída, cancelada). Regularização posterior pelo vínculo `licenca_id`.
+- Pendente de decisão da SECONSER: a base legal da dispensa de licença quando a obra é própria da Prefeitura. Não há presunção no sistema.
+- Sem exclusão nesta entrega (decidir se haverá lixeira).
+- Migração `20261019120000` aplicada em produção (14/10/2026), antes do merge.

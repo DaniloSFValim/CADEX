@@ -26,6 +26,7 @@ import Licencas from './pages/Licencas';
 import LicencaPage from './pages/LicencaPage';
 import LicencaPublica from './pages/LicencaPublica';
 import PlacaLicenca from './pages/PlacaLicenca';
+import SemLicenca, { FormSemLicencaPage } from './pages/SemLicenca';
 import { CadastrarMfa, ConfirmarMfa } from './pages/Mfa';
 
 export function App() {
@@ -88,6 +89,9 @@ function AreaRestrita() {
         <Route element={<Layout />}>
           <Route index element={<Navigate to="/obras" replace />} />
           <Route path="obras" element={<Licencas />} />
+          <Route path="obras/sem-licenca" element={<SemLicenca />} />
+          <Route path="obras/sem-licenca/nova" element={<FormSemLicencaPage />} />
+          <Route path="obras/sem-licenca/:id" element={<FormSemLicencaPage />} />
           <Route path="obras/nova" element={<LicencaPage />} />
           <Route path="obras/:id" element={<LicencaPage />} />
           <Route path="minha-conta" element={<MinhaConta />} />
@@ -112,6 +116,9 @@ function AreaRestrita() {
         <Route path="empresas/nova" element={<EmpresaPage />} />
         <Route path="empresas/:id" element={<EmpresaPage />} />
         <Route path="obras" element={<Licencas />} />
+        <Route path="obras/sem-licenca" element={<SemLicenca />} />
+        <Route path="obras/sem-licenca/nova" element={<FormSemLicencaPage />} />
+        <Route path="obras/sem-licenca/:id" element={<FormSemLicencaPage />} />
         <Route path="obras/nova" element={<LicencaPage />} />
         <Route path="obras/:id" element={<LicencaPage />} />
         <Route path="orgaos" element={<Orgaos />} />

@@ -75,6 +75,7 @@ export default function Licencas() {
           <Button variant="secondary" disabled={!licencas?.length} onClick={() => setExportando((x) => !x)}>
             Exportar (PDF ou planilha)
           </Button>
+          {podeLicenciar && <Link to="/obras/sem-licenca" className={botaoLink.secondary}>Sem licença</Link>}
           {podeLicenciar && <Link to="/obras/nova" className={botaoLink.primary}>Registrar licença</Link>}
         </>}
       />
