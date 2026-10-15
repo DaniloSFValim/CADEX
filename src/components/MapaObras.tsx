@@ -86,7 +86,11 @@ export default function MapaObras({ obras, foco, onSelecionar }: {
       // que espera todos os blocos do mapa-base e pode não chegar se algum falhar.
       const style: StyleSpecification = {
         ...base,
-        sources: { ...base.sources, obras: { type: 'geojson', data: obrasParaGeoJSON([]) } },
+        // Pontos próximos viram um agrupamento com a contagem; só as linhas não agrupam.
+        sources: {
+          ...base.sources,
+          obras: { type: 'geojson', data: obrasParaGeoJSON([]), cluster: true, clusterRadius: 40, clusterMaxZoom: 14 },
+        },
         layers: [
           ...base.layers,
           {
@@ -95,7 +99,24 @@ export default function MapaObras({ obras, foco, onSelecionar }: {
             paint: { 'line-color': corPorSituacao, 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 3, 17, 7] },
           },
           {
-            id: 'obras-pontos', type: 'circle', source: 'obras', filter: ['==', ['geometry-type'], 'Point'],
+            id: 'obras-agrupamentos', type: 'circle', source: 'obras', filter: ['has', 'point_count'],
+            paint: {
+              'circle-color': '#1d4e5a', 'circle-opacity': 0.85,
+              'circle-radius': ['step', ['get', 'point_count'], 16, 10, 20, 50, 26],
+              'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2,
+            },
+          },
+          {
+            id: 'obras-agrupamentos-contagem', type: 'symbol', source: 'obras', filter: ['has', 'point_count'],
+            layout: {
+              'text-field': ['to-string', ['get', 'point_count']], 'text-font': ['Noto Sans Medium'],
+              'text-size': 13, 'text-allow-overlap': true,
+            },
+            paint: { 'text-color': '#ffffff' },
+          },
+          {
+            id: 'obras-pontos', type: 'circle', source: 'obras',
+            filter: ['all', ['==', ['geometry-type'], 'Point'], ['!', ['has', 'point_count']]],
             paint: {
               'circle-color': corPorSituacao, 'circle-radius': ['interpolate', ['linear'], ['zoom'], 12, 4, 17, 8],
               'circle-stroke-color': '#ffffff', 'circle-stroke-width': 1.5,
@@ -120,6 +141,20 @@ export default function MapaObras({ obras, foco, onSelecionar }: {
         m.on('mouseenter', camada, () => { m.getCanvas().style.cursor = 'pointer'; });
         m.on('mouseleave', camada, () => { m.getCanvas().style.cursor = ''; });
       }
+      // Clique num agrupamento: aproxima o mapa até ele se separar nas obras.
+      m.on('click', 'obras-agrupamentos', (e: maplibregl.MapLayerMouseEvent) => {
+        const f = e.features?.[0];
+        const id = f?.properties?.cluster_id;
+        const geom = f?.geometry;
+        if (typeof id !== 'number' || geom?.type !== 'Point') return;
+        const centro = geom.coordinates as [number, number];
+        const fonte = m.getSource('obras') as maplibregl.GeoJSONSource;
+        void fonte.getClusterExpansionZoom(id).then((zoom) => {
+          m.easeTo({ center: centro, zoom });
+        }).catch(() => undefined);
+      });
+      m.on('mouseenter', 'obras-agrupamentos', () => { m.getCanvas().style.cursor = 'pointer'; });
+      m.on('mouseleave', 'obras-agrupamentos', () => { m.getCanvas().style.cursor = ''; });
       const marcarPronto = () => { if (vivo && m.getSource('obras')) setPronto(true); };
       m.once('style.load', marcarPronto);
       m.once('idle', marcarPronto);
