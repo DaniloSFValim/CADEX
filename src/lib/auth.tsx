@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { registrarAtividade } from './sessao';
 import { supabase } from './supabase';
@@ -53,6 +53,7 @@ const Ctx = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
+  const ultimoUsuario = useRef<string | null>(null);
   const [servidor, setServidor] = useState<Servidor | null>(null);
   const [mfa, setMfa] = useState<EstadoMfa | null>(null);
   const [loading, setLoading] = useState(true);
@@ -90,12 +91,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     supabase.auth.getSession().then(({ data }) => {
+      ultimoUsuario.current = data.session?.user.id ?? null;
       setSession(data.session);
       void load(data.session);
     });
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((evento, s) => {
       setSession(s);
+      // Voltar para a aba renova o token e emite SIGNED_IN ou TOKEN_REFRESHED
+      // com o mesmo usuário. Recarregar nesse momento põe a área em "carregando"
+      // e desmonta as telas: o que estava sendo digitado se perde. Só troca de
+      // usuário e a confirmação do MFA (MFA_CHALLENGE_VERIFIED) recarregam o perfil.
+      const mesmoUsuario = s?.user.id === ultimoUsuario.current;
+      if (mesmoUsuario && (evento === 'SIGNED_IN' || evento === 'TOKEN_REFRESHED' || evento === 'INITIAL_SESSION')) return;
+      ultimoUsuario.current = s?.user.id ?? null;
       setLoading(true);
       void load(s);
     });
