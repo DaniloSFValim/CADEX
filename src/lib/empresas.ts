@@ -346,6 +346,44 @@ export async function definirEmpresaAtiva(id: string, ativa: boolean): Promise<v
   if (error) throw error;
 }
 
+/**
+ * O que a administração pode fazer com um cadastro. Desativar é para empresa
+ * habilitada; empresa em análise sai pela exclusão. Excluir nunca vale se a
+ * empresa tem licença: esses registros são históricos e públicos.
+ */
+export function opcoesCadastro(e: Pick<Empresa, 'ativa' | 'situacao'>, licencas: number) {
+  const emAnalise = e.situacao === 'em_analise';
+  return {
+    // Em análise sem licença sai pela exclusão; com licença, só dá para desativar.
+    desativar: e.ativa && (!emAnalise || licencas > 0),
+    reativar: !e.ativa,
+    excluir: (!e.ativa || emAnalise) && licencas === 0,
+    /** Só para explicar, na tela, por que a exclusão não aparece. */
+    motivoSemExclusao: licencas > 0 ? 'Tem licença: só dá para desativar.' : null,
+  };
+}
+
+/**
+ * Exclui o cadastro e os arquivos dele. O banco confere as regras e apaga a
+ * linha primeiro; só depois os arquivos saem do Storage. Se o banco recusar,
+ * nada é removido.
+ */
+export async function excluirEmpresa(e: Pick<Empresa, 'id' | 'logo_arquivo'>): Promise<void> {
+  const { data: docs, error: erroDocs } = await supabase.from('documentos').select('arquivo').eq('empresa_id', e.id);
+  if (erroDocs) throw erroDocs;
+  const { error } = await supabase.rpc('admin_excluir_empresa', { p_id: e.id });
+  if (error) throw error;
+  const arquivos = (docs ?? []).map((d) => d.arquivo as string | null).filter((a): a is string => Boolean(a));
+  if (arquivos.length) {
+    const r = await supabase.storage.from(BUCKET).remove(arquivos);
+    if (r.error) throw new Error('Cadastro excluído, mas alguns arquivos não foram removidos do armazenamento.');
+  }
+  if (e.logo_arquivo) {
+    const r = await supabase.storage.from(BUCKET_LOGOS).remove([e.logo_arquivo]);
+    if (r.error) throw new Error('Cadastro excluído, mas o logo não foi removido do armazenamento.');
+  }
+}
+
 export async function listarVinculos(): Promise<Vinculo[]> {
   const { data, error } = await supabase.from('vinculos').select('*').order('inicio');
   if (error) throw error;

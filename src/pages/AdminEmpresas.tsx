@@ -5,7 +5,8 @@ import { SituacaoBadge } from '../components/Situacao';
 import { duplicidades, participacoes, type Participacao } from '../lib/admin';
 import { formatCnpj, onlyDigits } from '../lib/cnpj';
 import {
-  TIPO_LABEL, definirEmpresaAtiva, hojeISO, listarEmpresas, nomeEmpresa, situacaoEfetiva, type Empresa, type Tipo,
+  TIPO_LABEL, definirEmpresaAtiva, excluirEmpresa, hojeISO, listarEmpresas, nomeEmpresa, opcoesCadastro, situacaoEfetiva,
+  type Empresa, type Tipo,
 } from '../lib/empresas';
 import { listarLicencas, type LicencaComTrechos } from '../lib/licencas';
 
@@ -141,8 +142,11 @@ function LinhaEmpresa({ empresa: e, hoje, participacao: p, onMudou }: {
   empresa: Empresa; hoje: string; participacao: Participacao; onMudou: (msg: string) => void;
 }) {
   const [confirmando, setConfirmando] = useState(false);
+  const [excluindo, setExcluindo] = useState(false);
+  const [cnpjDigitado, setCnpjDigitado] = useState('');
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState<unknown>(null);
+  const opc = opcoesCadastro(e, p.licencas);
 
   const alternar = async () => {
     setBusy(true); setErro(null);
@@ -150,6 +154,15 @@ function LinhaEmpresa({ empresa: e, hoje, participacao: p, onMudou }: {
       await definirEmpresaAtiva(e.id, !e.ativa);
       setConfirmando(false);
       onMudou(e.ativa ? `Cadastro de ${nomeEmpresa(e)} desativado.` : `Cadastro de ${nomeEmpresa(e)} reativado.`);
+    } catch (err) { setErro(err); } finally { setBusy(false); }
+  };
+
+  const excluir = async () => {
+    setBusy(true); setErro(null);
+    try {
+      await excluirEmpresa(e);
+      setExcluindo(false);
+      onMudou(`Cadastro de ${nomeEmpresa(e)} excluído, com os documentos e arquivos.`);
     } catch (err) { setErro(err); } finally { setBusy(false); }
   };
 
@@ -175,10 +188,40 @@ function LinhaEmpresa({ empresa: e, hoje, participacao: p, onMudou }: {
       </td>
       <td className={tabela.td}>{e.ativa ? <Badge tom="bom">Ativa</Badge> : <Badge tom="alerta">Desativada</Badge>}</td>
       <td className={`${tabela.td} min-w-[220px] text-right`}>
-        {!confirmando ? (
-          <Button variant={e.ativa ? 'danger' : 'secondary'} className="px-3! py-1.5!" onClick={() => setConfirmando(true)}>
-            {e.ativa ? 'Desativar' : 'Reativar'}
-          </Button>
+        {excluindo ? (
+          <div className="flex flex-col items-end gap-2 text-right text-sm">
+            <span className="text-tinta-700">
+              Apaga o cadastro, documentos, vínculos, responsáveis técnicos, funcionários e veículos. A exclusão fica na auditoria.
+            </span>
+            <label className="w-full text-left text-xs text-tinta-600">
+              Digite o CNPJ ({formatCnpj(e.cnpj)}) para confirmar
+              <input className={`${inputClass} mt-1 tabular`} inputMode="numeric" value={cnpjDigitado}
+                     onChange={(ev) => setCnpjDigitado(ev.target.value)} />
+            </label>
+            <div className="flex gap-2">
+              <Button variant="secondary" className="px-3! py-1.5!" onClick={() => { setExcluindo(false); setCnpjDigitado(''); }}>Cancelar</Button>
+              <Button variant="danger" className="px-3! py-1.5!"
+                      disabled={busy || onlyDigits(cnpjDigitado) !== e.cnpj}
+                      onClick={() => void excluir()}>
+                {busy ? 'Excluindo…' : 'Excluir'}
+              </Button>
+            </div>
+          </div>
+        ) : !confirmando ? (
+          <div className="flex flex-wrap justify-end gap-2">
+            {opc.desativar && (
+              <Button variant="danger" className="px-3! py-1.5!" onClick={() => setConfirmando(true)}>Desativar</Button>
+            )}
+            {opc.reativar && (
+              <Button variant="secondary" className="px-3! py-1.5!" onClick={() => setConfirmando(true)}>Reativar</Button>
+            )}
+            {opc.excluir && (
+              <Button variant="danger" className="px-3! py-1.5!" onClick={() => setExcluindo(true)}>Excluir</Button>
+            )}
+            {!opc.excluir && opc.motivoSemExclusao && (
+              <span className="self-center text-xs text-tinta-500">{opc.motivoSemExclusao}</span>
+            )}
+          </div>
         ) : (
           <div className="flex flex-col items-end gap-2 text-right text-sm">
             <span className="text-tinta-700">
