@@ -4,6 +4,7 @@ import { Button, Card, Empty, ErrorNote, Field, Spinner, Titulo, botaoLink, inpu
 import { dataBR } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { SETORES, SETOR_LABEL, atuaNoSetor, hojeISO, listarEmpresas, nomeEmpresa, type Empresa, type Setor } from '../lib/empresas';
+import { listarTipos, type TipoIntervencao as TipoDeObra } from '../lib/tiposIntervencao';
 import { TIPO_INTERVENCAO_LABEL, TIPOS_INTERVENCAO, type TipoIntervencao, coordenadaTexto } from '../lib/licencas';
 import { listarOrgaos, nomeOrgao, type Orgao } from '../lib/orgaos';
 import {
@@ -95,20 +96,21 @@ export function FormSemLicencaPage() {
   const [empresas, setEmpresas] = useState<Empresa[] | null>(null);
   const [orgaos, setOrgaos] = useState<Orgao[] | null>(null);
   const [atual, setAtual] = useState<IntervencaoSemLicenca | null>(null);
+  const [tipos, setTipos] = useState<TipoDeObra[] | null>(null);
   const [carregado, setCarregado] = useState(!id);
   const [erro, setErro] = useState<unknown>(null);
 
   useEffect(() => {
-    Promise.all([listarEmpresas(), listarOrgaos(), id ? listarSemLicenca() : Promise.resolve(null)])
-      .then(([e, o, l]) => {
-        setEmpresas(e); setOrgaos(o);
+    Promise.all([listarEmpresas(), listarOrgaos(), listarTipos(), id ? listarSemLicenca() : Promise.resolve(null)])
+      .then(([e, o, t, l]) => {
+        setEmpresas(e); setOrgaos(o); setTipos(t);
         if (l) setAtual(l.find((x) => x.id === id) ?? null);
         setCarregado(true);
       })
       .catch(setErro);
   }, [id]);
 
-  if (!empresas || !orgaos || !carregado) return <Spinner />;
+  if (!empresas || !orgaos || !tipos || !carregado) return <Spinner />;
   if (id && !atual) return <ErrorNote error={new Error('Registro não encontrado.')} />;
 
   return (
@@ -123,6 +125,7 @@ export function FormSemLicencaPage() {
         atual={atual}
         empresas={empresas}
         orgaos={orgaos}
+        tipos={tipos}
         somenteLeitura={!podeLicenciar}
         onSalvo={(mensagem) => navigate('/obras/sem-licenca', { state: { aviso: mensagem } })}
       />
@@ -134,7 +137,8 @@ export function FormSemLicencaPage() {
 function paraForm(r: IntervencaoSemLicenca): FormSemLicenca {
   const s = (v: string | null) => v ?? '';
   return {
-    setor: r.setor, tipo_intervencao: r.tipo_intervencao, escopo: r.escopo, contratante_orgao_id: r.contratante_orgao_id,
+    setor: r.setor, tipo_intervencao: r.tipo_intervencao, tipos_obra: r.tipos_obra, outros_descricao: s(r.outros_descricao),
+    escopo: r.escopo, contratante_orgao_id: r.contratante_orgao_id,
     executora_modo: r.executora_modo, executora_id: s(r.executora_id), executora_razao_social: s(r.executora_razao_social),
     executora_cnpj: s(r.executora_cnpj), logradouro: r.logradouro, bairro: s(r.bairro), referencia: s(r.referencia),
     inicio: coordenadaTexto(r.inicio_lat, r.inicio_lng),
@@ -146,8 +150,8 @@ function paraForm(r: IntervencaoSemLicenca): FormSemLicenca {
   };
 }
 
-function FormSemLicenca({ atual, empresas, orgaos, somenteLeitura, onSalvo }: {
-  atual: IntervencaoSemLicenca | null; empresas: Empresa[]; orgaos: Orgao[]; somenteLeitura: boolean;
+function FormSemLicenca({ atual, empresas, orgaos, tipos, somenteLeitura, onSalvo }: {
+  atual: IntervencaoSemLicenca | null; empresas: Empresa[]; orgaos: Orgao[]; tipos: TipoDeObra[]; somenteLeitura: boolean;
   onSalvo: (mensagem: string) => void;
 }) {
   const [f, setF] = useState<FormSemLicenca>(atual ? paraForm(atual) : { ...FORM_SEM_LICENCA_VAZIO, inicio_previsto: hojeISO() });
@@ -159,6 +163,12 @@ function FormSemLicenca({ atual, empresas, orgaos, somenteLeitura, onSalvo }: {
   // Empresa e órgão que servem ao setor escolhido.
   const empresasDoSetor = empresas.filter((e) => e.ativa && atuaNoSetor(e, f.setor));
   const orgaosDoSetor = orgaos.filter((o) => o.setores.length === 0 || o.setores.includes(f.setor));
+  // Tipos do setor: os ativos, mais os já marcados neste registro (mesmo desativados depois).
+  const tiposDoSetor = tipos.filter((t) => t.setor === f.setor && (t.ativo || f.tipos_obra.includes(t.codigo)));
+
+  function alternarTipo(codigo: string, marcado: boolean) {
+    set('tipos_obra', marcado ? [...f.tipos_obra, codigo] : f.tipos_obra.filter((c) => c !== codigo));
+  }
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -179,7 +189,9 @@ function FormSemLicenca({ atual, empresas, orgaos, somenteLeitura, onSalvo }: {
       <Card title="O que é">
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="Setor" required>
-            <select className={inputClass} required {...campo('setor')} onChange={(e) => set('setor', e.target.value as Setor)}>
+            {/* Trocar o setor limpa os tipos: cada setor tem o seu catálogo. */}
+            <select className={inputClass} required {...campo('setor')}
+                    onChange={(e) => setF((x) => ({ ...x, setor: e.target.value as Setor, tipos_obra: [], outros_descricao: '' }))}>
               {SETORES.map((s) => <option key={s} value={s}>{SETOR_LABEL[s]}</option>)}
             </select>
           </Field>
@@ -195,6 +207,29 @@ function FormSemLicenca({ atual, empresas, orgaos, somenteLeitura, onSalvo }: {
             </select>
           </Field>
         </div>
+        <fieldset className="mt-4" disabled={ro}>
+          <legend className="text-[13px] font-medium text-tinta-700">
+            Tipo de obra ou serviço <span className="ml-0.5 text-baixa" aria-hidden>*</span>{' '}
+            <span className="font-normal text-tinta-500">marque todos que se aplicam</span>
+          </legend>
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            {tiposDoSetor.map((t) => (
+              <label key={t.codigo} className={`flex items-start gap-2 text-sm ${t.ativo ? 'text-tinta-800' : 'text-tinta-500'}`}>
+                <input type="checkbox" className="mt-1" checked={f.tipos_obra.includes(t.codigo)}
+                       onChange={(e) => alternarTipo(t.codigo, e.target.checked)} />
+                <span>{t.rotulo}{t.ativo ? '' : ' (desativado)'}</span>
+              </label>
+            ))}
+            {tiposDoSetor.length === 0 && (
+              <p className="text-sm text-tinta-500 sm:col-span-2">Este setor ainda não tem tipos cadastrados. Peça à administração para incluí-los.</p>
+            )}
+          </div>
+          {f.tipos_obra.includes('outros') && (
+            <Field label="Descreva o tipo (Outros)" required className="mt-4" hint="Aparece no registro e, depois, na placa.">
+              <input className={inputClass} required {...campo('outros_descricao')} />
+            </Field>
+          )}
+        </fieldset>
         <Field label="Escopo" required className="mt-4" hint="O que será feito, em uma ou duas frases.">
           <textarea className={inputClass} rows={2} required {...campo('escopo')} />
         </Field>

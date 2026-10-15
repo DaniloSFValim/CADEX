@@ -88,7 +88,7 @@ begin
   -- Tipo de obra fora do art. 10
   perform pg_temp.recusa(format($q$insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id, contratante_id, protocolo_data)
     values ('telecom', 'NIT-050120/000123/2026', '{pintura}', 'x', %L, %L, '2026-09-01')$q$, te, op),
-    'licencas_tipos_obra_check', 'aceitou tipo de obra fora do art. 10');
+    'não está disponível para o setor telecom', 'aceitou tipo de obra fora do art. 10');
 
   -- Subcontratada sem vínculo com a executora
   perform pg_temp.recusa(format($q$insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id, contratante_id, subcontratada_id, protocolo_data)

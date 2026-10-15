@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { FORM_SEM_LICENCA_VAZIO, montarSemLicenca, type FormSemLicenca } from './semLicenca';
 
 const base = (o: Partial<FormSemLicenca> = {}): FormSemLicenca => ({
-  ...FORM_SEM_LICENCA_VAZIO, tipo_intervencao: 'servico', escopo: 'Poda de árvores', contratante_orgao_id: 'sec',
+  ...FORM_SEM_LICENCA_VAZIO, tipo_intervencao: 'servico', tipos_obra: ['vala'], escopo: 'Poda de árvores', contratante_orgao_id: 'sec',
   executora_modo: 'propria_orgao', logradouro: 'Rua Visconde do Rio Branco', inicio: '-22.8955, -43.1245', ...o,
 });
 
@@ -42,6 +42,19 @@ describe('registro sem licença', () => {
     expect(erro(montarSemLicenca(base({ escopo: '  ' })))).toBe('Descreva o escopo da obra ou serviço.');
     expect(erro(montarSemLicenca(base({ contratante_orgao_id: '' })))).toBe('Escolha o órgão contratante.');
     expect(erro(montarSemLicenca(base({ logradouro: '' })))).toBe('Informe o logradouro.');
+  });
+
+  it('exige ao menos um tipo de obra e descrição quando marca "Outros"', () => {
+    expect(erro(montarSemLicenca(base({ tipos_obra: [] })))).toBe('Marque ao menos um tipo de obra ou serviço.');
+    expect(erro(montarSemLicenca(base({ tipos_obra: ['outros'], outros_descricao: ' ' }))))
+      .toBe('Descreva o tipo "Outros" no campo de descrição.');
+  });
+
+  it('grava os tipos marcados; a descrição de "Outros" só vai junto com esse tipo', () => {
+    const com = montarSemLicenca(base({ tipos_obra: ['outros'], outros_descricao: ' Poda ' }));
+    expect('linha' in com && com.linha).toMatchObject({ tipos_obra: ['outros'], outros_descricao: 'Poda' });
+    const sem = montarSemLicenca(base({ tipos_obra: ['vala'], outros_descricao: 'sobra' }));
+    expect('linha' in sem && sem.linha).toMatchObject({ tipos_obra: ['vala'], outros_descricao: null });
   });
 
   it('coordenada fora de Niterói e período invertido são recusados', () => {

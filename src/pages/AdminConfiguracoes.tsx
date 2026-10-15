@@ -103,8 +103,8 @@ export default function AdminConfiguracoes() {
       </Card>
 
       <p className="max-w-3xl text-sm text-tinta-500">
-        Categorias de empresa, setores e tipos de obra também não são editáveis aqui: são restrições do modelo de dados,
-        e o banco recusaria um valor que a tela aceitasse. Incluir um novo exige uma migração.
+        Categorias de empresa e setores são restrições do modelo de dados: incluir um novo exige uma migração.
+        Os tipos de obra e serviço de cada setor são editados em <Link to="/admin/tipos" className={linkTexto}>Tipos de obra</Link>.
       </p>
     </div>
   );
