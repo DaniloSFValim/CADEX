@@ -26,6 +26,15 @@ async function preencherBasico(page: Page) {
 }
 
 test.describe('registro de licença', () => {
+  test('o bicicletário aparece para viário / mobilidade e some em telecomunicações', async ({ page }) => {
+    await instalarBackend(page);
+    await page.goto('/obras/nova');
+    await campo(page, 'Setor').selectOption('viario');
+    await expect(page.getByLabel('Bicicletário')).toBeVisible();
+    await campo(page, 'Setor').selectOption('telecom');
+    await expect(page.getByLabel('Bicicletário')).toHaveCount(0);
+  });
+
   test('não oferece "Indeferida" e nomeia as datas do período', async ({ page }) => {
     await instalarBackend(page);
     await page.goto('/obras/nova');

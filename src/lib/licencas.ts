@@ -8,7 +8,7 @@ import { supabase } from './supabase';
 
 export type TipoObra =
   | 'vala' | 'escavacao' | 'perfuracao_nao_destrutiva' | 'poste' | 'rede'
-  | 'ligacao_predial' | 'galeria_drenagem' | 'boca_de_lobo' | 'recomposicao';
+  | 'ligacao_predial' | 'galeria_drenagem' | 'boca_de_lobo' | 'recomposicao' | 'bicicletario';
 export type SituacaoLicenca = 'em_analise' | 'deferida' | 'indeferida' | 'cancelada';
 
 /** Situação exibida: a deferida se desdobra conforme o cronograma e a conclusão. */
@@ -121,6 +121,7 @@ export const TIPO_OBRA_LABEL: Record<TipoObra, string> = {
   galeria_drenagem: 'Galeria ou rede de drenagem',
   boca_de_lobo: 'Boca de lobo ou caixa de ralo',
   recomposicao: 'Recomposição de calçada ou pavimento',
+  bicicletario: 'Bicicletário',
 };
 
 /** Licença em que valem as regras da Resolução (só telecom, a partir de 09/09/2026). */

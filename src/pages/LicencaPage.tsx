@@ -12,13 +12,14 @@ import {
   nomeEmpresa, podeAtuar, situacaoEfetiva, type Empresa, type Registro, type Setor, type Vinculo,
 } from '../lib/empresas';
 import {
-  ESTADO_LICENCA_LABEL, ORIGENS, ORIGEM_LABEL, TIPOS_INTERVENCAO, TIPO_INTERVENCAO_LABEL, TIPO_OBRA_LABEL, origemPublica, TOM_ESTADO_LICENCA, buscarConflitos, buscarLicenca,
+  ESTADO_LICENCA_LABEL, ORIGENS, ORIGEM_LABEL, TIPOS_INTERVENCAO, TIPO_INTERVENCAO_LABEL, origemPublica, TOM_ESTADO_LICENCA, buscarConflitos, buscarLicenca,
   anteriorResolucao, coordenadaTexto, segueResolucao, estadoLicenca, lerCoordenada, linkMapa, salvarLicenca,
   erroPeriodoObra, mesmaEmpresaNosPapeis, situacoesRegistraveis,
   urlPublicaLicenca,
   type Conflito, type LicencaComTrechos, type LicencaInput, type OrigemIntervencao, type SituacaoLicenca, type TipoIntervencao, type TipoObra, type Trecho,
 } from '../lib/licencas';
 import { listarOrgaos, nomeOrgao, orgaoServeOrigem, type Orgao } from '../lib/orgaos';
+import { listarTipos, type TipoIntervencao as TipoDeObra } from '../lib/tiposIntervencao';
 
 interface TrechoForm { id?: string; cep: string; logradouro: string; bairro: string; referencia: string; inicio: string; fim: string }
 
@@ -114,11 +115,12 @@ export default function LicencaPage() {
   const [vinculos, setVinculos] = useState<Vinculo[]>([]);
   const [orgaos, setOrgaos] = useState<Orgao[]>([]);
   const [error, setError] = useState<unknown>(null);
+  const [tiposCatalogo, setTiposCatalogo] = useState<TipoDeObra[]>([]);
 
   useEffect(() => {
     setLicenca(null);
-    Promise.all([id ? buscarLicenca(id) : Promise.resolve(null), listarEmpresas(), listarVinculos(), listarOrgaos()])
-      .then(([l, e, v, o]) => { setLicenca(l); setEmpresas(e); setVinculos(v); setOrgaos(o); })
+    Promise.all([id ? buscarLicenca(id) : Promise.resolve(null), listarEmpresas(), listarVinculos(), listarOrgaos(), listarTipos()])
+      .then(([l, e, v, o, t]) => { setLicenca(l); setEmpresas(e); setVinculos(v); setOrgaos(o); setTiposCatalogo(t); })
       .catch(setError);
   }, [id]);
 
@@ -158,6 +160,7 @@ export default function LicencaPage() {
       <LicencaForm
         key={licenca?.id ?? 'nova'}
         licenca={licenca}
+        tipos={tiposCatalogo}
         empresas={empresas}
         vinculos={vinculos}
         orgaos={orgaos}
@@ -171,8 +174,8 @@ export default function LicencaPage() {
   );
 }
 
-function LicencaForm({ licenca, empresas, vinculos, orgaos, somenteLeitura, onSalvo }: {
-  licenca: LicencaComTrechos | null; empresas: Empresa[]; vinculos: Vinculo[]; orgaos: Orgao[]; somenteLeitura: boolean;
+function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitura, onSalvo }: {
+  licenca: LicencaComTrechos | null; empresas: Empresa[]; vinculos: Vinculo[]; orgaos: Orgao[]; tipos: TipoDeObra[]; somenteLeitura: boolean;
   onSalvo: (id: string) => Promise<void>;
 }) {
   const [f, setF] = useState<Form>(licenca ? paraForm(licenca) : { ...VAZIO, protocolo_data: hojeISO() });
@@ -190,6 +193,9 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, somenteLeitura, onSa
   // Empresa desativada (Administração) não entra em licença nova; a que esta licença já usa continua listada.
   const jaUsadas = new Set([licenca?.executora_id, licenca?.contratante_id, licenca?.subcontratada_id].filter(Boolean));
   const ativaOuJaUsada = (e: Empresa) => e.ativa || jaUsadas.has(e.id);
+  // Tipos de obra do setor escolhido: os ativos, mais os já marcados nesta licença.
+  const tiposDoSetor = tipos.filter((t) => t.setor === f.setor && (t.ativo || f.tipos_obra.includes(t.codigo as TipoObra)));
+
   // Executora: empresa HABILITADA (deferida/apta) que atua no setor da licença.
   const executoras = empresas.filter((e) => ativaOuJaUsada(e) && atuaNoSetor(e, f.setor) && podeAtuar(situacaoEfetiva(e, hoje)));
   const publica = origemPublica(f.origem_intervencao);
@@ -461,13 +467,13 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, somenteLeitura, onSa
             </span>
           </legend>
           <div className="mt-2 flex flex-wrap gap-x-6 gap-y-2">
-            {(Object.keys(TIPO_OBRA_LABEL) as TipoObra[]).map((t) => (
-              <label key={t} className="inline-flex items-center gap-2 text-sm text-tinta-800">
-                <input type="checkbox" disabled={ro} checked={f.tipos_obra.includes(t)}
+            {tiposDoSetor.map((t) => (
+              <label key={t.codigo} className="inline-flex items-center gap-2 text-sm text-tinta-800">
+                <input type="checkbox" disabled={ro} checked={f.tipos_obra.includes(t.codigo as TipoObra)}
                        onChange={(e) => set('tipos_obra', e.target.checked
-                         ? (Object.keys(TIPO_OBRA_LABEL) as TipoObra[]).filter((x) => x === t || f.tipos_obra.includes(x))
-                         : f.tipos_obra.filter((x) => x !== t))} />
-                {TIPO_OBRA_LABEL[t]}
+                         ? [...f.tipos_obra, t.codigo as TipoObra]
+                         : f.tipos_obra.filter((x) => x !== t.codigo))} />
+                {t.rotulo}
               </label>
             ))}
           </div>
