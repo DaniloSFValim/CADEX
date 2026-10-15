@@ -35,6 +35,28 @@ test.describe('registro de licença', () => {
     await expect(page.getByLabel('Bicicletário')).toHaveCount(0);
   });
 
+  test('"Outros" pede a descrição e vai ao banco junto com a licença', async ({ page }) => {
+    const backend = await instalarBackend(page);
+    await page.goto('/obras/nova');
+    await campo(page, 'Setor').selectOption('viario');
+    await preencherBasico(page);
+    await page.locator('label:has-text("Outros (descrever)") input').check();
+    await page.getByRole('button', { name: 'Registrar licença' }).click();
+    // Pelo navegador (campo obrigatório) e, sem ele, pela regra da aplicação.
+    expect(await page.getByLabel(/Descreva o tipo/).evaluate((el: HTMLInputElement) => el.validity.valueMissing)).toBe(true);
+    await page.locator('form').evaluate((f: HTMLFormElement) => { f.noValidate = true; });
+    await page.getByRole('button', { name: 'Registrar licença' }).click();
+    await expect(page.getByRole('alert')).toContainText('Descreva o tipo "Outros"');
+    expect(backend.de('rpc/salvar_licenca')).toHaveLength(0);
+
+    await page.getByLabel(/Descreva o tipo/).fill('Poste de sinalização');
+    await page.getByRole('button', { name: 'Registrar licença' }).click();
+    await expect.poll(() => backend.de('rpc/salvar_licenca').length).toBe(1);
+    const { p_licenca } = backend.de('rpc/salvar_licenca')[0].corpo as { p_licenca: Record<string, unknown> };
+    expect(p_licenca.tipos_obra).toEqual(['vala', 'outros']);
+    expect(p_licenca.outros_descricao).toBe('Poste de sinalização');
+  });
+
   test('não oferece "Indeferida" e nomeia as datas do período', async ({ page }) => {
     await instalarBackend(page);
     await page.goto('/obras/nova');

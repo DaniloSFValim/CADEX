@@ -92,3 +92,16 @@ export async function alterarTipo(id: string, mudanca: Pick<TipoIntervencao, 'ro
 }
 
 export const rotuloSetor = (s: Setor) => SETOR_LABEL[s];
+
+/**
+ * Rótulo por código, a partir do catálogo (que a administração pode renomear).
+ * Código que não está no catálogo mostra o próprio código: melhor um código
+ * feio do que um nome errado.
+ */
+export function mapaRotulosTipos(tipos: Pick<TipoIntervencao, 'codigo' | 'rotulo'>[]): Record<string, string> {
+  const mapa: Record<string, string> = {};
+  for (const t of tipos) if (!(t.codigo in mapa)) mapa[t.codigo] = t.rotulo;
+  return mapa;
+}
+
+export const rotuloDoTipo = (codigo: string, mapa: Record<string, string>) => mapa[codigo] ?? codigo;

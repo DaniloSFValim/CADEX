@@ -24,7 +24,7 @@ import { listarTipos, type TipoIntervencao as TipoDeObra } from '../lib/tiposInt
 interface TrechoForm { id?: string; cep: string; logradouro: string; bairro: string; referencia: string; inicio: string; fim: string }
 
 type Form = {
-  setor: Setor; processo_sei: string; numero: string; tipos_obra: TipoObra[]; escopo: string; observacoes: string;
+  setor: Setor; processo_sei: string; numero: string; tipos_obra: TipoObra[]; outros_descricao: string; escopo: string; observacoes: string;
   /** Vazio até o usuário escolher: o campo é obrigatório. */
   tipo_intervencao: TipoIntervencao | ''; origem_intervencao: OrigemIntervencao;
   contrato_numero: string; processo_administrativo: string; ordem_servico_numero: string; objeto_contrato: string;
@@ -67,7 +67,7 @@ function uiDaSituacao(situacao: SituacaoLicenca, concluidaEm: string): UiSituaca
 const TRECHO_VAZIO: TrechoForm = { cep: '', logradouro: '', bairro: '', referencia: '', inicio: '', fim: '' };
 
 const VAZIO: Form = {
-  setor: 'telecom', processo_sei: '', numero: '', tipos_obra: [], escopo: '', observacoes: '',
+  setor: 'telecom', processo_sei: '', numero: '', tipos_obra: [], outros_descricao: '', escopo: '', observacoes: '',
   tipo_intervencao: '', origem_intervencao: 'concessionaria',
   contrato_numero: '', processo_administrativo: '', ordem_servico_numero: '', objeto_contrato: '',
   executora_id: '', contratante_id: '', subcontratada_id: '', responsavel_tecnico_id: '',
@@ -80,7 +80,8 @@ const VAZIO: Form = {
 function paraForm(l: LicencaComTrechos): Form {
   const s = (v: string | null) => v ?? '';
   return {
-    setor: l.setor, processo_sei: l.processo_sei, numero: s(l.numero), tipos_obra: l.tipos_obra, escopo: l.escopo,
+    setor: l.setor, processo_sei: l.processo_sei, numero: s(l.numero), tipos_obra: l.tipos_obra,
+    outros_descricao: s(l.outros_descricao ?? null), escopo: l.escopo,
     observacoes: s(l.observacoes),
     tipo_intervencao: l.tipo_intervencao, origem_intervencao: l.origem_intervencao,
     contrato_numero: s(l.contrato_numero), processo_administrativo: s(l.processo_administrativo),
@@ -335,6 +336,9 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
       if (!f.contratante_id && executora?.tipo !== 'construtora') return 'Drenagem: informe o dono do imóvel ou a construtora contratante.';
     }
     if (f.tipos_obra.length === 0) return 'Marque ao menos um tipo de obra (art. 10).';
+    if (f.tipos_obra.includes('outros') && !f.outros_descricao.trim()) {
+      return 'Descreva o tipo "Outros" no campo de descrição.';
+    }
     const erroPeriodo = erroPeriodoObra({
       deferida: deferindo, decisao: f.decisao_data, inicio: f.inicio_previsto, fim: f.fim_previsto, concluidaEm: f.concluida_em,
     });
@@ -357,7 +361,9 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
     return {
       licenca: {
         ...(licenca ? { id: licenca.id } : {}),
-        setor: f.setor, processo_sei: f.processo_sei, numero: n(f.numero), tipos_obra: f.tipos_obra, escopo: f.escopo.trim(),
+        setor: f.setor, processo_sei: f.processo_sei, numero: n(f.numero), tipos_obra: f.tipos_obra,
+        outros_descricao: f.tipos_obra.includes('outros') ? n(f.outros_descricao) : null,
+        escopo: f.escopo.trim(),
         observacoes: n(f.observacoes),
         tipo_intervencao: f.tipo_intervencao as TipoIntervencao,
         origem_intervencao: f.origem_intervencao,
@@ -477,6 +483,12 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
               </label>
             ))}
           </div>
+          {f.tipos_obra.includes('outros') && (
+            <Field label="Descreva o tipo (Outros)" required className="mt-4" hint="Aparece no registro e na placa do canteiro.">
+              <input className={inputClass} required disabled={ro} value={f.outros_descricao}
+                     onChange={(e) => set('outros_descricao', e.target.value)} />
+            </Field>
+          )}
         </fieldset>
         <Field label={f.tipo_intervencao === 'servico' ? 'Escopo do serviço' : f.tipo_intervencao === 'obra' ? 'Escopo da obra' : 'Escopo da obra ou serviço'} required className="mt-5" hint="O que será feito, como aparecerá na placa do canteiro (art. 14).">
           <textarea className={inputClass} rows={2} required disabled={ro} value={f.escopo}

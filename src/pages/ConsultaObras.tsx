@@ -8,7 +8,8 @@ import { Rodape } from '../components/Rodape';
 import { Empty, ErrorNote, Spinner, inputClass, linkTexto } from '../components/ui';
 import { dataBR } from '../components/Situacao';
 import { SETORES, SETOR_LABEL, hojeISO } from '../lib/empresas';
-import { ORIGENS, ORIGEM_LABEL, TIPOS_INTERVENCAO, TIPO_INTERVENCAO_LABEL, TIPO_OBRA_LABEL, origemPublica } from '../lib/licencas';
+import { ORIGENS, ORIGEM_LABEL, TIPOS_INTERVENCAO, TIPO_INTERVENCAO_LABEL, origemPublica } from '../lib/licencas';
+import { listarTipos, mapaRotulosTipos, rotuloDoTipo } from '../lib/tiposIntervencao';
 import {
   COR_SITUACAO, FILTRO_OBRAS, SITUACAO_PUBLICA_LABEL, anosDasObras, baixarObrasGeojson, buscarObrasPublicas, filtrarObras, temLocalizacao,
   type ObraPublica,
@@ -30,7 +31,9 @@ export default function ConsultaObras() {
   const [foco, setFoco] = useState<string | null>(null);
   const [baixando, setBaixando] = useState(false);
 
+  const [rotulos, setRotulos] = useState<Record<string, string>>({});
   useEffect(() => { buscarObrasPublicas().then(setObras).catch(setError); }, []);
+  useEffect(() => { listarTipos().then((t) => setRotulos(mapaRotulosTipos(t))).catch(() => setRotulos({})); }, []);
 
   async function baixarGeojson() {
     setError(null);
@@ -175,7 +178,7 @@ export default function ConsultaObras() {
                       </div>
                       <p className="mt-1 text-sm text-tinta-600">
                         {o.executora}{o.contratante && `, para ${o.contratante}`}
-                        <span className="text-tinta-500">; {o.tipos_obra.map((t) => TIPO_OBRA_LABEL[t].toLowerCase()).join(', ')}</span>
+                        <span className="text-tinta-500">; {o.tipos_obra.map((t) => rotuloDoTipo(t, rotulos).toLowerCase()).join(', ')}</span>
                       </p>
                       <p className="mt-0.5 text-xs text-tinta-500">
                         {TIPO_INTERVENCAO_LABEL[o.tipo_intervencao]}
