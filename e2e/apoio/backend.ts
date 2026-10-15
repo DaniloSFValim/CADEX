@@ -155,6 +155,7 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
     if (caminho === 'licencas') return lista(estado.licencas as unknown as Record<string, unknown>[]);
     if (caminho === 'tipos_intervencao') {
       const padrao = [
+        { setor: 'telecom', codigo: 'vala', rotulo: 'Abertura de vala', ativo: true },
         { setor: 'viario', codigo: 'vala', rotulo: 'Abertura de vala', ativo: true },
         { setor: 'viario', codigo: 'bicicletario', rotulo: 'Bicicletário', ativo: true },
         { setor: 'viario', codigo: 'outros', rotulo: 'Outros (descrever)', ativo: true },
