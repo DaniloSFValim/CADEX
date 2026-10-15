@@ -28,10 +28,13 @@ export default function PlacaLicenca() {
 
   if (error) return <div className="p-8"><ErrorNote error={error} /></div>;
   if (!l || exec === undefined) return <Spinner />;
-  if (l.situacao !== 'deferida') {
+  if (l.situacao !== 'deferida' || l.concluida_em) {
     return (
       <div className="mx-auto max-w-xl p-8 text-sm text-tinta-700">
-        Só licença deferida tem placa. <Link to={`/obras/${l.id}`} className="underline">Voltar à licença</Link>
+        {l.concluida_em
+          ? 'Obra concluída não tem placa.'
+          : 'Só licença deferida tem placa.'}{' '}
+        <Link to={`/obras/${l.id}`} className="underline">Voltar à licença</Link>
       </div>
     );
   }

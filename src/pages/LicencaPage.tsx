@@ -156,7 +156,8 @@ export default function LicencaPage() {
           <Link to="/admin/licencas" className="font-semibold underline">Ir para a lixeira</Link>
         </p>
       )}
-      {licenca?.situacao === 'deferida' && !licenca.excluida_em && <Placa licenca={licenca} />}
+      {/* Obra já concluída não precisa de placa nem de QR Code. */}
+      {licenca?.situacao === 'deferida' && !licenca.excluida_em && !licenca.concluida_em && <Placa licenca={licenca} />}
       {licenca && <Conflitos key={licenca.atualizado_em} licencaId={licenca.id} />}
       <LicencaForm
         key={licenca?.id ?? 'nova'}
