@@ -164,3 +164,26 @@ test.describe('administração: licenças e auditoria', () => {
     await expect(page.getByText('Prazos e parâmetros')).toBeVisible();
   });
 });
+
+test.describe('administração: exclusão de empresa', () => {
+  test('empresa em análise sem licença: só excluir, com o CNPJ digitado; a exclusão vai ao banco', async ({ page }) => {
+    const backend = await instalarBackend(page, {
+      administrador: true,
+      empresas: [empresa('em1', 'Em Análise Um Ltda.', 'terceirizada', { situacao: 'em_analise', cnpj: '33000167000101' })],
+    });
+    await page.goto('/admin/empresas');
+    const linha = page.getByRole('row', { name: /Em Análise Um Ltda/ });
+    await expect(linha.getByRole('button', { name: 'Desativar' })).toHaveCount(0);
+    await linha.getByRole('button', { name: 'Excluir', exact: true }).click();
+
+    const confirmar = linha.getByRole('button', { name: 'Excluir', exact: true });
+    await expect(confirmar).toBeDisabled();
+    await linha.getByLabel(/Digite o CNPJ/).fill('33.000.167/0001-01');
+    await expect(confirmar).toBeEnabled();
+    await confirmar.click();
+
+    await expect.poll(() => backend.de('rpc/admin_excluir_empresa').length).toBe(1);
+    const { p_id } = backend.de('rpc/admin_excluir_empresa')[0].corpo as { p_id: string };
+    expect(p_id).toBe('em1');
+  });
+});
