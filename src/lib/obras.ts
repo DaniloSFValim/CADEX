@@ -151,3 +151,32 @@ export function barraNoAno(o: Pick<ObraPublica, 'inicio_previsto' | 'fim_previst
   // Obra de um dia só ainda aparece como barra fina.
   return { esquerda: esq, largura: Math.max(dir - esq, 0.002) };
 }
+
+/** Distância em metros entre dois pontos [lng, lat] (fórmula de Haversine). */
+export function distanciaMetros(a: [number, number], b: [number, number]): number {
+  const R = 6371000;
+  const rad = (g: number) => (g * Math.PI) / 180;
+  const dLat = rad(b[1] - a[1]);
+  const dLng = rad(b[0] - a[0]);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a[1])) * Math.cos(rad(b[1])) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+/**
+ * As obras mais perto de um ponto, pelo trecho mais próximo de cada obra.
+ * Só usa obras com localização; a posição do visitante não é guardada.
+ */
+export function obrasProximas(obras: ObraPublica[], ponto: [number, number], limite = 5): { obra: ObraPublica; metros: number }[] {
+  return obras
+    .filter(temLocalizacao)
+    .map((obra) => ({
+      obra,
+      metros: Math.min(...obra.trechos.filter((t) => coordenadaValida(t.inicio)).map((t) => distanciaMetros(ponto, t.inicio))),
+    }))
+    .sort((a, b) => a.metros - b.metros)
+    .slice(0, limite);
+}
+
+/** Distância para leitura: "320 m" ou "1,4 km". */
+export const textoDistancia = (metros: number) =>
+  metros < 1000 ? `${Math.round(metros)} m` : `${(metros / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} km`;

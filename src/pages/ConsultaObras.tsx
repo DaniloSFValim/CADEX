@@ -11,8 +11,8 @@ import { SETORES, SETOR_LABEL, hojeISO } from '../lib/empresas';
 import { ORIGENS, ORIGEM_LABEL, TIPOS_INTERVENCAO, TIPO_INTERVENCAO_LABEL, origemPublica } from '../lib/licencas';
 import { listarTipos, mapaRotulosTipos, rotuloDoTipo } from '../lib/tiposIntervencao';
 import {
-  COR_SITUACAO, FILTRO_OBRAS, SITUACAO_PUBLICA_LABEL, anosDasObras, baixarObrasGeojson, buscarObrasPublicas, filtrarObras, temLocalizacao,
-  type ObraPublica,
+  COR_SITUACAO, FILTRO_OBRAS, SITUACAO_PUBLICA_LABEL, anosDasObras, baixarObrasGeojson, buscarObrasPublicas, filtrarObras, obrasProximas,
+  temLocalizacao, textoDistancia, type ObraPublica,
 } from '../lib/obras';
 
 // O mapa (MapLibre) é pesado: só carrega nesta página.
@@ -126,6 +126,8 @@ export default function ConsultaObras() {
                 Cada trecho aparece como uma linha reta entre o início e o fim informados na licença, sem seguir o
                 traçado da rua. Para o percurso exato, abra a licença.
               </p>
+              <ObrasPerto obras={filtradas} onSelecionar={setFoco} />
+
               <p className="mt-2 text-xs text-tinta-500">
                 <button type="button" className={linkTexto} disabled={baixando} onClick={() => void baixarGeojson()}>
                   {baixando ? 'Preparando…' : 'Dados abertos: baixar GeoJSON'}
@@ -258,5 +260,56 @@ function Legenda() {
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * Obras mais próximas de quem consulta. A posição vem do navegador (com a
+ * permissão dele), fica só no estado desta tela e não é enviada nem gravada.
+ */
+function ObrasPerto({ obras, onSelecionar }: { obras: ObraPublica[]; onSelecionar: (codigo: string) => void }) {
+  const [ponto, setPonto] = useState<[number, number] | null>(null);
+  const [buscando, setBuscando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  const localizar = () => {
+    if (!navigator.geolocation) { setErro('Este navegador não informa a localização.'); return; }
+    setBuscando(true);
+    setErro(null);
+    navigator.geolocation.getCurrentPosition(
+      (p) => { setPonto([p.coords.longitude, p.coords.latitude]); setBuscando(false); },
+      () => { setErro('Não foi possível obter a localização. Verifique a permissão do navegador.'); setBuscando(false); },
+      { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 },
+    );
+  };
+
+  const proximas = ponto ? obrasProximas(obras, ponto) : [];
+  return (
+    <section className="mt-4 rounded-xl border border-tinta-200 bg-white p-4" aria-labelledby="perto-titulo">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 id="perto-titulo" className="text-sm font-semibold text-tinta-900">Obras perto de você</h2>
+        <button type="button" className={linkTexto} disabled={buscando} onClick={localizar}>
+          {buscando ? 'Localizando…' : ponto ? 'Atualizar localização' : 'Usar minha localização'}
+        </button>
+      </div>
+      <p className="mt-1 text-xs text-tinta-500">Sua localização fica só neste aparelho: não é gravada nem enviada.</p>
+      {erro && <p className="mt-2 text-sm text-baixa">{erro}</p>}
+      {ponto && proximas.length === 0 && (
+        <p className="mt-2 text-sm text-tinta-600">Nenhuma obra com localização nos filtros atuais.</p>
+      )}
+      {proximas.length > 0 && (
+        <ol className="mt-3 divide-y divide-tinta-100">
+          {proximas.map(({ obra, metros }) => (
+            <li key={obra.codigo} className="flex items-baseline justify-between gap-3 py-2 text-sm">
+              <button type="button" className="text-left font-medium text-tinta-900 hover:underline"
+                      onClick={() => { onSelecionar(obra.codigo); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+                {obra.trechos[0]?.logradouro ?? 'Obra'}{obra.trechos[0]?.bairro ? `, ${obra.trechos[0].bairro}` : ''}
+              </button>
+              <span className="tabular shrink-0 text-tinta-600">{textoDistancia(metros)}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
   );
 }
