@@ -19,6 +19,8 @@ test.describe('obras e serviços sem licença', () => {
     const backend = await instalarBackend(page, { orgaos });
     await page.goto('/obras/sem-licenca/nova');
     await campo(page, 'Tipo').selectOption('servico');
+    await page.getByLabel('Outros (descrever)').check();
+    await page.getByLabel(/Descreva o tipo/).fill('Poda de árvores');
     await campo(page, 'Escopo').fill('Poda de árvores na praça');
     await campo(page, 'Órgão contratante').selectOption('sec');
     await campo(page, 'Quem executa').selectOption('propria_orgao');
@@ -31,7 +33,8 @@ test.describe('obras e serviços sem licença', () => {
     await expect.poll(() => backend.de('intervencoes_sem_licenca', 'POST').length).toBe(1);
     const corpo = backend.de('intervencoes_sem_licenca', 'POST')[0].corpo as Record<string, unknown>;
     expect(corpo).toMatchObject({
-      tipo_intervencao: 'servico', contratante_orgao_id: 'sec', executora_modo: 'propria_orgao',
+      tipo_intervencao: 'servico', tipos_obra: ['outros'], outros_descricao: 'Poda de árvores',
+      contratante_orgao_id: 'sec', executora_modo: 'propria_orgao',
       executora_id: null, executora_razao_social: null, licenca_id: null, processo_sei: null,
     });
     // Nada de licença: o envio não passa pela função de licença.
@@ -42,6 +45,7 @@ test.describe('obras e serviços sem licença', () => {
     const backend = await instalarBackend(page, { orgaos });
     await page.goto('/obras/sem-licenca/nova');
     await campo(page, 'Tipo').selectOption('obra');
+    await page.getByLabel('Bicicletário').check();
     await campo(page, 'Escopo').fill('Galeria');
     await campo(page, 'Órgão contratante').selectOption('semob');
     await campo(page, 'Quem executa').selectOption('sem_cadastro');
@@ -65,7 +69,8 @@ test.describe('obras e serviços sem licença', () => {
       orgaos,
       perfil: 'cisp',
       semLicenca: [{
-        id: uuid(7001), setor: 'viario', tipo_intervencao: 'servico', escopo: 'Poda de árvores na praça', contratante_orgao_id: 'sec',
+        id: uuid(7001), setor: 'viario', tipo_intervencao: 'servico', tipos_obra: ['outros'], outros_descricao: 'Poda de árvores',
+        escopo: 'Poda de árvores na praça', contratante_orgao_id: 'sec',
         executora_modo: 'propria_orgao', executora_id: null, executora_razao_social: null, executora_cnpj: null,
         logradouro: 'Rua Visconde do Rio Branco', bairro: null, referencia: null, inicio_lat: -22.8955, inicio_lng: -43.1245,
         fim_lat: null, fim_lng: null, inicio_previsto: null, fim_previsto: null, situacao: 'em_execucao', concluida_em: null,

@@ -92,30 +92,30 @@ declare
   a uuid; b uuid; c uuid;
 begin
   -- 1. Própria da SECONSER: o órgão executa, sem empresa.
-  insert into intervencoes_sem_licenca (setor, tipo_intervencao, escopo, contratante_orgao_id, executora_modo, logradouro,
+  insert into intervencoes_sem_licenca (setor, tipos_obra, tipo_intervencao, escopo, contratante_orgao_id, executora_modo, logradouro,
     inicio_lat, inicio_lng, inicio_previsto, fim_previsto, situacao)
-  values ('viario', 'servico', 'Manutenção de meio-fio', sec, 'propria_orgao', 'Rua Visconde do Rio Branco', -22.8955, -43.1245,
+  values ('viario', array['vala'], 'servico', 'Manutenção de meio-fio', sec, 'propria_orgao', 'Rua Visconde do Rio Branco', -22.8955, -43.1245,
     '2026-10-05', '2026-10-20', 'em_execucao') returning id into a;
   insert into ids values ('propria', a);
 
   -- 2. Contratada por outro órgão, com empresa cadastrada.
-  insert into intervencoes_sem_licenca (setor, tipo_intervencao, escopo, contratante_orgao_id, executora_modo, executora_id,
+  insert into intervencoes_sem_licenca (setor, tipos_obra, tipo_intervencao, escopo, contratante_orgao_id, executora_modo, executora_id,
     logradouro, inicio_lat, inicio_lng, fim_lat, fim_lng)
-  values ('telecom', 'obra', 'Poste novo', org, 'empresa', ter, 'Rua Mem de Sá', -22.905, -43.110, -22.906, -43.109)
+  values ('telecom', array['vala'], 'obra', 'Poste novo', org, 'empresa', ter, 'Rua Mem de Sá', -22.905, -43.110, -22.906, -43.109)
   returning id into b;
 
   -- 3. Contratada por outro órgão, empresa fora do cadastro.
-  insert into intervencoes_sem_licenca (setor, tipo_intervencao, escopo, contratante_orgao_id, executora_modo,
+  insert into intervencoes_sem_licenca (setor, tipos_obra, tipo_intervencao, escopo, contratante_orgao_id, executora_modo,
     executora_razao_social, executora_cnpj, logradouro, inicio_lat, inicio_lng)
-  values ('drenagem', 'obra', 'Desobstrução de galeria', org, 'sem_cadastro', 'Construtora Externa Ltda.', '24144040000175',
+  values ('drenagem', array['vala'], 'obra', 'Desobstrução de galeria', org, 'sem_cadastro', 'Construtora Externa Ltda.', '24144040000175',
     'Rua Otávio Carneiro', -22.9010, -43.1180)
   returning id into c;
   insert into ids values ('sem_cad', c), ('contratada', b);
 
   -- Sem processo SEI, mais de um registro pode existir.
-  insert into intervencoes_sem_licenca (setor, tipo_intervencao, escopo, contratante_orgao_id, executora_modo, executora_id,
+  insert into intervencoes_sem_licenca (setor, tipos_obra, tipo_intervencao, escopo, contratante_orgao_id, executora_modo, executora_id,
     logradouro, inicio_lat, inicio_lng)
-  values ('telecom', 'servico', 'Religação', org, 'empresa', ter, 'Rua X', -22.90, -43.11);
+  values ('telecom', array['vala'], 'servico', 'Religação', org, 'empresa', ter, 'Rua X', -22.90, -43.11);
 end $$;
 
 -- Coerência: cada combinação errada é recusada.
@@ -123,51 +123,51 @@ do $$
 declare org uuid := (select id from ids where nome = 'org'); sec uuid := (select id from ids where nome = 'sec');
   op uuid := (select id from ids where nome = 'op'); ter uuid := (select id from ids where nome = 'ter');
 begin
-  perform pg_temp.recusa(format($q$insert into intervencoes_sem_licenca (setor, tipo_intervencao, escopo, contratante_orgao_id,
+  perform pg_temp.recusa(format($q$insert into intervencoes_sem_licenca (setor, tipos_obra, tipo_intervencao, escopo, contratante_orgao_id,
       executora_modo, executora_id, logradouro, inicio_lat, inicio_lng)
-    values ('telecom','obra','x','%s','propria_orgao','%s','R',-22.90,-43.11)$q$, sec, op),
+    values ('telecom', array['vala'], 'obra','x','%s','propria_orgao','%s','R',-22.90,-43.11)$q$, sec, op),
     'isl_executora_coerente', 'órgão próprio com empresa foi aceito');
-  perform pg_temp.recusa(format($q$insert into intervencoes_sem_licenca (setor, tipo_intervencao, escopo, contratante_orgao_id,
+  perform pg_temp.recusa(format($q$insert into intervencoes_sem_licenca (setor, tipos_obra, tipo_intervencao, escopo, contratante_orgao_id,
       executora_modo, logradouro, inicio_lat, inicio_lng)
-    values ('telecom','obra','x','%s','empresa','R',-22.90,-43.11)$q$, org),
+    values ('telecom', array['vala'], 'obra','x','%s','empresa','R',-22.90,-43.11)$q$, org),
     'isl_executora_coerente', 'empresa sem executora foi aceita');
-  perform pg_temp.recusa(format($q$insert into intervencoes_sem_licenca (setor, tipo_intervencao, escopo, contratante_orgao_id,
+  perform pg_temp.recusa(format($q$insert into intervencoes_sem_licenca (setor, tipos_obra, tipo_intervencao, escopo, contratante_orgao_id,
       executora_modo, executora_razao_social, logradouro, inicio_lat, inicio_lng)
-    values ('telecom','obra','x','%s','sem_cadastro','  ','R',-22.90,-43.11)$q$, org),
+    values ('telecom', array['vala'], 'obra','x','%s','sem_cadastro','  ','R',-22.90,-43.11)$q$, org),
     'isl_executora_coerente', 'empresa sem cadastro sem nome foi aceita');
   -- Terceirizada de telecom não atua em viário.
-  perform pg_temp.recusa(format($q$insert into intervencoes_sem_licenca (setor, tipo_intervencao, escopo, contratante_orgao_id,
+  perform pg_temp.recusa(format($q$insert into intervencoes_sem_licenca (setor, tipos_obra, tipo_intervencao, escopo, contratante_orgao_id,
       executora_modo, executora_id, logradouro, inicio_lat, inicio_lng)
-    values ('viario','obra','x','%s','empresa','%s','R',-22.90,-43.11)$q$, org, ter),
+    values ('viario', array['vala'], 'obra','x','%s','empresa','%s','R',-22.90,-43.11)$q$, org, ter),
     'não atua no setor', 'empresa fora do setor foi aceita');
-  perform pg_temp.recusa(format($q$insert into intervencoes_sem_licenca (setor, tipo_intervencao, escopo, contratante_orgao_id,
+  perform pg_temp.recusa(format($q$insert into intervencoes_sem_licenca (setor, tipos_obra, tipo_intervencao, escopo, contratante_orgao_id,
       executora_modo, logradouro, inicio_lat, inicio_lng, inicio_previsto, fim_previsto)
-    values ('telecom','obra','x','%s','propria_orgao','R',-22.90,-43.11,'2026-10-20','2026-10-01')$q$, sec),
+    values ('telecom', array['vala'], 'obra','x','%s','propria_orgao','R',-22.90,-43.11,'2026-10-20','2026-10-01')$q$, sec),
     'isl_periodo', 'período invertido foi aceito');
-  perform pg_temp.recusa(format($q$insert into intervencoes_sem_licenca (setor, tipo_intervencao, escopo, contratante_orgao_id,
+  perform pg_temp.recusa(format($q$insert into intervencoes_sem_licenca (setor, tipos_obra, tipo_intervencao, escopo, contratante_orgao_id,
       executora_modo, logradouro, inicio_lat, inicio_lng, situacao)
-    values ('telecom','obra','x','%s','propria_orgao','R',-22.90,-43.11,'concluida')$q$, sec),
+    values ('telecom', array['vala'], 'obra','x','%s','propria_orgao','R',-22.90,-43.11,'concluida')$q$, sec),
     'isl_concluida', 'concluída sem data de conclusão foi aceita');
-  perform pg_temp.recusa(format($q$insert into intervencoes_sem_licenca (setor, tipo_intervencao, escopo, contratante_orgao_id,
+  perform pg_temp.recusa(format($q$insert into intervencoes_sem_licenca (setor, tipos_obra, tipo_intervencao, escopo, contratante_orgao_id,
       executora_modo, logradouro, inicio_lat, inicio_lng)
-    values ('telecom','obra','x','%s','propria_orgao','R',-23.50,-43.11)$q$, sec),
+    values ('telecom', array['vala'], 'obra','x','%s','propria_orgao','R',-23.50,-43.11)$q$, sec),
     'intervencoes_sem_licenca_inicio_lat_check', 'coordenada fora de Niterói foi aceita');
-  perform pg_temp.recusa(format($q$insert into intervencoes_sem_licenca (setor, tipo_intervencao, escopo, contratante_orgao_id,
+  perform pg_temp.recusa(format($q$insert into intervencoes_sem_licenca (setor, tipos_obra, tipo_intervencao, escopo, contratante_orgao_id,
       executora_modo, executora_razao_social, executora_cnpj, logradouro, inicio_lat, inicio_lng)
-    values ('telecom','obra','x','%s','sem_cadastro','Y','123','R',-22.90,-43.11)$q$, org),
+    values ('telecom', array['vala'], 'obra','x','%s','sem_cadastro','Y','123','R',-22.90,-43.11)$q$, org),
     'executora_cnpj', 'CNPJ inválido foi aceito');
   -- Processo SEI é guardado em maiúsculas e sem espaços.
-  insert into intervencoes_sem_licenca (setor, tipo_intervencao, escopo, contratante_orgao_id, executora_modo, logradouro, inicio_lat, inicio_lng, processo_sei)
-  values ('telecom','obra','com processo',sec,'propria_orgao','R',-22.90,-43.11,'  sei-dup-1  ');
+  insert into intervencoes_sem_licenca (setor, tipos_obra, tipo_intervencao, escopo, contratante_orgao_id, executora_modo, logradouro, inicio_lat, inicio_lng, processo_sei)
+  values ('telecom', array['vala'], 'obra','com processo',sec,'propria_orgao','R',-22.90,-43.11,'  sei-dup-1  ');
 end $$;
 
 -- Processo SEI repetido entre registros é recusado.
 do $$
 declare sec uuid := (select id from ids where nome = 'sec');
 begin
-  perform pg_temp.recusa(format($q$insert into intervencoes_sem_licenca (setor, tipo_intervencao, escopo, contratante_orgao_id,
+  perform pg_temp.recusa(format($q$insert into intervencoes_sem_licenca (setor, tipos_obra, tipo_intervencao, escopo, contratante_orgao_id,
       executora_modo, logradouro, inicio_lat, inicio_lng, processo_sei)
-    values ('telecom','obra','repetido','%s','propria_orgao','R',-22.90,-43.11,'SEI-DUP-1')$q$, sec),
+    values ('telecom', array['vala'], 'obra','repetido','%s','propria_orgao','R',-22.90,-43.11,'SEI-DUP-1')$q$, sec),
     'intervencoes_sem_licenca_processo_uk', 'processo SEI repetido foi aceito');
 end $$;
 
@@ -184,8 +184,8 @@ select set_config('cadex.test_user_id', '00000000-0000-4000-8000-0000000000e2', 
 do $$
 declare sec uuid := (select id from ids where nome = 'sec');
 begin
-  insert into intervencoes_sem_licenca (setor, tipo_intervencao, escopo, contratante_orgao_id, executora_modo, logradouro, inicio_lat, inicio_lng)
-  values ('telecom','obra','pelo licenciador',sec,'propria_orgao','R',-22.90,-43.11);
+  insert into intervencoes_sem_licenca (setor, tipos_obra, tipo_intervencao, escopo, contratante_orgao_id, executora_modo, logradouro, inicio_lat, inicio_lng)
+  values ('telecom', array['vala'], 'obra','pelo licenciador',sec,'propria_orgao','R',-22.90,-43.11);
   perform pg_temp.assert((select count(*) from intervencoes_sem_licenca where escopo = 'pelo licenciador') = 1,
     'licenciador não gravou');
 end $$;
@@ -194,8 +194,8 @@ select set_config('cadex.test_user_id', '00000000-0000-4000-8000-0000000000e3', 
 do $$
 declare sec uuid := (select id from ids where nome = 'sec');
 begin
-  perform pg_temp.recusa(format($q$insert into intervencoes_sem_licenca (setor, tipo_intervencao, escopo, contratante_orgao_id, executora_modo, logradouro, inicio_lat, inicio_lng)
-    values ('telecom','obra','pela CISP','%s','propria_orgao','R',-22.90,-43.11)$q$, sec),
+  perform pg_temp.recusa(format($q$insert into intervencoes_sem_licenca (setor, tipos_obra, tipo_intervencao, escopo, contratante_orgao_id, executora_modo, logradouro, inicio_lat, inicio_lng)
+    values ('telecom', array['vala'], 'obra','pela CISP','%s','propria_orgao','R',-22.90,-43.11)$q$, sec),
     'row-level security', 'CISP gravou sem permissão');
   perform pg_temp.assert((select count(*) from intervencoes_sem_licenca) >= 1, 'CISP não consegue ler');
 end $$;

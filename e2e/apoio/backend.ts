@@ -32,6 +32,8 @@ export interface Cenario {
   auditoria: EventoAuditoria[];
   /** Obras e serviços sem licença (tabela intervencoes_sem_licenca). */
   semLicenca?: Record<string, unknown>[];
+  /** Catálogo de tipos (tabela tipos_intervencao). Sem ele, vale o catálogo padrão de viário. */
+  tipos?: Record<string, unknown>[];
 }
 
 export interface Chamada {
@@ -151,6 +153,14 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
       return lista(estado.empresas as unknown as Record<string, unknown>[]);
     }
     if (caminho === 'licencas') return lista(estado.licencas as unknown as Record<string, unknown>[]);
+    if (caminho === 'tipos_intervencao') {
+      const padrao = [
+        { setor: 'viario', codigo: 'vala', rotulo: 'Abertura de vala', ativo: true },
+        { setor: 'viario', codigo: 'bicicletario', rotulo: 'Bicicletário', ativo: true },
+        { setor: 'viario', codigo: 'outros', rotulo: 'Outros (descrever)', ativo: true },
+      ].map((t) => ({ ...t, id: uuid(8000 + t.codigo.length), fonte: 'Catálogo de teste', atualizado_em: '2026-10-14' }));
+      return lista(estado.tipos ?? padrao);
+    }
     if (caminho === 'intervencoes_sem_licenca') {
       if (req.method() === 'POST') {
         const nova = { id: uuid(9000 + (estado.semLicenca?.length ?? 0) + 1), ...(corpo as object), atualizado_em: new Date().toISOString() };

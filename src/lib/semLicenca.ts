@@ -28,6 +28,9 @@ export interface IntervencaoSemLicenca {
   id: string;
   setor: Setor;
   tipo_intervencao: TipoIntervencao;
+  /** Códigos do catálogo do setor (tipos_intervencao). */
+  tipos_obra: string[];
+  outros_descricao: string | null;
   escopo: string;
   contratante_orgao_id: string;
   executora_modo: ModoExecucao;
@@ -58,6 +61,8 @@ export interface IntervencaoSemLicenca {
 export interface FormSemLicenca {
   setor: Setor;
   tipo_intervencao: TipoIntervencao | '';
+  tipos_obra: string[];
+  outros_descricao: string;
   escopo: string;
   contratante_orgao_id: string;
   executora_modo: ModoExecucao;
@@ -81,7 +86,7 @@ export interface FormSemLicenca {
 }
 
 export const FORM_SEM_LICENCA_VAZIO: FormSemLicenca = {
-  setor: 'viario', tipo_intervencao: '', escopo: '', contratante_orgao_id: '', executora_modo: 'propria_orgao',
+  setor: 'viario', tipo_intervencao: '', tipos_obra: [], outros_descricao: '', escopo: '', contratante_orgao_id: '', executora_modo: 'propria_orgao',
   executora_id: '', executora_razao_social: '', executora_cnpj: '', logradouro: '', bairro: '', referencia: '',
   inicio: '', fim: '', inicio_previsto: '', fim_previsto: '', situacao: 'em_execucao', concluida_em: '',
   processo_sei: '', contrato_numero: '', processo_administrativo: '', ordem_servico_numero: '', observacoes: '',
@@ -96,6 +101,10 @@ export type LinhaSemLicenca = Omit<IntervencaoSemLicenca, 'id' | 'atualizado_em'
  */
 export function montarSemLicenca(f: FormSemLicenca): { linha: LinhaSemLicenca } | { erro: string } {
   if (!f.tipo_intervencao) return { erro: 'Escolha o tipo: obra ou serviço.' };
+  if (f.tipos_obra.length === 0) return { erro: 'Marque ao menos um tipo de obra ou serviço.' };
+  if (f.tipos_obra.includes('outros') && !f.outros_descricao.trim()) {
+    return { erro: 'Descreva o tipo "Outros" no campo de descrição.' };
+  }
   if (!f.escopo.trim()) return { erro: 'Descreva o escopo da obra ou serviço.' };
   if (!f.contratante_orgao_id) return { erro: 'Escolha o órgão contratante.' };
   if (f.executora_modo === 'empresa' && !f.executora_id) return { erro: 'Escolha a empresa executora.' };
@@ -121,6 +130,8 @@ export function montarSemLicenca(f: FormSemLicenca): { linha: LinhaSemLicenca } 
     linha: {
       setor: f.setor,
       tipo_intervencao: f.tipo_intervencao,
+      tipos_obra: f.tipos_obra,
+      outros_descricao: f.tipos_obra.includes('outros') ? n(f.outros_descricao) : null,
       escopo: f.escopo.trim(),
       contratante_orgao_id: f.contratante_orgao_id,
       executora_modo: f.executora_modo,

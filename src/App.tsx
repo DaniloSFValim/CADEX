@@ -19,6 +19,7 @@ import AdminAuditoria from './pages/AdminAuditoria';
 import AdminConfiguracoes from './pages/AdminConfiguracoes';
 import AdminEmpresas from './pages/AdminEmpresas';
 import AdminLicencas from './pages/AdminLicencas';
+import AdminTipos from './pages/AdminTipos';
 import Contas from './pages/Contas';
 import Orgaos from './pages/Orgaos';
 import MinhaConta from './pages/MinhaConta';
@@ -126,6 +127,7 @@ function AreaRestrita() {
           <Route index element={<Contas />} />
           <Route path="empresas" element={<AdminEmpresas />} />
           <Route path="licencas" element={<AdminLicencas />} />
+          <Route path="tipos" element={<AdminTipos />} />
           <Route path="configuracoes" element={<AdminConfiguracoes />} />
           <Route path="auditoria" element={<AdminAuditoria />} />
         </Route>
