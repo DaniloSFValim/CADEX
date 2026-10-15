@@ -4,7 +4,8 @@ import { QrCode } from '../components/QrCode';
 import { Button, ErrorNote, Spinner } from '../components/ui';
 import { dataBR } from '../components/Situacao';
 import { buscarEmpresa, type Empresa } from '../lib/empresas';
-import { TIPO_OBRA_LABEL, buscarLicenca, urlPublicaLicenca, type LicencaComTrechos } from '../lib/licencas';
+import { buscarLicenca, urlPublicaLicenca, type LicencaComTrechos } from '../lib/licencas';
+import { listarTipos, mapaRotulosTipos, rotuloDoTipo } from '../lib/tiposIntervencao';
 
 /**
  * Placa do canteiro (art. 14) para imprimir: razão social da executora,
@@ -16,11 +17,13 @@ export default function PlacaLicenca() {
   const [l, setL] = useState<LicencaComTrechos | null>(null);
   const [exec, setExec] = useState<Empresa | null | undefined>(undefined);
   const [error, setError] = useState<unknown>(null);
+  const [rotulos, setRotulos] = useState<Record<string, string>>({});
 
   useEffect(() => {
     buscarLicenca(id)
       .then(async (x) => { setL(x); setExec(x.executora_id ? await buscarEmpresa(x.executora_id) : null); })
       .catch(setError);
+    listarTipos().then((t) => setRotulos(mapaRotulosTipos(t))).catch(() => setRotulos({}));
   }, [id]);
 
   if (error) return <div className="p-8"><ErrorNote error={error} /></div>;
@@ -61,7 +64,9 @@ export default function PlacaLicenca() {
             <div>
               <dt className="text-xs font-semibold text-tinta-500">Escopo</dt>
               <dd className="text-lg text-tinta-900">{l.escopo}</dd>
-              <dd className="text-sm text-tinta-600">{l.tipos_obra.map((t) => TIPO_OBRA_LABEL[t]).join(', ')}</dd>
+              <dd className="text-sm text-tinta-600">{l.tipos_obra.map((t) => (t === 'outros' && l.outros_descricao
+                ? `${rotuloDoTipo(t, rotulos)}: ${l.outros_descricao}`
+                : rotuloDoTipo(t, rotulos))).join(', ')}</dd>
             </div>
             <div>
               <dt className="text-xs font-semibold text-tinta-500">Fim da obra ou serviço</dt>

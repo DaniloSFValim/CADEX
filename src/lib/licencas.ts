@@ -8,7 +8,7 @@ import { supabase } from './supabase';
 
 export type TipoObra =
   | 'vala' | 'escavacao' | 'perfuracao_nao_destrutiva' | 'poste' | 'rede'
-  | 'ligacao_predial' | 'galeria_drenagem' | 'boca_de_lobo' | 'recomposicao' | 'bicicletario';
+  | 'ligacao_predial' | 'galeria_drenagem' | 'boca_de_lobo' | 'recomposicao' | 'bicicletario' | 'outros';
 export type SituacaoLicenca = 'em_analise' | 'deferida' | 'indeferida' | 'cancelada';
 
 /** Situação exibida: a deferida se desdobra conforme o cronograma e a conclusão. */
@@ -45,6 +45,8 @@ export interface Licenca {
   processo_sei: string;
   numero: string | null;
   tipos_obra: TipoObra[];
+  /** Descrição obrigatória quando "outros" está entre os tipos. */
+  outros_descricao?: string | null;
   escopo: string;
   /** Nulo só em licença anterior à Resolução com executora sem cadastro. */
   executora_id: string | null;
@@ -122,6 +124,7 @@ export const TIPO_OBRA_LABEL: Record<TipoObra, string> = {
   boca_de_lobo: 'Boca de lobo ou caixa de ralo',
   recomposicao: 'Recomposição de calçada ou pavimento',
   bicicletario: 'Bicicletário',
+  outros: 'Outros (descrever)',
 };
 
 /** Licença em que valem as regras da Resolução (só telecom, a partir de 09/09/2026). */
