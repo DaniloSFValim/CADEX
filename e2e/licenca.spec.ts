@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { instalarBackend } from './apoio/backend';
-import { dia, licenca } from './apoio/dados';
+import { dia, licenca, uuid } from './apoio/dados';
 
 /**
  * O campo de um formulário, achado pelo texto do próprio rótulo (e não por uma dica
@@ -232,5 +232,20 @@ test.describe('registro de licença', () => {
     await lista(page, 'Contratante').selectOption('op1');
     // Operadora Dois não pode executar para a Operadora Um.
     await expect(lista(page, 'Executora').locator('option')).toHaveText(['Selecione', 'OpUm', 'Terceirizada Alfa Ltda.']);
+  });
+});
+
+test.describe('administrador corrige licença de outro cadastro', () => {
+  test('administrador abre a licença cadastrada por outra pessoa e corrige o escopo', async ({ page }) => {
+    const alheia = licenca({ id: uuid(4242), escopo: 'Escopo com erro de digitação' });
+    const backend = await instalarBackend(page, { administrador: true, licencas: [alheia] });
+    await page.goto(`/obras/${alheia.id}`);
+    await campo(page, 'Escopo da obra').fill('Escopo corrigido pelo administrador');
+    await page.getByRole('button', { name: 'Salvar alterações' }).click();
+
+    await expect.poll(() => backend.de('rpc/salvar_licenca').length).toBe(1);
+    const { p_licenca } = backend.de('rpc/salvar_licenca')[0].corpo as { p_licenca: Record<string, unknown> };
+    expect(p_licenca.id).toBe(alheia.id);
+    expect(p_licenca.escopo).toBe('Escopo corrigido pelo administrador');
   });
 });
