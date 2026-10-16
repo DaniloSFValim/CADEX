@@ -13,6 +13,8 @@ import { listarContas, type Conta } from '../lib/contas';
 import { listarOrgaos, type Orgao } from '../lib/orgaos';
 
 const MAX_BUSCA = 8;
+/** Sem busca, a lista mostra as licenças mais recentes; o resto aparece pela busca. */
+const MAX_LISTA = 20;
 
 /** Licenças na Administração: o que pede revisão e o caminho para o histórico de cada uma. */
 export default function AdminLicencas() {
@@ -36,11 +38,12 @@ export default function AdminLicencas() {
   const hoje = hojeISO();
   const porId = useMemo(() => new Map(empresas.map((e) => [e.id, e])), [empresas]);
   const revisar = useMemo(() => (licencas ? inconsistencias(licencas, hoje, porId) : []), [licencas, hoje, porId]);
+  const q = busca.trim().toLowerCase();
   const achadas = useMemo(() => {
-    const q = busca.trim().toLowerCase();
-    if (!q || !licencas) return [];
+    if (!licencas) return [];
+    if (!q) return licencas.slice(0, MAX_LISTA);
     return licencas.filter((l) => [l.numero ?? '', l.processo_sei, l.escopo].some((s) => s.toLowerCase().includes(q))).slice(0, MAX_BUSCA);
-  }, [licencas, busca]);
+  }, [licencas, q]);
 
   if (!licencas && !erro) return <Spinner />;
   if (!licencas) return <ErrorNote error={erro} />;
@@ -48,18 +51,20 @@ export default function AdminLicencas() {
   return (
     <div className="flex flex-col gap-10">
       {aviso && <p role="status" className="rounded-sm border-l-4 border-alta bg-alta/6 px-3 py-2 text-sm text-tinta-800">{aviso}</p>}
-      <Card title="Buscar uma licença">
+      <Card title="Licenças no CADEX">
         <input className={inputClass} value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar licença"
                placeholder="Nº da licença, processo SEI ou parte do escopo" />
-        {busca.trim() !== '' && (achadas.length === 0
+        {achadas.length === 0
           ? <p className="mt-3 text-sm text-tinta-500">Nenhuma licença encontrada.</p>
           : (
             <ul className="mt-3 divide-y divide-tinta-100">
               {achadas.map((l) => <LinhaBusca key={l.id} licenca={l} porId={porId} orgaos={orgaos} hoje={hoje} onExcluida={mudou} />)}
             </ul>
-          ))}
+          )}
         <p className="mt-3 text-xs text-tinta-500">
-          {licencas.length} licença{licencas.length === 1 ? '' : 's'} no CADEX. Lançada por engano? Use Excluir: ela vai para a lixeira, abaixo. O histórico mostra quem alterou o quê e quando, direto da auditoria.
+          {licencas.length} licença{licencas.length === 1 ? '' : 's'} no CADEX.
+          {!q && licencas.length > MAX_LISTA && ` Mostrando as ${MAX_LISTA} mais recentes; use a busca para achar as demais.`}
+          {' '}Lançada por engano? Use Excluir: ela vai para a lixeira, abaixo. O histórico mostra quem alterou o quê e quando, direto da auditoria.
         </p>
       </Card>
 
