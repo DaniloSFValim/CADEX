@@ -82,7 +82,11 @@ export default function ConsultaObras() {
         <AbasConsulta />
 
         {/* Filtros numa superfície clara, logo abaixo das abas. */}
-        <div className="mt-5 rounded-xl border border-tinta-200 bg-white p-3 shadow-xs">
+        <p className="mt-5 text-sm text-tinta-600">
+          Para ver uma licença, escolha uma obra no mapa ou na lista e abra <strong className="font-semibold text-tinta-800">Ver licença</strong>.
+          Lá estão o trecho, a executora e o prazo.
+        </p>
+        <div className="mt-3 rounded-xl border border-tinta-200 bg-white p-3 shadow-xs">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_repeat(5,auto)]">
             <input className={inputClass} value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar obra"
                    placeholder="Rua, bairro, empresa ou nº da licença" />
@@ -126,8 +130,6 @@ export default function ConsultaObras() {
                 Cada trecho aparece como uma linha reta entre o início e o fim informados na licença, sem seguir o
                 traçado da rua. Para o percurso exato, abra a licença.
               </p>
-              <ObrasPerto obras={filtradas} onSelecionar={setFoco} />
-
               <p className="mt-2 text-xs text-tinta-500">
                 <button type="button" className={linkTexto} disabled={baixando} onClick={() => void baixarGeojson()}>
                   {baixando ? 'Preparando…' : 'Dados abertos: baixar GeoJSON'}
@@ -146,6 +148,7 @@ export default function ConsultaObras() {
                   {filtradas.length}{filtradas.length !== obras.length && ` de ${obras.length}`}
                 </span>
               </div>
+              <ObrasPerto obras={filtradas} onSelecionar={setFoco} />
               {filtradas.length < obras.length && (
                 <p className="mb-3 text-xs text-tinta-500">
                   {obras.length - filtradas.length} fora dos filtros atuais
@@ -171,11 +174,11 @@ export default function ConsultaObras() {
                     <li key={o.codigo} className="border-l-[3px] px-4 py-3.5 transition-colors hover:bg-tinta-50"
                         style={{ borderLeftColor: COR_SITUACAO[o.situacao] }}>
                       <div className="flex items-start justify-between gap-3">
-                        <p className="min-w-0 font-medium text-tinta-900">
+                        <Link to={`/licenca/${o.codigo}`} className="min-w-0 font-medium text-tinta-900 hover:text-marca-700 hover:underline">
                           {o.trechos[0]?.logradouro}
                           {o.trechos[0]?.bairro && <span className="font-normal text-tinta-500">, {o.trechos[0].bairro}</span>}
                           {o.trechos.length > 1 && <span className="text-sm text-tinta-500"> e mais {o.trechos.length - 1}</span>}
-                        </p>
+                        </Link>
                         <SeloSituacao situacao={o.situacao} />
                       </div>
                       <p className="mt-1 text-sm text-tinta-600">
@@ -187,20 +190,22 @@ export default function ConsultaObras() {
                         {origemPublica(o.origem) && ` pública · ${ORIGEM_LABEL[o.origem].toLowerCase()}`}
                       </p>
                       <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
-                        <span className="tabular text-tinta-500">
-                          {o.inicio_previsto || o.fim_previsto
-                            ? `${o.inicio_previsto ? dataBR(o.inicio_previsto) : '—'} a ${o.fim_previsto ? dataBR(o.fim_previsto) : '—'}`
-                            : 'Sem período informado'}
-                        </span>
+                        <Link to={`/licenca/${o.codigo}`} className="rounded-sm bg-marca-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-marca-800">
+                          Ver licença
+                        </Link>
                         {temLocalizacao(o)
                           ? <button type="button" className="font-semibold text-marca-600 hover:underline"
                                     onClick={() => { setFoco(o.codigo); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
                               Ver no mapa
                             </button>
                           : <span className="text-tinta-500">Sem localização no mapa</span>}
-                        <Link to={`/licenca/${o.codigo}`} className="tabular font-medium text-marca-600 hover:underline">
-                          nº&nbsp;{o.numero}
-                        </Link>
+                        <span className="tabular text-tinta-500">
+                          Licença nº {o.numero}
+                          {' · '}
+                          {o.inicio_previsto || o.fim_previsto
+                            ? `${o.inicio_previsto ? dataBR(o.inicio_previsto) : '—'} a ${o.fim_previsto ? dataBR(o.fim_previsto) : '—'}`
+                            : 'Sem período informado'}
+                        </span>
                       </div>
                     </li>
                   ))}
