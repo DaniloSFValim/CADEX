@@ -56,7 +56,7 @@ export default function Consulta() {
     <div className="flex min-h-screen flex-col">
       <Cabecalho itens={MENU_PUBLICO} />
 
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-12">
+      <main id="conteudo" tabIndex={-1} className="mx-auto w-full max-w-7xl flex-1 px-4 py-12">
         <Titulo
           trilha="Consulta pública"
           titulo="Consultar empresa executora"

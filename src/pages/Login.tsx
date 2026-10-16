@@ -22,7 +22,7 @@ export default function Login() {
   return (
     <div className="flex min-h-screen flex-col">
       <Cabecalho itens={MENU_PUBLICO} />
-      <main className="grid flex-1 lg:grid-cols-2 lg:min-h-[calc(100vh-65px)]">
+      <main id="conteudo" tabIndex={-1} className="grid flex-1 lg:grid-cols-2 lg:min-h-[calc(100dvh-65px)]">
         {/* Painel institucional: a mesma identidade do mapa público. */}
         <aside className="hidden flex-col justify-between bg-marca-900 p-12 text-white lg:flex xl:p-16">
           <p className="flex items-center gap-2.5 text-sm font-medium text-marca-200">

@@ -39,7 +39,7 @@ export function Layout() {
         </>}
       />
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 lg:px-10">
+      <main id="conteudo" tabIndex={-1} className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 lg:px-10">
         <Outlet />
       </main>
       <Rodape />
