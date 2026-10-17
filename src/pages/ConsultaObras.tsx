@@ -57,7 +57,7 @@ export default function ConsultaObras() {
       {/* Herói: faixa institucional escura com o mapa de obras como promessa. */}
       <section className="bg-marca-900 text-white">
         <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:py-14">
-          <h1 className="mt-4 max-w-[17ch] font-display text-3xl font-bold leading-[1.04] tracking-[-0.01em] sm:text-5xl">
+          <h1 className="mt-4 max-w-[17ch] text-balance font-display text-3xl font-bold leading-[1.04] tracking-[-0.01em] sm:text-5xl">
             Onde Niterói está com obras nas ruas
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-relaxed text-marca-100/85 sm:text-lg">
@@ -179,7 +179,14 @@ export default function ConsultaObras() {
                 <div className="rounded-xl border border-tinta-200 bg-white">
                   <Empty>
                     {obras.length === 0 ? 'Nenhuma licença de obra registrada até o momento.'
-                      : situacao === 'vigentes' ? 'Nenhuma obra vigente agora. Escolha "Todas as licenças" para ver as anteriores.'
+                      : situacao === 'vigentes' ? (
+                        <>
+                          Nenhuma obra vigente agora.{' '}
+                          <button type="button" className={linkTexto} onClick={() => setSituacao('todas')}>
+                            Mostrar as licenças anteriores
+                          </button>
+                        </>
+                      )
                         : 'Nenhuma licença corresponde à busca.'}
                   </Empty>
                 </div>
