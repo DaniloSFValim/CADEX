@@ -262,9 +262,9 @@ function resumo(obras: ObraPublica[]) {
 
 function Estat({ valor, rotulo, destaque = false }: { valor: number; rotulo: string; destaque?: boolean }) {
   return (
-    <div className="border-white/15 bg-white/5 px-4 py-4 [&:not(:last-child)]:border-r [&:nth-child(-n+2)]:border-b sm:[&:nth-child(2)]:border-b-0">
-      <div className={`tabular font-display text-2xl font-bold sm:text-3xl ${destaque ? 'text-obra-500' : 'text-white'}`}>{valor}</div>
-      <div className="mt-0.5 text-xs text-marca-200">{rotulo}</div>
+    <div className="flex flex-col-reverse border-white/15 bg-white/5 px-4 py-4 [&:not(:last-child)]:border-r [&:nth-child(-n+2)]:border-b sm:[&:nth-child(2)]:border-b-0">
+      <dt className="mt-0.5 text-xs text-marca-200">{rotulo}</dt>
+      <dd className={`tabular font-display text-2xl font-bold sm:text-3xl ${destaque ? 'text-obra-500' : 'text-white'}`}>{valor}</dd>
     </div>
   );
 }
