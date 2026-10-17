@@ -14,8 +14,7 @@ export function Rodape() {
         <div className="max-w-md space-y-2">
           <p className="font-semibold text-tinta-900">CADEX, Fiscalização de Serviços Concedidos</p>
           <p>
-            Cadastro de Executores (CADEX) da Prefeitura Municipal de Niterói, previsto na
-            Resolução Conjunta SECONSER/SEOP nº&nbsp;001/2026.
+            Cadastro de Executores (CADEX) da Prefeitura Municipal de Niterói.
           </p>
           <p>Av. Visconde do Rio Branco, 11 – Ponta d'Areia, Niterói – RJ</p>
         </div>

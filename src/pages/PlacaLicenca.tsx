@@ -85,7 +85,7 @@ export default function PlacaLicenca() {
         </div>
 
         <footer className="mt-6 border-t border-tinta-200 pt-3 text-[11px] text-tinta-500">
-          Resolução Conjunta SECONSER/SEOP nº 001/2026, art. 14. Endereço de conferência: <span className="break-all">{url}</span>
+          Endereço de conferência: <span className="break-all">{url}</span>
         </footer>
       </article>
     </div>

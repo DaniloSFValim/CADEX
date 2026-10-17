@@ -107,7 +107,7 @@ function Conteudo({ d }: { d: Dados }) {
           <span className="block text-sm text-tinta-500">
             {d.executora.codigo_cadex && sitCadex
               ? `${d.executora.codigo_cadex}; inscrição no CADEX hoje: ${SITUACAO_LABEL[sitCadex] ?? sitCadex}`
-              : 'Sem inscrição no CADEX: licença anterior à Resolução nº 001/2026.'}
+              : 'Sem inscrição no CADEX: licença emitida antes do cadastro.'}
           </span>
         </Item>
         {d.contratante && (
