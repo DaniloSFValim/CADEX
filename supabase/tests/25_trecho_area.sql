@@ -3,6 +3,13 @@
 -- =====================================================================
 begin;
 
+create or replace function pg_temp.assert(p_cond boolean, p_msg text)
+returns void language plpgsql as $$
+begin
+  if not coalesce(p_cond, false) then raise exception 'ASSERT FALHOU: %', p_msg; end if;
+end;
+$$;
+
 create or replace function pg_temp.recusa(p_sql text, p_trecho text, p_msg text)
 returns void language plpgsql as $$
 begin
@@ -61,8 +68,36 @@ select pg_temp.recusa(
   $sql$update licenca_trechos set area = ST_SetSRID(ST_MakePoint(-43.10, -22.90), 4326) where logradouro = 'Rua Teste'$sql$,
   null, 'ponto foi aceito no lugar de polígono');
 
--- Nulo é aceito (trecho sem área).
+-- O mapa público recebe a área em GeoJSON, só para licença deferida ou cancelada.
+-- A regra de negócio (licencas_antes_de_gravar) fica de fora, por ser fixture.
+update licenca_trechos set area = ST_SetSRID(ST_GeomFromText(
+    'POLYGON((-43.105 -22.905, -43.100 -22.905, -43.100 -22.900, -43.105 -22.900, -43.105 -22.905))'), 4326)
+  where logradouro = 'Rua Teste';
+alter table licencas disable trigger licencas_antes_de_gravar;
+update licencas set situacao = 'deferida' where processo_sei = 'PROC-ARE-1';
+alter table licencas enable trigger licencas_antes_de_gravar;
+
+do $$
+declare
+  trecho jsonb;
+begin
+  select t into trecho
+    from jsonb_array_elements(public.obras_publicas()) o, jsonb_array_elements(o -> 'trechos') t
+   where t ->> 'logradouro' = 'Rua Teste' limit 1;
+  perform pg_temp.assert(trecho is not null, 'trecho não apareceu no mapa público');
+  perform pg_temp.assert(trecho -> 'area' ->> 'type' = 'Polygon', 'área não foi para o mapa público');
+  perform pg_temp.assert(jsonb_array_length(trecho -> 'area' -> 'coordinates' -> 0) = 5,
+    'anel da área sem o ponto de fechamento');
+end $$;
+
+-- Nulo é aceito (trecho sem área): o mapa recebe null, não quebra.
 update licenca_trechos set area = null where logradouro = 'Rua Teste';
+do $$
+begin
+  perform pg_temp.assert((select t -> 'area' from jsonb_array_elements(public.obras_publicas()) o, jsonb_array_elements(o -> 'trechos') t
+                           where t ->> 'logradouro' = 'Rua Teste' limit 1) = 'null'::jsonb,
+    'trecho sem área devolveu algo no mapa público');
+end $$;
 select 'área da intervenção: OK' as resultado;
 
 rollback;
