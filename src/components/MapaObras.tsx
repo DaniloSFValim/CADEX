@@ -24,7 +24,7 @@ let protocoloRegistrado = false;
  * pelo próprio site. Enquanto ela não existir, usa os blocos públicos do
  * OpenStreetMap, sem garantia de disponibilidade: só para a fase piloto.
  */
-async function estiloBase(): Promise<StyleSpecification> {
+export async function estiloBase(): Promise<StyleSpecification> {
   const origem = window.location.origin;
   const arquivo = `${origem}/mapa/niteroi.pmtiles`;
   let temBase = false;
