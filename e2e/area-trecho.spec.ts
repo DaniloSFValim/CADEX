@@ -43,4 +43,19 @@ test.describe('área da intervenção no formulário da licença', () => {
     }).toPass({ timeout: 10000 });
     await expect(page.getByLabel('Fim', { exact: true })).toHaveCount(0);
   });
+
+  test('obra sem licença: o tipo área marca o polígono no mapa', async ({ page }) => {
+    await instalarBackend(page);
+    await page.goto('/obras/sem-licenca/nova');
+    await page.getByRole('radio', { name: 'Área' }).check();
+    await page.getByRole('button', { name: 'Marcar no mapa' }).click();
+    const mapa = page.getByRole('region', { name: 'Mapa para marcar o trecho' });
+    await expect(mapa.locator('canvas')).toHaveCount(1);
+    const caixa = await mapa.boundingBox();
+    if (!caixa) throw new Error('mapa sem área visível');
+    await page.mouse.click(caixa.x + caixa.width * 0.4, caixa.y + caixa.height * 0.4);
+    await page.mouse.click(caixa.x + caixa.width * 0.6, caixa.y + caixa.height * 0.4);
+    await page.mouse.click(caixa.x + caixa.width * 0.5, caixa.y + caixa.height * 0.6);
+    await expect(page.getByText('3 vértices marcados.')).toBeVisible();
+  });
 });

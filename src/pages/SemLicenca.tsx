@@ -1,12 +1,15 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Button, Card, Empty, ErrorNote, Field, Spinner, Titulo, botaoLink, inputClass, tabela } from '../components/ui';
 import { dataBR } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { SETORES, SETOR_LABEL, atuaNoSetor, hojeISO, listarEmpresas, nomeEmpresa, type Empresa, type Setor } from '../lib/empresas';
 import { listarTipos, type TipoIntervencao as TipoDeObra } from '../lib/tiposIntervencao';
-import { TIPO_INTERVENCAO_LABEL, TIPOS_INTERVENCAO, type TipoIntervencao, coordenadaTexto } from '../lib/licencas';
+import { TIPO_INTERVENCAO_LABEL, TIPOS_INTERVENCAO, type TipoIntervencao, coordenadaTexto, lerCoordenada } from '../lib/licencas';
 import { listarOrgaos, nomeOrgao, type Orgao } from '../lib/orgaos';
+import { lerAreaWkb } from '../lib/areaTrecho';
+
+const DesenhoArea = lazy(() => import('../components/DesenhoArea'));
 import {
   FORM_SEM_LICENCA_VAZIO, MODO_EXECUCAO_LABEL, SITUACAO_SEM_LICENCA_LABEL, listarSemLicenca, montarSemLicenca,
   salvarSemLicenca, type FormSemLicenca, type IntervencaoSemLicenca, type ModoExecucao, type SituacaoSemLicenca,
@@ -134,6 +137,12 @@ export function FormSemLicencaPage() {
   );
 }
 
+/** Coordenada digitada ou colada, em [lng, lat] (ordem do mapa). */
+function lerCoordenadaPonto(texto: string): [number, number] | null {
+  const c = lerCoordenada(texto);
+  return c ? [c.lng, c.lat] : null;
+}
+
 function paraForm(r: IntervencaoSemLicenca): FormSemLicenca {
   const s = (v: string | null) => v ?? '';
   return {
@@ -143,6 +152,8 @@ function paraForm(r: IntervencaoSemLicenca): FormSemLicenca {
     executora_cnpj: s(r.executora_cnpj), logradouro: r.logradouro, bairro: s(r.bairro), referencia: s(r.referencia),
     inicio: coordenadaTexto(r.inicio_lat, r.inicio_lng),
     fim: r.fim_lat != null && r.fim_lng != null ? coordenadaTexto(r.fim_lat, r.fim_lng) : '',
+    tipo: lerAreaWkb(r.area ?? null) ? 'area' : r.fim_lat != null && r.fim_lng != null ? 'segmento' : 'ponto',
+    area: lerAreaWkb(r.area ?? null),
     inicio_previsto: s(r.inicio_previsto), fim_previsto: s(r.fim_previsto), situacao: r.situacao,
     concluida_em: s(r.concluida_em), processo_sei: s(r.processo_sei), contrato_numero: s(r.contrato_numero),
     processo_administrativo: s(r.processo_administrativo), ordem_servico_numero: s(r.ordem_servico_numero),
@@ -155,6 +166,7 @@ function FormSemLicenca({ atual, empresas, orgaos, tipos, somenteLeitura, onSalv
   onSalvo: (mensagem: string) => void;
 }) {
   const [f, setF] = useState<FormSemLicenca>(atual ? paraForm(atual) : { ...FORM_SEM_LICENCA_VAZIO, inicio_previsto: hojeISO() });
+  const [mapaAberto, setMapaAberto] = useState(false);
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState<unknown>(null);
   const ro = somenteLeitura;
@@ -273,12 +285,49 @@ function FormSemLicenca({ atual, empresas, orgaos, tipos, somenteLeitura, onSalv
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Logradouro" required><input className={inputClass} required {...campo('logradouro')} /></Field>
           <Field label="Bairro"><input className={inputClass} {...campo('bairro')} /></Field>
-          <Field label="Início (coordenadas)" required hint="Cole do Google Maps: lat, lng. Deve estar em Niterói.">
-            <input className={`${inputClass} tabular`} required placeholder="-22.895000, -43.123000" {...campo('inicio')} />
-          </Field>
-          <Field label="Fim (coordenadas, se for um trecho)">
-            <input className={`${inputClass} tabular`} placeholder="Opcional" {...campo('fim')} />
-          </Field>
+          <fieldset className="flex flex-wrap items-center gap-x-5 gap-y-2 sm:col-span-2" disabled={ro}>
+            <legend className="mb-1 text-sm font-medium text-tinta-800">Tipo de trecho</legend>
+            {([['ponto', 'Ponto'], ['segmento', 'Segmento'], ['area', 'Área']] as const).map(([tipo, rotulo]) => (
+              <label key={tipo} className="inline-flex items-center gap-2 text-sm text-tinta-800">
+                <input type="radio" name="tipo-trecho-sem-licenca" value={tipo} checked={f.tipo === tipo}
+                       onChange={() => setF((x) => ({ ...x, tipo, fim: tipo === 'segmento' ? x.fim : '', area: tipo === 'area' ? x.area : null }))}
+                       className="accent-marca-600" />
+                {rotulo}
+              </label>
+            ))}
+          </fieldset>
+          {f.tipo !== 'area' && (
+            <Field label={f.tipo === 'segmento' ? 'Início (coordenadas)' : 'Ponto (coordenadas)'} required
+                   hint="Cole do Google Maps: lat, lng. Deve estar em Niterói.">
+              <input className={`${inputClass} tabular`} required placeholder="-22.895000, -43.123000" {...campo('inicio')} />
+            </Field>
+          )}
+          {f.tipo === 'segmento' && (
+            <Field label="Fim (coordenadas)" required>
+              <input className={`${inputClass} tabular`} required placeholder="-22.895000, -43.123000" {...campo('fim')} />
+            </Field>
+          )}
+          {!ro && (
+            <div className="flex flex-col gap-3 sm:col-span-2">
+              <div>
+                <Button variant="secondary" className="px-3! py-1.5!" onClick={() => setMapaAberto((v) => !v)}>
+                  {mapaAberto ? 'Ocultar o mapa' : 'Marcar no mapa'}
+                </Button>
+              </div>
+              {mapaAberto && (
+                <Suspense fallback={<div className="h-[360px] rounded-sm border border-tinta-200 bg-tinta-50" />}>
+                  <DesenhoArea tipo={f.tipo}
+                               inicio={lerCoordenadaPonto(f.inicio)} fim={lerCoordenadaPonto(f.fim)} area={f.area} ro={ro}
+                               onChange={(p) => setF((x) => ({
+                                 ...x,
+                                 ...(p.inicio !== undefined ? { inicio: p.inicio ? coordenadaTexto(p.inicio[1], p.inicio[0]) : '' } : {}),
+                                 ...(p.fim !== undefined ? { fim: p.fim ? coordenadaTexto(p.fim[1], p.fim[0]) : '' } : {}),
+                                 ...(p.area !== undefined ? { area: p.area } : {}),
+                               }))} />
+                </Suspense>
+              )}
+            </div>
+          )}
           <Field label="Início previsto"><input type="date" className={inputClass} {...campo('inicio_previsto')} /></Field>
           <Field label="Fim previsto"><input type="date" className={inputClass} {...campo('fim_previsto')} /></Field>
           {f.situacao === 'concluida' && (

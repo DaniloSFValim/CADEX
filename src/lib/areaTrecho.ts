@@ -38,6 +38,12 @@ export function areaParaGeoJson(anel: Anel): string {
   return JSON.stringify({ type: 'Polygon', coordinates: [[...anel, anel[0]]] });
 }
 
+/** EWKT (SRID 4326) aceito pelo PostgREST na coluna geometry. O anel é fechado aqui. */
+export function areaParaEwkt(anel: Anel): string {
+  const pares = [...anel, anel[0]].map(([lng, lat]) => `${lng} ${lat}`).join(', ');
+  return `SRID=4326;POLYGON((${pares}))`;
+}
+
 /** Motivo de o desenho não poder ser salvo, ou null se pode. */
 export function problemaArea(anel: Anel): string | null {
   if (anel.length < MIN_VERTICES) return `Marque pelo menos ${MIN_VERTICES} pontos no mapa.`;
