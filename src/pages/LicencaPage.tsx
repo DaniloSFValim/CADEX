@@ -24,7 +24,9 @@ import { areaParaGeoJson, lerAreaWkb, problemaArea, type Anel } from '../lib/are
 
 const DesenhoArea = lazy(() => import('../components/DesenhoArea'));
 
-interface TrechoForm { id?: string; cep: string; logradouro: string; bairro: string; referencia: string; inicio: string; fim: string; area: Anel | null }
+/** Ponto: só o início. Segmento: início e fim. Área: polígono (o início é o primeiro vértice). */
+type TipoTrechoForm = 'ponto' | 'segmento' | 'area';
+interface TrechoForm { id?: string; cep: string; logradouro: string; bairro: string; referencia: string; inicio: string; fim: string; area: Anel | null; tipo: TipoTrechoForm }
 
 type Form = {
   setor: Setor; processo_sei: string; numero: string; tipos_obra: TipoObra[]; outros_descricao: string; escopo: string; observacoes: string;
@@ -67,7 +69,8 @@ function uiDaSituacao(situacao: SituacaoLicenca, concluidaEm: string): UiSituaca
   return concluidaEm ? 'concluida' : 'em_execucao';
 }
 
-const TRECHO_VAZIO: TrechoForm = { cep: '', logradouro: '', bairro: '', referencia: '', inicio: '', fim: '', area: null };
+const TRECHO_VAZIO: TrechoForm = { cep: '', logradouro: '', bairro: '', referencia: '', inicio: '', fim: '', area: null, tipo: 'ponto' };
+const ROTULO_TIPO_TRECHO: Record<TipoTrechoForm, string> = { ponto: 'Ponto', segmento: 'Segmento', area: 'Área' };
 
 const VAZIO: Form = {
   setor: 'telecom', processo_sei: '', numero: '', tipos_obra: [], outros_descricao: '', escopo: '', observacoes: '',
@@ -108,6 +111,7 @@ const trechoParaForm = (t: Trecho & { id: string }): TrechoForm => ({
   inicio: coordenadaTexto(t.inicio_lat, t.inicio_lng),
   fim: t.fim_lat != null && t.fim_lng != null ? coordenadaTexto(t.fim_lat, t.fim_lng) : '',
   area: lerAreaWkb(t.area),
+  tipo: lerAreaWkb(t.area) ? 'area' : t.fim_lat != null && t.fim_lng != null ? 'segmento' : 'ponto',
 });
 
 export default function LicencaPage() {
@@ -305,8 +309,25 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
     setTrechos((ts) => ts.map((t, j) => (j === i ? { ...t, [k]: v } : t)));
     setSalvo(false);
   };
-  const setAreaTrecho = (i: number, area: Anel | null) => {
-    setTrechos((ts) => ts.map((t, j) => (j === i ? { ...t, area } : t)));
+  // Trocar o tipo limpa o que não se aplica ao novo tipo (fim fora do segmento, área fora da área).
+  const setTipoTrecho = (i: number, tipo: TipoTrechoForm) => {
+    setTrechos((ts) => ts.map((t, j) => (j === i ? {
+      ...t, tipo,
+      fim: tipo === 'segmento' ? t.fim : '',
+      area: tipo === 'area' ? t.area : null,
+    } : t)));
+    setSalvo(false);
+  };
+  // O mapa de marcação grava nos campos do formulário (texto de coordenadas e área).
+  const marcarNoMapa = (i: number, p: { inicio?: [number, number] | null; fim?: [number, number] | null; area?: Anel | null }) => {
+    setTrechos((ts) => ts.map((t, j) => {
+      if (j !== i) return t;
+      const next = { ...t };
+      if (p.inicio !== undefined) next.inicio = p.inicio ? coordenadaTexto(p.inicio[1], p.inicio[0]) : '';
+      if (p.fim !== undefined) next.fim = p.fim ? coordenadaTexto(p.fim[1], p.fim[0]) : '';
+      if (p.area !== undefined) next.area = p.area;
+      return next;
+    }));
     setSalvo(false);
   };
   // Qual trecho está com o mapa de desenho aberto (um por vez, para o mapa não pesar).
@@ -358,13 +379,17 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
     for (const [i, t] of trechos.entries()) {
       const n = trechos.length > 1 ? ` ${i + 1}` : '';
       if (!t.logradouro.trim()) return `Trecho${n}: informe o logradouro.`;
-      const ini = lerCoordenada(t.inicio);
+      const area = t.tipo === 'area' && t.area && t.area.length > 0 ? t.area : null;
+      if (t.tipo === 'area') {
+        const erroArea = area ? problemaArea(area) : 'marque pelo menos 3 pontos da área no mapa.';
+        if (erroArea) return `Trecho${n}: área da intervenção. ${erroArea}`;
+      }
+      // Na área, o início é o primeiro vértice; nos outros tipos, é o que foi digitado ou marcado.
+      const ini = area ? { lat: area[0][1], lng: area[0][0] } : lerCoordenada(t.inicio);
       if (!ini) return `Trecho${n}: coordenada de início não reconhecida ou fora de Niterói.`;
-      const fim = t.fim.trim() ? lerCoordenada(t.fim) : null;
-      if (t.fim.trim() && !fim) return `Trecho${n}: coordenada de fim não reconhecida ou fora de Niterói.`;
-      const area = t.area && t.area.length > 0 ? t.area : null;
-      const erroArea = area ? problemaArea(area) : null;
-      if (erroArea) return `Trecho${n}: área da intervenção. ${erroArea}`;
+      if (t.tipo === 'segmento' && !t.fim.trim()) return `Trecho${n}: informe o fim do segmento, ou escolha Ponto.`;
+      const fim = t.tipo === 'segmento' && t.fim.trim() ? lerCoordenada(t.fim) : null;
+      if (t.tipo === 'segmento' && t.fim.trim() && !fim) return `Trecho${n}: coordenada de fim não reconhecida ou fora de Niterói.`;
       lista.push({
         ...(t.id ? { id: t.id } : {}), logradouro: t.logradouro.trim(), bairro: t.bairro.trim() || null,
         referencia: t.referencia.trim() || null, inicio_lat: ini.lat, inicio_lng: ini.lng,
@@ -752,29 +777,49 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
                     </Button>
                   )}
                 </div>
-                <CoordField label="Início" required valor={t.inicio} lida={ini} ro={ro}
-                            onChange={(v) => setTrecho(i, 'inicio', v)} />
-                <CoordField label="Fim" valor={t.fim} lida={fim} ro={ro} onChange={(v) => setTrecho(i, 'fim', v)} />
-                {(!ro || t.area) && (
+                <fieldset className="flex flex-wrap items-center gap-x-5 gap-y-2 sm:col-span-6" disabled={ro}>
+                  <legend className="mb-1 text-sm font-medium text-tinta-800">Tipo de trecho</legend>
+                  {(Object.keys(ROTULO_TIPO_TRECHO) as TipoTrechoForm[]).map((tipo) => (
+                    <label key={tipo} className="inline-flex items-center gap-2 text-sm text-tinta-800">
+                      <input type="radio" name={`tipo-trecho-${i}`} value={tipo} checked={t.tipo === tipo}
+                             onChange={() => setTipoTrecho(i, tipo)} className="accent-marca-600" />
+                      {ROTULO_TIPO_TRECHO[tipo]}
+                    </label>
+                  ))}
+                  <span className="text-sm text-tinta-500">
+                    {t.tipo === 'ponto' && 'Um ponto, como a implantação de um poste.'}
+                    {t.tipo === 'segmento' && 'Uma linha entre início e fim, como um trecho de rede.'}
+                    {t.tipo === 'area' && 'Um polígono, como a área de uma obra ou canteiro.'}
+                  </span>
+                </fieldset>
+                {t.tipo !== 'area' && (
+                  <CoordField label={t.tipo === 'segmento' ? 'Início' : 'Ponto'} required valor={t.inicio} lida={ini} ro={ro}
+                              onChange={(v) => setTrecho(i, 'inicio', v)} />
+                )}
+                {t.tipo === 'segmento' && (
+                  <CoordField label="Fim" required valor={t.fim} lida={fim} ro={ro} onChange={(v) => setTrecho(i, 'fim', v)} />
+                )}
+                {(!ro || t.area || t.inicio) && (
                   <div className="flex flex-col gap-3 sm:col-span-6">
                     <div>
                       <Button variant="secondary" className="px-3! py-1.5!"
                               onClick={() => setAreaAberta(areaAberta === i ? null : i)}>
-                        {areaAberta === i ? 'Fechar o mapa da área' : t.area ? 'Ver ou editar a área no mapa' : 'Desenhar a área no mapa'}
+                        {areaAberta === i ? 'Ocultar o mapa' : 'Marcar no mapa'}
                       </Button>
-                      <span className="ml-3 text-sm text-tinta-500">Opcional. Marque os cantos da área da obra.</span>
+                      <span className="ml-3 text-sm text-tinta-500">
+                        {t.tipo === 'area' ? 'Marque os cantos da área.' : t.tipo === 'segmento' ? 'Marque o início e o fim.' : 'Marque o ponto.'}
+                      </span>
                     </div>
                     {areaAberta === i && (
                       <Suspense fallback={<div className="h-[360px] rounded-sm border border-tinta-200 bg-tinta-50" />}>
-                        <DesenhoArea valor={t.area} ro={ro} onChange={(a) => setAreaTrecho(i, a)} />
+                        <DesenhoArea tipo={t.tipo}
+                                     inicio={lerCoordenada(t.inicio) ? [lerCoordenada(t.inicio)!.lng, lerCoordenada(t.inicio)!.lat] : null}
+                                     fim={lerCoordenada(t.fim) ? [lerCoordenada(t.fim)!.lng, lerCoordenada(t.fim)!.lat] : null}
+                                     area={t.area} ro={ro} onChange={(p) => marcarNoMapa(i, p)} />
                       </Suspense>
                     )}
                   </div>
                 )}
-                <Field label="Referência" className="sm:col-span-2" hint="Ex.: em frente ao nº 120.">
-                  <input className={inputClass} disabled={ro} value={t.referencia}
-                         onChange={(e) => setTrecho(i, 'referencia', e.target.value)} />
-                </Field>
                 {ini && (
                   <a className={`${linkTexto} text-sm sm:col-span-6`} target="_blank" rel="noopener noreferrer"
                      href={linkMapa({ inicio_lat: ini.lat, inicio_lng: ini.lng, fim_lat: fim?.lat ?? null, fim_lng: fim?.lng ?? null })}>

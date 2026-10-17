@@ -102,3 +102,10 @@
   }
   ::selection { @apply bg-marca-100 text-tinta-900; }
 }
+
+/* No mapa de marcação do trecho, o cursor é a seta: o clique marca um ponto, não arrasta a tela. */
+.desenho-area canvas,
+.desenho-area .maplibregl-canvas-container,
+.desenho-area .maplibregl-canvas {
+  cursor: default !important;
+}
