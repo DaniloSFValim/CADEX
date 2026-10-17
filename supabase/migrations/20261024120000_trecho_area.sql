@@ -18,7 +18,7 @@ create index licenca_trechos_area_idx on public.licenca_trechos using gist (area
 -- Corpo igual ao da migração 20261021120000, com o campo "area" no insert e no update dos trechos.
 create or replace function public.salvar_licenca(p_licenca jsonb, p_trechos jsonb)
 returns uuid language plpgsql security invoker
-set search_path = public as $$
+set search_path = public, extensions as $$
 declare
   r       public.licencas := jsonb_populate_record(null::public.licencas, p_licenca);
   v_id    uuid := r.id;
