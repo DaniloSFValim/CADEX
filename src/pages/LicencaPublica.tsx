@@ -7,7 +7,8 @@ import { dataBR } from '../components/Situacao';
 import { SETOR_LABEL, SITUACAO_LABEL, type SituacaoEfetiva } from '../lib/empresas';
 import { listarTipos, mapaRotulosTipos, rotuloDoTipo } from '../lib/tiposIntervencao';
 import {
-  ORIGEM_LABEL, TIPO_INTERVENCAO_LABEL, buscarLicencaPublica, linkMapa, type LicencaPublica as Dados, type SituacaoPublica,
+  ORIGEM_LABEL, TIPO_INTERVENCAO_LABEL, buscarLicencaPublica, buscarTrilhaPublica, linkMapa, type EventoPublico,
+  type LicencaPublica as Dados, type SituacaoPublica,
 } from '../lib/licencas';
 
 /**
@@ -45,7 +46,11 @@ export default function LicencaPublica() {
   const [d, setD] = useState<Dados | null | undefined>(undefined);
   const [error, setError] = useState<unknown>(null);
 
+  const [trilha, setTrilha] = useState<EventoPublico[]>([]);
+
   useEffect(() => { buscarLicencaPublica(codigo).then(setD).catch(setError); }, [codigo]);
+  // A trilha é secundária: se falhar, a licença continua visível sem ela.
+  useEffect(() => { if (d) buscarTrilhaPublica(codigo).then(setTrilha).catch(() => setTrilha([])); }, [codigo, d]);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -66,6 +71,7 @@ export default function LicencaPublica() {
           </div>
         )}
         {d && <Conteudo d={d} />}
+        {d && trilha.length > 0 && <TrilhaPublica eventos={trilha} />}
       </main>
       <Rodape />
     </div>
@@ -138,6 +144,23 @@ function Conteudo({ d }: { d: Dados }) {
         Para conferir a inscrição das empresas, use a <Link to="/consulta" className={linkTexto}>consulta pública do CADEX</Link>.
       </p>
     </>
+  );
+}
+
+/** Histórico da situação, em ordem cronológica. Só data e evento: nenhum dado de quem alterou. */
+function TrilhaPublica({ eventos }: { eventos: EventoPublico[] }) {
+  return (
+    <section className="mt-8" aria-labelledby="trilha-titulo">
+      <h2 id="trilha-titulo" className="font-display text-lg font-semibold text-tinta-900">Histórico da situação</h2>
+      <ol className="mt-3 divide-y divide-tinta-100 rounded-xl border border-tinta-200 bg-white">
+        {eventos.map((e) => (
+          <li key={`${e.data}-${e.evento}`} className="flex items-baseline justify-between gap-4 px-4 py-2.5 text-sm">
+            <span className="text-tinta-800">{e.evento}</span>
+            <time dateTime={e.data} className="tabular whitespace-nowrap text-tinta-500">{dataBR(e.data)}</time>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 

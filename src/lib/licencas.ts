@@ -397,6 +397,16 @@ export async function buscarLicencaPublica(codigo: string): Promise<LicencaPubli
   return (data as LicencaPublica | null) ?? null;
 }
 
+/** Uma mudança da situação, como aparece ao público: data e evento, sem quem alterou. */
+export interface EventoPublico { data: string; evento: string }
+
+/** Trilha da situação da licença. Vazia se o código não existe ou não está visível ao público. */
+export async function buscarTrilhaPublica(codigo: string): Promise<EventoPublico[]> {
+  const { data, error } = await supabase.rpc('licenca_publica_historico', { p_codigo: codigo });
+  if (error) throw error;
+  return (data as EventoPublico[] | null) ?? [];
+}
+
 /** Endereço que vai no QR Code. Usa o domínio em que o sistema está aberto. */
 export const urlPublicaLicenca = (codigo: string, origem = window.location.origin) => `${origem}/licenca/${codigo}`;
 
