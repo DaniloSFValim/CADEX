@@ -2,6 +2,7 @@ import { supabase } from './supabase';
 import { lerCoordenada, TIPO_INTERVENCAO_LABEL, type TipoIntervencao } from './licencas';
 import type { Setor } from './empresas';
 import { onlyDigits } from './cnpj';
+import { areaParaEwkt, problemaArea, type Anel } from './areaTrecho';
 
 // ---------------------------------------------------------------------
 // Obras e serviços sem licença: registro à parte das licenças. Não entra
@@ -44,6 +45,8 @@ export interface IntervencaoSemLicenca {
   inicio_lng: number;
   fim_lat: number | null;
   fim_lng: number | null;
+  /** Área da intervenção: EWKB em hexadecimal ao ler. */
+  area?: string | null;
   inicio_previsto: string | null;
   fim_previsto: string | null;
   situacao: SituacaoSemLicenca;
@@ -74,6 +77,9 @@ export interface FormSemLicenca {
   referencia: string;
   inicio: string;
   fim: string;
+  /** Ponto: só o início. Segmento: início e fim. Área: polígono (o início é o primeiro vértice). */
+  tipo: 'ponto' | 'segmento' | 'area';
+  area: Anel | null;
   inicio_previsto: string;
   fim_previsto: string;
   situacao: SituacaoSemLicenca;
@@ -88,7 +94,7 @@ export interface FormSemLicenca {
 export const FORM_SEM_LICENCA_VAZIO: FormSemLicenca = {
   setor: 'viario', tipo_intervencao: '', tipos_obra: [], outros_descricao: '', escopo: '', contratante_orgao_id: '', executora_modo: 'propria_orgao',
   executora_id: '', executora_razao_social: '', executora_cnpj: '', logradouro: '', bairro: '', referencia: '',
-  inicio: '', fim: '', inicio_previsto: '', fim_previsto: '', situacao: 'em_execucao', concluida_em: '',
+  inicio: '', fim: '', tipo: 'ponto', area: null, inicio_previsto: '', fim_previsto: '', situacao: 'em_execucao', concluida_em: '',
   processo_sei: '', contrato_numero: '', processo_administrativo: '', ordem_servico_numero: '', observacoes: '',
 };
 
@@ -115,10 +121,17 @@ export function montarSemLicenca(f: FormSemLicenca): { linha: LinhaSemLicenca } 
     }
   }
   if (!f.logradouro.trim()) return { erro: 'Informe o logradouro.' };
-  const ini = lerCoordenada(f.inicio);
+  const area = f.tipo === 'area' && f.area && f.area.length > 0 ? f.area : null;
+  if (f.tipo === 'area') {
+    const erroArea = area ? problemaArea(area) : 'Marque pelo menos 3 pontos da área no mapa.';
+    if (erroArea) return { erro: `Área da intervenção. ${erroArea}` };
+  }
+  // Na área, o início é o primeiro vértice; nos outros tipos, é o que foi digitado ou marcado.
+  const ini = area ? { lat: area[0][1], lng: area[0][0] } : lerCoordenada(f.inicio);
   if (!ini) return { erro: 'Coordenada de início não reconhecida ou fora de Niterói.' };
-  const fim = f.fim.trim() ? lerCoordenada(f.fim) : null;
-  if (f.fim.trim() && !fim) return { erro: 'Coordenada de fim não reconhecida ou fora de Niterói.' };
+  if (f.tipo === 'segmento' && !f.fim.trim()) return { erro: 'Informe o fim do segmento, ou escolha Ponto.' };
+  const fim = f.tipo === 'segmento' && f.fim.trim() ? lerCoordenada(f.fim) : null;
+  if (f.tipo === 'segmento' && f.fim.trim() && !fim) return { erro: 'Coordenada de fim não reconhecida ou fora de Niterói.' };
   if (f.inicio_previsto && f.fim_previsto && f.fim_previsto < f.inicio_previsto) {
     return { erro: 'O fim previsto não pode ser anterior ao início.' };
   }
@@ -145,6 +158,7 @@ export function montarSemLicenca(f: FormSemLicenca): { linha: LinhaSemLicenca } 
       inicio_lng: ini.lng,
       fim_lat: fim?.lat ?? null,
       fim_lng: fim?.lng ?? null,
+      area: area ? areaParaEwkt(area) : null,
       inicio_previsto: n(f.inicio_previsto),
       fim_previsto: n(f.fim_previsto),
       situacao: f.situacao,
