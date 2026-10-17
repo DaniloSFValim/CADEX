@@ -1,9 +1,9 @@
-import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AbasConsulta } from '../components/AbasConsulta';
 import FaixaDoTempo from '../components/FaixaDoTempo';
 import FichaObra from '../components/FichaObra';
-import { Cabecalho, MENU_PUBLICO } from '../components/Cabecalho';
+import { Cabecalho } from '../components/Cabecalho';
 import { Rodape } from '../components/Rodape';
 import { Empty, ErrorNote, Spinner, inputClass, linkTexto } from '../components/ui';
 import { dataBR } from '../components/Situacao';
@@ -30,10 +30,17 @@ export default function ConsultaObras() {
   const [busca, setBusca] = useState('');
   const [foco, setFoco] = useState<string | null>(null);
   const [baixando, setBaixando] = useState(false);
+  const mapaRef = useRef<HTMLDivElement>(null);
 
   const [rotulos, setRotulos] = useState<Record<string, string>>({});
   useEffect(() => { buscarObrasPublicas().then(setObras).catch(setError); }, []);
   useEffect(() => { listarTipos().then((t) => setRotulos(mapaRotulosTipos(t))).catch(() => setRotulos({})); }, []);
+
+  /** Seleciona a obra e leva a tela ao mapa, sem voltar ao cabeçalho: a ficha abre sobre o mapa. */
+  function verNoMapa(codigo: string) {
+    setFoco(codigo);
+    mapaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 
   async function baixarGeojson() {
     setError(null);
@@ -52,12 +59,12 @@ export default function ConsultaObras() {
 
   return (
     <div className="flex min-h-screen flex-col bg-tinta-50">
-      <Cabecalho itens={MENU_PUBLICO} />
+      <Cabecalho />
 
       {/* Herói: faixa institucional escura com o mapa de obras como promessa. */}
       <section className="bg-marca-900 text-white">
         <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:py-14">
-          <h1 className="mt-4 max-w-[17ch] font-display text-3xl font-bold leading-[1.04] tracking-[-0.01em] sm:text-5xl">
+          <h1 className="mt-4 max-w-[17ch] text-balance font-display text-3xl font-bold leading-[1.04] tracking-[-0.01em] sm:text-5xl">
             Onde Niterói está com obras nas ruas
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-relaxed text-marca-100/85 sm:text-lg">
@@ -135,7 +142,7 @@ export default function ConsultaObras() {
             {/* Mapa em largura total; a ficha da obra selecionada fica sobre ele. */}
             <div>
               <Suspense fallback={<div className="h-[60vh] min-h-[360px] rounded-xl border border-tinta-200 bg-tinta-50" />}>
-                <div className="relative overflow-hidden rounded-xl border border-tinta-200 shadow-xs">
+                <div ref={mapaRef} className="relative scroll-mt-4 overflow-hidden rounded-xl border border-tinta-200 shadow-xs">
                   <MapaObras obras={filtradas} foco={foco} onSelecionar={setFoco} />
                   {selecionada && <FichaObra obra={selecionada} onFechar={() => setFoco(null)} />}
                 </div>
@@ -163,7 +170,7 @@ export default function ConsultaObras() {
                   {filtradas.length}{filtradas.length !== obras.length && ` de ${obras.length}`}
                 </span>
               </div>
-              <ObrasPerto obras={filtradas} onSelecionar={setFoco} />
+              <ObrasPerto obras={filtradas} onSelecionar={verNoMapa} />
               {filtradas.length < obras.length && (
                 <p className="mb-3 text-xs text-tinta-500">
                   {obras.length - filtradas.length} fora dos filtros atuais
@@ -179,7 +186,14 @@ export default function ConsultaObras() {
                 <div className="rounded-xl border border-tinta-200 bg-white">
                   <Empty>
                     {obras.length === 0 ? 'Nenhuma licença de obra registrada até o momento.'
-                      : situacao === 'vigentes' ? 'Nenhuma obra vigente agora. Escolha "Todas as licenças" para ver as anteriores.'
+                      : situacao === 'vigentes' ? (
+                        <>
+                          Nenhuma obra vigente agora.{' '}
+                          <button type="button" className={linkTexto} onClick={() => setSituacao('todas')}>
+                            Mostrar as licenças anteriores
+                          </button>
+                        </>
+                      )
                         : 'Nenhuma licença corresponde à busca.'}
                   </Empty>
                 </div>
@@ -210,7 +224,7 @@ export default function ConsultaObras() {
                         </Link>
                         {temLocalizacao(o)
                           ? <button type="button" className="font-semibold text-marca-600 hover:underline"
-                                    onClick={() => { setFoco(o.codigo); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+                                    onClick={() => verNoMapa(o.codigo)}>
                               Ver no mapa
                             </button>
                           : <span className="text-tinta-500">Sem localização no mapa</span>}
@@ -334,7 +348,7 @@ function ObrasPerto({ obras, onSelecionar }: { obras: ObraPublica[]; onSeleciona
           {proximas.map(({ obra, metros }) => (
             <li key={obra.codigo} className="flex items-baseline justify-between gap-3 py-2 text-sm">
               <button type="button" className="text-left font-medium text-tinta-900 hover:underline"
-                      onClick={() => { onSelecionar(obra.codigo); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+                      onClick={() => onSelecionar(obra.codigo)}>
                 {obra.trechos[0]?.logradouro ?? 'Obra'}{obra.trechos[0]?.bairro ? `, ${obra.trechos[0].bairro}` : ''}
               </button>
               <span className="tabular shrink-0 text-tinta-600">{textoDistancia(metros)}</span>

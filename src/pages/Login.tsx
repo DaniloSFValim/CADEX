@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Cabecalho, MENU_PUBLICO } from '../components/Cabecalho';
+import { Cabecalho } from '../components/Cabecalho';
 import { Rodape } from '../components/Rodape';
 import { Button, ErrorNote, Field, inputClass } from '../components/ui';
 import { useAuth } from '../lib/auth';
@@ -21,7 +21,7 @@ export default function Login() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Cabecalho itens={MENU_PUBLICO} />
+      <Cabecalho />
       <main id="conteudo" tabIndex={-1} className="grid flex-1 lg:grid-cols-2 lg:min-h-[calc(100dvh-65px)]">
         {/* Painel institucional: a mesma identidade do mapa público. */}
         <aside className="hidden flex-col justify-between bg-marca-900 p-12 text-white lg:flex xl:p-16">
