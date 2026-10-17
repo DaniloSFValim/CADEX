@@ -106,6 +106,8 @@ export interface Trecho {
   inicio_lng: number;
   fim_lat: number | null;
   fim_lng: number | null;
+  /** Área da intervenção: EWKB em hexadecimal ao ler; GeoJSON (Polygon) ao gravar. */
+  area?: string | null;
 }
 
 export interface LicencaComTrechos extends Licenca {

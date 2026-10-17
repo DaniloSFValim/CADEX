@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Badge, Button, Card, ErrorNote, Field, Spinner, Titulo, botaoLink, inputClass, linkTexto } from '../components/ui';
 import { QrCode } from '../components/QrCode';
@@ -20,8 +20,11 @@ import {
 } from '../lib/licencas';
 import { listarOrgaos, nomeOrgao, orgaoServeOrigem, type Orgao } from '../lib/orgaos';
 import { listarTipos, type TipoIntervencao as TipoDeObra } from '../lib/tiposIntervencao';
+import { areaParaGeoJson, lerAreaWkb, problemaArea, type Anel } from '../lib/areaTrecho';
 
-interface TrechoForm { id?: string; cep: string; logradouro: string; bairro: string; referencia: string; inicio: string; fim: string }
+const DesenhoArea = lazy(() => import('../components/DesenhoArea'));
+
+interface TrechoForm { id?: string; cep: string; logradouro: string; bairro: string; referencia: string; inicio: string; fim: string; area: Anel | null }
 
 type Form = {
   setor: Setor; processo_sei: string; numero: string; tipos_obra: TipoObra[]; outros_descricao: string; escopo: string; observacoes: string;
@@ -64,7 +67,7 @@ function uiDaSituacao(situacao: SituacaoLicenca, concluidaEm: string): UiSituaca
   return concluidaEm ? 'concluida' : 'em_execucao';
 }
 
-const TRECHO_VAZIO: TrechoForm = { cep: '', logradouro: '', bairro: '', referencia: '', inicio: '', fim: '' };
+const TRECHO_VAZIO: TrechoForm = { cep: '', logradouro: '', bairro: '', referencia: '', inicio: '', fim: '', area: null };
 
 const VAZIO: Form = {
   setor: 'telecom', processo_sei: '', numero: '', tipos_obra: [], outros_descricao: '', escopo: '', observacoes: '',
@@ -104,6 +107,7 @@ const trechoParaForm = (t: Trecho & { id: string }): TrechoForm => ({
   id: t.id, cep: '', logradouro: t.logradouro, bairro: t.bairro ?? '', referencia: t.referencia ?? '',
   inicio: coordenadaTexto(t.inicio_lat, t.inicio_lng),
   fim: t.fim_lat != null && t.fim_lng != null ? coordenadaTexto(t.fim_lat, t.fim_lng) : '',
+  area: lerAreaWkb(t.area),
 });
 
 export default function LicencaPage() {
@@ -301,6 +305,12 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
     setTrechos((ts) => ts.map((t, j) => (j === i ? { ...t, [k]: v } : t)));
     setSalvo(false);
   };
+  const setAreaTrecho = (i: number, area: Anel | null) => {
+    setTrechos((ts) => ts.map((t, j) => (j === i ? { ...t, area } : t)));
+    setSalvo(false);
+  };
+  // Qual trecho está com o mapa de desenho aberto (um por vez, para o mapa não pesar).
+  const [areaAberta, setAreaAberta] = useState<number | null>(null);
   // CEP preenche logradouro e bairro; as coordenadas continuam à mão.
   const buscarCepTrecho = async (i: number, cep: string) => {
     if (!cepValido(cep)) return;
@@ -352,10 +362,14 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
       if (!ini) return `Trecho${n}: coordenada de início não reconhecida ou fora de Niterói.`;
       const fim = t.fim.trim() ? lerCoordenada(t.fim) : null;
       if (t.fim.trim() && !fim) return `Trecho${n}: coordenada de fim não reconhecida ou fora de Niterói.`;
+      const area = t.area && t.area.length > 0 ? t.area : null;
+      const erroArea = area ? problemaArea(area) : null;
+      if (erroArea) return `Trecho${n}: área da intervenção. ${erroArea}`;
       lista.push({
         ...(t.id ? { id: t.id } : {}), logradouro: t.logradouro.trim(), bairro: t.bairro.trim() || null,
         referencia: t.referencia.trim() || null, inicio_lat: ini.lat, inicio_lng: ini.lng,
         fim_lat: fim?.lat ?? null, fim_lng: fim?.lng ?? null,
+        area: area ? areaParaGeoJson(area) : null,
       });
     }
     const n = (v: string) => v.trim() || null;
@@ -741,6 +755,22 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
                 <CoordField label="Início" required valor={t.inicio} lida={ini} ro={ro}
                             onChange={(v) => setTrecho(i, 'inicio', v)} />
                 <CoordField label="Fim" valor={t.fim} lida={fim} ro={ro} onChange={(v) => setTrecho(i, 'fim', v)} />
+                {(!ro || t.area) && (
+                  <div className="flex flex-col gap-3 sm:col-span-6">
+                    <div>
+                      <Button variant="secondary" className="px-3! py-1.5!"
+                              onClick={() => setAreaAberta(areaAberta === i ? null : i)}>
+                        {areaAberta === i ? 'Fechar o mapa da área' : t.area ? 'Ver ou editar a área no mapa' : 'Desenhar a área no mapa'}
+                      </Button>
+                      <span className="ml-3 text-sm text-tinta-500">Opcional. Marque os cantos da área da obra.</span>
+                    </div>
+                    {areaAberta === i && (
+                      <Suspense fallback={<div className="h-[360px] rounded-sm border border-tinta-200 bg-tinta-50" />}>
+                        <DesenhoArea valor={t.area} ro={ro} onChange={(a) => setAreaTrecho(i, a)} />
+                      </Suspense>
+                    )}
+                  </div>
+                )}
                 <Field label="Referência" className="sm:col-span-2" hint="Ex.: em frente ao nº 120.">
                   <input className={inputClass} disabled={ro} value={t.referencia}
                          onChange={(e) => setTrecho(i, 'referencia', e.target.value)} />
