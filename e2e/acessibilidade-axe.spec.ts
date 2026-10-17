@@ -1,10 +1,10 @@
 import { expect, test, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { instalarBackend } from './apoio/backend';
+import { instalarBackend, type Cenario } from './apoio/backend';
 
 // Varredura automática com axe-core (WCAG 2.0 e 2.1, níveis A e AA) nas telas
-// que já têm teste de tela. Pega contraste, rótulos, landmarks e ARIA que a
-// revisão manual deixa passar. Não substitui o teste com leitor de tela.
+// do sistema. Pega contraste, rótulos, landmarks e ARIA que a revisão manual
+// deixa passar. Não substitui o teste com leitor de tela.
 
 const WCAG_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
 
@@ -20,35 +20,59 @@ async function varrer(page: Page) {
   }));
 }
 
-test.describe('acessibilidade automatizada (axe, WCAG AA)', () => {
-  test('consulta de obras, a página pública principal', async ({ page }) => {
-    await instalarBackend(page, { licencas: [] });
-    await page.goto('/consulta/obras');
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-    expect(await varrer(page)).toEqual([]);
-  });
+/** Telas públicas: sem sessão. */
+const PUBLICAS: { nome: string; caminho: string; cenario?: Partial<Cenario> }[] = [
+  { nome: 'consulta de obras', caminho: '/consulta/obras', cenario: { licencas: [] } },
+  { nome: 'consulta (empresas)', caminho: '/consulta' },
+  { nome: 'entrada na área restrita', caminho: '/entrar' },
+];
 
-  test('entrada na área restrita', async ({ page }) => {
-    await instalarBackend(page, {});
-    await page.goto('/entrar');
-    expect(await varrer(page)).toEqual([]);
-  });
+/** Telas internas do gestor (perfil SECONSER, sem administração). */
+const GESTOR: { nome: string; caminho: string }[] = [
+  { nome: 'painel', caminho: '/dashboard' },
+  { nome: 'pendências', caminho: '/dashboard/pendencias' },
+  { nome: 'empresas', caminho: '/empresas' },
+  { nome: 'nova empresa', caminho: '/empresas/nova' },
+  { nome: 'obras e serviços', caminho: '/obras' },
+  { nome: 'nova licença', caminho: '/obras/nova' },
+  { nome: 'obras sem licença', caminho: '/obras/sem-licenca' },
+  { nome: 'órgãos', caminho: '/orgaos' },
+  { nome: 'minha conta', caminho: '/minha-conta' },
+];
 
-  test('painel de pendências', async ({ page }) => {
-    await instalarBackend(page, { perfil: 'gestor' });
-    await page.goto('/pendencias');
-    expect(await varrer(page)).toEqual([]);
-  });
+/** Telas da administração: exigem o flag de administrador. */
+const ADMIN: { nome: string; caminho: string }[] = [
+  { nome: 'administração: empresas', caminho: '/admin/empresas' },
+  { nome: 'administração: licenças', caminho: '/admin/licencas' },
+  { nome: 'administração: tipos', caminho: '/admin/tipos' },
+  { nome: 'administração: configurações', caminho: '/admin/configuracoes' },
+  { nome: 'administração: auditoria', caminho: '/admin/auditoria' },
+];
 
-  test('administração: licenças', async ({ page }) => {
-    await instalarBackend(page, { administrador: true });
-    await page.goto('/admin/licencas');
-    expect(await varrer(page)).toEqual([]);
-  });
+test.describe('acessibilidade automatizada (axe, WCAG AA): públicas', () => {
+  for (const tela of PUBLICAS) {
+    test(tela.nome, async ({ page }) => {
+      await instalarBackend(page, tela.cenario ?? {});
+      await page.goto(tela.caminho);
+      expect(await varrer(page)).toEqual([]);
+    });
+  }
+});
 
-  test('administração: auditoria', async ({ page }) => {
-    await instalarBackend(page, { administrador: true });
-    await page.goto('/admin/auditoria');
-    expect(await varrer(page)).toEqual([]);
-  });
+test.describe('acessibilidade automatizada (axe, WCAG AA): área restrita', () => {
+  for (const tela of GESTOR) {
+    test(tela.nome, async ({ page }) => {
+      await instalarBackend(page, { perfil: 'gestor' });
+      await page.goto(tela.caminho);
+      expect(await varrer(page)).toEqual([]);
+    });
+  }
+
+  for (const tela of ADMIN) {
+    test(tela.nome, async ({ page }) => {
+      await instalarBackend(page, { administrador: true, perfil: 'gestor' });
+      await page.goto(tela.caminho);
+      expect(await varrer(page)).toEqual([]);
+    });
+  }
 });
