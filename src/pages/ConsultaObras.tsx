@@ -68,7 +68,7 @@ export default function ConsultaObras() {
             Onde Niterói está com obras nas ruas
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-relaxed text-marca-100/85 sm:text-lg">
-            Consulte no mapa cada obra de infraestrutura licenciada nas vias públicas da cidade — quem executa,
+            Consulte no mapa cada obra de infraestrutura licenciada nas vias públicas da cidade: quem executa,
             em que trecho e até quando o prazo é válido.
           </p>
 
@@ -109,8 +109,8 @@ export default function ConsultaObras() {
           Lá estão o trecho, a executora e o prazo.
         </p>
         <div className="mt-3 rounded-xl border border-tinta-200 bg-white p-3 shadow-xs">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_repeat(5,auto)]">
-            <input className={inputClass} value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar obra"
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <input className={`${inputClass} sm:col-span-2 lg:col-span-full`} value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar obra"
                    placeholder="Rua, bairro, empresa ou nº da licença" />
             <select className={inputClass} value={setor} onChange={(e) => setSetor(e.target.value)} aria-label="Setor">
               <option value="">Todos os setores</option>
@@ -156,7 +156,7 @@ export default function ConsultaObras() {
                 <button type="button" className={linkTexto} disabled={baixando} onClick={() => void baixarGeojson()}>
                   {baixando ? 'Preparando…' : 'Dados abertos: baixar GeoJSON'}
                 </button>
-                <span className="text-tinta-400"> — todas as obras licenciadas, para uso livre.</span>
+                <span className="text-tinta-400">. Todas as obras licenciadas, para uso livre.</span>
               </p>
             </div>
 
