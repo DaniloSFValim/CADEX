@@ -21,6 +21,7 @@ export default function Administracao() {
   if (servidor?.administrador !== true) {
     return <Empty>Só administrador acessa a administração do CADEX.</Empty>;
   }
+  // Menu lateral em telas largas; em telas estreitas, vira uma faixa que rola na horizontal.
   const aba = ({ isActive }: { isActive: boolean }) =>
     `inline-flex min-h-10 items-center whitespace-nowrap rounded px-3 text-sm font-medium transition-colors ${
       isActive ? 'bg-tinta-900 text-white' : 'text-tinta-600 hover:bg-tinta-100 hover:text-tinta-900'}`;
@@ -30,14 +31,18 @@ export default function Administracao() {
         titulo="Administração"
         descricao="Contas, empresas, licenças, parâmetros e auditoria do CADEX. Toda mudança fica na auditoria e vale no banco, não só nesta tela."
       />
-      <nav className="-mx-4 mb-8 overflow-x-auto px-4" aria-label="Administração">
-        <ul className="flex w-max gap-1">
-          {ABAS.map((a) => (
-            <li key={a.para}><NavLink to={a.para} end={a.fim} className={aba}>{a.rotulo}</NavLink></li>
-          ))}
-        </ul>
-      </nav>
-      <Outlet />
+      <div className="grid gap-8 lg:grid-cols-[13rem_minmax(0,1fr)]">
+        <nav className="-mx-4 overflow-x-auto px-4 lg:sticky lg:top-4 lg:mx-0 lg:self-start lg:overflow-visible lg:px-0" aria-label="Administração">
+          <ul className="flex w-max gap-1 lg:w-auto lg:flex-col">
+            {ABAS.map((a) => (
+              <li key={a.para}><NavLink to={a.para} end={a.fim} className={aba}>{a.rotulo}</NavLink></li>
+            ))}
+          </ul>
+        </nav>
+        <div className="min-w-0">
+          <Outlet />
+        </div>
+      </div>
     </>
   );
 }
