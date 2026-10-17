@@ -57,9 +57,6 @@ export default function ConsultaObras() {
       {/* Herói: faixa institucional escura com o mapa de obras como promessa. */}
       <section className="bg-marca-900 text-white">
         <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:py-14">
-          <p className="flex items-center gap-2.5 text-sm font-medium text-marca-200">
-            Resolução Conjunta SECONSER/SEOP nº&nbsp;001/2026
-          </p>
           <h1 className="mt-4 max-w-[17ch] font-display text-3xl font-bold leading-[1.04] tracking-[-0.01em] sm:text-5xl">
             Onde Niterói está com obras nas ruas
           </h1>

@@ -33,8 +33,7 @@ export default function Login() {
               A fiscalização de obras na via pública, num só lugar.
             </h2>
             <p className="mt-4 max-w-md text-base leading-relaxed text-marca-100/85">
-              Cadastro de executores, licenciamento de obras e transparência pública, sob a Resolução
-              Conjunta SECONSER/SEOP nº&nbsp;001/2026.
+              Cadastro de executores, licenciamento de obras e transparência pública.
             </p>
           </div>
           <ul className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-marca-200">

@@ -223,6 +223,7 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
       return responder({ numero: l.numero, processo_sei: l.processo_sei, trechos_apagados: l.licenca_trechos.length });
     }
     if (caminho === 'rpc/obras_publicas') return responder(obrasPublicas(estado));
+    if (caminho === 'rpc/licenca_publica_historico') return responder([]);
 
     semSimulacao.push(`${req.method()} ${caminho}`);
     return responder(unico ? {} : []);
