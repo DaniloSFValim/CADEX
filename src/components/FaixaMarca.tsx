@@ -23,12 +23,13 @@ export function FaixaMarca({ itens, direita }: { itens: ItemMenu[]; direita?: Re
           <span className="leading-tight">
             <span className="block font-display text-xl font-extrabold tracking-wide">CADEX</span>
             <span className="block text-xs text-white/75">Prefeitura de Niterói · SECONSER</span>
+            <span className="block text-xs text-white/75">Fiscalização de Serviços Concedidos</span>
           </span>
         </Link>
 
         {direita && <div className="ml-auto flex items-center gap-3 text-sm">{direita}</div>}
 
-        <nav className="-mx-4 w-[calc(100%+2rem)] overflow-x-auto pb-4 lg:-mx-10 lg:w-[calc(100%+5rem)]" aria-label="Menu principal">
+        {itens.length > 0 && <nav className="-mx-4 w-[calc(100%+2rem)] overflow-x-auto pb-4 lg:-mx-10 lg:w-[calc(100%+5rem)]" aria-label="Menu principal">
           <ul className="flex w-max gap-2 px-4 lg:px-10">
             {itens.map((i) => (
               <li key={i.para}>
@@ -44,7 +45,7 @@ export function FaixaMarca({ itens, direita }: { itens: ItemMenu[]; direita?: Re
               </li>
             ))}
           </ul>
-        </nav>
+        </nav>}
       </div>
     </header>
     </>

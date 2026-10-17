@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Cabecalho, MENU_PUBLICO } from '../components/Cabecalho';
+import { Cabecalho } from '../components/Cabecalho';
 import { Rodape } from '../components/Rodape';
 import { ErrorNote, Spinner, linkTexto } from '../components/ui';
 import { dataBR } from '../components/Situacao';
@@ -54,7 +54,7 @@ export default function LicencaPublica() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Cabecalho itens={MENU_PUBLICO} />
+      <Cabecalho />
       <main id="conteudo" tabIndex={-1} className="mx-auto w-full max-w-2xl flex-1 px-4 py-8">
         <p className="flex items-center gap-2.5 text-sm font-medium text-tinta-500">
                     Licença de obra em via pública

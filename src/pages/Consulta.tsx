@@ -1,5 +1,5 @@
 import { AbasConsulta } from '../components/AbasConsulta';
-import { Cabecalho, MENU_PUBLICO } from '../components/Cabecalho';
+import { Cabecalho } from '../components/Cabecalho';
 import { Rodape } from '../components/Rodape';
 import { useEffect, useMemo, useState } from 'react';
 import { Empty, ErrorNote, Kpi, Spinner, Titulo, inputClass } from '../components/ui';
@@ -54,7 +54,7 @@ export default function Consulta() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Cabecalho itens={MENU_PUBLICO} />
+      <Cabecalho />
 
       <main id="conteudo" tabIndex={-1} className="mx-auto w-full max-w-7xl flex-1 px-4 py-12">
         <Titulo
