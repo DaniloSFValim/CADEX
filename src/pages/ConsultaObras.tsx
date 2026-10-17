@@ -7,7 +7,7 @@ import { Cabecalho, MENU_PUBLICO } from '../components/Cabecalho';
 import { Rodape } from '../components/Rodape';
 import { Empty, ErrorNote, Spinner, inputClass, linkTexto } from '../components/ui';
 import { dataBR } from '../components/Situacao';
-import { SETORES, SETOR_LABEL, hojeISO } from '../lib/empresas';
+import { SETORES, SETOR_LABEL, hojeISO, type Setor } from '../lib/empresas';
 import { ORIGENS, ORIGEM_LABEL, TIPOS_INTERVENCAO, TIPO_INTERVENCAO_LABEL, origemPublica } from '../lib/licencas';
 import { listarTipos, mapaRotulosTipos, rotuloDoTipo } from '../lib/tiposIntervencao';
 import {
@@ -47,6 +47,7 @@ export default function ConsultaObras() {
     [obras, situacao, ano, busca, setor, intervencao, origem]);
   const anos = useMemo(() => anosDasObras(obras ?? []), [obras]);
   const stats = useMemo(() => resumo(obras ?? []), [obras]);
+  const porSetor = useMemo(() => contarVigentesPorSetor(obras ?? []), [obras]);
   const selecionada = useMemo(() => (obras ?? []).find((o) => o.codigo === foco) ?? null, [obras, foco]);
 
   return (
@@ -74,6 +75,23 @@ export default function ConsultaObras() {
               <Estat valor={stats.execs} rotulo={stats.execs === 1 ? 'executora' : 'executoras'} />
               <Estat valor={stats.total} rotulo="no cadastro" />
             </dl>
+          )}
+
+          {obras && porSetor.length > 0 && (
+            <div className="mt-5 max-w-3xl">
+              <p className="text-sm font-medium text-marca-200">Obras vigentes por setor</p>
+              <ul className="mt-2 flex flex-wrap gap-2" aria-label="Obras vigentes por setor">
+                {porSetor.map(({ setor: s, vigentes: n }) => (
+                  <li key={s}>
+                    <button type="button" onClick={() => setSetor(s)} aria-label={`${SETOR_LABEL[s]}: ${n} obras vigentes. Filtrar por este setor`}
+                            className="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1 text-sm text-white hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+                      {SETOR_LABEL[s]}
+                      <span className="tabular rounded-full bg-white/15 px-2 text-xs font-semibold">{n}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </div>
       </section>
@@ -218,6 +236,18 @@ export default function ConsultaObras() {
       <Rodape />
     </div>
   );
+}
+
+/** Obras vigentes (ou aguardando início) por setor, só os setores com alguma obra. */
+function contarVigentesPorSetor(obras: ObraPublica[]) {
+  const cont = new Map<Setor, number>();
+  for (const o of obras) {
+    if (o.situacao !== 'vigente' && o.situacao !== 'aguardando_inicio') continue;
+    cont.set(o.setor, (cont.get(o.setor) ?? 0) + 1);
+  }
+  return [...cont.entries()]
+    .map(([setor, vigentes]) => ({ setor, vigentes }))
+    .sort((a, b) => b.vigentes - a.vigentes);
 }
 
 /** Resumo para a faixa de números do herói, a partir das obras carregadas. */
