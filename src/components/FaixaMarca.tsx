@@ -11,6 +11,10 @@ export interface ItemMenu { rotulo: string; para: string; fim?: boolean }
  */
 export function FaixaMarca({ itens, direita }: { itens: ItemMenu[]; direita?: ReactNode }) {
   return (
+    <>
+    <a href="#conteudo" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-sm focus:bg-white focus:px-4 focus:py-2 focus:font-semibold focus:text-marca-800 focus:shadow-md">
+      Pular para o conteúdo
+    </a>
     <header className="relative overflow-hidden bg-gradient-to-br from-marca-900 to-marca-600 text-white">
       <div aria-hidden className="pointer-events-none absolute -right-20 -top-28 h-72 w-72 rounded-full bg-obra-500/20" />
       <div className="relative mx-auto flex max-w-7xl flex-wrap items-center gap-x-5 gap-y-3 px-4 pt-4 lg:px-10">
@@ -43,5 +47,6 @@ export function FaixaMarca({ itens, direita }: { itens: ItemMenu[]; direita?: Re
         </nav>
       </div>
     </header>
+    </>
   );
 }

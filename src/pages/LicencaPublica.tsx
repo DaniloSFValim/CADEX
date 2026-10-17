@@ -50,7 +50,7 @@ export default function LicencaPublica() {
   return (
     <div className="flex min-h-screen flex-col">
       <Cabecalho itens={MENU_PUBLICO} />
-      <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8">
+      <main id="conteudo" tabIndex={-1} className="mx-auto w-full max-w-2xl flex-1 px-4 py-8">
         <p className="flex items-center gap-2.5 text-sm font-medium text-tinta-500">
                     Licença de obra em via pública
         </p>

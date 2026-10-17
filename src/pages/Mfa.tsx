@@ -17,7 +17,7 @@ function Moldura({ titulo, children }: { titulo: string; children: ReactNode }) 
           <Button variant="secondary" className="px-3! py-1.5!" onClick={() => void signOut()}>Sair</Button>
         </>}
       />
-      <main className="flex flex-1 items-start justify-center px-4 py-12">
+      <main id="conteudo" tabIndex={-1} className="flex flex-1 items-start justify-center px-4 py-12">
         <div className="cartao w-full max-w-xl p-8">
           <h1 className="text-xl font-bold tracking-tight text-tinta-900">{titulo}</h1>
           {children}
