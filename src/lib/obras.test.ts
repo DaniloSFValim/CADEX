@@ -116,3 +116,19 @@ describe('faixa do tempo', () => {
     expect(b.largura).toBeGreaterThan(0);
   });
 });
+
+describe('área da intervenção no mapa', () => {
+  const anel: [number, number][][] = [[[-43.105, -22.905], [-43.1, -22.905], [-43.1, -22.9], [-43.105, -22.905]]];
+
+  it('trecho com área gera o polígono, além do ponto do trecho', () => {
+    const com = obra({ trechos: [{ logradouro: 'Rua Área', bairro: null, inicio: [-43.105, -22.905], fim: null,
+                                   area: { type: 'Polygon', coordinates: anel } }] });
+    const tipos = obrasParaGeoJSON([com]).features.map((f) => f.geometry.type);
+    expect(tipos).toEqual(['Polygon', 'Point']);
+    expect(obrasParaGeoJSON([com]).features[0].properties?.situacao).toBe('vigente');
+  });
+
+  it('trecho sem área continua só com o ponto ou a linha', () => {
+    expect(obrasParaGeoJSON([obra({})]).features.map((f) => f.geometry.type)).toEqual(['Point']);
+  });
+});

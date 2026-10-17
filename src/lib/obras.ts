@@ -26,7 +26,11 @@ export interface ObraPublica {
   executora: string;
   contratante: string | null;
   /** Coordenadas em [longitude, latitude], como no GeoJSON. */
-  trechos: { logradouro: string; bairro: string | null; inicio: [number, number]; fim: [number, number] | null }[];
+  trechos: {
+    logradouro: string; bairro: string | null; inicio: [number, number]; fim: [number, number] | null;
+    /** Área da intervenção, quando foi desenhada (GeoJSON Polygon, em [lng, lat]). */
+    area?: { type: 'Polygon'; coordinates: [number, number][][] } | null;
+  }[];
 }
 
 export async function buscarObrasPublicas(): Promise<ObraPublica[]> {
@@ -109,19 +113,26 @@ export function obrasParaGeoJSON(obras: ObraPublica[]): FeatureCollection {
     type: 'FeatureCollection',
     // Trecho sem coordenada utilizável não é desenhado (nem inventado): a lista
     // da consulta avisa que a obra está sem localização.
-    features: obras.flatMap((o) => o.trechos.filter((t) => coordenadaValida(t.inicio)).map((t): Feature => ({
-      type: 'Feature',
-      // Fim igual ao início é um ponto: a linha de comprimento zero não aparece no mapa.
-      geometry: coordenadaValida(t.fim) && !mesmoPonto(t.inicio, t.fim)
-        ? { type: 'LineString', coordinates: [t.inicio, t.fim] }
-        : { type: 'Point', coordinates: t.inicio },
-      properties: {
+    features: obras.flatMap((o) => o.trechos.filter((t) => coordenadaValida(t.inicio)).flatMap((t): Feature[] => {
+      const properties = {
         codigo: o.codigo, numero: o.numero, situacao: o.situacao, executora: o.executora,
         contratante: o.contratante ?? '', escopo: o.escopo, tipo_intervencao: o.tipo_intervencao, origem: o.origem,
         logradouro: t.logradouro, bairro: t.bairro ?? '',
         inicio_previsto: o.inicio_previsto ?? '', fim_previsto: o.fim_previsto ?? '',
-      },
-    }))),
+      };
+      // Área desenhada: um polígono, além do ponto ou da linha do trecho.
+      const area: Feature[] = t.area?.type === 'Polygon' && (t.area.coordinates[0]?.length ?? 0) >= 4
+        ? [{ type: 'Feature', properties, geometry: t.area }] : [];
+      const traço: Feature = {
+        type: 'Feature',
+        // Fim igual ao início é um ponto: a linha de comprimento zero não aparece no mapa.
+        geometry: coordenadaValida(t.fim) && !mesmoPonto(t.inicio, t.fim)
+          ? { type: 'LineString', coordinates: [t.inicio, t.fim] }
+          : { type: 'Point', coordinates: t.inicio },
+        properties,
+      };
+      return [...area, traço];
+    })),
   };
 }
 

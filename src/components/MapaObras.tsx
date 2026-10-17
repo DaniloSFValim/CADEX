@@ -115,6 +115,15 @@ export default function MapaObras({ obras, foco, onSelecionar }: {
             paint: { 'text-color': '#ffffff' },
           },
           {
+            // Área da intervenção (polígono desenhado): preenchimento e contorno na cor da situação.
+            id: 'obras-areas', type: 'fill', source: 'obras', filter: ['==', ['geometry-type'], 'Polygon'],
+            paint: { 'fill-color': corPorSituacao, 'fill-opacity': 0.28 },
+          },
+          {
+            id: 'obras-areas-contorno', type: 'line', source: 'obras', filter: ['==', ['geometry-type'], 'Polygon'],
+            paint: { 'line-color': corPorSituacao, 'line-width': 2 },
+          },
+          {
             id: 'obras-pontos', type: 'circle', source: 'obras',
             filter: ['all', ['==', ['geometry-type'], 'Point'], ['!', ['has', 'point_count']]],
             paint: {
@@ -133,7 +142,7 @@ export default function MapaObras({ obras, foco, onSelecionar }: {
       m.on('error', (e: maplibregl.ErrorEvent) => {
         if (vivo && !m.isStyleLoaded()) setErro(e.error?.message ?? 'Falha ao carregar o mapa.');
       });
-      for (const camada of ['obras-linhas', 'obras-pontos']) {
+      for (const camada of ['obras-linhas', 'obras-pontos', 'obras-areas']) {
         m.on('click', camada, (e: maplibregl.MapLayerMouseEvent) => {
           const codigo = e.features?.[0]?.properties?.codigo;
           if (typeof codigo === 'string') onSelecionarRef.current?.(codigo);
