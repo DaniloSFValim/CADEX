@@ -22,7 +22,7 @@ const MapaObras = lazy(() => import('../components/MapaObras'));
 export default function ConsultaObras() {
   const [obras, setObras] = useState<ObraPublica[] | null>(null);
   const [error, setError] = useState<unknown>(null);
-  const [situacao, setSituacao] = useState('vigentes');
+  const [situacao, setSituacao] = useState('todas');
   const [ano, setAno] = useState('');
   const [setor, setSetor] = useState('');
   const [intervencao, setIntervencao] = useState('');
@@ -182,6 +182,7 @@ export default function ConsultaObras() {
                 </p>
               )}
 
+              {filtradas.length > 0 && <ResumoSituacoes obras={filtradas} />}
               {filtradas.length === 0 ? (
                 <div className="rounded-xl border border-tinta-200 bg-white">
                   <Empty>
@@ -198,47 +199,60 @@ export default function ConsultaObras() {
                   </Empty>
                 </div>
               ) : (
-                <ul className="divide-y divide-tinta-100 overflow-hidden rounded-xl border border-tinta-200 bg-white">
-                  {filtradas.map((o) => (
-                    <li key={o.codigo} className="border-l-[3px] px-4 py-3.5 transition-colors hover:bg-tinta-50"
-                        style={{ borderLeftColor: COR_SITUACAO[o.situacao] }}>
-                      <div className="flex items-start justify-between gap-3">
-                        <Link to={`/licenca/${o.codigo}`} className="min-w-0 font-medium text-tinta-900 hover:text-marca-700 hover:underline">
-                          {o.trechos[0]?.logradouro}
-                          {o.trechos[0]?.bairro && <span className="font-normal text-tinta-500">, {o.trechos[0].bairro}</span>}
-                          {o.trechos.length > 1 && <span className="text-sm text-tinta-500"> e mais {o.trechos.length - 1}</span>}
-                        </Link>
-                        <SeloSituacao situacao={o.situacao} />
-                      </div>
-                      <p className="mt-1 text-sm text-tinta-600">
-                        {o.executora}{o.contratante && `, para ${o.contratante}`}
-                        <span className="text-tinta-500">; {o.tipos_obra.map((t) => rotuloDoTipo(t, rotulos).toLowerCase()).join(', ')}</span>
-                      </p>
-                      <p className="mt-0.5 text-xs text-tinta-500">
-                        {TIPO_INTERVENCAO_LABEL[o.tipo_intervencao]}
-                        {origemPublica(o.origem) && ` pública · ${ORIGEM_LABEL[o.origem].toLowerCase()}`}
-                      </p>
-                      <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
-                        <Link to={`/licenca/${o.codigo}`} className="rounded-sm bg-marca-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-marca-800">
-                          Ver licença
-                        </Link>
-                        {temLocalizacao(o)
-                          ? <button type="button" className="font-semibold text-marca-600 hover:underline"
-                                    onClick={() => verNoMapa(o.codigo)}>
-                              Ver no mapa
-                            </button>
-                          : <span className="text-tinta-500">Sem localização no mapa</span>}
-                        <span className="tabular text-tinta-500">
-                          Licença nº {o.numero}
-                          {' · '}
-                          {o.inicio_previsto || o.fim_previsto
-                            ? `${o.inicio_previsto ? dataBR(o.inicio_previsto) : '—'} a ${o.fim_previsto ? dataBR(o.fim_previsto) : '—'}`
-                            : 'Sem período informado'}
-                        </span>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                <div className="overflow-x-auto rounded-xl border border-tinta-200 bg-white">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-tinta-50 text-left text-tinta-600">
+                      <tr>
+                        <th scope="col" className="px-4 py-2.5 font-semibold">Licença nº</th>
+                        <th scope="col" className="px-4 py-2.5 font-semibold">Local</th>
+                        <th scope="col" className="px-4 py-2.5 font-semibold">Executora</th>
+                        <th scope="col" className="px-4 py-2.5 font-semibold">Período</th>
+                        <th scope="col" className="px-4 py-2.5 font-semibold">Situação</th>
+                        <th scope="col" className="px-4 py-2.5"><span className="sr-only">Ações</span></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-tinta-100">
+                      {filtradas.map((o) => (
+                        <tr key={o.codigo} className="align-top hover:bg-tinta-50" style={{ boxShadow: `inset 3px 0 0 ${COR_SITUACAO[o.situacao]}` }}>
+                          <td className="tabular whitespace-nowrap px-4 py-3 font-medium text-tinta-900">{o.numero}</td>
+                          <td className="px-4 py-3">
+                            <Link to={`/licenca/${o.codigo}`} className="font-medium text-tinta-900 hover:text-marca-700 hover:underline">
+                              {o.trechos[0]?.logradouro}
+                            </Link>
+                            <div className="text-xs text-tinta-500">
+                              {o.trechos[0]?.bairro}
+                              {o.trechos.length > 1 && ` · e mais ${o.trechos.length - 1}`}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-tinta-700">
+                            {o.executora}
+                            {o.contratante && <div className="text-xs text-tinta-500">para {o.contratante}</div>}
+                            <div className="text-xs text-tinta-500">
+                              {rotuloTipos(o.tipos_obra, rotulos)}
+                              {` · ${TIPO_INTERVENCAO_LABEL[o.tipo_intervencao]}`}
+                              {origemPublica(o.origem) && ` pública · ${ORIGEM_LABEL[o.origem].toLowerCase()}`}
+                            </div>
+                          </td>
+                          <td className="tabular whitespace-nowrap px-4 py-3 text-tinta-700">
+                            {o.inicio_previsto || o.fim_previsto
+                              ? `${o.inicio_previsto ? dataBR(o.inicio_previsto) : '—'} a ${o.fim_previsto ? dataBR(o.fim_previsto) : '—'}`
+                              : 'Sem período informado'}
+                          </td>
+                          <td className="px-4 py-3"><SeloSituacao situacao={o.situacao} /></td>
+                          <td className="whitespace-nowrap px-4 py-3 text-right">
+                            <Link to={`/licenca/${o.codigo}`} className="font-semibold text-marca-700 hover:underline">Ver licença</Link>
+                            {temLocalizacao(o)
+                              ? <button type="button" className="ml-3 font-semibold text-marca-700 hover:underline"
+                                        onClick={() => verNoMapa(o.codigo)}>
+                                  Ver no mapa
+                                </button>
+                              : <span className="ml-3 text-xs text-tinta-500">Sem localização no mapa</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </section>
           </div>
@@ -292,6 +306,27 @@ function SeloSituacao({ situacao }: { situacao: ObraPublica['situacao'] }) {
       <span className="h-1.5 w-1.5 rounded-full" style={{ background: cor }} aria-hidden />
       {SITUACAO_PUBLICA_LABEL[situacao]}
     </span>
+  );
+}
+
+function rotuloTipos(tipos: string[], rotulos: Record<string, string>) {
+  return tipos.map((t) => rotuloDoTipo(t, rotulos).toLowerCase()).join(', ');
+}
+
+/** Quantas licenças da lista estão em cada situação, na ordem da legenda. */
+function ResumoSituacoes({ obras }: { obras: ObraPublica[] }) {
+  const ordem: ObraPublica['situacao'][] = ['vigente', 'aguardando_inicio', 'prazo_encerrado', 'concluida', 'cancelada'];
+  const contagem = new Map<ObraPublica['situacao'], number>();
+  for (const o of obras) contagem.set(o.situacao, (contagem.get(o.situacao) ?? 0) + 1);
+  return (
+    <ul className="mb-3 flex flex-wrap gap-2" aria-label="Resumo por situação">
+      {ordem.filter((s) => contagem.has(s)).map((s) => (
+        <li key={s} className="inline-flex items-center gap-2 rounded-full border border-tinta-200 bg-white px-3 py-1 text-sm text-tinta-700">
+          <SeloSituacao situacao={s} />
+          <span className="tabular font-semibold text-tinta-900">{contagem.get(s)}</span>
+        </li>
+      ))}
+    </ul>
   );
 }
 

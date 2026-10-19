@@ -4,7 +4,7 @@ import { dia, licenca } from './apoio/dados';
 
 /** Quantos trechos o mapa recebeu (atributo do próprio componente). */
 const noMapa = (page: Page) => page.locator('[data-trechos]');
-const lista = (page: Page) => page.locator('section[aria-live="polite"] ul > li');
+const lista = (page: Page) => page.locator('section[aria-live="polite"] tbody > tr');
 
 const orgao = (id: string, nome: string, natureza: 'administracao_direta' | 'autarquia') =>
   ({ id, nome, sigla: nome.slice(0, 4).toUpperCase(), esfera: 'municipal' as const, cnpj: null, setores: [], natureza, criado_em: '2026-01-01', atualizado_em: '2026-01-01' });
@@ -47,7 +47,7 @@ test.describe('mapa de consulta', () => {
     await expect(lista(page).first()).toContainText('autarquia municipal');
   });
 
-  test('o que o filtro inicial esconde é avisado, e "Mostrar tudo" traz de volta', async ({ page }) => {
+  test('abre com todas as licenças e o filtro de vigentes esconde o resto, avisado, e "Mostrar tudo" traz de volta', async ({ page }) => {
     await instalarBackend(page, {
       licencas: [
         licenca({ inicio_previsto: dia(-5), fim_previsto: dia(10) }),
@@ -56,6 +56,9 @@ test.describe('mapa de consulta', () => {
       ],
     });
     await page.goto('/consulta/obras');
+    await expect(lista(page)).toHaveCount(3);
+    await expect(page.getByRole('list', { name: 'Resumo por situação' })).toBeVisible();
+    await page.getByLabel('Situação', { exact: true }).selectOption('vigentes');
     await expect(lista(page)).toHaveCount(1);
     await expect(page.getByText('2 fora dos filtros atuais')).toBeVisible();
     await page.getByRole('button', { name: 'Mostrar tudo' }).click();
@@ -71,8 +74,6 @@ test.describe('mapa de consulta', () => {
       licencas: [licenca({}), licenca({ situacao: 'cancelada', decisao_data: null, inicio_previsto: null, fim_previsto: null })],
     });
     await page.goto('/consulta/obras');
-    await expect(lista(page)).toHaveCount(1);
-    await page.getByLabel('Situação').selectOption('todas');
     await expect(lista(page)).toHaveCount(2);
     await expect(page.getByText('Sem período informado')).toBeVisible();
     expect(erros).toEqual([]);
