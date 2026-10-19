@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { instalarBackend, type Cenario } from './apoio/backend';
+import { empresasPadrao } from './apoio/dados';
 
 // Varredura automática com axe-core (WCAG 2.0 e 2.1, níveis A e AA) nas telas
 // do sistema. Pega contraste, rótulos, landmarks e ARIA que a revisão manual
@@ -75,4 +76,13 @@ test.describe('acessibilidade automatizada (axe, WCAG AA): área restrita', () =
       expect(await varrer(page)).toEqual([]);
     });
   }
+});
+
+test.describe('acessibilidade automatizada (axe, WCAG AA): documentos oficiais', () => {
+  test('documentos oficiais da empresa (gestor)', async ({ page }) => {
+    await instalarBackend(page, { perfil: 'gestor', empresas: empresasPadrao() });
+    await page.goto(`/empresas/${empresasPadrao()[0].id}/documentos`);
+    await expect(page.getByRole('tab', { name: 'Auto de Infração' })).toBeVisible();
+    expect(await varrer(page)).toEqual([]);
+  });
 });

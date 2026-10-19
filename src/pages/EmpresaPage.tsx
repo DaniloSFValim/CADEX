@@ -151,6 +151,7 @@ function Idc({ rotulo, valor, mono }: { rotulo: string; valor: string; mono?: bo
 
 /** Cabeçalho-dossiê da empresa: identidade e documentos numa faixa institucional. */
 function DossieEmpresa({ empresa }: { empresa: Empresa }) {
+  const { podeEditar } = useAuth();
   const s = situacaoEfetiva(empresa, hojeISO());
   return (
     <div>
@@ -180,6 +181,12 @@ function DossieEmpresa({ empresa }: { empresa: Empresa }) {
                   className="inline-flex items-center rounded-lg border border-white/20 bg-white/10 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/20">
               Imprimir ficha
             </Link>
+            {podeEditar && (
+              <Link to={`/empresas/${empresa.id}/documentos`}
+                    className="ml-2 inline-flex items-center rounded-lg border border-white/20 bg-white/10 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/20">
+                Documentos oficiais
+              </Link>
+            )}
           </div>
         </div>
         <dl className="grid grid-cols-2 border-t border-white/15 sm:grid-cols-4">
