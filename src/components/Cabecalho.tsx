@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { PAPEL_LABEL, useAuth, type Servidor } from '../lib/auth';
 import { FaixaMarca, type ItemMenu } from './FaixaMarca';
 import { Button } from './ui';
@@ -12,7 +12,6 @@ export function itensRestritos(servidor: Servidor | null | undefined): ItemMenu[
   if (servidor?.papel === 'licenciador') {
     return [
       { rotulo: 'Obras', para: '/obras', fim: true },
-      { rotulo: 'Consulta pública', para: '/consulta' },
     ];
   }
   return [
@@ -21,7 +20,6 @@ export function itensRestritos(servidor: Servidor | null | undefined): ItemMenu[
     { rotulo: 'Empresas', para: '/empresas', fim: true },
     { rotulo: 'Obras', para: '/obras' },
     { rotulo: 'Órgãos', para: '/orgaos' },
-    { rotulo: 'Consulta pública', para: '/consulta' },
     ...(servidor?.administrador ? [{ rotulo: 'Administração', para: '/admin' }] : []),
   ];
 }
@@ -55,7 +53,10 @@ const AREA_RESTRITA = (
  */
 export function Cabecalho({ itens, direita }: { itens?: ItemMenu[]; direita?: ReactNode } = {}) {
   const { servidor, session } = useAuth();
-  if (itens || direita) return <FaixaMarca itens={itens ?? []} direita={direita ?? AREA_RESTRITA} />;
+  const { pathname } = useLocation();
+  // Na própria tela de entrada, o link para a área restrita repetiria a página aberta.
+  const entrada = pathname === '/entrar' ? undefined : AREA_RESTRITA;
+  if (itens || direita) return <FaixaMarca itens={itens ?? []} direita={direita ?? entrada} />;
   if (session && servidor) return <FaixaMarca itens={itensRestritos(servidor)} direita={<UsuarioSaida />} />;
-  return <FaixaMarca itens={[]} direita={AREA_RESTRITA} />;
+  return <FaixaMarca itens={[]} direita={entrada} />;
 }
