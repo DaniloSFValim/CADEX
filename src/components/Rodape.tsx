@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useAuth } from '../lib/auth';
 
 const SITE_SECONSER = 'https://www.seconser.niteroi.rj.gov.br/';
 
@@ -7,6 +8,7 @@ const SITE_SECONSER = 'https://www.seconser.niteroi.rj.gov.br/';
  * CADEX, contatos da Fiscalização de Serviços Concedidos e links.
  */
 export function Rodape() {
+  const { session } = useAuth();
   const link = 'text-marca-600 underline-offset-4 hover:underline';
   return (
     <footer className="mt-20 border-t border-tinta-200 bg-white text-tinta-500">
@@ -34,8 +36,7 @@ export function Rodape() {
           </div>
         </dl>
         <ul className="space-y-2">
-          <li><Link to="/consulta" className={link}>Consulta pública</Link></li>
-          <li><Link to="/entrar" className={link}>Área restrita</Link></li>
+          {!session && <li><Link to="/consulta" className={link}>Consulta pública</Link></li>}
           <li><a href={SITE_SECONSER} target="_blank" rel="noopener noreferrer" className={link}>Portal da SECONSER</a></li>
         </ul>
       </div>
