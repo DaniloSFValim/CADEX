@@ -105,9 +105,12 @@ begin
   perform pg_temp.assert((select processo_sei from licencas where id = lic) = 'NIT-050120/000123/2026',
     'processo SEI não normalizado');
 
-  perform pg_temp.recusa(format($q$insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id, contratante_id, protocolo_data)
-    values ('telecom', 'NIT-050120/000123/2026', '{vala}', 'x', %L, %L, '2026-09-01')$q$, te, op),
-    'licencas_processo_sei_ativo', 'aceitou processo SEI repetido');
+  -- Um processo SEI pode originar mais de uma licença (números distintos).
+  insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id, contratante_id, protocolo_data, numero)
+  values ('telecom', 'NIT-050120/000123/2026', '{vala}', 'x', te, op, '2026-09-01', 'MESMO-PROC-A/2026');
+  perform pg_temp.recusa(format($q$insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id, contratante_id, protocolo_data, numero)
+    values ('telecom', 'NIT-050120/000123/2026', '{vala}', 'x', %L, %L, '2026-09-01', 'MESMO-PROC-A/2026')$q$, te, op),
+    'licencas_numero_ativo', 'aceitou número de licença repetido com o mesmo processo');
 
   -- Trecho com latitude e longitude trocadas
   perform pg_temp.recusa(format($q$insert into licenca_trechos (licenca_id, logradouro, inicio_lat, inicio_lng)
