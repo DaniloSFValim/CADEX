@@ -7,6 +7,7 @@ const ABAS = [
   { rotulo: 'Empresas', para: '/admin/empresas' },
   { rotulo: 'Licenças', para: '/admin/licencas' },
   { rotulo: 'Tipos de obra', para: '/admin/tipos' },
+  { rotulo: 'Órgãos', para: '/admin/orgaos' },
   { rotulo: 'Configurações', para: '/admin/configuracoes' },
   { rotulo: 'Auditoria', para: '/admin/auditoria' },
 ];

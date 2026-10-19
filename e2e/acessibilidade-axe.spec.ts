@@ -37,7 +37,6 @@ const GESTOR: { nome: string; caminho: string }[] = [
   { nome: 'obras e serviços', caminho: '/obras' },
   { nome: 'nova licença', caminho: '/obras/nova' },
   { nome: 'obras sem licença', caminho: '/obras/sem-licenca' },
-  { nome: 'órgãos', caminho: '/orgaos' },
   { nome: 'minha conta', caminho: '/minha-conta' },
 ];
 
@@ -46,6 +45,7 @@ const ADMIN: { nome: string; caminho: string }[] = [
   { nome: 'administração: empresas', caminho: '/admin/empresas' },
   { nome: 'administração: licenças', caminho: '/admin/licencas' },
   { nome: 'administração: tipos', caminho: '/admin/tipos' },
+  { nome: 'administração: órgãos', caminho: '/admin/orgaos' },
   { nome: 'administração: configurações', caminho: '/admin/configuracoes' },
   { nome: 'administração: auditoria', caminho: '/admin/auditoria' },
 ];
