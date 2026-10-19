@@ -19,7 +19,6 @@ export function itensRestritos(servidor: Servidor | null | undefined): ItemMenu[
     ...(isGestor ? [{ rotulo: 'Anatel', para: '/anatel' }] : []),
     { rotulo: 'Empresas', para: '/empresas', fim: true },
     { rotulo: 'Obras', para: '/obras' },
-    { rotulo: 'Órgãos', para: '/orgaos' },
     ...(servidor?.administrador ? [{ rotulo: 'Administração', para: '/admin' }] : []),
   ];
 }
