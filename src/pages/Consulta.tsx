@@ -99,11 +99,10 @@ export default function Consulta() {
         <section className="mt-8" aria-live="polite">
           <ErrorNote error={error} />
           {!linhas && !error && <Spinner />}
-          {linhas && (
+          {/* Sem filtro, o total já está no cartão "Cadastradas": a linha só aparece quando filtra. */}
+          {linhas && filtradas.length !== linhas.length && (
             <p className="mb-3 text-sm text-tinta-500">
-              {filtradas.length === linhas.length
-                ? `${linhas.length} empresa${linhas.length === 1 ? '' : 's'} no cadastro`
-                : `${filtradas.length} de ${linhas.length} empresas`}
+              {filtradas.length} de {linhas.length} empresas
             </p>
           )}
           {linhas && filtradas.length === 0 && (
