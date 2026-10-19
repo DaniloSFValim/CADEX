@@ -198,8 +198,9 @@ próprio (ex.: analista de licenciamento), as políticas de `licencas` e
   restaurar ou apagar por fora das funções do administrador (gatilho), então a regra não depende da tela.
 - Empresas, órgãos e demais cadastros nunca são apagados com a licença. Os trechos acompanham a licença na exclusão definitiva.
   A licença não tem documentos nem arquivos próprios. A auditoria guarda cada passo, inclusive o estado completo antes da exclusão definitiva.
-- O nº do processo e o nº da licença passam a ser únicos só entre as licenças fora da lixeira: quem lançou por engano
-  pode lançar de novo o mesmo número. Restaurar é recusado se outra licença ativa já usa o número.
+- O nº da licença é único só entre as licenças fora da lixeira: quem lançou por engano pode lançar de novo o mesmo número.
+  Restaurar é recusado se outra licença ativa já usa o número. O nº do processo SEI **não** é único: um processo pode originar
+  mais de uma licença (números distintos).
 - Registro na lixeira não passa pelas validações de gravação (o lançado errado pode estar incompleto).
 - Passo destrutivo da migração: a troca das duas restrições únicas por índices parciais (`DROP CONSTRAINT`), que não perde dado.
 
