@@ -12,7 +12,6 @@ export function itensRestritos(servidor: Servidor | null | undefined): ItemMenu[
   if (servidor?.papel === 'licenciador') {
     return [
       { rotulo: 'Obras', para: '/obras', fim: true },
-      { rotulo: 'Consulta pública', para: '/consulta' },
     ];
   }
   return [
@@ -21,7 +20,6 @@ export function itensRestritos(servidor: Servidor | null | undefined): ItemMenu[
     { rotulo: 'Empresas', para: '/empresas', fim: true },
     { rotulo: 'Obras', para: '/obras' },
     { rotulo: 'Órgãos', para: '/orgaos' },
-    { rotulo: 'Consulta pública', para: '/consulta' },
     ...(servidor?.administrador ? [{ rotulo: 'Administração', para: '/admin' }] : []),
   ];
 }
