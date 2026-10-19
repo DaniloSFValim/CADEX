@@ -62,7 +62,7 @@ export const COR_SITUACAO: Record<SituacaoPublica, string> = {
   vigente: '#1e7b4c',
   aguardando_inicio: '#8f5b00',
   prazo_encerrado: '#b3372c',
-  concluida: '#6b7280',
+  concluida: '#1d4ed8',
   cancelada: '#1f2937',
 };
 
