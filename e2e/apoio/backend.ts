@@ -30,6 +30,8 @@ export interface Cenario {
   orgaos: Orgao[];
   contas: Conta[];
   auditoria: EventoAuditoria[];
+  /** Documentos oficiais emitidos (tabela documentos_oficiais). */
+  documentos: Record<string, unknown>[];
   /** Obras e serviços sem licença (tabela intervencoes_sem_licenca). */
   semLicenca?: Record<string, unknown>[];
   /** Catálogo de tipos (tabela tipos_intervencao). Sem ele, vale o catálogo padrão de viário. */
@@ -97,7 +99,7 @@ function filtrar<T extends Record<string, unknown>>(linhas: T[], q: URLSearchPar
 
 export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}): Promise<Backend> {
   const estado: Cenario = {
-    perfil: 'gestor', administrador: false, empresas: empresasPadrao(), licencas: [], orgaos: [], contas: [], auditoria: [],
+    perfil: 'gestor', administrador: false, empresas: empresasPadrao(), licencas: [], orgaos: [], contas: [], auditoria: [], documentos: [],
     ...parcial,
   };
   const chamadas: Chamada[] = [];
@@ -195,6 +197,16 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
       return vazio();
     }
     if (caminho === 'rpc/conflitos_de_licenca') return responder([]);
+    if (caminho === 'rpc/emitir_documento') {
+      // Numeração em memória, como o banco: 1, 2, 3... por emissão.
+      const { p_tipo, p_empresa_id, p_dados } = corpo as { p_tipo: string; p_empresa_id: string; p_dados: Record<string, unknown> };
+      const numero = estado.documentos.length + 1;
+      const registro = { id: uuid(9000 + numero), tipo: p_tipo, numero, empresa_id: p_empresa_id, dados: p_dados,
+        emitido_por: ID_USUARIO, emitido_em: '2026-10-19T12:00:00Z', codigo_verificacao: `A1B2C3D4E${numero}` };
+      estado.documentos.push(registro);
+      return responder([{ id: registro.id, numero, codigo_verificacao: registro.codigo_verificacao, emitido_em: registro.emitido_em }]);
+    }
+    if (caminho === 'documentos_oficiais') return lista(estado.documentos as unknown as Record<string, unknown>[]);
     if (caminho === 'rpc/salvar_licenca') {
       // Grava como o banco: a licença e os trechos passam a existir para as outras telas (lista, painel, mapa).
       const { p_licenca, p_trechos } = corpo as { p_licenca: Record<string, unknown>; p_trechos: Record<string, unknown>[] };

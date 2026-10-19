@@ -13,6 +13,8 @@ import Pendencias from './pages/Pendencias';
 import CruzamentoAnatel from './pages/CruzamentoAnatel';
 import Empresas from './pages/Empresas';
 import EmpresaPage from './pages/EmpresaPage';
+import Documentos from './pages/Documentos';
+
 import Ficha from './pages/Ficha';
 import Administracao from './pages/Administracao';
 import AdminAuditoria from './pages/AdminAuditoria';
@@ -116,6 +118,7 @@ function AreaRestrita() {
         <Route path="anatel" element={<CruzamentoAnatel />} />
         <Route path="empresas/nova" element={<EmpresaPage />} />
         <Route path="empresas/:id" element={<EmpresaPage />} />
+        <Route path="empresas/:id/documentos" element={<Documentos />} />
         <Route path="obras" element={<Licencas />} />
         <Route path="obras/sem-licenca" element={<SemLicenca />} />
         <Route path="obras/sem-licenca/nova" element={<FormSemLicencaPage />} />
