@@ -5,7 +5,7 @@ import FaixaDoTempo from '../components/FaixaDoTempo';
 import FichaObra from '../components/FichaObra';
 import { Cabecalho } from '../components/Cabecalho';
 import { Rodape } from '../components/Rodape';
-import { Empty, ErrorNote, Spinner, linkTexto } from '../components/ui';
+import { Empty, ErrorNote, Kpi, Spinner, Titulo, linkTexto } from '../components/ui';
 import { dataBR } from '../components/Situacao';
 import { hojeISO } from '../lib/empresas';
 import { ORIGEM_LABEL, TIPO_INTERVENCAO_LABEL, origemPublica } from '../lib/licencas';
@@ -52,35 +52,22 @@ export default function ConsultaObras() {
     <div className="flex min-h-screen flex-col bg-tinta-50">
       <Cabecalho />
 
-      {/* Herói: cartão escuro na mesma coluna do conteúdo, com o mapa de obras como promessa. */}
-      <section className="mx-auto w-full max-w-7xl px-4 pt-6">
-        <div className="flex flex-col gap-6 rounded-2xl bg-marca-900 px-6 py-6 text-white sm:px-8 lg:flex-row lg:items-center lg:justify-between lg:gap-10">
-          <div className="max-w-xl">
-            <h1 className="text-balance font-display text-2xl font-bold leading-[1.1] tracking-[-0.01em] sm:text-3xl">
-              Onde Niterói está com obras nas ruas
-            </h1>
-            <p className="mt-2 text-sm leading-relaxed text-marca-100/85 sm:text-base">
-              Consulte no mapa cada obra de infraestrutura licenciada nas vias públicas da cidade: quem executa,
-              em que trecho e até quando o prazo é válido.
-            </p>
+      <main id="conteudo" tabIndex={-1} className="mx-auto w-full max-w-7xl flex-1 px-4 py-12">
+        <Titulo
+          trilha="Consulta pública"
+          titulo="Obras licenciadas em Niterói"
+          descricao="Consulte no mapa cada obra de infraestrutura licenciada nas vias públicas da cidade: quem executa, em que trecho e até quando o prazo é válido."
+        />
+
+        {obras && (
+          <div className="mt-8 grid grid-cols-2 gap-x-8 gap-y-6 md:grid-cols-4">
+            <Kpi rotulo="Vigentes agora" valor={stats.vigentes} detalhe="obras autorizadas" tom="alta" />
+            <Kpi rotulo={stats.bairros === 1 ? 'Bairro' : 'Bairros'} valor={stats.bairros} detalhe="com obra licenciada" />
+            <Kpi rotulo={stats.execs === 1 ? 'Executora' : 'Executoras'} valor={stats.execs} detalhe="com obra licenciada" />
+            <Kpi rotulo="No cadastro" valor={stats.total} detalhe="licenças registradas" />
           </div>
+        )}
 
-          <div className="flex w-full flex-col gap-3 lg:w-auto lg:min-w-[30rem]">
-            {obras && (
-              <dl className="grid w-full grid-cols-2 overflow-hidden rounded-xl border border-white/15 sm:grid-cols-4 lg:w-auto lg:min-w-[30rem]">
-              <Estat valor={stats.vigentes} rotulo="obras vigentes" destaque />
-              <Estat valor={stats.bairros} rotulo={stats.bairros === 1 ? 'bairro' : 'bairros'} />
-              <Estat valor={stats.execs} rotulo={stats.execs === 1 ? 'executora' : 'executoras'} />
-              <Estat valor={stats.total} rotulo="no cadastro" />
-              </dl>
-            )}
-
-
-          </div>
-        </div>
-      </section>
-
-      <main id="conteudo" tabIndex={-1} className="mx-auto w-full max-w-7xl flex-1 px-4 pb-8 pt-4">
         <AbasConsulta />
 
         {/* Filtros numa superfície clara, logo abaixo das abas. */}
@@ -213,14 +200,6 @@ function resumo(obras: ObraPublica[]) {
   return { vigentes, bairros: bairros.size, execs: execs.size, total: obras.length };
 }
 
-function Estat({ valor, rotulo, destaque = false }: { valor: number; rotulo: string; destaque?: boolean }) {
-  return (
-    <div className="flex flex-col-reverse border-white/15 bg-white/5 px-4 py-3 [&:not(:last-child)]:border-r [&:nth-child(-n+2)]:border-b sm:[&:nth-child(2)]:border-b-0">
-      <dt className="mt-0.5 text-xs text-marca-200">{rotulo}</dt>
-      <dd className={`tabular font-display text-2xl font-bold sm:text-2xl ${destaque ? 'text-obra-500' : 'text-white'}`}>{valor}</dd>
-    </div>
-  );
-}
 
 /** Selo da situação: contorno e cor da própria situação (mesma do mapa). */
 function SeloSituacao({ situacao }: { situacao: ObraPublica['situacao'] }) {
