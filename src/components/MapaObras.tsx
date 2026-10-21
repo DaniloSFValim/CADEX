@@ -59,6 +59,24 @@ export async function estiloBase(): Promise<StyleSpecification> {
   };
 }
 
+/** Raio dos agrupamentos por quantidade de obras. */
+const RAIO_AGRUPAMENTO = ['step', ['get', 'point_count'], 16, 10, 20, 50, 26] as unknown as maplibregl.ExpressionSpecification;
+
+/** Cresce os agrupamentos de zero ao tamanho final, uma vez. Não roda com "reduzir movimento" ativado. */
+function crescerAgrupamentos(m: maplibregl.Map) {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const inicio = performance.now();
+  const passo = (agora: number) => {
+    const f = Math.min(1, (agora - inicio) / 600);
+    const suave = 1 - Math.pow(1 - f, 3);
+    if (!m.getLayer('obras-agrupamentos')) return;
+    m.setPaintProperty('obras-agrupamentos', 'circle-radius', ['*', suave, RAIO_AGRUPAMENTO] as unknown as maplibregl.ExpressionSpecification);
+    if (f < 1) requestAnimationFrame(passo);
+  };
+  passo(inicio);
+  requestAnimationFrame(passo);
+}
+
 const corPorSituacao = [
   'match', ['get', 'situacao'],
   ...(Object.entries(COR_SITUACAO) as [SituacaoPublica, string][]).flat(),
@@ -73,6 +91,7 @@ export default function MapaObras({ obras, foco, onSelecionar }: {
   const caixa = useRef<HTMLDivElement>(null);
   const mapa = useRef<maplibregl.Map | null>(null);
   const [pronto, setPronto] = useState(false);
+  const entrou = useRef(false);
   const [erro, setErro] = useState('');
   // O evento de clique é registrado uma vez; a referência garante que ele use a função atual.
   const onSelecionarRef = useRef(onSelecionar);
@@ -101,8 +120,8 @@ export default function MapaObras({ obras, foco, onSelecionar }: {
           {
             id: 'obras-agrupamentos', type: 'circle', source: 'obras', filter: ['has', 'point_count'],
             paint: {
-              'circle-color': '#1d4e5a', 'circle-opacity': 0.85,
-              'circle-radius': ['step', ['get', 'point_count'], 16, 10, 20, 50, 26],
+              'circle-color': '#0b6572', 'circle-opacity': 0.92,
+              'circle-radius': RAIO_AGRUPAMENTO,
               'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2,
             },
           },
@@ -172,10 +191,14 @@ export default function MapaObras({ obras, foco, onSelecionar }: {
     return () => { vivo = false; mapa.current?.remove(); mapa.current = null; };
   }, []);
 
-  // Atualiza as obras sem recriar o mapa.
+  // Atualiza as obras sem recriar o mapa. Na primeira carga com obras, os agrupamentos crescem uma vez.
   useEffect(() => {
     if (!pronto || !mapa.current) return;
     (mapa.current.getSource('obras') as maplibregl.GeoJSONSource).setData(obrasParaGeoJSON(obras));
+    if (!entrou.current && obras.length > 0) {
+      entrou.current = true;
+      crescerAgrupamentos(mapa.current);
+    }
   }, [obras, pronto]);
 
   // Leva o mapa até a obra escolhida na lista.
