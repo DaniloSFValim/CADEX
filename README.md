@@ -126,3 +126,11 @@ guardada por 90 dias no GitHub Actions. Configuração e restauração:
   (o `_redirects` da Cloudflare não faz proxy para domínio externo). O
   Supabase não muda: a troca de hospedagem não encosta no banco nem no
   login.
+
+## Licença
+
+- **Código-fonte:** GNU Affero General Public License v3.0 (AGPL-3.0). Texto integral em [`LICENSE`](LICENSE).
+- **Documentação e dados:** Creative Commons Atribuição 4.0 Internacional (CC BY 4.0).
+- **Autor:** Danilo Valim (ORCID [0009-0009-7250-6151](https://orcid.org/0009-0009-7250-6151)).
+
+Quem usar, modificar ou distribuir este sistema deve manter estes avisos de autoria e licença. A AGPL também exige que versões modificadas oferecidas pela rede tenham o código-fonte disponível.
