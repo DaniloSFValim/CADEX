@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 
 const SITE_SECONSER = 'https://www.seconser.niteroi.rj.gov.br/';
-const REPOSITORIO = 'https://github.com/DaniloSFValim/CADEX';
 /** DOI de conceito do Zenodo: aponta sempre para a versão mais recente. */
 const DOI = '10.5281/zenodo.23546537';
 
@@ -50,7 +49,7 @@ export function Rodape() {
           <p>
             Desenvolvido por <span className="text-tinta-600">Danilo S. F. Valim</span>, ORCID{' '}
             <a href="https://orcid.org/0009-0009-7250-6151" target="_blank" rel="noopener noreferrer" className={linkNoTexto}>0009-0009-7250-6151</a>.
-            Código no <a href={REPOSITORIO} target="_blank" rel="noopener noreferrer" className={linkNoTexto}>GitHub</a>, sob AGPL-3.0;
+            Código sob AGPL-3.0;
             documentação e dados sob CC BY 4.0.
           </p>
           <p>
