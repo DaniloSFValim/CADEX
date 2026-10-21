@@ -17,7 +17,7 @@ export function FaixaMarca({ itens, direita }: { itens: ItemMenu[]; direita?: Re
     </a>
     <header className="relative overflow-hidden bg-gradient-to-br from-marca-900 to-marca-600 text-white">
       <div aria-hidden className="pointer-events-none absolute -right-20 -top-28 h-72 w-72 rounded-full bg-obra-500/20" />
-      <div className="relative mx-auto flex max-w-7xl flex-wrap items-center gap-x-5 gap-y-3 px-4 pt-4 lg:px-10">
+      <div className="relative mx-auto flex max-w-7xl flex-wrap items-center gap-x-5 gap-y-3 px-4 pt-4">
         <Link to="/consulta/obras" className="flex items-center gap-3" title="CADEX, Cadastro de Executores">
           <span className="grid h-10 w-10 flex-none place-items-center rounded-xl bg-obra-500 font-display text-base font-extrabold text-tinta-900">CX</span>
           <span className="leading-tight">
@@ -29,8 +29,8 @@ export function FaixaMarca({ itens, direita }: { itens: ItemMenu[]; direita?: Re
 
         {direita && <div className="ml-auto flex items-center gap-3 text-sm">{direita}</div>}
 
-        {itens.length > 0 && <nav className="-mx-4 w-[calc(100%+2rem)] overflow-x-auto pb-4 lg:-mx-10 lg:w-[calc(100%+5rem)]" aria-label="Menu principal">
-          <ul className="flex w-max gap-2 px-4 lg:px-10">
+        {itens.length > 0 && <nav className="-mx-4 w-[calc(100%+2rem)] overflow-x-auto pb-4" aria-label="Menu principal">
+          <ul className="flex w-max gap-2 px-4">
             {itens.map((i) => (
               <li key={i.para}>
                 <NavLink
