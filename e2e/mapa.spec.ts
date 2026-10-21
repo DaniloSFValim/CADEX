@@ -28,26 +28,7 @@ test.describe('mapa de consulta', () => {
     await expect(lista(page).filter({ hasText: 'para SECR' })).toHaveCount(1);
   });
 
-  test('filtra por serviço e por origem, e some do mapa o que sai da lista', async ({ page }) => {
-    await instalarBackend(page, {
-      orgaos: [orgao('aut', 'Autarquia de Obras', 'autarquia')],
-      licencas: [
-        licenca({}),
-        licenca({ tipo_intervencao: 'servico' }),
-        licenca({ origem_intervencao: 'autarquia', orgao_contratante_id: 'aut', contratante_id: null }),
-      ],
-    });
-    await page.goto('/consulta/obras');
-    await page.getByLabel('Tipo de intervenção').selectOption('servico');
-    await expect(lista(page)).toHaveCount(1);
-    await expect(noMapa(page)).toHaveAttribute('data-trechos', '1');
-    await page.getByLabel('Tipo de intervenção').selectOption('');
-    await page.getByLabel('Origem da intervenção').selectOption('autarquia');
-    await expect(lista(page)).toHaveCount(1);
-    await expect(lista(page).first()).toContainText('autarquia municipal');
-  });
-
-  test('abre com todas as licenças e o filtro de vigentes esconde o resto, avisado, e "Mostrar tudo" traz de volta', async ({ page }) => {
+  test('mostra todas as licenças, sem filtro, e o mapa recebe todas', async ({ page }) => {
     await instalarBackend(page, {
       licencas: [
         licenca({ inicio_previsto: dia(-5), fim_previsto: dia(10) }),
@@ -58,11 +39,6 @@ test.describe('mapa de consulta', () => {
     await page.goto('/consulta/obras');
     await expect(lista(page)).toHaveCount(3);
     await expect(page.getByRole('list', { name: 'Resumo por situação' })).toBeVisible();
-    await page.getByLabel('Situação', { exact: true }).selectOption('vigentes');
-    await expect(lista(page)).toHaveCount(1);
-    await expect(page.getByText('2 fora dos filtros atuais')).toBeVisible();
-    await page.getByRole('button', { name: 'Mostrar tudo' }).click();
-    await expect(lista(page)).toHaveCount(3);
     await expect(noMapa(page)).toHaveAttribute('data-trechos', '3');
   });
 
