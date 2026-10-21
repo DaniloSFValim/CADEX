@@ -61,9 +61,9 @@ export default function ConsultaObras() {
     <div className="flex min-h-screen flex-col bg-tinta-50">
       <Cabecalho />
 
-      {/* Herói: faixa institucional escura com o mapa de obras como promessa. */}
-      <section className="bg-marca-900 text-white">
-        <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:py-14">
+      {/* Herói: cartão escuro na mesma coluna do conteúdo, com o mapa de obras como promessa. */}
+      <section className="mx-auto w-full max-w-7xl px-4 pt-6">
+        <div className="rounded-2xl bg-marca-900 px-6 py-10 text-white sm:px-10 sm:py-14">
           <h1 className="mt-4 max-w-[17ch] text-balance font-display text-3xl font-bold leading-[1.04] tracking-[-0.01em] sm:text-5xl">
             Onde Niterói está com obras nas ruas
           </h1>
