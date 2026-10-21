@@ -62,12 +62,12 @@ export async function estiloBase(): Promise<StyleSpecification> {
 /** Raio dos agrupamentos por quantidade de obras. */
 const RAIO_AGRUPAMENTO = ['step', ['get', 'point_count'], 16, 10, 20, 50, 26] as unknown as maplibregl.ExpressionSpecification;
 
-/** Cresce os agrupamentos de zero ao tamanho final, uma vez. Não roda com "reduzir movimento" ativado. */
+/** Cresce os agrupamentos de zero ao tamanho final, em cerca de 0,9 s. Não roda com "reduzir movimento" ativado. */
 function crescerAgrupamentos(m: maplibregl.Map) {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const inicio = performance.now();
   const passo = (agora: number) => {
-    const f = Math.min(1, (agora - inicio) / 600);
+    const f = Math.min(1, (agora - inicio) / 900);
     const suave = 1 - Math.pow(1 - f, 3);
     if (!m.getLayer('obras-agrupamentos')) return;
     m.setPaintProperty('obras-agrupamentos', 'circle-radius', ['*', suave, RAIO_AGRUPAMENTO] as unknown as maplibregl.ExpressionSpecification);
@@ -91,7 +91,6 @@ export default function MapaObras({ obras, foco, onSelecionar }: {
   const caixa = useRef<HTMLDivElement>(null);
   const mapa = useRef<maplibregl.Map | null>(null);
   const [pronto, setPronto] = useState(false);
-  const entrou = useRef(false);
   const [erro, setErro] = useState('');
   // O evento de clique é registrado uma vez; a referência garante que ele use a função atual.
   const onSelecionarRef = useRef(onSelecionar);
@@ -120,9 +119,9 @@ export default function MapaObras({ obras, foco, onSelecionar }: {
           {
             id: 'obras-agrupamentos', type: 'circle', source: 'obras', filter: ['has', 'point_count'],
             paint: {
-              'circle-color': '#0b6572', 'circle-opacity': 0.92,
+              'circle-color': '#0e7482', 'circle-opacity': 0.95,
               'circle-radius': RAIO_AGRUPAMENTO,
-              'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2,
+              'circle-stroke-color': '#ffffff', 'circle-stroke-width': 3,
             },
           },
           {
@@ -141,6 +140,12 @@ export default function MapaObras({ obras, foco, onSelecionar }: {
           {
             id: 'obras-areas-contorno', type: 'line', source: 'obras', filter: ['==', ['geometry-type'], 'Polygon'],
             paint: { 'line-color': corPorSituacao, 'line-width': 2 },
+          },
+          {
+            // Halo pulsante atrás das obras vigentes: mostra quais trechos estão autorizados agora.
+            id: 'obras-vigentes-halo', type: 'circle', source: 'obras',
+            filter: ['all', ['==', ['geometry-type'], 'Point'], ['!', ['has', 'point_count']], ['==', ['get', 'situacao'], 'vigente']],
+            paint: { 'circle-color': '#1e7b4c', 'circle-radius': 8, 'circle-opacity': 0 },
           },
           {
             id: 'obras-pontos', type: 'circle', source: 'obras',
@@ -191,15 +196,36 @@ export default function MapaObras({ obras, foco, onSelecionar }: {
     return () => { vivo = false; mapa.current?.remove(); mapa.current = null; };
   }, []);
 
-  // Atualiza as obras sem recriar o mapa. Na primeira carga com obras, os agrupamentos crescem uma vez.
+  // Atualiza as obras sem recriar o mapa. Cada mudança de obras faz os agrupamentos crescerem de novo.
   useEffect(() => {
     if (!pronto || !mapa.current) return;
     (mapa.current.getSource('obras') as maplibregl.GeoJSONSource).setData(obrasParaGeoJSON(obras));
-    if (!entrou.current && obras.length > 0) {
-      entrou.current = true;
-      crescerAgrupamentos(mapa.current);
-    }
+    if (obras.length > 0) crescerAgrupamentos(mapa.current);
   }, [obras, pronto]);
+
+  // Halo pulsante das obras vigentes. Com "reduzir movimento", fica parado, em tamanho fixo.
+  useEffect(() => {
+    const m = mapa.current;
+    if (!pronto || !m) return;
+    const reduzido = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const PERIODO = 1800;
+    let quadro = 0;
+    // "zoom" precisa ser a expressão de topo; a escala entra dentro de cada valor do interpolate.
+    const raio = (escala: number) => ['interpolate', ['linear'], ['zoom'], 12, 8 * escala, 17, 14 * escala] as unknown as maplibregl.ExpressionSpecification;
+    const pintar = (escala: number, opacidade: number) => {
+      if (!m.getLayer('obras-vigentes-halo')) return;
+      m.setPaintProperty('obras-vigentes-halo', 'circle-radius', raio(escala));
+      m.setPaintProperty('obras-vigentes-halo', 'circle-opacity', opacidade);
+    };
+    if (reduzido) { pintar(1.2, 0.3); return; }
+    const passo = (agora: number) => {
+      const fase = (agora % PERIODO) / PERIODO;
+      pintar(1 + fase * 1.6, 0.5 * (1 - fase));
+      quadro = requestAnimationFrame(passo);
+    };
+    quadro = requestAnimationFrame(passo);
+    return () => cancelAnimationFrame(quadro);
+  }, [pronto]);
 
   // Leva o mapa até a obra escolhida na lista.
   useEffect(() => {
