@@ -78,7 +78,7 @@ export default function AdminConfiguracoes() {
       <Card title="Órgãos públicos contratantes">
         <p className="text-sm text-tinta-700">
           {orgaos.length === 0 ? 'Nenhum órgão cadastrado.' : <><strong>{orgaos.length}</strong> órgão{orgaos.length === 1 ? '' : 's'} cadastrado{orgaos.length === 1 ? '' : 's'}.</>}{' '}
-          Cadastro, edição e setores em <Link to="/admin/orgaos" className={linkTexto}>Órgãos</Link>.
+          Cadastro, edição e setores em <Link to="/orgaos" className={linkTexto}>Órgãos</Link>.
         </p>
       </Card>
 
