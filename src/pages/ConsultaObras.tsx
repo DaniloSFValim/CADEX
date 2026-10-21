@@ -5,13 +5,13 @@ import FaixaDoTempo from '../components/FaixaDoTempo';
 import FichaObra from '../components/FichaObra';
 import { Cabecalho } from '../components/Cabecalho';
 import { Rodape } from '../components/Rodape';
-import { Empty, ErrorNote, Spinner, inputClass, linkTexto } from '../components/ui';
+import { Empty, ErrorNote, Spinner, linkTexto } from '../components/ui';
 import { dataBR } from '../components/Situacao';
-import { SETORES, SETOR_LABEL, hojeISO, type Setor } from '../lib/empresas';
-import { ORIGENS, ORIGEM_LABEL, TIPOS_INTERVENCAO, TIPO_INTERVENCAO_LABEL, origemPublica } from '../lib/licencas';
+import { hojeISO } from '../lib/empresas';
+import { ORIGEM_LABEL, TIPO_INTERVENCAO_LABEL, origemPublica } from '../lib/licencas';
 import { listarTipos, mapaRotulosTipos, rotuloDoTipo } from '../lib/tiposIntervencao';
 import {
-  COR_SITUACAO, FILTRO_OBRAS, SITUACAO_PUBLICA_LABEL, anosDasObras, baixarObrasGeojson, buscarObrasPublicas, filtrarObras, obrasProximas,
+  COR_SITUACAO, SITUACAO_PUBLICA_LABEL, baixarObrasGeojson, buscarObrasPublicas, obrasProximas,
   temLocalizacao, textoDistancia, type ObraPublica,
 } from '../lib/obras';
 
@@ -22,12 +22,6 @@ const MapaObras = lazy(() => import('../components/MapaObras'));
 export default function ConsultaObras() {
   const [obras, setObras] = useState<ObraPublica[] | null>(null);
   const [error, setError] = useState<unknown>(null);
-  const [situacao, setSituacao] = useState('todas');
-  const [ano, setAno] = useState('');
-  const [setor, setSetor] = useState('');
-  const [intervencao, setIntervencao] = useState('');
-  const [origem, setOrigem] = useState('');
-  const [busca, setBusca] = useState('');
   const [foco, setFoco] = useState<string | null>(null);
   const [baixando, setBaixando] = useState(false);
   const mapaRef = useRef<HTMLDivElement>(null);
@@ -50,11 +44,8 @@ export default function ConsultaObras() {
     finally { setBaixando(false); }
   }
 
-  const filtradas = useMemo(() => filtrarObras(obras ?? [], { situacao, ano, busca, setor, intervencao, origem }),
-    [obras, situacao, ano, busca, setor, intervencao, origem]);
-  const anos = useMemo(() => anosDasObras(obras ?? []), [obras]);
+  const filtradas = obras ?? [];
   const stats = useMemo(() => resumo(obras ?? []), [obras]);
-  const porSetor = useMemo(() => contarVigentesPorSetor(obras ?? []), [obras]);
   const selecionada = useMemo(() => (obras ?? []).find((o) => o.codigo === foco) ?? null, [obras, foco]);
 
   return (
@@ -84,22 +75,6 @@ export default function ConsultaObras() {
               </dl>
             )}
 
-          {obras && porSetor.length > 0 && (
-            <div>
-              <p className="text-sm font-medium text-marca-200">Obras vigentes por setor</p>
-              <ul className="mt-2 flex flex-wrap gap-2" aria-label="Obras vigentes por setor">
-                {porSetor.map(({ setor: s, vigentes: n }) => (
-                  <li key={s}>
-                    <button type="button" onClick={() => setSetor(s)} aria-label={`${SETOR_LABEL[s]}: ${n} obras vigentes. Filtrar por este setor`}
-                            className="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1 text-sm text-white hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
-                      {SETOR_LABEL[s]}
-                      <span className="tabular rounded-full bg-white/15 px-2 text-xs font-semibold">{n}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
 
           </div>
         </div>
@@ -113,32 +88,6 @@ export default function ConsultaObras() {
           Para ver uma licença, escolha uma obra no mapa ou na lista e abra <strong className="font-semibold text-tinta-800">Ver licença</strong>.
           Lá estão o trecho, a executora e o prazo.
         </p>
-        <div className="mt-3 rounded-xl border border-tinta-200 bg-white p-3 shadow-xs">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            <input className={`${inputClass} sm:col-span-2 lg:col-span-full`} value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar obra"
-                   placeholder="Rua, bairro, empresa ou nº da licença" />
-            <select className={inputClass} value={setor} onChange={(e) => setSetor(e.target.value)} aria-label="Setor">
-              <option value="">Todos os setores</option>
-              {SETORES.map((st) => <option key={st} value={st}>{SETOR_LABEL[st]}</option>)}
-            </select>
-            <select className={inputClass} value={intervencao} onChange={(e) => setIntervencao(e.target.value)} aria-label="Tipo de intervenção">
-              <option value="">Obras e serviços</option>
-              {TIPOS_INTERVENCAO.map((t) => <option key={t} value={t}>{TIPO_INTERVENCAO_LABEL[t]}s</option>)}
-            </select>
-            <select className={inputClass} value={origem} onChange={(e) => setOrigem(e.target.value)} aria-label="Origem da intervenção">
-              <option value="">Todas as origens</option>
-              {ORIGENS.map((o) => <option key={o} value={o}>{ORIGEM_LABEL[o]}</option>)}
-            </select>
-            <select className={inputClass} value={situacao} onChange={(e) => setSituacao(e.target.value)} aria-label="Situação">
-              {FILTRO_OBRAS.map((f) => <option key={f.valor} value={f.valor}>{f.rotulo}</option>)}
-            </select>
-            <select className={inputClass} value={ano} onChange={(e) => setAno(e.target.value)} aria-label="Ano de emissão">
-              <option value="">Todos os anos</option>
-              {anos.map((a) => <option key={a} value={a}>{a}</option>)}
-            </select>
-          </div>
-        </div>
-
         <ErrorNote error={error} />
         {!obras && !error && <Spinner label="Carregando as obras…" />}
 
@@ -176,31 +125,12 @@ export default function ConsultaObras() {
                 </span>
               </div>
               <ObrasPerto obras={filtradas} onSelecionar={verNoMapa} />
-              {filtradas.length < obras.length && (
-                <p className="mb-3 text-xs text-tinta-500">
-                  {obras.length - filtradas.length} fora dos filtros atuais
-                  {situacao === 'vigentes' && ' (a lista começa só com o que está vigente ou a começar)'}.{' '}
-                  <button type="button" className={linkTexto}
-                          onClick={() => { setSituacao('todas'); setAno(''); setSetor(''); setBusca(''); setIntervencao(''); setOrigem(''); }}>
-                    Mostrar tudo
-                  </button>
-                </p>
-              )}
 
               {filtradas.length > 0 && <ResumoSituacoes obras={filtradas} />}
               {filtradas.length === 0 ? (
                 <div className="rounded-xl border border-tinta-200 bg-white">
                   <Empty>
-                    {obras.length === 0 ? 'Nenhuma licença de obra registrada até o momento.'
-                      : situacao === 'vigentes' ? (
-                        <>
-                          Nenhuma obra vigente agora.{' '}
-                          <button type="button" className={linkTexto} onClick={() => setSituacao('todas')}>
-                            Mostrar as licenças anteriores
-                          </button>
-                        </>
-                      )
-                        : 'Nenhuma licença corresponde à busca.'}
+                    Nenhuma licença de obra registrada até o momento.
                   </Empty>
                 </div>
               ) : (
@@ -269,16 +199,6 @@ export default function ConsultaObras() {
 }
 
 /** Obras vigentes (ou aguardando início) por setor, só os setores com alguma obra. */
-function contarVigentesPorSetor(obras: ObraPublica[]) {
-  const cont = new Map<Setor, number>();
-  for (const o of obras) {
-    if (o.situacao !== 'vigente' && o.situacao !== 'aguardando_inicio') continue;
-    cont.set(o.setor, (cont.get(o.setor) ?? 0) + 1);
-  }
-  return [...cont.entries()]
-    .map(([setor, vigentes]) => ({ setor, vigentes }))
-    .sort((a, b) => b.vigentes - a.vigentes);
-}
 
 /** Resumo para a faixa de números do herói, a partir das obras carregadas. */
 function resumo(obras: ObraPublica[]) {
