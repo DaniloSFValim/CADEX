@@ -22,8 +22,7 @@ export function FaixaMarca({ itens, direita }: { itens: ItemMenu[]; direita?: Re
           <span className="grid h-10 w-10 flex-none place-items-center rounded-xl bg-obra-500 font-display text-base font-extrabold text-tinta-900">CX</span>
           <span className="leading-tight">
             <span className="block font-display text-xl font-extrabold tracking-wide">CADEX</span>
-            <span className="block text-xs text-white/75">Prefeitura de Niterói · SECONSER</span>
-            <span className="block text-xs text-white/75">Fiscalização de Serviços Concedidos</span>
+            <span className="block text-xs text-white/75">Cadastro de Executores · sistema independente</span>
           </span>
         </Link>
 

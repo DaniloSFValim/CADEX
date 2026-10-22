@@ -98,7 +98,6 @@ export default function Ficha() {
 
       <article className="mx-auto my-6 max-w-4xl bg-white p-8 text-sm text-tinta-800 print:my-0 print:max-w-none print:p-0 print:shadow-none">
         <header className="flex items-center justify-between gap-6 border-b-2 border-tinta-900 pb-4">
-          <img src="/logo-prefeitura-seconser.png" alt="Prefeitura de Niterói — SECONSER" className="h-16 w-auto" />
           <div className="text-right leading-tight">
             <div className="text-base font-bold tracking-wide">CADEX</div>
             <div className="text-xs text-tinta-600">Cadastro de Executores</div>
