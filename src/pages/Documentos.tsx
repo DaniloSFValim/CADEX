@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Button, Card, Empty, ErrorNote, Spinner, Titulo, inputClass } from '../components/ui';
 import { useAuth } from '../lib/auth';
-import { buscarEmpresa, podeAtuar, situacaoEfetiva, type Empresa } from '../lib/empresas';
+import { buscarEmpresa, situacaoEfetiva, type Empresa } from '../lib/empresas';
 import {
   CAMPOS_DOCUMENTO, TIPOS_DOCUMENTO, TITULO_DOCUMENTO, autuadoDoCadastro, codigoLegivel, emitirDocumento, registroDoCadastro,
   listarDocumentosDaEmpresa, montarDados, numeroDocumento, validarDados, type CampoDocumento, type DocumentoOficial,
@@ -79,10 +79,10 @@ function Emissao({ empresa, onEmitido }: { empresa: Empresa; onEmitido: () => Pr
       setErros(['Cadastre o representante legal da empresa antes de emitir o termo.']);
       return;
     }
-    // A certidão afirma regularidade: só sai para empresa que pode atuar (art. 3º), dentro da validade.
+    // A certidão afirma regularidade: só sai para empresa APTA, dentro da validade.
     const hoje = new Date().toISOString().slice(0, 10);
-    if (tipo === 'certidao_regularidade' && !podeAtuar(situacaoEfetiva(empresa, hoje))) {
-      setErros(['A certidão de regularidade só é emitida para empresa que pode atuar (APTA ou deferida) e dentro da validade.']);
+    if (tipo === 'certidao_regularidade' && situacaoEfetiva(empresa, hoje) !== 'apta') {
+      setErros(['A certidão de regularidade só é emitida para empresa APTA, dentro da validade.']);
       return;
     }
     setErros(problemas);
