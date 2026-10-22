@@ -241,10 +241,13 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
       m.on('mouseleave', 'obras-pontos', () => balao.remove());
       m.on('mouseleave', 'obras-linhas', () => balao.remove());
       m.on('mousemove', 'obras-calor-toque', (e: maplibregl.MapLayerMouseEvent) => {
-        const bairroDoPonto = String(e.features?.[0]?.properties?.bairro ?? '').trim() || 'Sem bairro';
-        const n = obrasRef.current.filter((o) => (o.trechos[0]?.bairro?.trim() || 'Sem bairro') === bairroDoPonto).length;
+        // Conta só as obras sob o cursor: cada mancha mostra o que está ali, não o total do bairro.
+        const sob = m.queryRenderedFeatures(e.point, { layers: ['obras-calor-toque'] });
+        const codigos = new Set(sob.map((f) => String(f.properties?.codigo ?? '')).filter(Boolean));
+        const bairroDoPonto = String(sob[0]?.properties?.bairro ?? '').trim() || 'Sem bairro';
+        const n = codigos.size;
         m.getCanvas().style.cursor = 'pointer';
-        balao.setLngLat(e.lngLat).setText(`${bairroDoPonto} · ${n} ${n === 1 ? 'obra' : 'obras'}`).addTo(m);
+        balao.setLngLat(e.lngLat).setText(`${bairroDoPonto} · ${n} ${n === 1 ? 'obra aqui' : 'obras aqui'}`).addTo(m);
       });
       m.on('mouseleave', 'obras-calor-toque', () => { m.getCanvas().style.cursor = ''; balao.remove(); });
       m.on('click', 'obras-calor-toque', (e: maplibregl.MapLayerMouseEvent) => {
