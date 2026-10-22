@@ -73,8 +73,26 @@ function textoResponsavel(rt: ResponsavelDoCadastro): string {
   return `${rt.nome} · ${registro}${rt.art_rrt_numero ? ` · ART/RRT ${rt.art_rrt_numero}` : ''}`;
 }
 
-export async function gerarPdfDocumento(doc: DocumentoOficial, logo?: string): Promise<ArrayBuffer> {
+/** Texto da tarja: o que vale o documento, sem depender de conferir o cadastro. */
+function tarjaDoDocumento(doc: DocumentoOficial, validadeCertidao: string | null): string {
+  if (doc.tipo === 'certidao_regularidade') {
+    return validadeCertidao
+      ? `Certidão válida até ${dataExibicao(validadeCertidao)}, enquanto a inscrição permanecer APTA. A situação atual está no QR Code.`
+      : 'Certidão de regularidade. A situação atual da inscrição está no QR Code.';
+  }
+  if (doc.tipo === 'termo_compromisso') {
+    return 'Termo sem prazo próprio: vale enquanto a inscrição da empresa estiver vigente. Confira a situação atual no QR Code.';
+  }
+  return 'Documento oficial da fiscalização. Confira a autenticidade no QR Code.';
+}
+
+export async function gerarPdfDocumento(
+  doc: DocumentoOficial,
+  logo?: string,
+  origem: string = typeof window !== 'undefined' ? window.location.origin : '',
+): Promise<ArrayBuffer> {
   const { jsPDF } = await import('jspdf');
+  const QRCode = (await import('qrcode')).default;
   const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
   const dados = doc.dados as Dados;
   const autuado = (dados.autuado ?? {}) as Dados;
@@ -92,7 +110,7 @@ export async function gerarPdfDocumento(doc: DocumentoOficial, logo?: string): P
   /** Seção: título em azul-marca e fio fino embaixo, como na ficha. */
   const secao = (t: string) => {
     garantir(16);
-    y += 3;
+    y += 2;
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(9);
     pdf.setTextColor(...COR_MARCA);
@@ -133,20 +151,21 @@ export async function gerarPdfDocumento(doc: DocumentoOficial, logo?: string): P
     }
   };
 
-  const paragrafo = (t: string) => {
+  const paragrafo = (t: string, tamanho = 9) => {
+    const entrelinha = tamanho * 0.5;
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(9);
+    pdf.setFontSize(tamanho);
     pdf.setTextColor(...COR_TINTA);
     const partes = quebrar(t, LARGURA - 2 * MARGEM);
-    garantir(partes.length * 4.5 + 1);
+    garantir(partes.length * entrelinha + 1);
     pdf.text(partes, MARGEM, y);
-    y += partes.length * 4.5 + 1;
+    y += partes.length * entrelinha + 1;
   };
 
   /** Assinaturas: uma ou duas colunas, cada uma com linha, nome e descrição. */
   const assinaturas = (blocos: { nome: string; descricao: string }[]) => {
     garantir(26);
-    y += 14;
+    y += 10;
     const colunas = blocos.length === 1 ? [LARGURA / 2] : [LARGURA / 4 + MARGEM / 2, (3 * LARGURA) / 4 - MARGEM / 2];
     blocos.forEach((b, i) => {
       const cx = colunas[i];
@@ -178,9 +197,9 @@ export async function gerarPdfDocumento(doc: DocumentoOficial, logo?: string): P
       ['Válida até', data(reg.validade_ate)],
     ]);
     secao('Compromisso');
-    for (const p of TEXTO_TERMO_COMPROMISSO.compromisso) paragrafo(p);
+    for (const p of TEXTO_TERMO_COMPROMISSO.compromisso) paragrafo(p, 8.5);
     secao('Responsabilidade pelas informações');
-    for (const p of TEXTO_TERMO_COMPROMISSO.responsabilidade) paragrafo(p);
+    for (const p of TEXTO_TERMO_COMPROMISSO.responsabilidade) paragrafo(p, 8.5);
     y += 4;
     paragrafo(`${texto(dados.local)}, ${data(dados.data)}.`);
     assinaturas([{ nome: texto(reg.representante), descricao: 'Representante legal da empresa' }]);
@@ -298,6 +317,32 @@ export async function gerarPdfDocumento(doc: DocumentoOficial, logo?: string): P
   else if (doc.tipo === 'certidao_regularidade') corpoCertidao();
   else corpoAuto();
 
+  // Tarja e QR Code de verificação, sempre na última página, acima do rodapé.
+  const BLOCO_Y = 269;
+  if (y > BLOCO_Y - 3) pdf.addPage();
+  const compacto = doc.codigo_verificacao.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+  const validadeCertidao = doc.tipo === 'certidao_regularidade'
+    ? (((dados.autuado ?? {}) as Dados).validade_ate as string | null) ?? null
+    : null;
+  pdf.setFillColor(238, 246, 246);
+  pdf.rect(MARGEM, BLOCO_Y, LARGURA - 2 * MARGEM, 5, 'F');
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(7.5);
+  pdf.setTextColor(...COR_MARCA);
+  pdf.text(quebrar(tarjaDoDocumento(doc, validadeCertidao), LARGURA - 2 * MARGEM - 4)[0], MARGEM + 2, BLOCO_Y + 3.4);
+  const qr = await QRCode.toDataURL(`${origem}/documento/${compacto}`, { margin: 0, errorCorrectionLevel: 'M', width: 240 });
+  pdf.addImage(qr, 'PNG', MARGEM, BLOCO_Y + 6.5, 15, 15);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(7.5);
+  pdf.setTextColor(...COR_CINZA);
+  pdf.text('Verifique a autenticidade e a situação atual em:', MARGEM + 18, BLOCO_Y + 9.5);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setTextColor(...COR_TINTA);
+  pdf.text(`${origem.replace(/^https?:\/\//, '')}/documento/${codigoLegivel(doc.codigo_verificacao)}`, MARGEM + 18, BLOCO_Y + 13.5);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setTextColor(...COR_CINZA);
+  pdf.text('Ou aponte a câmera para o QR Code.', MARGEM + 18, BLOCO_Y + 17.5);
+
   // Rodapé em todas as páginas: código de verificação e página.
   const total = pdf.getNumberOfPages();
   for (let i = 1; i <= total; i += 1) {
@@ -307,7 +352,7 @@ export async function gerarPdfDocumento(doc: DocumentoOficial, logo?: string): P
     pdf.setTextColor(...COR_CINZA);
     pdf.text(
       `Código de verificação: ${codigoLegivel(doc.codigo_verificacao)} · Emitido em ${instanteExibicao(doc.emitido_em)} · Página ${i} de ${total}`,
-      LARGURA / 2, 290, { align: 'center' },
+      LARGURA / 2, 293, { align: 'center' },
     );
   }
 

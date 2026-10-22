@@ -28,6 +28,7 @@ import MinhaConta from './pages/MinhaConta';
 import Licencas from './pages/Licencas';
 import LicencaPage from './pages/LicencaPage';
 import LicencaPublica from './pages/LicencaPublica';
+import VerificarDocumento from './pages/VerificarDocumento';
 import PlacaLicenca from './pages/PlacaLicenca';
 import SemLicenca, { FormSemLicencaPage } from './pages/SemLicenca';
 import { CadastrarMfa, ConfirmarMfa } from './pages/Mfa';
@@ -42,6 +43,7 @@ export function App() {
       <Route path="consulta/obras" element={<ConsultaObras />} />
       {/* Página da placa do canteiro (art. 14): aberta pelo QR Code, sem login. */}
       <Route path="licenca/:codigo" element={<LicencaPublica />} />
+      <Route path="documento/:codigo" element={<VerificarDocumento />} />
       {/* Entrada dos servidores (área restrita). O público cai no mapa. */}
       <Route path="entrar" element={<Login />} />
       <Route path="*" element={<AreaRestrita />} />
