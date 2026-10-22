@@ -126,30 +126,32 @@ export async function gerarPdfDocumento(doc: DocumentoOficial, logo?: string): P
     pdf.setTextColor(...COR_TINTA);
   };
 
-  /** Pares rótulo-valor em duas colunas, cada linha com fio fino embaixo. */
+  /** Campos em duas colunas, como na ficha: rótulo pequeno em cinza e valor embaixo, com fio fino entre as linhas. */
   const grade = (itens: [string, string][]) => {
-    const COLUNAS = [{ rotulo: MARGEM, valor: MARGEM + 34 }, { rotulo: 107, valor: 141 }];
-    const LARGURA_VALOR = 52;
+    const COLUNAS = [MARGEM, 110];
+    const LARGURA_CAMPO = 85;
     for (let i = 0; i < itens.length; i += 2) {
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(9);
       const celulas = [0, 1].map((k) => {
         const item = itens[i + k];
-        return item ? { rotulo: item[0], partes: quebrar(item[1], LARGURA_VALOR) } : undefined;
+        return item ? { rotulo: item[0], partes: quebrar(item[1], LARGURA_CAMPO) } : undefined;
       });
       const linhas = Math.max(...celulas.map((c) => c?.partes.length ?? 1));
       celulas.forEach((c, k) => {
         if (!c) return;
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(8.5);
-        pdf.setTextColor(...COR_CINZA);
-        pdf.text(c.rotulo, COLUNAS[k].rotulo, y);
         pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(7.5);
+        pdf.setTextColor(...COR_CINZA);
+        pdf.text(c.rotulo, COLUNAS[k], y);
+        pdf.setFontSize(9);
         pdf.setTextColor(...COR_TINTA);
-        pdf.text(c.partes, COLUNAS[k].valor, y);
+        pdf.text(c.partes, COLUNAS[k], y + 4);
       });
-      // Fio logo abaixo da última linha de texto, antes da próxima linha da grade.
-      const fio = y + (linhas - 1) * 4 + 2;
+      // Fio logo abaixo do último valor da linha.
+      const fio = y + 4 + (linhas - 1) * 4 + 2.2;
       pdf.setDrawColor(...COR_FIO).setLineWidth(0.2).line(MARGEM, fio, LARGURA - MARGEM, fio);
-      y += linhas * 4 + 2;
+      y = fio + 2.8;
     }
   };
 
