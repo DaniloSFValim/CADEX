@@ -123,9 +123,9 @@ export const CAMPOS_DOCUMENTO: Record<TipoDocumento, CampoDocumento[]> = {
  */
 export const TEXTO_TERMO_COMPROMISSO = {
   compromisso: [
-    'O representante legal da empresa identificada neste termo declara conhecer e comprometer-se a cumprir as regras do Cadastro de Executores (CADEX) da Prefeitura Municipal de Niterói, estabelecidas na Resolução Conjunta SECONSER/SEOP nº 001/2026, na Lei nº 3.988/2025 e nas orientações da Fiscalização de Serviços Concedidos.',
+    'O representante legal da empresa identificada neste termo declara conhecer e comprometer-se a cumprir as regras do Cadastro de Executores (CADEX) da Prefeitura Municipal de Niterói, estabelecidas na Resolução Conjunta SECONSER/SEOP nº 001/2026 e nas orientações da Fiscalização de Serviços Concedidos.',
     'A empresa se compromete a comunicar à Fiscalização, sem demora, qualquer alteração dos dados registrados neste termo, e a manter atualizada a documentação exigida para a sua inscrição.',
-    'O representante legal declara ciência de que a inscrição no CADEX confere à empresa as obrigações e os limites previstos nas regras do cadastro, e que a Prefeitura pode exigir a regularização ou aplicar as medidas cabíveis em caso de descumprimento.',
+    'O representante legal declara ciência das obrigações impostas pela Lei nº 3.988/2025 às concessionárias e demais entes autorizados a intervir em vias públicas, subsolo e espaço aéreo do Município (art. 6º), da fiscalização exercida pela SECONSER e das penalidades previstas no art. 13 da mesma lei, e de que a concessionária ou ente autorizado responde pelas penalidades decorrentes das infrações praticadas por suas contratadas (art. 15).',
   ],
   responsabilidade: [
     'O representante legal declara, sob as penas da lei, que as informações prestadas para o cadastro e para a inscrição no CADEX são verdadeiras, completas e atualizadas, e responde por elas, inclusive pelos documentos apresentados.',
