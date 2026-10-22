@@ -103,34 +103,43 @@ test.describe('mapa de consulta', () => {
   });
 });
 
-test.describe('faixa do tempo e ficha da obra', () => {
-  const faixa = (page: Page) => page.locator('section[aria-label="Faixa do tempo das obras"]');
+test.describe('obras por mês e ficha da obra', () => {
+  const grafico = (page: Page) => page.locator('section[aria-label="Obras por mês do ano"]');
+  const colunas = (page: Page) => grafico(page).getByRole('group', { name: 'Colunas por mês' }).getByRole('button');
   const ficha = (page: Page) => page.locator('article[aria-label="Ficha da obra selecionada"]');
 
-  test('clicar numa barra da faixa abre a ficha da obra; "Fechar" esconde', async ({ page }) => {
+  test('mostra doze colunas e lista as obras do mês escolhido; clicar numa obra abre a ficha', async ({ page }) => {
     await instalarBackend(page, {
       licencas: [licenca({ escopo: 'Rede óptica' }), licenca({ tipo_intervencao: 'servico', escopo: 'Manutenção de poste' })],
     });
     await page.goto('/consulta/obras');
-    await expect(faixa(page).getByRole('button')).toHaveCount(2);
-    await expect(ficha(page)).toHaveCount(0);
-
-    await faixa(page).getByRole('button').first().click();
+    await expect(colunas(page)).toHaveCount(12);
+    // O mês de hoje vem escolhido, e a lista traz as obras dele.
+    await grafico(page).locator('ul button').first().click();
     await expect(ficha(page)).toBeVisible();
     await expect(ficha(page)).toContainText('Rede óptica');
-    await expect(ficha(page)).toContainText('Executora');
-    await expect(faixa(page).getByRole('button').first()).toHaveAttribute('aria-pressed', 'true');
-
     await ficha(page).getByRole('button', { name: 'Fechar' }).click();
     await expect(ficha(page)).toHaveCount(0);
   });
 
-  test('sem obra com período no ano, a faixa diz isso em vez de ficar vazia', async ({ page }) => {
+  test('escolher outro mês troca a lista; mês sem obra mostra a contagem zero', async ({ page }) => {
+    const ano = new Date().getFullYear();
+    await instalarBackend(page, {
+      licencas: [licenca({ inicio_previsto: `${ano}-03-01`, fim_previsto: `${ano}-03-31`, escopo: 'Obra de março' })],
+    });
+    await page.goto('/consulta/obras');
+    await colunas(page).nth(2).click();
+    await expect(grafico(page)).toContainText(`Mar de ${ano}: 1 obra`);
+    await colunas(page).nth(10).click();
+    await expect(grafico(page)).toContainText(`Nov de ${ano}: 0 obras`);
+  });
+
+  test('sem obra com período no ano, o gráfico diz isso em vez de ficar vazio', async ({ page }) => {
     await instalarBackend(page, {
       licencas: [licenca({ inicio_previsto: '2019-01-01', fim_previsto: '2019-02-01', decisao_data: '2018-12-20' })],
     });
     await page.goto('/consulta/obras');
-    await expect(faixa(page)).toContainText('Nenhuma obra com período neste ano');
-    await expect(faixa(page).getByRole('button')).toHaveCount(0);
+    await expect(grafico(page)).toContainText('Nenhuma obra com período neste ano');
+    await expect(colunas(page)).toHaveCount(0);
   });
 });

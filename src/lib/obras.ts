@@ -163,6 +163,26 @@ export function barraNoAno(o: Pick<ObraPublica, 'inicio_previsto' | 'fim_previst
   return { esquerda: esq, largura: Math.max(dir - esq, 0.002) };
 }
 
+/** Um mês do ano: as obras com período que o tocam e quantas há em cada situação. */
+export interface MesDoAno {
+  mes: number;
+  obras: ObraPublica[];
+  porSituacao: Partial<Record<SituacaoPublica, number>>;
+}
+
+/** Obras com período que tocam cada mês do ano (uma obra conta em todos os meses que cobre). */
+export function obrasNoMes(obras: ObraPublica[], ano: number): MesDoAno[] {
+  return Array.from({ length: 12 }, (_, mes) => {
+    const primeiro = `${ano}-${String(mes + 1).padStart(2, '0')}-01`;
+    const ultimo = new Date(Date.UTC(ano, mes + 1, 0)).toISOString().slice(0, 10);
+    const noMes = obras.filter((o) => !!o.inicio_previsto && !!o.fim_previsto
+      && o.inicio_previsto <= ultimo && o.fim_previsto >= primeiro);
+    const porSituacao: Partial<Record<SituacaoPublica, number>> = {};
+    for (const o of noMes) porSituacao[o.situacao] = (porSituacao[o.situacao] ?? 0) + 1;
+    return { mes, obras: noMes, porSituacao };
+  });
+}
+
 /** Distância em metros entre dois pontos [lng, lat] (fórmula de Haversine). */
 export function distanciaMetros(a: [number, number], b: [number, number]): number {
   const R = 6371000;

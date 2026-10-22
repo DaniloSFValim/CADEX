@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AbasConsulta } from '../components/AbasConsulta';
-import FaixaDoTempo from '../components/FaixaDoTempo';
+import ObrasPorMes from '../components/ObrasPorMes';
 import FichaObra from '../components/FichaObra';
 import { Cabecalho } from '../components/Cabecalho';
 import { Rodape } from '../components/Rodape';
@@ -121,7 +121,7 @@ export default function ConsultaObras() {
               </p>
             </div>
 
-            <FaixaDoTempo obras={todas} ano={new Date().getFullYear()} hoje={hojeISO()} foco={foco} onSelecionar={setFoco} />
+            <ObrasPorMes obras={todas} ano={new Date().getFullYear()} hoje={hojeISO()} foco={foco} onSelecionar={setFoco} />
 
             <ObrasPerto obras={todas} onSelecionar={verNoMapa} />
             <ResumoExecutoras executoras={executoras} />
