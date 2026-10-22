@@ -33,7 +33,7 @@ begin
   end if;
 end $$;
 grant authenticated to cadex_test_app;
-grant select, insert, update on documentos_numeracao to cadex_test_app;
+grant select, insert, update on documentos_numeracao_tipo to cadex_test_app;
 grant usage on schema public to cadex_test_app;
 grant select on empresas, servidores to cadex_test_app;
 
@@ -55,12 +55,16 @@ declare
   emp uuid := (select id from empresas where cnpj = '11222333000181');
   a record;
   b record;
+  c record;
 begin
   select * into a from emitir_documento('notificacao', emp, '{"prazo_dias": 15}'::jsonb);
   select * into b from emitir_documento('apreensao', emp, '{"bens": "2 caixas"}'::jsonb);
+  select * into c from emitir_documento('notificacao', emp, '{"prazo_dias": 30}'::jsonb);
 
-  perform pg_temp.assert(a.numero = 1, 'primeiro documento deveria ser o nº 1, veio ' || a.numero);
-  perform pg_temp.assert(b.numero = 2, 'segundo documento deveria ser o nº 2, veio ' || b.numero);
+  -- Cada tipo tem a sua sequência: a apreensão começa do nº 1, a segunda notificação é a nº 2.
+  perform pg_temp.assert(a.numero = 1, 'primeira notificação deveria ser o nº 1, veio ' || a.numero);
+  perform pg_temp.assert(b.numero = 1, 'primeira apreensão deveria ser o nº 1, veio ' || b.numero);
+  perform pg_temp.assert(c.numero = 2, 'segunda notificação deveria ser o nº 2, veio ' || c.numero);
   perform pg_temp.assert(a.codigo_verificacao <> b.codigo_verificacao, 'códigos de verificação repetidos');
   perform pg_temp.assert(length(a.codigo_verificacao) = 12, 'código de verificação deveria ter 12 caracteres');
 end;
@@ -76,8 +80,10 @@ select pg_temp.recusa(
 
 -- O número não avança quando a emissão é recusada
 reset role;
-select pg_temp.assert((select ultimo from documentos_numeracao where id = 1) = 2,
+select pg_temp.assert((select ultimo from documentos_numeracao_tipo where tipo = 'notificacao') = 2,
   'emissão recusada não pode consumir número');
+select pg_temp.assert((select ultimo from documentos_numeracao_tipo where tipo = 'apreensao') = 1,
+  'a sequência da apreensão deveria estar no nº 1');
 
 -- ---------------------------------------------------------------------
 -- Quem não é gestor não emite
@@ -101,7 +107,7 @@ select pg_temp.recusa(
 
 -- A emissão fica na auditoria da empresa
 select pg_temp.assert((select count(*) from auditoria
-  where tabela = 'documentos_oficiais' and operacao = 'INSERT') = 2,
+  where tabela = 'documentos_oficiais' and operacao = 'INSERT') = 3,
   'cada emissão deveria gerar um registro de auditoria');
 
 rollback;
