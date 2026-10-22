@@ -86,11 +86,27 @@ function tarjaDoDocumento(doc: DocumentoOficial, validadeCertidao: string | null
   return 'Documento oficial da fiscalização. Confira a autenticidade no QR Code.';
 }
 
+/**
+ * Termo e certidão precisam caber em uma folha. Primeiro sai no tamanho normal;
+ * se passar de uma página, refaz em modo compacto (fontes e espaços menores).
+ */
 export async function gerarPdfDocumento(
   doc: DocumentoOficial,
   logo?: string,
   origem: string = typeof window !== 'undefined' ? window.location.origin : '',
 ): Promise<ArrayBuffer> {
+  const normal = await montarPdf(doc, logo, origem, false);
+  const umaFolha = doc.tipo === 'termo_compromisso' || doc.tipo === 'certidao_regularidade';
+  if (!umaFolha || normal.paginas === 1) return normal.bytes;
+  return (await montarPdf(doc, logo, origem, true)).bytes;
+}
+
+async function montarPdf(
+  doc: DocumentoOficial,
+  logo: string | undefined,
+  origem: string,
+  compacta: boolean,
+): Promise<{ bytes: ArrayBuffer; paginas: number }> {
   const { jsPDF } = await import('jspdf');
   const QRCode = (await import('qrcode')).default;
   const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
@@ -110,7 +126,7 @@ export async function gerarPdfDocumento(
   /** Seção: título em azul-marca e fio fino embaixo, como na ficha. */
   const secao = (t: string) => {
     garantir(16);
-    y += 2;
+    y += compacta ? 1 : 2;
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(9);
     pdf.setTextColor(...COR_MARCA);
@@ -127,7 +143,7 @@ export async function gerarPdfDocumento(
     const LARGURA_CAMPO = 85;
     for (let i = 0; i < itens.length; i += 2) {
       pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(9);
+      pdf.setFontSize(compacta ? 8 : 9);
       const celulas = [0, 1].map((k) => {
         const item = itens[i + k];
         return item ? { rotulo: item[0], partes: quebrar(item[1], LARGURA_CAMPO) } : undefined;
@@ -140,7 +156,7 @@ export async function gerarPdfDocumento(
         pdf.setFontSize(7.5);
         pdf.setTextColor(...COR_CINZA);
         pdf.text(c.rotulo, COLUNAS[k], y);
-        pdf.setFontSize(9);
+        pdf.setFontSize(compacta ? 8 : 9);
         pdf.setTextColor(...COR_TINTA);
         pdf.text(c.partes, COLUNAS[k], y + 4);
       });
@@ -151,7 +167,7 @@ export async function gerarPdfDocumento(
     }
   };
 
-  const paragrafo = (t: string, tamanho = 9) => {
+  const paragrafo = (t: string, tamanho = compacta ? 8 : 9) => {
     const entrelinha = tamanho * 0.5;
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(tamanho);
@@ -165,7 +181,7 @@ export async function gerarPdfDocumento(
   /** Assinaturas: uma ou duas colunas, cada uma com linha, nome e descrição. */
   const assinaturas = (blocos: { nome: string; descricao: string }[]) => {
     garantir(26);
-    y += 10;
+    y += compacta ? 5 : 10;
     const colunas = blocos.length === 1 ? [LARGURA / 2] : [LARGURA / 4 + MARGEM / 2, (3 * LARGURA) / 4 - MARGEM / 2];
     blocos.forEach((b, i) => {
       const cx = colunas[i];
@@ -197,9 +213,9 @@ export async function gerarPdfDocumento(
       ['Válida até', data(reg.validade_ate)],
     ]);
     secao('Compromisso');
-    for (const p of TEXTO_TERMO_COMPROMISSO.compromisso) paragrafo(p, 8.5);
+    for (const p of TEXTO_TERMO_COMPROMISSO.compromisso) paragrafo(p);
     secao('Responsabilidade pelas informações');
-    for (const p of TEXTO_TERMO_COMPROMISSO.responsabilidade) paragrafo(p, 8.5);
+    for (const p of TEXTO_TERMO_COMPROMISSO.responsabilidade) paragrafo(p);
     y += 4;
     paragrafo(`${texto(dados.local)}, ${data(dados.data)}.`);
     assinaturas([{ nome: texto(reg.representante), descricao: 'Representante legal da empresa' }]);
@@ -356,5 +372,5 @@ export async function gerarPdfDocumento(
     );
   }
 
-  return pdf.output('arraybuffer');
+  return { bytes: pdf.output('arraybuffer'), paginas: pdf.getNumberOfPages() };
 }
