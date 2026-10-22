@@ -59,6 +59,10 @@ export async function estiloBase(): Promise<StyleSpecification> {
   };
 }
 
+/** Raio do calor em pixels, igual à expressão do mapa de calor. Usado para contar o que está sob o cursor. */
+const RAIO_CALOR = ['interpolate', ['linear'], ['zoom'], 11, 26, 16, 48] as unknown as maplibregl.ExpressionSpecification;
+const raioCalorPx = (zoom: number) => Math.min(48, Math.max(26, 26 + ((zoom - 11) * 22) / 5));
+
 /** Raio dos agrupamentos por quantidade de obras. */
 const RAIO_AGRUPAMENTO = ['step', ['get', 'point_count'], 16, 10, 20, 50, 26] as unknown as maplibregl.ExpressionSpecification;
 
@@ -84,9 +88,10 @@ const corPorSituacao = [
 ] as unknown as maplibregl.ExpressionSpecification;
 
 /** Mapa das obras. Clicar numa obra avisa quem chamou (a ficha aparece ao lado), sem balão. */
-export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bairro, onSelecionar, onBairro }: {
+export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bairro, onSelecionar, onBairro, onDestacar }: {
   obras: ObraPublica[]; foco?: string | null; destaque?: string | null; modo?: 'pontos' | 'calor';
   bairro?: string | null; onSelecionar?: (codigo: string) => void; onBairro?: (bairro: string) => void;
+  onDestacar?: (codigo: string | null) => void;
 }) {
   const caixa = useRef<HTMLDivElement>(null);
   const mapa = useRef<maplibregl.Map | null>(null);
@@ -97,6 +102,8 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
   onSelecionarRef.current = onSelecionar;
   const onBairroRef = useRef(onBairro);
   onBairroRef.current = onBairro;
+  const onDestacarRef = useRef(onDestacar);
+  onDestacarRef.current = onDestacar;
   // Quem está no mapa, para os balões de informação lerem sempre o valor atual.
   const obrasRef = useRef(obras);
   obrasRef.current = obras;
@@ -113,6 +120,8 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
         sources: {
           ...base.sources,
           obras: { type: 'geojson', data: obrasParaGeoJSON([]), cluster: true, clusterRadius: 40, clusterMaxZoom: 14 },
+          // Calor e área de toque usam cada obra, sem agrupar: a densidade precisa contar obra por obra.
+          brutas: { type: 'geojson', data: obrasParaGeoJSON([]) },
         },
         layers: [
           ...base.layers,
@@ -154,12 +163,12 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
           },
           {
             // Visão de densidade: onde há mais intervenções. Ligada pelo botão "Mapa de calor".
-            id: 'obras-calor', type: 'heatmap', source: 'obras', filter: ['==', ['geometry-type'], 'Point'],
+            id: 'obras-calor', type: 'heatmap', source: 'brutas', filter: ['==', ['geometry-type'], 'Point'],
             layout: { visibility: 'none' },
             paint: {
-              'heatmap-weight': ['case', ['has', 'point_count'], ['get', 'point_count'], 1] as unknown as maplibregl.ExpressionSpecification,
+              'heatmap-weight': 1,
               'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 11, 1.4, 16, 3.5],
-              'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 11, 26, 16, 48],
+              'heatmap-radius': RAIO_CALOR,
               'heatmap-opacity': 0.85,
               'heatmap-color': ['interpolate', ['linear'], ['heatmap-density'],
                 0, 'rgba(14,116,130,0)', 0.25, '#67c1cf', 0.55, '#f5b841', 1, '#c2410c'] as unknown as maplibregl.ExpressionSpecification,
@@ -177,10 +186,10 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
           },
           {
             // Área de toque sobre o calor: invisível, só para clicar e passar o mouse num bairro.
-            id: 'obras-calor-toque', type: 'circle', source: 'obras',
-            filter: ['all', ['==', ['geometry-type'], 'Point'], ['!', ['has', 'point_count']]],
+            id: 'obras-calor-toque', type: 'circle', source: 'brutas',
+            filter: ['==', ['geometry-type'], 'Point'],
             layout: { visibility: 'none' },
-            paint: { 'circle-color': '#000000', 'circle-opacity': 0, 'circle-radius': 26 },
+            paint: { 'circle-color': '#000000', 'circle-opacity': 0, 'circle-radius': RAIO_CALOR },
           },
           {
             id: 'obras-pontos', type: 'circle', source: 'obras',
@@ -223,36 +232,47 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
         }).catch(() => undefined);
       });
       m.on('mouseenter', 'obras-agrupamentos', () => { m.getCanvas().style.cursor = 'pointer'; });
-      m.on('mouseleave', 'obras-agrupamentos', () => { m.getCanvas().style.cursor = ''; });
-      // Balão de informação ao passar o mouse: obra no mapa principal, bairro no calor.
+      // Balão de informação ao passar o mouse: obra, grupo ou área de calor.
       const balao = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 12, className: 'balao-obras' });
-      m.on('mousemove', 'obras-pontos', (e: maplibregl.MapLayerMouseEvent) => {
+      const mostrarObra = (e: maplibregl.MapLayerMouseEvent) => {
         const pr = e.features?.[0]?.properties;
         if (!pr) return;
         const local = [pr.logradouro, pr.bairro].filter((x) => typeof x === 'string' && x).join(', ');
         balao.setLngLat(e.lngLat).setText(`${local || 'Obra'} · nº ${String(pr.numero ?? '')}`).addTo(m);
+        // Marca a obra na lista ao lado; ao sair do mapa, a marcação some.
+        onDestacarRef.current?.(typeof pr.codigo === 'string' ? pr.codigo : null);
+      };
+      const sairDaObra = () => { balao.remove(); onDestacarRef.current?.(null); };
+      m.on('mousemove', 'obras-pontos', mostrarObra);
+      m.on('mousemove', 'obras-linhas', mostrarObra);
+      m.on('mouseleave', 'obras-pontos', () => { m.getCanvas().style.cursor = ''; sairDaObra(); });
+      m.on('mouseleave', 'obras-linhas', () => { m.getCanvas().style.cursor = ''; sairDaObra(); });
+      m.on('mousemove', 'obras-agrupamentos', (e: maplibregl.MapLayerMouseEvent) => {
+        const n = Number(e.features?.[0]?.properties?.point_count ?? 0);
+        balao.setLngLat(e.lngLat).setText(`${n} obras neste grupo · clique para abrir`).addTo(m);
       });
-      m.on('mousemove', 'obras-linhas', (e: maplibregl.MapLayerMouseEvent) => {
-        const pr = e.features?.[0]?.properties;
-        if (!pr) return;
-        const local = [pr.logradouro, pr.bairro].filter((x) => typeof x === 'string' && x).join(', ');
-        balao.setLngLat(e.lngLat).setText(`${local || 'Obra'} · nº ${String(pr.numero ?? '')}`).addTo(m);
-      });
-      m.on('mouseleave', 'obras-pontos', () => balao.remove());
-      m.on('mouseleave', 'obras-linhas', () => balao.remove());
+      m.on('mouseleave', 'obras-agrupamentos', () => { m.getCanvas().style.cursor = ''; balao.remove(); });
       m.on('mousemove', 'obras-calor-toque', (e: maplibregl.MapLayerMouseEvent) => {
-        // Conta só as obras sob o cursor: cada mancha mostra o que está ali, não o total do bairro.
-        const sob = m.queryRenderedFeatures(e.point, { layers: ['obras-calor-toque'] });
-        const codigos = new Set(sob.map((f) => String(f.properties?.codigo ?? '')).filter(Boolean));
-        const bairroDoPonto = String(sob[0]?.properties?.bairro ?? '').trim() || 'Sem bairro';
+        // Conta as obras dentro do mesmo raio que pinta a mancha, não o total do bairro.
+        const R = raioCalorPx(m.getZoom());
+        const p = e.point;
+        const proximas = m.queryRenderedFeatures([[p.x - R, p.y - R], [p.x + R, p.y + R]], { layers: ['obras-calor-toque'] })
+          .map((f) => {
+            const q = m.project((f.geometry as unknown as { coordinates: [number, number] }).coordinates);
+            return { f, d: Math.hypot(q.x - p.x, q.y - p.y) };
+          })
+          .filter((x) => x.d <= R)
+          .sort((a, b) => a.d - b.d);
+        const codigos = new Set(proximas.map((x) => String(x.f.properties?.codigo ?? '')).filter(Boolean));
+        const bairroDoPonto = String(proximas[0]?.f.properties?.bairro ?? '').trim() || 'Sem bairro';
         const n = codigos.size;
         m.getCanvas().style.cursor = 'pointer';
-        balao.setLngLat(e.lngLat).setText(`${bairroDoPonto} · ${n} ${n === 1 ? 'obra aqui' : 'obras aqui'}`).addTo(m);
+        balao.setLngLat(e.lngLat).setText(`${bairroDoPonto} · ${n} ${n === 1 ? 'obra nesta área' : 'obras nesta área'} · clique para ampliar`).addTo(m);
       });
       m.on('mouseleave', 'obras-calor-toque', () => { m.getCanvas().style.cursor = ''; balao.remove(); });
+      // No calor, o clique aproxima o mapa da área. Não filtra a lista: isso fica com o bairro escolhido na lista.
       m.on('click', 'obras-calor-toque', (e: maplibregl.MapLayerMouseEvent) => {
-        const b = String(e.features?.[0]?.properties?.bairro ?? '').trim();
-        if (b) onBairroRef.current?.(b);
+        m.easeTo({ center: e.lngLat, zoom: Math.min(m.getZoom() + 2, 16) });
       });
       m.on('click', 'obras-pontos', (e: maplibregl.MapLayerMouseEvent) => {
         const b = String(e.features?.[0]?.properties?.bairro ?? '').trim();
@@ -270,6 +290,7 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
   useEffect(() => {
     if (!pronto || !mapa.current) return;
     (mapa.current.getSource('obras') as maplibregl.GeoJSONSource).setData(obrasParaGeoJSON(obras));
+    (mapa.current.getSource('brutas') as maplibregl.GeoJSONSource).setData(obrasParaGeoJSON(obras));
     if (obras.length > 0) crescerAgrupamentos(mapa.current);
   }, [obras, pronto]);
 

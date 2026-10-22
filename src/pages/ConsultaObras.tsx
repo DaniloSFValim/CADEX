@@ -104,7 +104,7 @@ export default function ConsultaObras() {
                 </div>
                 <div ref={mapaRef} className="relative scroll-mt-4 overflow-hidden rounded-xl border border-tinta-200 shadow-xs">
                   <MapaObras obras={todas} foco={foco} destaque={destaque} modo={modo} bairro={bairro}
-                             onSelecionar={setFoco} onBairro={setBairro} />
+                             onSelecionar={setFoco} onBairro={setBairro} onDestacar={setDestaque} />
                   {selecionada && <FichaObra obra={selecionada} onFechar={() => setFoco(null)} />}
                 </div>
               </Suspense>
