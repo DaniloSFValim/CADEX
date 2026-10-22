@@ -83,10 +83,43 @@ const corPorSituacao = [
   '#6b7280',
 ] as unknown as maplibregl.ExpressionSpecification;
 
-/** Conteúdo do balão: montado com nós de texto, nunca com HTML vindo do banco. */
+/**
+ * Lista das obras de um agrupamento. Monta os nós com textContent: o texto vem
+ * do cadastro e nunca é tratado como HTML.
+ */
+function conteudoDoCluster(folhas: GeoJSON.Feature[], aoEscolher: (codigo: string) => void): HTMLElement {
+  const porCodigo = new Map<string, GeoJSON.GeoJsonProperties>();
+  for (const f of folhas) {
+    const codigo = f.properties?.codigo;
+    if (typeof codigo === 'string' && !porCodigo.has(codigo)) porCodigo.set(codigo, f.properties);
+  }
+  const raiz = document.createElement('div');
+  raiz.className = 'text-sm';
+  const titulo = document.createElement('p');
+  titulo.className = 'mb-1 font-semibold text-tinta-900';
+  titulo.textContent = `${porCodigo.size} ${porCodigo.size === 1 ? 'obra' : 'obras'} neste ponto`;
+  raiz.appendChild(titulo);
+  const lista = document.createElement('ul');
+  lista.className = 'max-h-60 divide-y divide-tinta-100 overflow-y-auto';
+  for (const [codigo, pr] of porCodigo) {
+    const item = document.createElement('li');
+    const botao = document.createElement('button');
+    botao.type = 'button';
+    botao.className = 'block w-full py-1.5 text-left hover:text-marca-700 hover:underline';
+    const local = [pr?.logradouro, pr?.bairro].filter((x) => typeof x === 'string' && x).join(', ');
+    botao.textContent = `${local || 'Obra'} · nº ${String(pr?.numero ?? '')}`;
+    botao.addEventListener('click', () => aoEscolher(codigo));
+    item.appendChild(botao);
+    lista.appendChild(item);
+  }
+  raiz.appendChild(lista);
+  return raiz;
+}
+
 /** Mapa das obras. Clicar numa obra avisa quem chamou (a ficha aparece ao lado), sem balão. */
-export default function MapaObras({ obras, foco, onSelecionar }: {
-  obras: ObraPublica[]; foco?: string | null; onSelecionar?: (codigo: string) => void;
+export default function MapaObras({ obras, foco, destaque, modo = 'pontos', onSelecionar }: {
+  obras: ObraPublica[]; foco?: string | null; destaque?: string | null; modo?: 'pontos' | 'calor';
+  onSelecionar?: (codigo: string) => void;
 }) {
   const caixa = useRef<HTMLDivElement>(null);
   const mapa = useRef<maplibregl.Map | null>(null);
@@ -148,6 +181,29 @@ export default function MapaObras({ obras, foco, onSelecionar }: {
             paint: { 'circle-color': '#1e7b4c', 'circle-radius': 8, 'circle-opacity': 0 },
           },
           {
+            // Visão de densidade: onde há mais intervenções. Ligada pelo botão "Mapa de calor".
+            id: 'obras-calor', type: 'heatmap', source: 'obras', filter: ['==', ['geometry-type'], 'Point'],
+            layout: { visibility: 'none' },
+            paint: {
+              'heatmap-weight': ['case', ['has', 'point_count'], ['get', 'point_count'], 1] as unknown as maplibregl.ExpressionSpecification,
+              'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 11, 0.8, 16, 2.5],
+              'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 11, 18, 16, 34],
+              'heatmap-opacity': 0.85,
+              'heatmap-color': ['interpolate', ['linear'], ['heatmap-density'],
+                0, 'rgba(14,116,130,0)', 0.25, '#67c1cf', 0.55, '#f5b841', 1, '#c2410c'] as unknown as maplibregl.ExpressionSpecification,
+            },
+          },
+          {
+            // Destaque da obra apontada na lista: contorno escuro por cima do trecho.
+            id: 'obras-destaque-linha', type: 'line', source: 'obras', filter: ['==', ['get', 'codigo'], '__nenhum__'],
+            layout: { 'line-cap': 'round' },
+            paint: { 'line-color': '#0b2530', 'line-width': 9, 'line-opacity': 0.9 },
+          },
+          {
+            id: 'obras-destaque-ponto', type: 'circle', source: 'obras', filter: ['==', ['get', 'codigo'], '__nenhum__'],
+            paint: { 'circle-color': 'rgba(0,0,0,0)', 'circle-radius': 14, 'circle-stroke-color': '#0b2530', 'circle-stroke-width': 3 },
+          },
+          {
             id: 'obras-pontos', type: 'circle', source: 'obras',
             filter: ['all', ['==', ['geometry-type'], 'Point'], ['!', ['has', 'point_count']]],
             paint: {
@@ -174,7 +230,7 @@ export default function MapaObras({ obras, foco, onSelecionar }: {
         m.on('mouseenter', camada, () => { m.getCanvas().style.cursor = 'pointer'; });
         m.on('mouseleave', camada, () => { m.getCanvas().style.cursor = ''; });
       }
-      // Clique num agrupamento: aproxima o mapa até ele se separar nas obras.
+      // Clique num agrupamento: lista as obras dentro dele, para escolher uma sem dar zoom às cegas.
       m.on('click', 'obras-agrupamentos', (e: maplibregl.MapLayerMouseEvent) => {
         const f = e.features?.[0];
         const id = f?.properties?.cluster_id;
@@ -182,8 +238,12 @@ export default function MapaObras({ obras, foco, onSelecionar }: {
         if (typeof id !== 'number' || geom?.type !== 'Point') return;
         const centro = geom.coordinates as [number, number];
         const fonte = m.getSource('obras') as maplibregl.GeoJSONSource;
-        void fonte.getClusterExpansionZoom(id).then((zoom) => {
-          m.easeTo({ center: centro, zoom });
+        void fonte.getClusterLeaves(id, 50, 0).then((folhas) => {
+          const popup = new maplibregl.Popup({ closeButton: true, maxWidth: '300px', offset: 16 });
+          popup.setLngLat(centro).setDOMContent(conteudoDoCluster(folhas, (codigo) => {
+            popup.remove();
+            onSelecionarRef.current?.(codigo);
+          })).addTo(m);
         }).catch(() => undefined);
       });
       m.on('mouseenter', 'obras-agrupamentos', () => { m.getCanvas().style.cursor = 'pointer'; });
@@ -226,6 +286,29 @@ export default function MapaObras({ obras, foco, onSelecionar }: {
     quadro = requestAnimationFrame(passo);
     return () => cancelAnimationFrame(quadro);
   }, [pronto]);
+
+  // Destaque da obra apontada na lista: contorno escuro sobre o trecho dela.
+  useEffect(() => {
+    const m = mapa.current;
+    if (!pronto || !m) return;
+    const filtro = ['==', ['get', 'codigo'], destaque ?? '__nenhum__'] as unknown as maplibregl.ExpressionSpecification;
+    for (const camada of ['obras-destaque-linha', 'obras-destaque-ponto']) {
+      if (m.getLayer(camada)) m.setFilter(camada, filtro);
+    }
+  }, [destaque, pronto]);
+
+  // Pontos ou mapa de calor: a visão de calor esconde os pontos e os agrupamentos.
+  useEffect(() => {
+    const m = mapa.current;
+    if (!pronto || !m) return;
+    const calor = modo === 'calor';
+    const visivel = (ligado: boolean) => (ligado ? 'visible' : 'none') as maplibregl.VisibilitySpecification;
+    m.setLayoutProperty('obras-calor', 'visibility', visivel(calor));
+    for (const camada of ['obras-linhas', 'obras-pontos', 'obras-vigentes-halo', 'obras-agrupamentos',
+      'obras-agrupamentos-contagem', 'obras-areas', 'obras-areas-contorno']) {
+      if (m.getLayer(camada)) m.setLayoutProperty(camada, 'visibility', visivel(!calor));
+    }
+  }, [modo, pronto]);
 
   // Leva o mapa até a obra escolhida na lista.
   useEffect(() => {

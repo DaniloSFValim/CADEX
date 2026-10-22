@@ -23,6 +23,9 @@ export default function ConsultaObras() {
   const [obras, setObras] = useState<ObraPublica[] | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [foco, setFoco] = useState<string | null>(null);
+  const [destaque, setDestaque] = useState<string | null>(null);
+  const [modo, setModo] = useState<'pontos' | 'calor'>('pontos');
+  const [mostrarEncerradas, setMostrarEncerradas] = useState(false);
   const [baixando, setBaixando] = useState(false);
   const mapaRef = useRef<HTMLDivElement>(null);
 
@@ -44,8 +47,12 @@ export default function ConsultaObras() {
     finally { setBaixando(false); }
   }
 
-  const filtradas = obras ?? [];
-  const stats = useMemo(() => resumo(obras ?? []), [obras]);
+  const todas = obras ?? [];
+  const ativas = useMemo(() => todas.filter(obraAtiva), [todas]);
+  const listadas = mostrarEncerradas ? todas : ativas;
+  const grupos = useMemo(() => agruparPorBairro(listadas), [listadas]);
+  const executoras = useMemo(() => resumoExecutoras(todas), [todas]);
+  const stats = useMemo(() => resumo(todas), [todas]);
   const selecionada = useMemo(() => (obras ?? []).find((o) => o.codigo === foco) ?? null, [obras, foco]);
 
   return (
@@ -83,8 +90,18 @@ export default function ConsultaObras() {
             {/* Mapa em largura total; a ficha da obra selecionada fica sobre ele. */}
             <div>
               <Suspense fallback={<div className="h-[60vh] min-h-[360px] rounded-xl border border-tinta-200 bg-tinta-50" />}>
+                <div className="mb-2 flex justify-end">
+                  <div role="group" aria-label="Visualização do mapa" className="inline-flex rounded-full border border-tinta-200 bg-white p-0.5 text-xs font-semibold">
+                    {(['pontos', 'calor'] as const).map((m) => (
+                      <button key={m} type="button" aria-pressed={modo === m} onClick={() => setModo(m)}
+                              className={`rounded-full px-3 py-1 ${modo === m ? 'bg-marca-700 text-white' : 'text-tinta-600 hover:text-tinta-900'}`}>
+                        {m === 'pontos' ? 'Obras' : 'Mapa de calor'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <div ref={mapaRef} className="relative scroll-mt-4 overflow-hidden rounded-xl border border-tinta-200 shadow-xs">
-                  <MapaObras obras={filtradas} foco={foco} onSelecionar={setFoco} />
+                  <MapaObras obras={todas} foco={foco} destaque={destaque} modo={modo} onSelecionar={setFoco} />
                   {selecionada && <FichaObra obra={selecionada} onFechar={() => setFoco(null)} />}
                 </div>
               </Suspense>
@@ -101,79 +118,92 @@ export default function ConsultaObras() {
               </p>
             </div>
 
-            <FaixaDoTempo obras={filtradas} ano={new Date().getFullYear()} hoje={hojeISO()} foco={foco} onSelecionar={setFoco} />
+            <FaixaDoTempo obras={todas} ano={new Date().getFullYear()} hoje={hojeISO()} foco={foco} onSelecionar={setFoco} />
 
-            {/* Lista das obras, abaixo da faixa do tempo. */}
+            <ObrasPerto obras={todas} onSelecionar={verNoMapa} />
+            <ResumoExecutoras executoras={executoras} />
+
+            {/* Lista das obras, agrupada por bairro. Por padrão, só as vigentes ou aguardando início. */}
             <section aria-live="polite" aria-label="Lista das obras e serviços licenciados">
-              <div className="mb-3 flex items-baseline justify-between gap-3">
-                <h2 className="font-display text-lg font-bold tracking-[-0.01em] text-tinta-900">Obras e serviços licenciados</h2>
+              <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
+                <h2 className="font-display text-lg font-bold tracking-[-0.01em] text-tinta-900">
+                  {mostrarEncerradas ? 'Todas as obras e serviços licenciados' : 'Obras e serviços vigentes'}
+                </h2>
                 <span className="text-sm text-tinta-500">
-                  {filtradas.length}{filtradas.length !== obras.length && ` de ${obras.length}`}
+                  {listadas.length}{listadas.length !== todas.length && ` de ${todas.length}`}
                 </span>
               </div>
-              <ObrasPerto obras={filtradas} onSelecionar={verNoMapa} />
-
-              {filtradas.length > 0 && <ResumoSituacoes obras={filtradas} />}
-              {filtradas.length === 0 ? (
+              {listadas.length > 0 && <ResumoSituacoes obras={listadas} />}
+              <p className="mb-3">
+                <button type="button" className={linkTexto} onClick={() => setMostrarEncerradas((v) => !v)}>
+                  {mostrarEncerradas
+                    ? 'Mostrar só as vigentes'
+                    : `Ver encerradas e concluídas (${todas.length - ativas.length})`}
+                </button>
+              </p>
+              {grupos.length === 0 ? (
                 <div className="rounded-xl border border-tinta-200 bg-white">
                   <Empty>
-                    Nenhuma licença de obra registrada até o momento.
+                    {mostrarEncerradas
+                      ? 'Nenhuma licença de obra registrada até o momento.'
+                      : 'Nenhuma obra vigente no momento.'}
                   </Empty>
                 </div>
               ) : (
-                <div className="overflow-x-auto rounded-xl border border-tinta-200 bg-white">
-                  <table className="min-w-full text-sm">
-                    <thead className="bg-tinta-50 text-left text-tinta-600">
-                      <tr>
-                        <th scope="col" className="px-4 py-2.5 font-semibold">Licença nº</th>
-                        <th scope="col" className="px-4 py-2.5 font-semibold">Local</th>
-                        <th scope="col" className="px-4 py-2.5 font-semibold">Executora</th>
-                        <th scope="col" className="px-4 py-2.5 font-semibold">Período</th>
-                        <th scope="col" className="px-4 py-2.5 font-semibold">Situação</th>
-                        <th scope="col" className="px-4 py-2.5"><span className="sr-only">Ações</span></th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-tinta-100">
-                      {filtradas.map((o) => (
-                        <tr key={o.codigo} className="align-top hover:bg-tinta-50" style={{ boxShadow: `inset 3px 0 0 ${COR_SITUACAO[o.situacao]}` }}>
-                          <td className="tabular whitespace-nowrap px-4 py-3 font-medium text-tinta-900">{o.numero}</td>
-                          <td className="px-4 py-3">
-                            <Link to={`/licenca/${o.codigo}`} className="font-medium text-tinta-900 hover:text-marca-700 hover:underline">
-                              {o.trechos[0]?.logradouro}
-                            </Link>
-                            <div className="text-xs text-tinta-500">
-                              {o.trechos[0]?.bairro}
-                              {o.trechos.length > 1 && ` · e mais ${o.trechos.length - 1}`}
+                <div className="flex flex-col gap-3">
+                  {grupos.map((g) => (
+                    <details key={g.bairro} open className="group rounded-xl border border-tinta-200 bg-white">
+                      <summary className="flex cursor-pointer list-none items-baseline justify-between gap-3 px-4 py-3">
+                        <span className="font-semibold text-tinta-900">{g.bairro}</span>
+                        <span className="text-sm text-tinta-500">
+                          {g.obras.length} {g.obras.length === 1 ? 'obra' : 'obras'}
+                        </span>
+                      </summary>
+                      <ul className="divide-y divide-tinta-100 border-t border-tinta-100">
+                        {g.obras.map((o) => (
+                          <li key={o.codigo}
+                              className="grid gap-x-4 gap-y-1 px-4 py-3 text-sm sm:grid-cols-[1fr_auto]"
+                              style={{ boxShadow: `inset 3px 0 0 ${COR_SITUACAO[o.situacao]}` }}
+                              onMouseEnter={() => setDestaque(o.codigo)}
+                              onMouseLeave={() => setDestaque(null)}
+                              onFocus={() => setDestaque(o.codigo)}
+                              onBlur={() => setDestaque(null)}>
+                            <div className="min-w-0">
+                              <Link to={`/licenca/${o.codigo}`} className="font-medium text-tinta-900 hover:text-marca-700 hover:underline">
+                                {o.trechos[0]?.logradouro ?? 'Local não informado'}
+                              </Link>
+                              <span className="tabular ml-2 text-xs text-tinta-500">nº {o.numero}</span>
+                              {o.trechos.length > 1 && <span className="ml-2 text-xs text-tinta-500">e mais {o.trechos.length - 1}</span>}
+                              <div className="text-tinta-700">
+                                {o.executora}
+                                {o.contratante && <span className="text-tinta-500"> · para {o.contratante}</span>}
+                              </div>
+                              <div className="text-xs text-tinta-500">
+                                {rotuloTipos(o.tipos_obra, rotulos)}
+                                {` · ${TIPO_INTERVENCAO_LABEL[o.tipo_intervencao]}`}
+                                {origemPublica(o.origem) && ` pública · ${ORIGEM_LABEL[o.origem].toLowerCase()}`}
+                              </div>
                             </div>
-                          </td>
-                          <td className="px-4 py-3 text-tinta-700">
-                            {o.executora}
-                            {o.contratante && <div className="text-xs text-tinta-500">para {o.contratante}</div>}
-                            <div className="text-xs text-tinta-500">
-                              {rotuloTipos(o.tipos_obra, rotulos)}
-                              {` · ${TIPO_INTERVENCAO_LABEL[o.tipo_intervencao]}`}
-                              {origemPublica(o.origem) && ` pública · ${ORIGEM_LABEL[o.origem].toLowerCase()}`}
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 sm:flex-col sm:items-end">
+                              <SeloSituacao situacao={o.situacao} />
+                              <span className="tabular text-xs text-tinta-600">
+                                {o.inicio_previsto || o.fim_previsto
+                                  ? `${o.inicio_previsto ? dataBR(o.inicio_previsto) : '—'} a ${o.fim_previsto ? dataBR(o.fim_previsto) : '—'}`
+                                  : 'Sem período informado'}
+                              </span>
+                              <span className="flex gap-3 text-xs">
+                                <Link to={`/licenca/${o.codigo}`} className="font-semibold text-marca-700 hover:underline">Ver licença</Link>
+                                {temLocalizacao(o)
+                                  ? <button type="button" className="font-semibold text-marca-700 hover:underline"
+                                            onClick={() => verNoMapa(o.codigo)}>Ver no mapa</button>
+                                  : <span className="text-tinta-500">Sem localização</span>}
+                              </span>
                             </div>
-                          </td>
-                          <td className="tabular whitespace-nowrap px-4 py-3 text-tinta-700">
-                            {o.inicio_previsto || o.fim_previsto
-                              ? `${o.inicio_previsto ? dataBR(o.inicio_previsto) : '—'} a ${o.fim_previsto ? dataBR(o.fim_previsto) : '—'}`
-                              : 'Sem período informado'}
-                          </td>
-                          <td className="px-4 py-3"><SeloSituacao situacao={o.situacao} /></td>
-                          <td className="whitespace-nowrap px-4 py-3 text-right">
-                            <Link to={`/licenca/${o.codigo}`} className="font-semibold text-marca-700 hover:underline">Ver licença</Link>
-                            {temLocalizacao(o)
-                              ? <button type="button" className="ml-3 font-semibold text-marca-700 hover:underline"
-                                        onClick={() => verNoMapa(o.codigo)}>
-                                  Ver no mapa
-                                </button>
-                              : <span className="ml-3 text-xs text-tinta-500">Sem localização no mapa</span>}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  ))}
                 </div>
               )}
             </section>
@@ -186,6 +216,38 @@ export default function ConsultaObras() {
 }
 
 /** Obras vigentes (ou aguardando início) por setor, só os setores com alguma obra. */
+
+/** Vigente ou aguardando início: as obras que a lista mostra por padrão. */
+function obraAtiva(o: ObraPublica) {
+  return o.situacao === 'vigente' || o.situacao === 'aguardando_inicio';
+}
+
+/** Agrupa por bairro do primeiro trecho. Ordem alfabética, com "Sem bairro" por último. */
+function agruparPorBairro(obras: ObraPublica[]): { bairro: string; obras: ObraPublica[] }[] {
+  const mapa = new Map<string, ObraPublica[]>();
+  for (const o of obras) {
+    const bairro = o.trechos[0]?.bairro?.trim() || 'Sem bairro';
+    mapa.set(bairro, [...(mapa.get(bairro) ?? []), o]);
+  }
+  return [...mapa.entries()]
+    .sort(([a], [b]) => (a === 'Sem bairro' ? 1 : b === 'Sem bairro' ? -1 : a.localeCompare(b, 'pt-BR')))
+    .map(([bairro, lista]) => ({ bairro, obras: lista }));
+}
+
+/** Executoras com obras, das que têm mais obras vigentes para as que têm menos. */
+function resumoExecutoras(obras: ObraPublica[]) {
+  const mapa = new Map<string, { nome: string; vigentes: number; total: number }>();
+  for (const o of obras) {
+    const nome = o.executora?.trim();
+    if (!nome) continue;
+    const chave = nome.toLowerCase();
+    const atual = mapa.get(chave) ?? { nome, vigentes: 0, total: 0 };
+    atual.total += 1;
+    if (obraAtiva(o)) atual.vigentes += 1;
+    mapa.set(chave, atual);
+  }
+  return [...mapa.values()].sort((a, b) => b.vigentes - a.vigentes || b.total - a.total || a.nome.localeCompare(b.nome, 'pt-BR'));
+}
 
 /** Resumo para a faixa de números do herói, a partir das obras carregadas. */
 function resumo(obras: ObraPublica[]) {
@@ -231,6 +293,26 @@ function ResumoSituacoes({ obras }: { obras: ObraPublica[] }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+function ResumoExecutoras({ executoras }: { executoras: { nome: string; vigentes: number; total: number }[] }) {
+  if (executoras.length === 0) return null;
+  return (
+    <section className="mt-4 rounded-xl border border-tinta-200 bg-white p-4" aria-labelledby="exec-titulo">
+      <h2 id="exec-titulo" className="text-sm font-semibold text-tinta-900">Executoras com obras</h2>
+      <p className="mt-1 text-xs text-tinta-500">Obras vigentes e total de licenças de cada executora.</p>
+      <ul className="mt-3 grid gap-x-8 gap-y-1 text-sm sm:grid-cols-2">
+        {executoras.map((e) => (
+          <li key={e.nome} className="flex items-baseline justify-between gap-3 border-b border-tinta-100 py-1.5">
+            <span className="min-w-0 truncate text-tinta-800">{e.nome}</span>
+            <span className="tabular shrink-0 text-tinta-600">
+              <strong className="font-semibold text-alta">{e.vigentes}</strong> vigentes · {e.total} no total
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

@@ -4,7 +4,13 @@ import { dia, licenca } from './apoio/dados';
 
 /** Quantos trechos o mapa recebeu (atributo do próprio componente). */
 const noMapa = (page: Page) => page.locator('[data-trechos]');
-const lista = (page: Page) => page.locator('section[aria-live="polite"] tbody > tr');
+const lista = (page: Page) => page.locator('section[aria-label="Lista das obras e serviços licenciados"] details li');
+/** A lista mostra só as vigentes por padrão: abre as encerradas e concluídas antes de contar tudo. */
+const mostrarEncerradas = async (page: Page) => {
+  const botao = page.getByRole('button', { name: /Ver encerradas e concluídas/ });
+  await expect(botao).toBeVisible();
+  await botao.click();
+};
 
 const orgao = (id: string, nome: string, natureza: 'administracao_direta' | 'autarquia') =>
   ({ id, nome, sigla: nome.slice(0, 4).toUpperCase(), esfera: 'municipal' as const, cnpj: null, setores: [], natureza, criado_em: '2026-01-01', atualizado_em: '2026-01-01' });
@@ -20,7 +26,7 @@ test.describe('mapa de consulta', () => {
       ],
     });
     await page.goto('/consulta/obras');
-    await expect(lista(page)).toHaveCount(3);
+    await mostrarEncerradas(page);
     await expect(noMapa(page)).toHaveAttribute('data-trechos', '3');
     await expect(lista(page).filter({ hasText: 'Serviço' })).toHaveCount(1);
     await expect(lista(page).filter({ hasText: 'pública · prefeitura ou órgão municipal' })).toHaveCount(1);
@@ -37,6 +43,7 @@ test.describe('mapa de consulta', () => {
       ],
     });
     await page.goto('/consulta/obras');
+    await mostrarEncerradas(page);
     await expect(lista(page)).toHaveCount(3);
     await expect(page.getByRole('list', { name: 'Resumo por situação' })).toBeVisible();
     await expect(noMapa(page)).toHaveAttribute('data-trechos', '3');
@@ -50,6 +57,7 @@ test.describe('mapa de consulta', () => {
       licencas: [licenca({}), licenca({ situacao: 'cancelada', decisao_data: null, inicio_previsto: null, fim_previsto: null })],
     });
     await page.goto('/consulta/obras');
+    await mostrarEncerradas(page);
     await expect(lista(page)).toHaveCount(2);
     await expect(page.getByText('Sem período informado')).toBeVisible();
     expect(erros).toEqual([]);
@@ -59,7 +67,7 @@ test.describe('mapa de consulta', () => {
     await instalarBackend(page, { licencas: [licenca({}), licenca({ licenca_trechos: [] })] });
     await page.goto('/consulta/obras');
     await expect(lista(page)).toHaveCount(2);
-    await expect(page.getByText('Sem localização no mapa')).toHaveCount(1);
+    await expect(page.getByText('Sem localização', { exact: true })).toHaveCount(1);
     await expect(noMapa(page)).toHaveAttribute('data-trechos', '1');
   });
 
