@@ -5,7 +5,7 @@ import { useAuth } from '../lib/auth';
 import { buscarEmpresa, situacaoEfetiva, type Empresa } from '../lib/empresas';
 import {
   CAMPOS_DOCUMENTO, TIPOS_DOCUMENTO, TITULO_DOCUMENTO, autuadoDoCadastro, codigoLegivel, emitirDocumento, registroDoCadastro,
-  listarDocumentosDaEmpresa, montarDados, numeroDocumento, validarDados, type CampoDocumento, type DocumentoOficial,
+  buscarResponsaveisAtivos, listarDocumentosDaEmpresa, montarDados, numeroDocumento, validarDados, type CampoDocumento, type DocumentoOficial,
   type TipoDocumento,
 } from '../lib/documentos';
 import { gerarPdfDocumento } from '../lib/documentosPdf';
@@ -92,10 +92,12 @@ function Emissao({ empresa, onEmitido }: { empresa: Empresa; onEmitido: () => Pr
     try {
       // Termo e certidão levam o registro completo da empresa; os outros documentos, só os dados do autuado.
       const completo = tipo === 'termo_compromisso' || tipo === 'certidao_regularidade';
-      const copia = completo ? registroDoCadastro(empresa) : autuadoDoCadastro(empresa, empresa.situacao);
+      const copia = completo
+        ? { ...registroDoCadastro(empresa), responsaveis: await buscarResponsaveisAtivos(empresa.id) }
+        : autuadoDoCadastro(empresa, empresa.situacao);
       const dados = montarDados(tipo, campos, copia);
       const r = await emitirDocumento(tipo, empresa.id, dados);
-      setResultado(`${TITULO_DOCUMENTO[tipo]} emitido: documento nº ${numeroDocumento(r.numero)}. Código de verificação ${codigoLegivel(r.codigo_verificacao)}.`);
+      setResultado(`${TITULO_DOCUMENTO[tipo]} emitido: documento nº ${numeroDocumento(r.numero, tipo)}. Código de verificação ${codigoLegivel(r.codigo_verificacao)}.`);
       setCampos({});
       setConfirmado(false);
       await onEmitido();
@@ -205,7 +207,7 @@ function LinhaEmitido({ documento }: { documento: DocumentoOficial }) {
     <li className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
       <div className="min-w-0">
         <span className="font-semibold text-tinta-900">{TITULO_DOCUMENTO[documento.tipo]}</span>{' '}
-        <span className="tabular text-tinta-600">nº {numeroDocumento(documento.numero)}</span>
+        <span className="tabular text-tinta-600">nº {numeroDocumento(documento.numero, documento.tipo)}</span>
         <div className="text-xs text-tinta-500">Código {codigoLegivel(documento.codigo_verificacao)}</div>
         <ErrorNote error={erro} />
       </div>

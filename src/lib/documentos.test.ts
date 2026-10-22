@@ -49,9 +49,10 @@ describe('dinheiro digitado', () => {
 
 describe('numeração e código', () => {
   it('formata como o modelo: 001 - SFSC', () => {
-    expect(numeroDocumento(1)).toBe('001 - SFSC');
-    expect(numeroDocumento(42)).toBe('042 - SFSC');
-    expect(numeroDocumento(1234)).toBe('1234 - SFSC');
+    
+    expect(numeroDocumento(1, 'notificacao')).toBe('NOT-001 - SFSC');
+    expect(numeroDocumento(42, 'certidao_regularidade')).toBe('CER-042 - SFSC');
+    expect(numeroDocumento(1234, 'termo_compromisso')).toBe('TCR-1234 - SFSC');
   });
 
   it('código legível em blocos de quatro', () => {
@@ -145,7 +146,7 @@ describe('termo de compromisso', () => {
   });
 
   it('a certidão cita o cadastro e não traz dados de infração', () => {
-    const texto = textoCertidaoRegularidade(registroDoCadastro(empresa)).join(' ');
+    const texto = textoCertidaoRegularidade(registroDoCadastro(empresa), '2026-10-22T13:00:00Z').join(' ');
     expect(texto).toContain('CADEX-TER-2026-0001');
     expect(texto).toContain('Portaria 12/2026');
     expect(texto).toContain('inscrição prévia e ativa');

@@ -105,7 +105,10 @@ export const CAMPOS_DOCUMENTO: Record<TipoDocumento, CampoDocumento[]> = {
     ...CAMPO_FISCAL,
   ],
   // Só a identificação do fiscal: o texto e os dados vêm do cadastro, para que a certidão não seja redigida à mão.
-  certidao_regularidade: [...CAMPO_FISCAL],
+  certidao_regularidade: [
+    { chave: 'fiscal_nome', rotulo: 'Fiscal responsável pela emissão: nome', tipo: 'texto', obrigatorio: true },
+    { chave: 'fiscal_matricula', rotulo: 'Fiscal responsável pela emissão: matrícula', tipo: 'texto', obrigatorio: true },
+  ],
   termo_compromisso: [
     { chave: 'local', rotulo: 'Local', tipo: 'texto', obrigatorio: true },
     { chave: 'data', rotulo: 'Data da assinatura', tipo: 'data', obrigatorio: true },
@@ -129,8 +132,18 @@ export const TEXTO_TERMO_COMPROMISSO = {
 };
 
 /** Registro da empresa copiado no momento da emissão do termo de compromisso. */
+/** Responsável técnico ativo, como vai para o documento (sem CPF). */
+export interface ResponsavelDoCadastro {
+  nome: string;
+  conselho: string;
+  registro_numero: string;
+  registro_uf: string | null;
+  art_rrt_numero: string | null;
+}
+
 export interface RegistroDoCadastro extends AutuadoDoCadastro {
   codigo_cadex: string;
+  responsaveis: ResponsavelDoCadastro[];
   tipo_empresa: string;
   setores: string[];
   email: string;
@@ -146,6 +159,7 @@ export function registroDoCadastro(e: Empresa): RegistroDoCadastro {
   return {
     ...autuadoDoCadastro(e, SITUACAO_LABEL[e.situacao as SituacaoEfetiva] ?? e.situacao),
     codigo_cadex: e.codigo_cadex,
+    responsaveis: [],
     tipo_empresa: TIPO_LABEL[e.tipo],
     setores: e.setores.map((s) => SETOR_LABEL[s]),
     email: e.email,
@@ -162,12 +176,13 @@ export function registroDoCadastro(e: Empresa): RegistroDoCadastro {
  * Texto da certidão de regularidade, montado com o registro copiado do cadastro.
  * Certifica só a situação cadastral (art. 3º: pode atuar) na data de emissão.
  */
-export function textoCertidaoRegularidade(r: RegistroDoCadastro): string[] {
+export function textoCertidaoRegularidade(r: RegistroDoCadastro, emitidaEm: string): string[] {
   const data = (v: string | null) => (v ? v.split('-').reverse().join('/') : '—');
   return [
     `A Secretaria Municipal de Conservação e Serviços Públicos (SECONSER), por meio da Fiscalização de Serviços Concedidos, certifica que ${r.razao_social}, inscrita no CNPJ ${r.cnpj} sob o código CADEX ${r.codigo_cadex}, tem inscrição prévia e ativa no Cadastro de Executores (CADEX) do Município de Niterói, na situação ${r.situacao_cadastro}, na data de emissão desta certidão.`,
     `A inscrição consta do processo ${r.processo_numero ?? '—'}, com a portaria ${r.portaria_numero ?? '—'}, publicada em ${data(r.portaria_data)}, e tem validade até ${data(r.validade_ate)}, nos termos dos arts. 3º e 7º, § 1º, da Resolução Conjunta SECONSER/SEOP nº 001/2026.`,
     'Esta certidão comprova somente a situação cadastral da empresa. Não dispensa as autorizações exigidas para cada obra ou serviço, que seguem a Lei nº 3.988/2025 (art. 10).',
+    `Emitida com base no cadastro vigente em ${data(emitidaEm.slice(0, 10))}. A autenticidade pode ser conferida pelo código de verificação impresso no rodapé.`,
   ];
 }
 
@@ -215,8 +230,18 @@ export interface DocumentoOficial {
 }
 
 /** "001 - SFSC", como no modelo da fiscalização. */
-export function numeroDocumento(numero: number): string {
-  return `${String(numero).padStart(3, '0')} - SFSC`;
+/** Prefixo de cada tipo: cada documento tem a sua sequência de números. */
+const PREFIXO_DOCUMENTO: Record<TipoDocumento, string> = {
+  notificacao: 'NOT',
+  auto_infracao: 'AI',
+  embargo: 'EMB',
+  apreensao: 'APR',
+  certidao_regularidade: 'CER',
+  termo_compromisso: 'TCR',
+};
+
+export function numeroDocumento(numero: number, tipo: TipoDocumento): string {
+  return `${PREFIXO_DOCUMENTO[tipo]}-${String(numero).padStart(3, '0')} - SFSC`;
 }
 
 /** Código de verificação em blocos de quatro, para ler e digitar. */
@@ -355,6 +380,18 @@ export async function emitirDocumento(tipo: TipoDocumento, empresaId: string, da
   const linha = Array.isArray(data) ? data[0] : data;
   if (!linha) throw new Error('A emissão não devolveu o documento.');
   return linha as { id: string; numero: number; codigo_verificacao: string; emitido_em: string };
+}
+
+/** Responsáveis técnicos ativos da empresa, para copiar no documento. Sem CPF. */
+export async function buscarResponsaveisAtivos(empresaId: string): Promise<ResponsavelDoCadastro[]> {
+  const { data, error } = await supabase
+    .from('responsaveis_tecnicos')
+    .select('nome, conselho, registro_numero, registro_uf, art_rrt_numero')
+    .eq('empresa_id', empresaId)
+    .eq('ativo', true)
+    .order('nome');
+  if (error) throw error;
+  return (data ?? []) as ResponsavelDoCadastro[];
 }
 
 export async function listarDocumentosDaEmpresa(empresaId: string): Promise<DocumentoOficial[]> {

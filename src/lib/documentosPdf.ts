@@ -1,7 +1,7 @@
-import type { DocumentoOficial, TipoDocumento } from './documentos';
+import type { DocumentoOficial, RegistroDoCadastro, ResponsavelDoCadastro, TipoDocumento } from './documentos';
 import {
   CAMPOS_DOCUMENTO, TEXTO_TERMO_COMPROMISSO, TITULO_DOCUMENTO, codigoLegivel, dataExibicao, instanteExibicao, numeroDocumento,
-  textoCertidaoRegularidade, type RegistroDoCadastro,
+  textoCertidaoRegularidade,
 } from './documentos';
 
 /**
@@ -21,7 +21,7 @@ const COR_FIO: [number, number, number] = [205, 212, 216];
 
 type Dados = Record<string, unknown>;
 
-/** Campos que têm bloco próprio no layout e não entram no corpo genérico. */
+/** Campos com bloco próprio no layout, fora do corpo genérico. */
 const CHAVES_FIXAS = new Set(['local_infracao', 'data', 'hora', 'processo', 'licenca', 'termo_permissao',
   'recebimento', 'fiscal_nome', 'fiscal_matricula']);
 
@@ -34,20 +34,6 @@ function reais(valor: unknown): string {
   const n = typeof valor === 'number' ? valor : Number(valor);
   if (!Number.isFinite(n)) return '—';
   return `R$ ${n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
-/** Linha de itens do cadastro do autuado. */
-function linhasAutuado(autuado: Dados): [string, string][] {
-  const linhas: [string, string][] = [
-    ['Razão social', texto(autuado.razao_social)],
-    ['Nome fantasia', texto(autuado.nome_fantasia)],
-    ['CPF/CNPJ', texto(autuado.cnpj)],
-    ['Endereço', texto(autuado.endereco)],
-    ['Cidade / UF', `${texto(autuado.cidade)} / ${texto(autuado.uf)}`],
-    ['CEP', texto(autuado.cep)],
-    ['Telefone', texto(autuado.telefone)],
-  ];
-  return linhas;
 }
 
 /** Valor de um campo do corpo, já formatado para o documento. */
@@ -64,11 +50,35 @@ function valorDoCampo(tipo: TipoDocumento, chave: string, dados: Dados): string 
   return String(bruto);
 }
 
+/** Itens do cadastro da empresa, como pares rótulo-valor. */
+function pairsDoCadastro(reg: Dados): [string, string][] {
+  return [
+    ['Razão social', texto(reg.razao_social)],
+    ['Nome fantasia', texto(reg.nome_fantasia)],
+    ['CNPJ', texto(reg.cnpj)],
+    ['Código CADEX', texto(reg.codigo_cadex)],
+    ['Tipo', texto(reg.tipo_empresa)],
+    ['Setores', Array.isArray(reg.setores) && reg.setores.length > 0 ? reg.setores.join(', ') : '—'],
+    ['Endereço', texto(reg.endereco)],
+    ['Cidade / UF', `${texto(reg.cidade)} / ${texto(reg.uf)}`],
+    ['CEP', texto(reg.cep)],
+    ['Telefone', texto(reg.telefone)],
+    ['E-mail', texto(reg.email)],
+  ];
+}
+
+/** Texto de um responsável técnico: nome, conselho, registro e ART/RRT. Sem CPF. */
+function textoResponsavel(rt: ResponsavelDoCadastro): string {
+  const registro = `${rt.conselho} ${rt.registro_numero}${rt.registro_uf ? ` / ${rt.registro_uf.trim()}` : ''}`;
+  return `${rt.nome} · ${registro}${rt.art_rrt_numero ? ` · ART/RRT ${rt.art_rrt_numero}` : ''}`;
+}
+
 export async function gerarPdfDocumento(doc: DocumentoOficial, logo?: string): Promise<ArrayBuffer> {
   const { jsPDF } = await import('jspdf');
   const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
   const dados = doc.dados as Dados;
   const autuado = (dados.autuado ?? {}) as Dados;
+  const data = (v: unknown) => (v ? dataExibicao(String(v)) : '—');
   let y = MARGEM;
 
   const quebrar = (t: string, largura: number) => pdf.splitTextToSize(t, largura) as string[];
@@ -78,43 +88,10 @@ export async function gerarPdfDocumento(doc: DocumentoOficial, logo?: string): P
       y = MARGEM;
     }
   };
-  const titulo = (t: string) => {
-    garantir(10);
-    y += 4;
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(9);
-    pdf.text(t.toUpperCase(), MARGEM, y);
-    y += 1.5;
-    pdf.setDrawColor(120);
-    pdf.line(MARGEM, y, LARGURA - MARGEM, y);
-    y += 4;
-  };
-  const COLUNA_ROTULO = 58;
-  const linha = (rotulo: string, valor: string) => {
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(9);
-    const rotulos = quebrar(rotulo, COLUNA_ROTULO - 4);
-    pdf.setFont('helvetica', 'normal');
-    const partes = quebrar(valor, LARGURA - 2 * MARGEM - COLUNA_ROTULO);
-    const altura = Math.max(rotulos.length, partes.length) * 4.5 + 1;
-    garantir(altura);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text(rotulos, MARGEM, y);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(partes, MARGEM + COLUNA_ROTULO, y);
-    y += altura;
-  };
-  const paragrafo = (t: string) => {
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(9);
-    const partes = quebrar(t, LARGURA - 2 * MARGEM);
-    garantir(partes.length * 4.5 + 1);
-    pdf.text(partes, MARGEM, y);
-    y += partes.length * 4.5 + 1;
-  };
 
-  /** Seção do termo, no estilo da ficha: título em azul-marca e fio fino embaixo. */
+  /** Seção: título em azul-marca e fio fino embaixo, como na ficha. */
   const secao = (t: string) => {
+    garantir(16);
     y += 3;
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(9);
@@ -126,7 +103,7 @@ export async function gerarPdfDocumento(doc: DocumentoOficial, logo?: string): P
     pdf.setTextColor(...COR_TINTA);
   };
 
-  /** Campos em duas colunas, como na ficha: rótulo pequeno em cinza e valor embaixo, com fio fino entre as linhas. */
+  /** Campos em duas colunas: rótulo pequeno em cinza e valor embaixo, com fio fino entre as linhas. */
   const grade = (itens: [string, string][]) => {
     const COLUNAS = [MARGEM, 110];
     const LARGURA_CAMPO = 85;
@@ -138,6 +115,7 @@ export async function gerarPdfDocumento(doc: DocumentoOficial, logo?: string): P
         return item ? { rotulo: item[0], partes: quebrar(item[1], LARGURA_CAMPO) } : undefined;
       });
       const linhas = Math.max(...celulas.map((c) => c?.partes.length ?? 1));
+      garantir(linhas * 4 + 7);
       celulas.forEach((c, k) => {
         if (!c) return;
         pdf.setFont('helvetica', 'normal');
@@ -155,24 +133,41 @@ export async function gerarPdfDocumento(doc: DocumentoOficial, logo?: string): P
     }
   };
 
-  /** Termo de compromisso: registro completo da empresa, compromisso e assinatura do representante legal. Uma folha. */
+  const paragrafo = (t: string) => {
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(9);
+    pdf.setTextColor(...COR_TINTA);
+    const partes = quebrar(t, LARGURA - 2 * MARGEM);
+    garantir(partes.length * 4.5 + 1);
+    pdf.text(partes, MARGEM, y);
+    y += partes.length * 4.5 + 1;
+  };
+
+  /** Assinaturas: uma ou duas colunas, cada uma com linha, nome e descrição. */
+  const assinaturas = (blocos: { nome: string; descricao: string }[]) => {
+    garantir(26);
+    y += 14;
+    const colunas = blocos.length === 1 ? [LARGURA / 2] : [LARGURA / 4 + MARGEM / 2, (3 * LARGURA) / 4 - MARGEM / 2];
+    blocos.forEach((b, i) => {
+      const cx = colunas[i];
+      pdf.setDrawColor(...COR_TINTA).setLineWidth(0.3).line(cx - 35, y, cx + 35, y);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(8.5);
+      pdf.setTextColor(...COR_TINTA);
+      pdf.text(b.nome, cx, y + 4.5, { align: 'center' });
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(7.5);
+      pdf.setTextColor(...COR_CINZA);
+      pdf.text(b.descricao, cx, y + 8.5, { align: 'center' });
+    });
+    y += 12;
+  };
+
+  /** Termo de compromisso: registro completo da empresa, compromisso e assinatura do representante legal. */
   const corpoTermo = () => {
-    const reg = autuado;
-    const data = (v: unknown) => (v ? dataExibicao(String(v)) : '—');
+    const reg = autuado as unknown as RegistroDoCadastro;
     secao('Identificação da empresa');
-    grade([
-      ['Razão social', texto(reg.razao_social)],
-      ['Nome fantasia', texto(reg.nome_fantasia)],
-      ['CNPJ', texto(reg.cnpj)],
-      ['Código CADEX', texto(reg.codigo_cadex)],
-      ['Tipo', texto(reg.tipo_empresa)],
-      ['Setores', Array.isArray(reg.setores) && reg.setores.length > 0 ? reg.setores.join(', ') : '—'],
-      ['Endereço', texto(reg.endereco)],
-      ['Cidade / UF', `${texto(reg.cidade)} / ${texto(reg.uf)}`],
-      ['CEP', texto(reg.cep)],
-      ['Telefone', texto(reg.telefone)],
-      ['E-mail', texto(reg.email)],
-    ]);
+    grade(pairsDoCadastro(autuado));
     secao('Inscrição no CADEX');
     grade([
       ['Situação', texto(reg.situacao_cadastro)],
@@ -186,48 +181,84 @@ export async function gerarPdfDocumento(doc: DocumentoOficial, logo?: string): P
     for (const p of TEXTO_TERMO_COMPROMISSO.compromisso) paragrafo(p);
     secao('Responsabilidade pelas informações');
     for (const p of TEXTO_TERMO_COMPROMISSO.responsabilidade) paragrafo(p);
-    y += 6;
+    y += 4;
     paragrafo(`${texto(dados.local)}, ${data(dados.data)}.`);
-    y += 14;
-    const centro = LARGURA / 2;
-    pdf.setDrawColor(...COR_TINTA).setLineWidth(0.3).line(centro - 60, y, centro + 60, y);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(9);
-    pdf.setTextColor(...COR_TINTA);
-    pdf.text(texto(reg.representante), centro, y + 4.5, { align: 'center' });
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(...COR_CINZA);
-    pdf.text('Representante legal da empresa', centro, y + 9, { align: 'center' });
-    y += 14;
+    assinaturas([{ nome: texto(reg.representante), descricao: 'Representante legal da empresa' }]);
   };
 
-  /** Certidão de regularidade: identificação da empresa, texto gerado do cadastro e assinatura do fiscal. Sem dados de infração. */
+  /** Certidão de regularidade: empresa, responsável técnico, texto gerado do cadastro e assinatura do fiscal. */
   const corpoCertidao = () => {
     const reg = autuado as unknown as RegistroDoCadastro;
     secao('Identificação da empresa');
-    grade([
-      ['Razão social', texto(reg.razao_social)],
-      ['Nome fantasia', texto(reg.nome_fantasia)],
-      ['CNPJ', texto(reg.cnpj)],
-      ['Código CADEX', texto(reg.codigo_cadex)],
-      ['Tipo', texto(reg.tipo_empresa)],
-      ['Setores', Array.isArray(reg.setores) && reg.setores.length > 0 ? reg.setores.join(', ') : '—'],
-      ['Endereço', texto(reg.endereco)],
-      ['Cidade / UF', `${texto(reg.cidade)} / ${texto(reg.uf)}`],
-    ]);
+    grade(pairsDoCadastro(autuado));
+    secao('Responsável técnico');
+    const rts = Array.isArray(reg.responsaveis) ? reg.responsaveis : [];
+    if (rts.length === 0) {
+      paragrafo('Nenhum responsável técnico ativo cadastrado na data de emissão.');
+    } else {
+      for (const rt of rts) paragrafo(textoResponsavel(rt));
+    }
     secao('Certidão');
-    for (const p of textoCertidaoRegularidade(reg)) paragrafo(p);
-    y += 14;
-    const centro = LARGURA / 2;
-    pdf.setDrawColor(...COR_TINTA).setLineWidth(0.3).line(centro - 60, y, centro + 60, y);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(9);
-    pdf.setTextColor(...COR_TINTA);
-    pdf.text(texto(dados.fiscal_nome), centro, y + 4.5, { align: 'center' });
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(...COR_CINZA);
-    pdf.text(`Fiscal autuante · Matrícula ${texto(dados.fiscal_matricula)}`, centro, y + 9, { align: 'center' });
-    y += 14;
+    for (const p of textoCertidaoRegularidade(reg, doc.emitido_em)) paragrafo(p);
+    assinaturas([{
+      nome: texto(dados.fiscal_nome),
+      descricao: `Fiscal responsável pela emissão · Matrícula ${texto(dados.fiscal_matricula)}`,
+    }]);
+  };
+
+  /** Autos (notificação, infração, embargo, apreensão): identificação, fato, conteúdo e recebimento. */
+  const corpoAuto = () => {
+    secao('Identificação do autuado');
+    grade([
+      ['Razão social', texto(autuado.razao_social)],
+      ['Nome fantasia', texto(autuado.nome_fantasia)],
+      ['CPF/CNPJ', texto(autuado.cnpj)],
+      ['Endereço', texto(autuado.endereco)],
+      ['Cidade / UF', `${texto(autuado.cidade)} / ${texto(autuado.uf)}`],
+      ['CEP', texto(autuado.cep)],
+      ['Telefone', texto(autuado.telefone)],
+    ]);
+
+    secao('Fato');
+    const fato: [string, string][] = [
+      ['Local da infração', texto(dados.local_infracao)],
+      ['Data e hora', `${dados.data ? dataExibicao(String(dados.data)) : '—'} às ${texto(dados.hora)}`],
+      ['Processo', texto(dados.processo)],
+    ];
+    if (dados.licenca) fato.push(['Licença nº', String(dados.licenca)]);
+    if (dados.termo_permissao) fato.push(['Termo de permissão', String(dados.termo_permissao)]);
+    grade(fato);
+
+    const corpo = CAMPOS_DOCUMENTO[doc.tipo].filter((c) => !CHAVES_FIXAS.has(c.chave) && !c.chave.startsWith('fiscal_'));
+    const campos = corpo.filter((c) => c.tipo !== 'area' || dados[c.chave]);
+    const pares: [string, string][] = [];
+    const textos: { rotulo: string; valor: string }[] = [];
+    for (const c of campos) {
+      const v = valorDoCampo(doc.tipo, c.chave, dados);
+      if (!v) continue;
+      if (c.tipo === 'area') textos.push({ rotulo: c.rotulo, valor: v });
+      else pares.push([c.rotulo, v]);
+    }
+    if (pares.length > 0 || textos.length > 0) secao('Conteúdo');
+    grade(pares);
+    for (const t of textos) {
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(7.5);
+      pdf.setTextColor(...COR_CINZA);
+      garantir(8);
+      pdf.text(t.rotulo, MARGEM, y);
+      y += 4;
+      paragrafo(t.valor);
+    }
+
+    secao('Recebimento');
+    paragrafo(texto(dados.recebimento));
+
+    // O fiscal assina com a identificação do cadastro; o autuado registra a situação de recebimento.
+    assinaturas([
+      { nome: texto(dados.fiscal_nome), descricao: `Fiscal autuante · Matrícula ${texto(dados.fiscal_matricula)}` },
+      { nome: 'Autuado', descricao: texto(dados.recebimento) },
+    ]);
   };
 
   // Cabeçalho: brasão na proporção original, órgão e número do documento.
@@ -250,9 +281,10 @@ export async function gerarPdfDocumento(doc: DocumentoOficial, logo?: string): P
   pdf.setFont('helvetica', 'bold');
   pdf.setTextColor(...COR_MARCA);
   pdf.text('FISCALIZAÇÃO DE SERVIÇOS CONCEDIDOS', recuo, y + 14);
+  pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(9);
   pdf.setTextColor(...COR_TINTA);
-  pdf.text(`Documento nº ${numeroDocumento(doc.numero)}`, LARGURA - MARGEM, y + 4.5, { align: 'right' });
+  pdf.text(`Documento nº ${numeroDocumento(doc.numero, doc.tipo)}`, LARGURA - MARGEM, y + 4.5, { align: 'right' });
   y += ALTURA_BRASAO + 6;
   pdf.setDrawColor(...COR_FIO).setLineWidth(0.3).line(MARGEM, y, LARGURA - MARGEM, y);
 
@@ -262,57 +294,9 @@ export async function gerarPdfDocumento(doc: DocumentoOficial, logo?: string): P
   pdf.text(TITULO_DOCUMENTO[doc.tipo].toUpperCase(), LARGURA / 2, y + 9, { align: 'center' });
   y += 14;
 
-  if (doc.tipo === 'termo_compromisso') {
-    corpoTermo();
-  } else if (doc.tipo === 'certidao_regularidade') {
-    corpoCertidao();
-  } else {
-    titulo('Identificação do autuado');
-    for (const [r, v] of linhasAutuado(autuado)) linha(r, v);
-
-    titulo('Fato');
-    linha('Local da infração', texto(dados.local_infracao));
-    linha('Data e hora', `${dados.data ? dataExibicao(String(dados.data)) : '—'} às ${texto(dados.hora)}`);
-    linha('Processo', texto(dados.processo));
-    if (dados.licenca) linha('Licença nº', String(dados.licenca));
-    if (dados.termo_permissao) linha('Termo de permissão', String(dados.termo_permissao));
-
-    const corpo = CAMPOS_DOCUMENTO[doc.tipo].filter((c) => !CHAVES_FIXAS.has(c.chave) && !c.chave.startsWith('fiscal_'));
-    const campos = corpo.filter((c) => c.tipo !== 'area' || dados[c.chave]);
-    if (campos.length > 0) titulo('Conteúdo');
-    for (const c of campos) {
-      const v = valorDoCampo(doc.tipo, c.chave, dados);
-      if (c.tipo === 'area' && v) {
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(9);
-        garantir(6);
-        pdf.text(c.rotulo, MARGEM, y);
-        y += 4.5;
-        paragrafo(v);
-      } else if (v) {
-        linha(c.rotulo, v);
-      }
-    }
-
-    titulo('Recebimento');
-    paragrafo(texto(dados.recebimento));
-
-    // Assinaturas: o fiscal assina pelo gov.br; o campo do autuado mantém a
-    // situação de recebimento registrada acima.
-    garantir(44);
-    y += 8;
-    const meio = LARGURA / 2;
-    pdf.setDrawColor(0);
-    pdf.line(MARGEM, y, meio - 8, y);
-    pdf.line(meio + 8, y, LARGURA - MARGEM, y);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(8.5);
-    pdf.text('Assinatura e identificação do fiscal autuante', MARGEM, y + 4);
-    pdf.text(`${texto(dados.fiscal_nome)} - Matr.: ${texto(dados.fiscal_matricula)}`, MARGEM, y + 8);
-    pdf.text('Assinatura do autuado', meio + 8, y + 4);
-    pdf.text(texto(dados.recebimento), meio + 8, y + 8);
-    y += 14;
-  }
+  if (doc.tipo === 'termo_compromisso') corpoTermo();
+  else if (doc.tipo === 'certidao_regularidade') corpoCertidao();
+  else corpoAuto();
 
   // Rodapé em todas as páginas: código de verificação e página.
   const total = pdf.getNumberOfPages();
@@ -320,12 +304,11 @@ export async function gerarPdfDocumento(doc: DocumentoOficial, logo?: string): P
     pdf.setPage(i);
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(7.5);
-    pdf.setTextColor(90);
+    pdf.setTextColor(...COR_CINZA);
     pdf.text(
       `Código de verificação: ${codigoLegivel(doc.codigo_verificacao)} · Emitido em ${instanteExibicao(doc.emitido_em)} · Página ${i} de ${total}`,
       LARGURA / 2, 290, { align: 'center' },
     );
-    pdf.setTextColor(0);
   }
 
   return pdf.output('arraybuffer');
