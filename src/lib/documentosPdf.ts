@@ -12,6 +12,12 @@ const MARGEM = 15;
 const LARGURA = 210;
 const ALTURA_UTIL = 297 - 22;
 
+// Cores da identidade, as mesmas da ficha e dos relatórios (tailwind.config.js).
+const COR_MARCA: [number, number, number] = [11, 91, 104];
+const COR_TINTA: [number, number, number] = [20, 29, 38];
+const COR_CINZA: [number, number, number] = [86, 98, 110];
+const COR_FIO: [number, number, number] = [205, 212, 216];
+
 type Dados = Record<string, unknown>;
 
 /** Campos que têm bloco próprio no layout e não entram no corpo genérico. */
@@ -107,68 +113,123 @@ export async function gerarPdfDocumento(doc: DocumentoOficial, logo?: string): P
     y += partes.length * 4.5 + 1;
   };
 
-  /** Termo de compromisso: registro completo da empresa, compromisso e assinatura do representante legal. */
+  /** Seção do termo, no estilo da ficha: título em azul-marca e fio fino embaixo. */
+  const secao = (t: string) => {
+    y += 3;
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(9);
+    pdf.setTextColor(...COR_MARCA);
+    pdf.text(t.toUpperCase(), MARGEM, y);
+    y += 2;
+    pdf.setDrawColor(...COR_MARCA).setLineWidth(0.3).line(MARGEM, y, LARGURA - MARGEM, y);
+    y += 4;
+    pdf.setTextColor(...COR_TINTA);
+  };
+
+  /** Pares rótulo-valor em duas colunas, cada linha com fio fino embaixo. */
+  const grade = (itens: [string, string][]) => {
+    const COLUNAS = [{ rotulo: MARGEM, valor: MARGEM + 34 }, { rotulo: 107, valor: 141 }];
+    const LARGURA_VALOR = 52;
+    for (let i = 0; i < itens.length; i += 2) {
+      const celulas = [0, 1].map((k) => {
+        const item = itens[i + k];
+        return item ? { rotulo: item[0], partes: quebrar(item[1], LARGURA_VALOR) } : undefined;
+      });
+      const linhas = Math.max(...celulas.map((c) => c?.partes.length ?? 1));
+      celulas.forEach((c, k) => {
+        if (!c) return;
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(8.5);
+        pdf.setTextColor(...COR_CINZA);
+        pdf.text(c.rotulo, COLUNAS[k].rotulo, y);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setTextColor(...COR_TINTA);
+        pdf.text(c.partes, COLUNAS[k].valor, y);
+      });
+      // Fio logo abaixo da última linha de texto, antes da próxima linha da grade.
+      const fio = y + (linhas - 1) * 4 + 2;
+      pdf.setDrawColor(...COR_FIO).setLineWidth(0.2).line(MARGEM, fio, LARGURA - MARGEM, fio);
+      y += linhas * 4 + 2;
+    }
+  };
+
+  /** Termo de compromisso: registro completo da empresa, compromisso e assinatura do representante legal. Uma folha. */
   const corpoTermo = () => {
     const reg = autuado;
     const data = (v: unknown) => (v ? dataExibicao(String(v)) : '—');
-    titulo('Identificação da empresa');
-    linha('Razão social', texto(reg.razao_social));
-    linha('Nome fantasia', texto(reg.nome_fantasia));
-    linha('CNPJ', texto(reg.cnpj));
-    linha('Código CADEX', texto(reg.codigo_cadex));
-    linha('Tipo', texto(reg.tipo_empresa));
-    linha('Setores', Array.isArray(reg.setores) && reg.setores.length > 0 ? reg.setores.join(', ') : '—');
-    linha('Endereço', texto(reg.endereco));
-    linha('Cidade / UF', `${texto(reg.cidade)} / ${texto(reg.uf)}`);
-    linha('CEP', texto(reg.cep));
-    linha('Telefone', texto(reg.telefone));
-    linha('E-mail', texto(reg.email));
-    titulo('Inscrição no CADEX');
-    linha('Situação', texto(reg.situacao_cadastro));
-    linha('Processo', texto(reg.processo_numero));
-    linha('Data do requerimento', data(reg.data_requerimento));
-    linha('Portaria', texto(reg.portaria_numero));
-    linha('Publicada em', data(reg.portaria_data));
-    linha('Válida até', data(reg.validade_ate));
-    titulo('Compromisso');
+    secao('Identificação da empresa');
+    grade([
+      ['Razão social', texto(reg.razao_social)],
+      ['Nome fantasia', texto(reg.nome_fantasia)],
+      ['CNPJ', texto(reg.cnpj)],
+      ['Código CADEX', texto(reg.codigo_cadex)],
+      ['Tipo', texto(reg.tipo_empresa)],
+      ['Setores', Array.isArray(reg.setores) && reg.setores.length > 0 ? reg.setores.join(', ') : '—'],
+      ['Endereço', texto(reg.endereco)],
+      ['Cidade / UF', `${texto(reg.cidade)} / ${texto(reg.uf)}`],
+      ['CEP', texto(reg.cep)],
+      ['Telefone', texto(reg.telefone)],
+      ['E-mail', texto(reg.email)],
+    ]);
+    secao('Inscrição no CADEX');
+    grade([
+      ['Situação', texto(reg.situacao_cadastro)],
+      ['Processo', texto(reg.processo_numero)],
+      ['Data do requerimento', data(reg.data_requerimento)],
+      ['Portaria', texto(reg.portaria_numero)],
+      ['Publicada em', data(reg.portaria_data)],
+      ['Válida até', data(reg.validade_ate)],
+    ]);
+    secao('Compromisso');
     for (const p of TEXTO_TERMO_COMPROMISSO.compromisso) paragrafo(p);
-    titulo('Responsabilidade pelas informações');
+    secao('Responsabilidade pelas informações');
     for (const p of TEXTO_TERMO_COMPROMISSO.responsabilidade) paragrafo(p);
-    garantir(38);
     y += 6;
     paragrafo(`${texto(dados.local)}, ${data(dados.data)}.`);
-    y += 12;
+    y += 14;
     const centro = LARGURA / 2;
-    pdf.setDrawColor(0);
-    pdf.line(centro - 55, y, centro + 55, y);
+    pdf.setDrawColor(...COR_TINTA).setLineWidth(0.3).line(centro - 60, y, centro + 60, y);
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(9);
+    pdf.setTextColor(...COR_TINTA);
     pdf.text(texto(reg.representante), centro, y + 4.5, { align: 'center' });
     pdf.setFont('helvetica', 'normal');
-    pdf.text('Representante legal da empresa, assinatura', centro, y + 9, { align: 'center' });
-    y += 16;
+    pdf.setTextColor(...COR_CINZA);
+    pdf.text('Representante legal da empresa', centro, y + 9, { align: 'center' });
+    y += 14;
   };
 
-  // Cabeçalho: brasão e órgão, como no modelo da fiscalização.
+  // Cabeçalho: brasão na proporção original, órgão e número do documento.
+  const ALTURA_BRASAO = 16;
+  let recuo = MARGEM;
   if (logo) {
-    pdf.addImage(logo, 'PNG', MARGEM, y, 18, 18);
+    const { width, height } = pdf.getImageProperties(logo);
+    const largura = ALTURA_BRASAO * (width / height);
+    pdf.addImage(logo, 'PNG', MARGEM, y, largura, ALTURA_BRASAO);
+    recuo = MARGEM + largura + 5;
   }
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(10);
-  pdf.text('PREFEITURA MUNICIPAL DE NITERÓI', logo ? MARGEM + 22 : MARGEM, y + 4);
+  pdf.setTextColor(...COR_TINTA);
+  pdf.text('PREFEITURA MUNICIPAL DE NITERÓI', recuo, y + 4.5);
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(8.5);
-  pdf.text('SECRETARIA DE CONSERVAÇÃO E SERVIÇOS PÚBLICOS', logo ? MARGEM + 22 : MARGEM, y + 9);
+  pdf.setTextColor(...COR_CINZA);
+  pdf.text('SECRETARIA DE CONSERVAÇÃO E SERVIÇOS PÚBLICOS', recuo, y + 9.5);
   pdf.setFont('helvetica', 'bold');
-  pdf.text('FISCALIZAÇÃO DE SERVIÇOS CONCEDIDOS', logo ? MARGEM + 22 : MARGEM, y + 14);
+  pdf.setTextColor(...COR_MARCA);
+  pdf.text('FISCALIZAÇÃO DE SERVIÇOS CONCEDIDOS', recuo, y + 14);
   pdf.setFontSize(9);
-  pdf.text(`Documento nº ${numeroDocumento(doc.numero)}`, LARGURA - MARGEM, y + 4, { align: 'right' });
-  y += 24;
+  pdf.setTextColor(...COR_TINTA);
+  pdf.text(`Documento nº ${numeroDocumento(doc.numero)}`, LARGURA - MARGEM, y + 4.5, { align: 'right' });
+  y += ALTURA_BRASAO + 6;
+  pdf.setDrawColor(...COR_FIO).setLineWidth(0.3).line(MARGEM, y, LARGURA - MARGEM, y);
 
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(13);
-  pdf.text(TITULO_DOCUMENTO[doc.tipo].toUpperCase(), LARGURA / 2, y + 4, { align: 'center' });
-  y += 12;
+  pdf.setFontSize(14);
+  pdf.setTextColor(...COR_TINTA);
+  pdf.text(TITULO_DOCUMENTO[doc.tipo].toUpperCase(), LARGURA / 2, y + 9, { align: 'center' });
+  y += 14;
 
   if (doc.tipo === 'termo_compromisso') {
     corpoTermo();
