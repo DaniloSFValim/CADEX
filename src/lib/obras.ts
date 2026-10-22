@@ -163,6 +163,49 @@ export function barraNoAno(o: Pick<ObraPublica, 'inicio_previsto' | 'fim_previst
   return { esquerda: esq, largura: Math.max(dir - esq, 0.002) };
 }
 
+/** Um mês: as obras com período que o tocam e quantas há em cada situação. */
+export interface MesDoAno {
+  ano: number;
+  mes: number;
+  obras: ObraPublica[];
+  porSituacao: Partial<Record<SituacaoPublica, number>>;
+}
+
+/** Conta, para cada mês da lista, as obras com período que o tocam. Uma obra conta em todos os meses que cobre. */
+export function contarMeses(obras: ObraPublica[], meses: { ano: number; mes: number }[]): MesDoAno[] {
+  return meses.map(({ ano, mes }) => {
+    const primeiro = `${ano}-${String(mes + 1).padStart(2, '0')}-01`;
+    const ultimo = new Date(Date.UTC(ano, mes + 1, 0)).toISOString().slice(0, 10);
+    const noMes = obras.filter((o) => !!o.inicio_previsto && !!o.fim_previsto
+      && o.inicio_previsto <= ultimo && o.fim_previsto >= primeiro);
+    const porSituacao: Partial<Record<SituacaoPublica, number>> = {};
+    for (const o of noMes) porSituacao[o.situacao] = (porSituacao[o.situacao] ?? 0) + 1;
+    return { ano, mes, obras: noMes, porSituacao };
+  });
+}
+
+/** Os 12 meses de um ano, com as obras que os tocam. */
+export function obrasNoMes(obras: ObraPublica[], ano: number): MesDoAno[] {
+  return contarMeses(obras, Array.from({ length: 12 }, (_, mes) => ({ ano, mes })));
+}
+
+/** Do primeiro ao último mês cobertos pelos períodos das obras, sem pular meses. */
+export function mesesDoPeriodo(obras: ObraPublica[]): { ano: number; mes: number }[] {
+  const datas = obras.flatMap((o) => [o.inicio_previsto, o.fim_previsto]).filter((d): d is string => !!d).sort();
+  if (datas.length === 0) return [];
+  const meses: { ano: number; mes: number }[] = [];
+  let ano = Number(datas[0].slice(0, 4));
+  let mes = Number(datas[0].slice(5, 7)) - 1;
+  const fimAno = Number(datas[datas.length - 1].slice(0, 4));
+  const fimMes = Number(datas[datas.length - 1].slice(5, 7)) - 1;
+  while (ano < fimAno || (ano === fimAno && mes <= fimMes)) {
+    meses.push({ ano, mes });
+    mes += 1;
+    if (mes === 12) { mes = 0; ano += 1; }
+  }
+  return meses;
+}
+
 /** Distância em metros entre dois pontos [lng, lat] (fórmula de Haversine). */
 export function distanciaMetros(a: [number, number], b: [number, number]): number {
   const R = 6371000;
