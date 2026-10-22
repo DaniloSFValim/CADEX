@@ -7,11 +7,12 @@
     'Public Sans Variable', Public Sans, ui-sans-serif, system-ui, Segoe UI,
     Roboto, Helvetica, Arial, sans-serif;
 
-  /* Tipografia de exibição (títulos) e de dados (nº de licença, códigos). */
+  /* Uma família em todo o site, igual ao NETRANK RJ e ao OpenLux. Títulos
+     ganham peso e aperto pela classe; números usam font-variant-numeric. */
   --font-display:
-    'Archivo Variable', 'Public Sans Variable', ui-sans-serif, system-ui, sans-serif;
+    'Public Sans Variable', Public Sans, ui-sans-serif, system-ui, sans-serif;
   --font-mono:
-    'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    'Public Sans Variable', Public Sans, ui-sans-serif, system-ui, sans-serif;
 
   /* Âmbar de sinalização de obra: o acento novo da identidade, usado com
      parcimônia (consulta pública, estado "em execução"). Não substitui a
