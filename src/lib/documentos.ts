@@ -403,3 +403,22 @@ export async function listarDocumentosDaEmpresa(empresaId: string): Promise<Docu
   if (error) throw error;
   return (data ?? []) as DocumentoOficial[];
 }
+
+/** O que a verificação pública devolve sobre um documento emitido. */
+export interface VerificacaoDocumento {
+  tipo: TipoDocumento;
+  numero: number;
+  emitido_em: string;
+  razao_social: string;
+  codigo_cadex: string;
+  situacao_atual: string;
+  validade_ate: string | null;
+}
+
+/** Confere um documento pelo código impresso ou pelo QR Code. Null se não existe. */
+export async function verificarDocumento(codigo: string): Promise<VerificacaoDocumento | null> {
+  const { data, error } = await supabase.rpc('verificar_documento', { p_codigo: codigo });
+  if (error) throw error;
+  const linha = Array.isArray(data) ? data[0] : data;
+  return (linha as VerificacaoDocumento | undefined) ?? null;
+}
