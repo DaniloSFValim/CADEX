@@ -50,7 +50,6 @@ export default function PlacaLicenca() {
       <article className="mx-auto flex max-w-[210mm] flex-col bg-white p-[14mm] shadow-sm print:shadow-none"
                style={{ minHeight: '148mm' }}>
         <header className="flex items-center justify-between gap-6 border-b-2 border-marca-800 pb-4">
-          <img src="/logo-prefeitura-seconser.png" alt="Prefeitura de Niterói, SECONSER" className="h-14 w-auto" />
           <div className="text-right">
             <div className="text-xs font-semibold text-tinta-500">Obra licenciada</div>
             <div className="tabular text-3xl font-extrabold text-marca-800">Licença nº {l.numero}</div>
