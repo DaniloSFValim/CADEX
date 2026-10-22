@@ -342,7 +342,8 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
     }
   }, [modo, pronto]);
 
-  // Mapa de calor: ao entrar, a mancha cresce até a intensidade final; depois respira devagar.
+  // Mapa de calor: ao entrar, a mancha cresce até a intensidade final e depois pulsa em ciclo contínuo.
+  // A pulsação é uma senoide (sem saltos), recalculada a cerca de 30 quadros por segundo para não pesar o mapa.
   // Com "reduzir movimento", fica parada na intensidade final.
   useEffect(() => {
     const m = mapa.current;
@@ -353,15 +354,22 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
       m.setPaintProperty('obras-calor', 'heatmap-intensity', intensidade(1));
       return;
     }
+    const ENTRADA = 1000;
+    const CICLO = 5000;
+    const AMPLITUDE = 0.12;
+    const INTERVALO = 1000 / 30;
     const inicio = performance.now();
+    let ultimo = -INTERVALO;
     let quadro = 0;
     const passo = (agora: number) => {
-      const t = agora - inicio;
-      const entrada = Math.min(1, t / 700);
-      const suave = 1 - Math.pow(1 - entrada, 3);
-      const respira = 1 + 0.06 * Math.sin((t / 3200) * 2 * Math.PI);
-      if (m.getLayer('obras-calor')) m.setPaintProperty('obras-calor', 'heatmap-intensity', intensidade(suave * respira));
       quadro = requestAnimationFrame(passo);
+      if (agora - ultimo < INTERVALO) return;
+      ultimo = agora;
+      const t = agora - inicio;
+      const entrada = Math.min(1, t / ENTRADA);
+      const suave = 1 - Math.pow(1 - entrada, 3);
+      const pulso = 1 + AMPLITUDE * Math.sin((t / CICLO) * 2 * Math.PI);
+      if (m.getLayer('obras-calor')) m.setPaintProperty('obras-calor', 'heatmap-intensity', intensidade(suave * pulso));
     };
     quadro = requestAnimationFrame(passo);
     return () => cancelAnimationFrame(quadro);
