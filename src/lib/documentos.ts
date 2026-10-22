@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Empresa } from './empresas';
+import { SETOR_LABEL, SITUACAO_LABEL, TIPO_LABEL, type Empresa, type SituacaoEfetiva } from './empresas';
 
 /**
  * Documentos oficiais da fiscalização de serviços concedidos. Cada tipo tem
@@ -8,9 +8,9 @@ import type { Empresa } from './empresas';
  * fiscal: o registro emitido não depende de cadastro que mude depois.
  */
 
-export type TipoDocumento = 'notificacao' | 'auto_infracao' | 'embargo' | 'apreensao' | 'certidao_regularidade';
+export type TipoDocumento = 'notificacao' | 'auto_infracao' | 'embargo' | 'apreensao' | 'certidao_regularidade' | 'termo_compromisso';
 
-export const TIPOS_DOCUMENTO: TipoDocumento[] = ['notificacao', 'auto_infracao', 'embargo', 'apreensao', 'certidao_regularidade'];
+export const TIPOS_DOCUMENTO: TipoDocumento[] = ['notificacao', 'auto_infracao', 'embargo', 'apreensao', 'certidao_regularidade', 'termo_compromisso'];
 
 export const TITULO_DOCUMENTO: Record<TipoDocumento, string> = {
   notificacao: 'Auto de Notificação',
@@ -18,6 +18,7 @@ export const TITULO_DOCUMENTO: Record<TipoDocumento, string> = {
   embargo: 'Auto de Embargo',
   apreensao: 'Auto de Apreensão',
   certidao_regularidade: 'Certidão de Regularidade',
+  termo_compromisso: 'Termo de Compromisso e Responsabilidade',
 };
 
 export const RECEBIMENTO = [
@@ -110,7 +111,57 @@ export const CAMPOS_DOCUMENTO: Record<TipoDocumento, CampoDocumento[]> = {
     CAMPO_FUNDAMENTO,
     ...CAMPO_FISCAL,
   ],
+  termo_compromisso: [
+    { chave: 'local', rotulo: 'Local', tipo: 'texto', obrigatorio: true },
+    { chave: 'data', rotulo: 'Data da assinatura', tipo: 'data', obrigatorio: true },
+  ],
 };
+
+/**
+ * Texto do termo. Cada parágrafo é um item. Os dados da empresa entram pelo
+ * registro copiado do cadastro, não pelo texto.
+ */
+export const TEXTO_TERMO_COMPROMISSO = {
+  compromisso: [
+    'O representante legal da empresa identificada neste termo declara conhecer e comprometer-se a cumprir as regras do Cadastro de Executores (CADEX) da Prefeitura Municipal de Niterói, estabelecidas na Resolução Conjunta SECONSER/SEOP nº 001/2026 e nas orientações da Fiscalização de Serviços Concedidos.',
+    'A empresa se compromete a comunicar à Fiscalização, sem demora, qualquer alteração dos dados registrados neste termo, e a manter atualizada a documentação exigida para a sua inscrição.',
+    'O representante legal declara ciência das obrigações impostas pela Lei nº 3.988/2025 às concessionárias e demais entes autorizados a intervir em vias públicas, subsolo e espaço aéreo do Município (art. 6º), da fiscalização exercida pela SECONSER e das penalidades previstas no art. 13 da mesma lei, e de que a concessionária ou ente autorizado responde pelas penalidades decorrentes das infrações praticadas por suas contratadas (art. 15).',
+  ],
+  responsabilidade: [
+    'O representante legal declara, sob as penas da lei, que as informações prestadas para o cadastro e para a inscrição no CADEX são verdadeiras, completas e atualizadas, e responde por elas, inclusive pelos documentos apresentados.',
+    'Declara também que os documentos entregues são verdadeiros e correspondem aos originais, e que assume a responsabilidade pelo seu conteúdo perante a Prefeitura Municipal de Niterói.',
+  ],
+};
+
+/** Registro da empresa copiado no momento da emissão do termo de compromisso. */
+export interface RegistroDoCadastro extends AutuadoDoCadastro {
+  codigo_cadex: string;
+  tipo_empresa: string;
+  setores: string[];
+  email: string;
+  representante: string;
+  processo_numero: string | null;
+  data_requerimento: string | null;
+  portaria_numero: string | null;
+  portaria_data: string | null;
+  validade_ate: string | null;
+}
+
+export function registroDoCadastro(e: Empresa): RegistroDoCadastro {
+  return {
+    ...autuadoDoCadastro(e, SITUACAO_LABEL[e.situacao as SituacaoEfetiva] ?? e.situacao),
+    codigo_cadex: e.codigo_cadex,
+    tipo_empresa: TIPO_LABEL[e.tipo],
+    setores: e.setores.map((s) => SETOR_LABEL[s]),
+    email: e.email,
+    representante: e.representante ?? '',
+    processo_numero: e.processo_numero,
+    data_requerimento: e.data_requerimento,
+    portaria_numero: e.portaria_numero,
+    portaria_data: e.portaria_data,
+    validade_ate: e.validade_ate,
+  };
+}
 
 /** Dados do autuado copiados do cadastro da empresa no momento da emissão. */
 export interface AutuadoDoCadastro {

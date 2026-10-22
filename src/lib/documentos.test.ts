@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
-  CAMPOS_DOCUMENTO, codigoLegivel, dinheiroParaNumero, montarDados, numeroDocumento, validarDados, valorPorExtenso,
-  autuadoDoCadastro,
+  CAMPOS_DOCUMENTO, TIPOS_DOCUMENTO, TITULO_DOCUMENTO, TEXTO_TERMO_COMPROMISSO, codigoLegivel, dinheiroParaNumero,
+  montarDados, numeroDocumento, registroDoCadastro, validarDados, valorPorExtenso, autuadoDoCadastro,
 } from './documentos';
+import type { Empresa } from './empresas';
 
 describe('valor por extenso', () => {
   it('segue o modelo da fiscalização', () => {
@@ -108,5 +109,44 @@ describe('snapshot do documento', () => {
   it('não grava campos vazios', () => {
     const dados = montarDados('embargo', { trecho: 'Trecho 1', elementos: '   ' }, autuado);
     expect(dados).not.toHaveProperty('elementos');
+  });
+});
+
+describe('termo de compromisso', () => {
+  const empresa = {
+    id: 'e1', codigo_cadex: 'CADEX-TER-2026-0001', cnpj: '00000000000100', razao_social: 'Empresa Fictícia Ltda',
+    nome_fantasia: 'Fictícia', tipo: 'terceirizada', setores: ['telecom', 'viario'], email: 'contato@ficticia.test',
+    telefone: '21 0000-0000', cep: '24000000', logradouro: 'Rua Um', numero: '10', complemento: null, bairro: 'Centro',
+    cidade: 'Niterói', uf: 'RJ', observacoes: null, representante: 'Maria Teste', ativa: true, executa_obras: false,
+    situacao: 'apta', processo_numero: '1/2026', data_requerimento: '2026-01-10', portaria_numero: 'Portaria 12/2026',
+    portaria_data: '2026-02-01', validade_ate: '2027-02-01', notificacao_data: null, logo_arquivo: null,
+    criado_em: '2026-01-01', atualizado_em: '2026-01-01',
+  } as unknown as Empresa;
+
+  it('está na lista de tipos e tem título próprio', () => {
+    expect(TIPOS_DOCUMENTO).toContain('termo_compromisso');
+    expect(TITULO_DOCUMENTO.termo_compromisso).toBe('Termo de Compromisso e Responsabilidade');
+  });
+
+  it('exige local e data, e nenhum campo de infração', () => {
+    expect(validarDados('termo_compromisso', {})).toEqual(['Local: obrigatório.', 'Data da assinatura: obrigatório.']);
+    expect(validarDados('termo_compromisso', { local: 'Niterói', data: '2026-10-22' })).toEqual([]);
+    expect(CAMPOS_DOCUMENTO.termo_compromisso.map((c) => c.chave)).toEqual(['local', 'data']);
+  });
+
+  it('copia o registro completo da empresa, com rótulos legíveis', () => {
+    const r = registroDoCadastro(empresa);
+    expect(r.codigo_cadex).toBe('CADEX-TER-2026-0001');
+    expect(r.tipo_empresa).toBe('Terceirizada');
+    expect(r.setores).toEqual(['Telecomunicações', 'Viário / mobilidade']);
+    expect(r.representante).toBe('Maria Teste');
+    expect(r.portaria_numero).toBe('Portaria 12/2026');
+    expect(r.validade_ate).toBe('2027-02-01');
+    expect(r.endereco).toBe('Rua Um, 10 - Centro');
+  });
+
+  it('o texto tem o compromisso e a responsabilidade pelas informações', () => {
+    expect(TEXTO_TERMO_COMPROMISSO.compromisso.join(' ')).toContain('Resolução Conjunta SECONSER/SEOP nº 001/2026');
+    expect(TEXTO_TERMO_COMPROMISSO.responsabilidade.join(' ')).toContain('responde por elas');
   });
 });

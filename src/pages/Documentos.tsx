@@ -4,7 +4,7 @@ import { Button, Card, Empty, ErrorNote, Spinner, Titulo, inputClass } from '../
 import { useAuth } from '../lib/auth';
 import { buscarEmpresa, type Empresa } from '../lib/empresas';
 import {
-  CAMPOS_DOCUMENTO, TIPOS_DOCUMENTO, TITULO_DOCUMENTO, autuadoDoCadastro, codigoLegivel, emitirDocumento,
+  CAMPOS_DOCUMENTO, TIPOS_DOCUMENTO, TITULO_DOCUMENTO, autuadoDoCadastro, codigoLegivel, emitirDocumento, registroDoCadastro,
   listarDocumentosDaEmpresa, montarDados, numeroDocumento, validarDados, type CampoDocumento, type DocumentoOficial,
   type TipoDocumento,
 } from '../lib/documentos';
@@ -75,12 +75,18 @@ function Emissao({ empresa, onEmitido }: { empresa: Empresa; onEmitido: () => Pr
 
   const emitir = async () => {
     const problemas = validarDados(tipo, campos);
+    if (tipo === 'termo_compromisso' && !empresa.representante?.trim()) {
+      setErros(['Cadastre o representante legal da empresa antes de emitir o termo.']);
+      return;
+    }
     setErros(problemas);
     if (problemas.length > 0) return;
     setBusy(true);
     setErro(null);
     try {
-      const dados = montarDados(tipo, campos, autuadoDoCadastro(empresa, empresa.situacao));
+      // O termo leva o registro completo da empresa; os outros documentos, só os dados do autuado.
+      const copia = tipo === 'termo_compromisso' ? registroDoCadastro(empresa) : autuadoDoCadastro(empresa, empresa.situacao);
+      const dados = montarDados(tipo, campos, copia);
       const r = await emitirDocumento(tipo, empresa.id, dados);
       setResultado(`${TITULO_DOCUMENTO[tipo]} emitido: documento nº ${numeroDocumento(r.numero)}. Código de verificação ${codigoLegivel(r.codigo_verificacao)}.`);
       setCampos({});
