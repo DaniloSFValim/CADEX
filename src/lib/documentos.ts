@@ -104,13 +104,8 @@ export const CAMPOS_DOCUMENTO: Record<TipoDocumento, CampoDocumento[]> = {
     CAMPO_RECEBIMENTO,
     ...CAMPO_FISCAL,
   ],
-  certidao_regularidade: [
-    CAMPO_PROCESSO,
-    { chave: 'texto_certidao', rotulo: 'Texto da certidão', tipo: 'area', obrigatorio: true },
-    { chave: 'validade', rotulo: 'Válida até', tipo: 'data' },
-    CAMPO_FUNDAMENTO,
-    ...CAMPO_FISCAL,
-  ],
+  // Só a identificação do fiscal: o texto e os dados vêm do cadastro, para que a certidão não seja redigida à mão.
+  certidao_regularidade: [...CAMPO_FISCAL],
   termo_compromisso: [
     { chave: 'local', rotulo: 'Local', tipo: 'texto', obrigatorio: true },
     { chave: 'data', rotulo: 'Data da assinatura', tipo: 'data', obrigatorio: true },
@@ -161,6 +156,19 @@ export function registroDoCadastro(e: Empresa): RegistroDoCadastro {
     portaria_data: e.portaria_data,
     validade_ate: e.validade_ate,
   };
+}
+
+/**
+ * Texto da certidão de regularidade, montado com o registro copiado do cadastro.
+ * Certifica só a situação cadastral (art. 3º: pode atuar) na data de emissão.
+ */
+export function textoCertidaoRegularidade(r: RegistroDoCadastro): string[] {
+  const data = (v: string | null) => (v ? v.split('-').reverse().join('/') : '—');
+  return [
+    `A Secretaria Municipal de Conservação e Serviços Públicos (SECONSER), por meio da Fiscalização de Serviços Concedidos, certifica que ${r.razao_social}, inscrita no CNPJ ${r.cnpj} sob o código CADEX ${r.codigo_cadex}, está regular perante o Cadastro de Executores (CADEX) do Município de Niterói, com inscrição na situação ${r.situacao_cadastro}, na data de emissão desta certidão.`,
+    `A inscrição consta do processo ${r.processo_numero ?? '—'}, com a portaria ${r.portaria_numero ?? '—'}, publicada em ${data(r.portaria_data)}, e tem validade até ${data(r.validade_ate)}, nos termos da Resolução Conjunta SECONSER/SEOP nº 001/2026.`,
+    'Esta certidão comprova somente a situação cadastral da empresa. Não dispensa as autorizações exigidas para cada obra ou serviço, que seguem a Lei nº 3.988/2025 (art. 10).',
+  ];
 }
 
 /** Dados do autuado copiados do cadastro da empresa no momento da emissão. */

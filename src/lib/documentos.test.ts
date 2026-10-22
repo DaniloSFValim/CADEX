@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  CAMPOS_DOCUMENTO, TIPOS_DOCUMENTO, TITULO_DOCUMENTO, TEXTO_TERMO_COMPROMISSO, codigoLegivel, dinheiroParaNumero,
+  CAMPOS_DOCUMENTO, TIPOS_DOCUMENTO, TITULO_DOCUMENTO, TEXTO_TERMO_COMPROMISSO, textoCertidaoRegularidade, codigoLegivel, dinheiroParaNumero,
   montarDados, numeroDocumento, registroDoCadastro, validarDados, valorPorExtenso, autuadoDoCadastro,
 } from './documentos';
 import type { Empresa } from './empresas';
@@ -85,10 +85,9 @@ describe('validação por tipo', () => {
     expect(erros.some((e) => e.startsWith('Recebimento'))).toBe(true);
   });
 
-  it('certidão não pede os campos de infração', () => {
+  it('certidão só pede o fiscal: texto e dados vêm do cadastro', () => {
     const chaves = CAMPOS_DOCUMENTO.certidao_regularidade.map((c) => c.chave);
-    expect(chaves).not.toContain('valor');
-    expect(chaves).toContain('texto_certidao');
+    expect(chaves).toEqual(['fiscal_nome', 'fiscal_matricula']);
   });
 });
 
@@ -143,6 +142,14 @@ describe('termo de compromisso', () => {
     expect(r.portaria_numero).toBe('Portaria 12/2026');
     expect(r.validade_ate).toBe('2027-02-01');
     expect(r.endereco).toBe('Rua Um, 10 - Centro');
+  });
+
+  it('a certidão cita o cadastro e não traz dados de infração', () => {
+    const texto = textoCertidaoRegularidade(registroDoCadastro(empresa)).join(' ');
+    expect(texto).toContain('CADEX-TER-2026-0001');
+    expect(texto).toContain('Portaria 12/2026');
+    expect(texto).toContain('está regular');
+    expect(texto).not.toMatch(/infra|multa|notifica|auto de/i);
   });
 
   it('o texto tem o compromisso e a responsabilidade pelas informações', () => {

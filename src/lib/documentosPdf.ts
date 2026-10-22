@@ -1,6 +1,7 @@
 import type { DocumentoOficial, TipoDocumento } from './documentos';
 import {
   CAMPOS_DOCUMENTO, TEXTO_TERMO_COMPROMISSO, TITULO_DOCUMENTO, codigoLegivel, dataExibicao, instanteExibicao, numeroDocumento,
+  textoCertidaoRegularidade, type RegistroDoCadastro,
 } from './documentos';
 
 /**
@@ -36,7 +37,7 @@ function reais(valor: unknown): string {
 }
 
 /** Linha de itens do cadastro do autuado. */
-function linhasAutuado(autuado: Dados, tipo: TipoDocumento): [string, string][] {
+function linhasAutuado(autuado: Dados): [string, string][] {
   const linhas: [string, string][] = [
     ['Razão social', texto(autuado.razao_social)],
     ['Nome fantasia', texto(autuado.nome_fantasia)],
@@ -46,7 +47,6 @@ function linhasAutuado(autuado: Dados, tipo: TipoDocumento): [string, string][] 
     ['CEP', texto(autuado.cep)],
     ['Telefone', texto(autuado.telefone)],
   ];
-  if (tipo === 'certidao_regularidade') linhas.push(['Situação no cadastro', texto(autuado.situacao_cadastro)]);
   return linhas;
 }
 
@@ -201,6 +201,35 @@ export async function gerarPdfDocumento(doc: DocumentoOficial, logo?: string): P
     y += 14;
   };
 
+  /** Certidão de regularidade: identificação da empresa, texto gerado do cadastro e assinatura do fiscal. Sem dados de infração. */
+  const corpoCertidao = () => {
+    const reg = autuado as unknown as RegistroDoCadastro;
+    secao('Identificação da empresa');
+    grade([
+      ['Razão social', texto(reg.razao_social)],
+      ['Nome fantasia', texto(reg.nome_fantasia)],
+      ['CNPJ', texto(reg.cnpj)],
+      ['Código CADEX', texto(reg.codigo_cadex)],
+      ['Tipo', texto(reg.tipo_empresa)],
+      ['Setores', Array.isArray(reg.setores) && reg.setores.length > 0 ? reg.setores.join(', ') : '—'],
+      ['Endereço', texto(reg.endereco)],
+      ['Cidade / UF', `${texto(reg.cidade)} / ${texto(reg.uf)}`],
+    ]);
+    secao('Certidão');
+    for (const p of textoCertidaoRegularidade(reg)) paragrafo(p);
+    y += 14;
+    const centro = LARGURA / 2;
+    pdf.setDrawColor(...COR_TINTA).setLineWidth(0.3).line(centro - 60, y, centro + 60, y);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(9);
+    pdf.setTextColor(...COR_TINTA);
+    pdf.text(texto(dados.fiscal_nome), centro, y + 4.5, { align: 'center' });
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(...COR_CINZA);
+    pdf.text(`Fiscal autuante · Matrícula ${texto(dados.fiscal_matricula)}`, centro, y + 9, { align: 'center' });
+    y += 14;
+  };
+
   // Cabeçalho: brasão na proporção original, órgão e número do documento.
   const ALTURA_BRASAO = 16;
   let recuo = MARGEM;
@@ -235,9 +264,11 @@ export async function gerarPdfDocumento(doc: DocumentoOficial, logo?: string): P
 
   if (doc.tipo === 'termo_compromisso') {
     corpoTermo();
+  } else if (doc.tipo === 'certidao_regularidade') {
+    corpoCertidao();
   } else {
     titulo('Identificação do autuado');
-    for (const [r, v] of linhasAutuado(autuado, doc.tipo)) linha(r, v);
+    for (const [r, v] of linhasAutuado(autuado)) linha(r, v);
 
     titulo('Fato');
     linha('Local da infração', texto(dados.local_infracao));
