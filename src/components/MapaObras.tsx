@@ -83,39 +83,6 @@ const corPorSituacao = [
   '#6b7280',
 ] as unknown as maplibregl.ExpressionSpecification;
 
-/**
- * Lista das obras de um agrupamento. Monta os nós com textContent: o texto vem
- * do cadastro e nunca é tratado como HTML.
- */
-function conteudoDoCluster(folhas: GeoJSON.Feature[], aoEscolher: (codigo: string) => void): HTMLElement {
-  const porCodigo = new Map<string, GeoJSON.GeoJsonProperties>();
-  for (const f of folhas) {
-    const codigo = f.properties?.codigo;
-    if (typeof codigo === 'string' && !porCodigo.has(codigo)) porCodigo.set(codigo, f.properties);
-  }
-  const raiz = document.createElement('div');
-  raiz.className = 'text-sm';
-  const titulo = document.createElement('p');
-  titulo.className = 'mb-1 font-semibold text-tinta-900';
-  titulo.textContent = `${porCodigo.size} ${porCodigo.size === 1 ? 'obra' : 'obras'} neste ponto`;
-  raiz.appendChild(titulo);
-  const lista = document.createElement('ul');
-  lista.className = 'max-h-60 divide-y divide-tinta-100 overflow-y-auto';
-  for (const [codigo, pr] of porCodigo) {
-    const item = document.createElement('li');
-    const botao = document.createElement('button');
-    botao.type = 'button';
-    botao.className = 'block w-full py-1.5 text-left hover:text-marca-700 hover:underline';
-    const local = [pr?.logradouro, pr?.bairro].filter((x) => typeof x === 'string' && x).join(', ');
-    botao.textContent = `${local || 'Obra'} · nº ${String(pr?.numero ?? '')}`;
-    botao.addEventListener('click', () => aoEscolher(codigo));
-    item.appendChild(botao);
-    lista.appendChild(item);
-  }
-  raiz.appendChild(lista);
-  return raiz;
-}
-
 /** Mapa das obras. Clicar numa obra avisa quem chamou (a ficha aparece ao lado), sem balão. */
 export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bairro, onSelecionar, onBairro }: {
   obras: ObraPublica[]; foco?: string | null; destaque?: string | null; modo?: 'pontos' | 'calor';
@@ -242,7 +209,7 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
         m.on('mouseenter', camada, () => { m.getCanvas().style.cursor = 'pointer'; });
         m.on('mouseleave', camada, () => { m.getCanvas().style.cursor = ''; });
       }
-      // Clique num agrupamento: lista as obras dentro dele, para escolher uma sem dar zoom às cegas.
+      // Clique num agrupamento: abre o grupo no mapa.
       m.on('click', 'obras-agrupamentos', (e: maplibregl.MapLayerMouseEvent) => {
         const f = e.features?.[0];
         const id = f?.properties?.cluster_id;
@@ -250,12 +217,9 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
         if (typeof id !== 'number' || geom?.type !== 'Point') return;
         const centro = geom.coordinates as [number, number];
         const fonte = m.getSource('obras') as maplibregl.GeoJSONSource;
-        void fonte.getClusterLeaves(id, 50, 0).then((folhas) => {
-          const popup = new maplibregl.Popup({ closeButton: true, maxWidth: '300px', offset: 16 });
-          popup.setLngLat(centro).setDOMContent(conteudoDoCluster(folhas, (codigo) => {
-            popup.remove();
-            onSelecionarRef.current?.(codigo);
-          })).addTo(m);
+        // Um clique aproxima o mapa até o grupo se separar nos pontos (ou em grupos menores).
+        void fonte.getClusterExpansionZoom(id).then((zoom) => {
+          m.easeTo({ center: centro, zoom });
         }).catch(() => undefined);
       });
       m.on('mouseenter', 'obras-agrupamentos', () => { m.getCanvas().style.cursor = 'pointer'; });
