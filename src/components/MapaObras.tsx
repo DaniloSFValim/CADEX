@@ -122,6 +122,8 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
           obras: { type: 'geojson', data: obrasParaGeoJSON([]), cluster: true, clusterRadius: 40, clusterMaxZoom: 14 },
           // Calor e área de toque usam cada obra, sem agrupar: a densidade precisa contar obra por obra.
           brutas: { type: 'geojson', data: obrasParaGeoJSON([]) },
+          // Anel que pulsa sobre a área de calor sob o cursor. Vazio quando o cursor não está no calor.
+          'calor-foco': { type: 'geojson', data: { type: 'FeatureCollection', features: [] } },
         },
         layers: [
           ...base.layers,
@@ -192,6 +194,10 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
             paint: { 'circle-color': '#000000', 'circle-opacity': 0, 'circle-radius': RAIO_CALOR },
           },
           {
+            id: 'obras-calor-foco', type: 'circle', source: 'calor-foco',
+            paint: { 'circle-color': 'rgba(0,0,0,0)', 'circle-radius': 18, 'circle-stroke-color': '#0b2530', 'circle-stroke-width': 2, 'circle-stroke-opacity': 0.8 },
+          },
+          {
             id: 'obras-pontos', type: 'circle', source: 'obras',
             filter: ['all', ['==', ['geometry-type'], 'Point'], ['!', ['has', 'point_count']]],
             paint: {
@@ -252,6 +258,28 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
         balao.setLngLat(e.lngLat).setText(`${n} obras neste grupo · clique para abrir`).addTo(m);
       });
       m.on('mouseleave', 'obras-agrupamentos', () => { m.getCanvas().style.cursor = ''; balao.remove(); });
+      // Anel sobre o calor: pulsa enquanto o cursor estiver na área; com "reduzir movimento", fica parado.
+      const reduzidoFoco = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const fonteFoco = () => m.getSource('calor-foco') as maplibregl.GeoJSONSource;
+      let quadroFoco = 0;
+      let codigoFoco = '';
+      const iniciaAnel = () => {
+        if (quadroFoco || reduzidoFoco) return;
+        const t0 = performance.now();
+        const passo = (agora: number) => {
+          const fase = ((agora - t0) % 1200) / 1200;
+          m.setPaintProperty('obras-calor-foco', 'circle-radius', 12 + 14 * fase);
+          m.setPaintProperty('obras-calor-foco', 'circle-stroke-opacity', 0.8 * (1 - fase));
+          quadroFoco = requestAnimationFrame(passo);
+        };
+        quadroFoco = requestAnimationFrame(passo);
+      };
+      const paraAnel = () => {
+        cancelAnimationFrame(quadroFoco);
+        quadroFoco = 0;
+        codigoFoco = '';
+        fonteFoco().setData({ type: 'FeatureCollection', features: [] });
+      };
       m.on('mousemove', 'obras-calor-toque', (e: maplibregl.MapLayerMouseEvent) => {
         // Conta as obras dentro do mesmo raio que pinta a mancha, não o total do bairro.
         const R = raioCalorPx(m.getZoom());
@@ -266,10 +294,20 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
         const codigos = new Set(proximas.map((x) => String(x.f.properties?.codigo ?? '')).filter(Boolean));
         const bairroDoPonto = String(proximas[0]?.f.properties?.bairro ?? '').trim() || 'Sem bairro';
         const n = codigos.size;
+        // O anel só é redesenhado quando a obra mais próxima muda, não a cada movimento do mouse.
+        const codigoMaisProximo = String(proximas[0]?.f.properties?.codigo ?? '');
+        if (proximas[0] && codigoMaisProximo !== codigoFoco) {
+          codigoFoco = codigoMaisProximo;
+          fonteFoco().setData({
+            type: 'FeatureCollection',
+            features: [{ type: 'Feature', properties: {}, geometry: proximas[0].f.geometry }],
+          });
+        }
+        iniciaAnel();
         m.getCanvas().style.cursor = 'pointer';
         balao.setLngLat(e.lngLat).setText(`${bairroDoPonto} · ${n} ${n === 1 ? 'obra nesta área' : 'obras nesta área'} · clique para ampliar`).addTo(m);
       });
-      m.on('mouseleave', 'obras-calor-toque', () => { m.getCanvas().style.cursor = ''; balao.remove(); });
+      m.on('mouseleave', 'obras-calor-toque', () => { m.getCanvas().style.cursor = ''; balao.remove(); paraAnel(); });
       // No calor, o clique aproxima o mapa da área. Não filtra a lista: isso fica com o bairro escolhido na lista.
       m.on('click', 'obras-calor-toque', (e: maplibregl.MapLayerMouseEvent) => {
         m.easeTo({ center: e.lngLat, zoom: Math.min(m.getZoom() + 2, 16) });
@@ -335,6 +373,7 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
     const calor = modo === 'calor';
     const visivel = (ligado: boolean) => (ligado ? 'visible' : 'none') as maplibregl.VisibilitySpecification;
     m.setLayoutProperty('obras-calor', 'visibility', visivel(calor));
+    if (!calor) (m.getSource('calor-foco') as maplibregl.GeoJSONSource).setData({ type: 'FeatureCollection', features: [] });
     m.setLayoutProperty('obras-calor-toque', 'visibility', visivel(calor));
     for (const camada of ['obras-linhas', 'obras-pontos', 'obras-vigentes-halo', 'obras-agrupamentos',
       'obras-agrupamentos-contagem', 'obras-areas', 'obras-areas-contorno']) {
@@ -342,7 +381,8 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
     }
   }, [modo, pronto]);
 
-  // Mapa de calor: ao entrar, a mancha cresce até a intensidade final; depois respira devagar.
+  // Mapa de calor: ao entrar, a mancha cresce até a intensidade final e depois pulsa em ciclo contínuo.
+  // A pulsação é uma senoide (sem saltos), recalculada a cerca de 30 quadros por segundo para não pesar o mapa.
   // Com "reduzir movimento", fica parada na intensidade final.
   useEffect(() => {
     const m = mapa.current;
@@ -353,15 +393,22 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
       m.setPaintProperty('obras-calor', 'heatmap-intensity', intensidade(1));
       return;
     }
+    const ENTRADA = 1000;
+    const CICLO = 5000;
+    const AMPLITUDE = 0.12;
+    const INTERVALO = 1000 / 30;
     const inicio = performance.now();
+    let ultimo = -INTERVALO;
     let quadro = 0;
     const passo = (agora: number) => {
-      const t = agora - inicio;
-      const entrada = Math.min(1, t / 700);
-      const suave = 1 - Math.pow(1 - entrada, 3);
-      const respira = 1 + 0.06 * Math.sin((t / 3200) * 2 * Math.PI);
-      if (m.getLayer('obras-calor')) m.setPaintProperty('obras-calor', 'heatmap-intensity', intensidade(suave * respira));
       quadro = requestAnimationFrame(passo);
+      if (agora - ultimo < INTERVALO) return;
+      ultimo = agora;
+      const t = agora - inicio;
+      const entrada = Math.min(1, t / ENTRADA);
+      const suave = 1 - Math.pow(1 - entrada, 3);
+      const pulso = 1 + AMPLITUDE * Math.sin((t / CICLO) * 2 * Math.PI);
+      if (m.getLayer('obras-calor')) m.setPaintProperty('obras-calor', 'heatmap-intensity', intensidade(suave * pulso));
     };
     quadro = requestAnimationFrame(passo);
     return () => cancelAnimationFrame(quadro);
