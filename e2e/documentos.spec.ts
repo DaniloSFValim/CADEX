@@ -26,7 +26,7 @@ test.describe('documentos oficiais', () => {
     await expect(emitir).toBeEnabled();
     await emitir.click();
 
-    await expect(page.getByRole('status')).toContainText('documento nº 001 - SFSC');
+    await expect(page.getByRole('status')).toContainText('documento nº NOT-001 - SFSC');
     await expect(backend.chamadas.some((c) => c.caminho === 'rpc/emitir_documento')).toBe(true);
     const enviado = backend.chamadas.find((c) => c.caminho === 'rpc/emitir_documento')!.corpo as {
       p_tipo: string; p_dados: { autuado: { razao_social: string } } };
