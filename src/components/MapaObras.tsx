@@ -342,6 +342,31 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
     }
   }, [modo, pronto]);
 
+  // Mapa de calor: ao entrar, a mancha cresce até a intensidade final; depois respira devagar.
+  // Com "reduzir movimento", fica parada na intensidade final.
+  useEffect(() => {
+    const m = mapa.current;
+    if (!pronto || !m || modo !== 'calor' || !m.getLayer('obras-calor')) return;
+    // Intensidade na escala do zoom: "zoom" tem de ser a expressão de topo, por isso o fator entra dentro de cada valor.
+    const intensidade = (k: number) => ['interpolate', ['linear'], ['zoom'], 11, 1.4 * k, 16, 3.5 * k] as unknown as maplibregl.ExpressionSpecification;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      m.setPaintProperty('obras-calor', 'heatmap-intensity', intensidade(1));
+      return;
+    }
+    const inicio = performance.now();
+    let quadro = 0;
+    const passo = (agora: number) => {
+      const t = agora - inicio;
+      const entrada = Math.min(1, t / 700);
+      const suave = 1 - Math.pow(1 - entrada, 3);
+      const respira = 1 + 0.06 * Math.sin((t / 3200) * 2 * Math.PI);
+      if (m.getLayer('obras-calor')) m.setPaintProperty('obras-calor', 'heatmap-intensity', intensidade(suave * respira));
+      quadro = requestAnimationFrame(passo);
+    };
+    quadro = requestAnimationFrame(passo);
+    return () => cancelAnimationFrame(quadro);
+  }, [modo, pronto]);
+
   // Bairro escolhido (na lista ou no mapa): enquadra as obras dele.
   useEffect(() => {
     if (!pronto || !mapa.current || !bairro) return;
