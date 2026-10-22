@@ -15,14 +15,9 @@ export function Rodape() {
   return (
     <footer className="mt-20 border-t border-tinta-200 bg-white text-tinta-500">
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 text-sm md:grid-cols-2">
-        <div className="max-w-md space-y-2">
-          <p className="font-semibold text-tinta-900">CADEX, Cadastro de Executores</p>
-          <p>
-            Sistema criado de forma independente e mantido por Danilo Valim. Não é canal oficial da
-            Prefeitura Municipal de Niterói nem da Secretaria de Conservação e Serviços
-            Públicos (SECONSER).
-          </p>
-        </div>
+        <p className="max-w-md">
+          Consulta pública de empresas executoras e de obras e serviços licenciados em Niterói.
+        </p>
         <ul className="space-y-2">
           {!session && <li><Link to="/consulta" className={link}>Consulta pública</Link></li>}
         </ul>
