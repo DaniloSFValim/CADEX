@@ -119,7 +119,7 @@ export const CAMPOS_DOCUMENTO: Record<TipoDocumento, CampoDocumento[]> = {
 export const TEXTO_TERMO_COMPROMISSO = {
   compromisso: [
     'O representante legal da empresa identificada neste termo declara conhecer e comprometer-se a cumprir as regras do Cadastro de Executores (CADEX) da Prefeitura Municipal de Niterói, estabelecidas na Resolução Conjunta SECONSER/SEOP nº 001/2026 e nas orientações da Fiscalização de Serviços Concedidos.',
-    'A empresa se compromete a comunicar à Fiscalização, sem demora, qualquer alteração dos dados registrados neste termo, e a manter atualizada a documentação exigida para a sua inscrição.',
+    'A empresa se compromete a comunicar à Fiscalização, sem demora, qualquer alteração dos dados registrados neste termo, e a manter atualizada a documentação exigida para a sua inscrição (art. 6º), ciente de que a perda de validade ou a falta de renovação de documento sujeita a inscrição a notificação para saneamento em 30 dias (art. 8º).',
     'O representante legal declara ciência das obrigações impostas pela Lei nº 3.988/2025 às concessionárias e demais entes autorizados a intervir em vias públicas, subsolo e espaço aéreo do Município (art. 6º), da fiscalização exercida pela SECONSER e das penalidades previstas no art. 13 da mesma lei, e de que a concessionária ou ente autorizado responde pelas penalidades decorrentes das infrações praticadas por suas contratadas (art. 15).',
   ],
   responsabilidade: [
@@ -165,8 +165,8 @@ export function registroDoCadastro(e: Empresa): RegistroDoCadastro {
 export function textoCertidaoRegularidade(r: RegistroDoCadastro): string[] {
   const data = (v: string | null) => (v ? v.split('-').reverse().join('/') : '—');
   return [
-    `A Secretaria Municipal de Conservação e Serviços Públicos (SECONSER), por meio da Fiscalização de Serviços Concedidos, certifica que ${r.razao_social}, inscrita no CNPJ ${r.cnpj} sob o código CADEX ${r.codigo_cadex}, está regular perante o Cadastro de Executores (CADEX) do Município de Niterói, com inscrição na situação ${r.situacao_cadastro}, na data de emissão desta certidão.`,
-    `A inscrição consta do processo ${r.processo_numero ?? '—'}, com a portaria ${r.portaria_numero ?? '—'}, publicada em ${data(r.portaria_data)}, e tem validade até ${data(r.validade_ate)}, nos termos da Resolução Conjunta SECONSER/SEOP nº 001/2026.`,
+    `A Secretaria Municipal de Conservação e Serviços Públicos (SECONSER), por meio da Fiscalização de Serviços Concedidos, certifica que ${r.razao_social}, inscrita no CNPJ ${r.cnpj} sob o código CADEX ${r.codigo_cadex}, tem inscrição prévia e ativa no Cadastro de Executores (CADEX) do Município de Niterói, na situação ${r.situacao_cadastro}, na data de emissão desta certidão.`,
+    `A inscrição consta do processo ${r.processo_numero ?? '—'}, com a portaria ${r.portaria_numero ?? '—'}, publicada em ${data(r.portaria_data)}, e tem validade até ${data(r.validade_ate)}, nos termos dos arts. 3º e 7º, § 1º, da Resolução Conjunta SECONSER/SEOP nº 001/2026.`,
     'Esta certidão comprova somente a situação cadastral da empresa. Não dispensa as autorizações exigidas para cada obra ou serviço, que seguem a Lei nº 3.988/2025 (art. 10).',
   ];
 }

@@ -148,7 +148,7 @@ describe('termo de compromisso', () => {
     const texto = textoCertidaoRegularidade(registroDoCadastro(empresa)).join(' ');
     expect(texto).toContain('CADEX-TER-2026-0001');
     expect(texto).toContain('Portaria 12/2026');
-    expect(texto).toContain('está regular');
+    expect(texto).toContain('inscrição prévia e ativa');
     expect(texto).not.toMatch(/infra|multa|notifica|auto de/i);
   });
 
