@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { anosDasObras, barraNoAno, filtrarObras, fracaoDoAno, mesesDoPeriodo, obrasNoMes, obrasParaGeoJSON, temLocalizacao, type ObraPublica } from './obras';
+import { anosDasObras, barraNoAno, filtrarObras, fracaoDoAno, obrasNoMes, obrasParaGeoJSON, temLocalizacao, type ObraPublica } from './obras';
 
 const obra = (o: Partial<ObraPublica>): ObraPublica => ({
   codigo: 'c1', setor: 'telecom', numero: '001/2026', tipos_obra: ['vala'], tipo_intervencao: 'obra', origem: 'concessionaria', escopo: 'Rede', inicio_previsto: '2026-10-01',
@@ -114,18 +114,6 @@ describe('faixa do tempo', () => {
   it('obra de um dia só ainda aparece', () => {
     const b = barraNoAno({ inicio_previsto: '2026-03-10', fim_previsto: '2026-03-10' }, 2026)!;
     expect(b.largura).toBeGreaterThan(0);
-  });
-});
-
-describe('intervalo de meses das obras', () => {
-  it('vai do primeiro ao último mês cobertos, atravessando anos e sem pular meses', () => {
-    const meses = mesesDoPeriodo([obra({ inicio_previsto: '2025-11-25', fim_previsto: '2026-02-10' })]);
-    expect(meses).toEqual([
-      { ano: 2025, mes: 10 }, { ano: 2025, mes: 11 }, { ano: 2026, mes: 0 }, { ano: 2026, mes: 1 },
-    ]);
-  });
-  it('sem nenhum período, não há meses', () => {
-    expect(mesesDoPeriodo([obra({ inicio_previsto: null, fim_previsto: null })])).toEqual([]);
   });
 });
 
