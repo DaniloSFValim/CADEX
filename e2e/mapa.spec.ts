@@ -7,7 +7,7 @@ const noMapa = (page: Page) => page.locator('[data-trechos]');
 const lista = (page: Page) => page.locator('section[aria-label="Lista das obras e serviços licenciados"] details li');
 /** A lista mostra só as vigentes por padrão: abre as encerradas e concluídas antes de contar tudo. */
 const mostrarEncerradas = async (page: Page) => {
-  const botao = page.getByRole('button', { name: /Ver encerradas e concluídas/ });
+  const botao = page.getByRole('button', { name: /^Todas \(/ });
   await expect(botao).toBeVisible();
   await botao.click();
 };
@@ -45,7 +45,7 @@ test.describe('mapa de consulta', () => {
     await page.goto('/consulta/obras');
     await mostrarEncerradas(page);
     await expect(lista(page)).toHaveCount(3);
-    await expect(page.getByRole('list', { name: 'Resumo por situação' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Todas (3)' })).toBeVisible();
     await expect(noMapa(page)).toHaveAttribute('data-trechos', '3');
   });
 

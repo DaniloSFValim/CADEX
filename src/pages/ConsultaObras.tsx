@@ -26,6 +26,7 @@ export default function ConsultaObras() {
   const [destaque, setDestaque] = useState<string | null>(null);
   const [modo, setModo] = useState<'pontos' | 'calor'>('pontos');
   const [mostrarEncerradas, setMostrarEncerradas] = useState(false);
+  const [bairro, setBairro] = useState<string | null>(null);
   const [baixando, setBaixando] = useState(false);
   const mapaRef = useRef<HTMLDivElement>(null);
 
@@ -49,7 +50,8 @@ export default function ConsultaObras() {
 
   const todas = obras ?? [];
   const ativas = useMemo(() => todas.filter(obraAtiva), [todas]);
-  const listadas = mostrarEncerradas ? todas : ativas;
+  const porBairro = bairro ? (o: ObraPublica) => (o.trechos[0]?.bairro?.trim() || 'Sem bairro') === bairro : () => true;
+  const listadas = (mostrarEncerradas ? todas : ativas).filter(porBairro);
   const grupos = useMemo(() => agruparPorBairro(listadas), [listadas]);
   const executoras = useMemo(() => resumoExecutoras(todas), [todas]);
   const stats = useMemo(() => resumo(todas), [todas]);
@@ -101,7 +103,8 @@ export default function ConsultaObras() {
                   </div>
                 </div>
                 <div ref={mapaRef} className="relative scroll-mt-4 overflow-hidden rounded-xl border border-tinta-200 shadow-xs">
-                  <MapaObras obras={todas} foco={foco} destaque={destaque} modo={modo} onSelecionar={setFoco} />
+                  <MapaObras obras={todas} foco={foco} destaque={destaque} modo={modo} bairro={bairro}
+                             onSelecionar={setFoco} onBairro={setBairro} />
                   {selecionada && <FichaObra obra={selecionada} onFechar={() => setFoco(null)} />}
                 </div>
               </Suspense>
@@ -125,22 +128,24 @@ export default function ConsultaObras() {
 
             {/* Lista das obras, agrupada por bairro. Por padrão, só as vigentes ou aguardando início. */}
             <section aria-live="polite" aria-label="Lista das obras e serviços licenciados">
-              <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
-                <h2 className="font-display text-lg font-bold tracking-[-0.01em] text-tinta-900">
-                  {mostrarEncerradas ? 'Todas as obras e serviços licenciados' : 'Obras e serviços vigentes'}
-                </h2>
-                <span className="text-sm text-tinta-500">
-                  {listadas.length}{listadas.length !== todas.length && ` de ${todas.length}`}
-                </span>
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                <div role="group" aria-label="Quais obras mostrar" className="inline-flex rounded-full border border-tinta-200 bg-white p-0.5 text-sm font-semibold">
+                  {([false, true] as const).map((todasAsObras) => (
+                    <button key={String(todasAsObras)} type="button" aria-pressed={mostrarEncerradas === todasAsObras}
+                            onClick={() => setMostrarEncerradas(todasAsObras)}
+                            className={`rounded-full px-4 py-1.5 ${mostrarEncerradas === todasAsObras ? 'bg-marca-700 text-white' : 'text-tinta-600 hover:text-tinta-900'}`}>
+                      {todasAsObras ? `Todas (${todas.length})` : `Vigentes (${ativas.length})`}
+                    </button>
+                  ))}
+                </div>
+                {bairro && (
+                  <button type="button" onClick={() => setBairro(null)}
+                          className="inline-flex items-center gap-2 rounded-full border border-marca-700 bg-marca-50 px-3 py-1 text-sm font-semibold text-marca-700">
+                    Bairro: {bairro} <span aria-hidden>✕</span>
+                    <span className="sr-only">Mostrar todos os bairros</span>
+                  </button>
+                )}
               </div>
-              {listadas.length > 0 && <ResumoSituacoes obras={listadas} />}
-              <p className="mb-3">
-                <button type="button" className={linkTexto} onClick={() => setMostrarEncerradas((v) => !v)}>
-                  {mostrarEncerradas
-                    ? 'Mostrar só as vigentes'
-                    : `Ver encerradas e concluídas (${todas.length - ativas.length})`}
-                </button>
-              </p>
               {grupos.length === 0 ? (
                 <div className="rounded-xl border border-tinta-200 bg-white">
                   <Empty>
@@ -159,7 +164,13 @@ export default function ConsultaObras() {
                           {g.obras.length} {g.obras.length === 1 ? 'obra' : 'obras'}
                         </span>
                       </summary>
-                      <ul className="divide-y divide-tinta-100 border-t border-tinta-100">
+                      <div className="border-t border-tinta-100 px-4 py-2 text-right">
+                        <button type="button" className={linkTexto}
+                                onClick={() => { setBairro(g.bairro); mapaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>
+                          Ver {g.bairro} no mapa
+                        </button>
+                      </div>
+                      <ul className="divide-y divide-tinta-100">
                         {g.obras.map((o) => (
                           <li key={o.codigo}
                               className="grid gap-x-4 gap-y-1 px-4 py-3 text-sm sm:grid-cols-[1fr_auto]"
@@ -277,23 +288,6 @@ function SeloSituacao({ situacao }: { situacao: ObraPublica['situacao'] }) {
 
 function rotuloTipos(tipos: string[], rotulos: Record<string, string>) {
   return tipos.map((t) => rotuloDoTipo(t, rotulos).toLowerCase()).join(', ');
-}
-
-/** Quantas licenças da lista estão em cada situação, na ordem da legenda. */
-function ResumoSituacoes({ obras }: { obras: ObraPublica[] }) {
-  const ordem: ObraPublica['situacao'][] = ['vigente', 'aguardando_inicio', 'prazo_encerrado', 'concluida', 'cancelada'];
-  const contagem = new Map<ObraPublica['situacao'], number>();
-  for (const o of obras) contagem.set(o.situacao, (contagem.get(o.situacao) ?? 0) + 1);
-  return (
-    <ul className="mb-3 flex flex-wrap gap-2" aria-label="Resumo por situação">
-      {ordem.filter((s) => contagem.has(s)).map((s) => (
-        <li key={s} className="inline-flex items-center gap-2 rounded-full border border-tinta-200 bg-white px-3 py-1 text-sm text-tinta-700">
-          <SeloSituacao situacao={s} />
-          <span className="tabular font-semibold text-tinta-900">{contagem.get(s)}</span>
-        </li>
-      ))}
-    </ul>
-  );
 }
 
 function ResumoExecutoras({ executoras }: { executoras: { nome: string; vigentes: number; total: number }[] }) {

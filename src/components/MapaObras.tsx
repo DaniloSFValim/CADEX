@@ -117,9 +117,9 @@ function conteudoDoCluster(folhas: GeoJSON.Feature[], aoEscolher: (codigo: strin
 }
 
 /** Mapa das obras. Clicar numa obra avisa quem chamou (a ficha aparece ao lado), sem balão. */
-export default function MapaObras({ obras, foco, destaque, modo = 'pontos', onSelecionar }: {
+export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bairro, onSelecionar, onBairro }: {
   obras: ObraPublica[]; foco?: string | null; destaque?: string | null; modo?: 'pontos' | 'calor';
-  onSelecionar?: (codigo: string) => void;
+  bairro?: string | null; onSelecionar?: (codigo: string) => void; onBairro?: (bairro: string) => void;
 }) {
   const caixa = useRef<HTMLDivElement>(null);
   const mapa = useRef<maplibregl.Map | null>(null);
@@ -128,6 +128,11 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', onSe
   // O evento de clique é registrado uma vez; a referência garante que ele use a função atual.
   const onSelecionarRef = useRef(onSelecionar);
   onSelecionarRef.current = onSelecionar;
+  const onBairroRef = useRef(onBairro);
+  onBairroRef.current = onBairro;
+  // Quem está no mapa, para os balões de informação lerem sempre o valor atual.
+  const obrasRef = useRef(obras);
+  obrasRef.current = obras;
 
   useEffect(() => {
     let vivo = true;
@@ -186,8 +191,8 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', onSe
             layout: { visibility: 'none' },
             paint: {
               'heatmap-weight': ['case', ['has', 'point_count'], ['get', 'point_count'], 1] as unknown as maplibregl.ExpressionSpecification,
-              'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 11, 0.8, 16, 2.5],
-              'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 11, 18, 16, 34],
+              'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 11, 1.4, 16, 3.5],
+              'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 11, 26, 16, 48],
               'heatmap-opacity': 0.85,
               'heatmap-color': ['interpolate', ['linear'], ['heatmap-density'],
                 0, 'rgba(14,116,130,0)', 0.25, '#67c1cf', 0.55, '#f5b841', 1, '#c2410c'] as unknown as maplibregl.ExpressionSpecification,
@@ -202,6 +207,13 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', onSe
           {
             id: 'obras-destaque-ponto', type: 'circle', source: 'obras', filter: ['==', ['get', 'codigo'], '__nenhum__'],
             paint: { 'circle-color': 'rgba(0,0,0,0)', 'circle-radius': 14, 'circle-stroke-color': '#0b2530', 'circle-stroke-width': 3 },
+          },
+          {
+            // Área de toque sobre o calor: invisível, só para clicar e passar o mouse num bairro.
+            id: 'obras-calor-toque', type: 'circle', source: 'obras',
+            filter: ['all', ['==', ['geometry-type'], 'Point'], ['!', ['has', 'point_count']]],
+            layout: { visibility: 'none' },
+            paint: { 'circle-color': '#000000', 'circle-opacity': 0, 'circle-radius': 26 },
           },
           {
             id: 'obras-pontos', type: 'circle', source: 'obras',
@@ -248,6 +260,37 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', onSe
       });
       m.on('mouseenter', 'obras-agrupamentos', () => { m.getCanvas().style.cursor = 'pointer'; });
       m.on('mouseleave', 'obras-agrupamentos', () => { m.getCanvas().style.cursor = ''; });
+      // Balão de informação ao passar o mouse: obra no mapa principal, bairro no calor.
+      const balao = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 12, className: 'balao-obras' });
+      m.on('mousemove', 'obras-pontos', (e: maplibregl.MapLayerMouseEvent) => {
+        const pr = e.features?.[0]?.properties;
+        if (!pr) return;
+        const local = [pr.logradouro, pr.bairro].filter((x) => typeof x === 'string' && x).join(', ');
+        balao.setLngLat(e.lngLat).setText(`${local || 'Obra'} · nº ${String(pr.numero ?? '')}`).addTo(m);
+      });
+      m.on('mousemove', 'obras-linhas', (e: maplibregl.MapLayerMouseEvent) => {
+        const pr = e.features?.[0]?.properties;
+        if (!pr) return;
+        const local = [pr.logradouro, pr.bairro].filter((x) => typeof x === 'string' && x).join(', ');
+        balao.setLngLat(e.lngLat).setText(`${local || 'Obra'} · nº ${String(pr.numero ?? '')}`).addTo(m);
+      });
+      m.on('mouseleave', 'obras-pontos', () => balao.remove());
+      m.on('mouseleave', 'obras-linhas', () => balao.remove());
+      m.on('mousemove', 'obras-calor-toque', (e: maplibregl.MapLayerMouseEvent) => {
+        const bairroDoPonto = String(e.features?.[0]?.properties?.bairro ?? '').trim() || 'Sem bairro';
+        const n = obrasRef.current.filter((o) => (o.trechos[0]?.bairro?.trim() || 'Sem bairro') === bairroDoPonto).length;
+        m.getCanvas().style.cursor = 'pointer';
+        balao.setLngLat(e.lngLat).setText(`${bairroDoPonto} · ${n} ${n === 1 ? 'obra' : 'obras'}`).addTo(m);
+      });
+      m.on('mouseleave', 'obras-calor-toque', () => { m.getCanvas().style.cursor = ''; balao.remove(); });
+      m.on('click', 'obras-calor-toque', (e: maplibregl.MapLayerMouseEvent) => {
+        const b = String(e.features?.[0]?.properties?.bairro ?? '').trim();
+        if (b) onBairroRef.current?.(b);
+      });
+      m.on('click', 'obras-pontos', (e: maplibregl.MapLayerMouseEvent) => {
+        const b = String(e.features?.[0]?.properties?.bairro ?? '').trim();
+        if (b) onBairroRef.current?.(b);
+      });
       const marcarPronto = () => { if (vivo && m.getSource('obras')) setPronto(true); };
       m.once('style.load', marcarPronto);
       m.once('idle', marcarPronto);
@@ -304,11 +347,25 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', onSe
     const calor = modo === 'calor';
     const visivel = (ligado: boolean) => (ligado ? 'visible' : 'none') as maplibregl.VisibilitySpecification;
     m.setLayoutProperty('obras-calor', 'visibility', visivel(calor));
+    m.setLayoutProperty('obras-calor-toque', 'visibility', visivel(calor));
     for (const camada of ['obras-linhas', 'obras-pontos', 'obras-vigentes-halo', 'obras-agrupamentos',
       'obras-agrupamentos-contagem', 'obras-areas', 'obras-areas-contorno']) {
       if (m.getLayer(camada)) m.setLayoutProperty(camada, 'visibility', visivel(!calor));
     }
   }, [modo, pronto]);
+
+  // Bairro escolhido (na lista ou no mapa): enquadra as obras dele.
+  useEffect(() => {
+    if (!pronto || !mapa.current || !bairro) return;
+    const pts: [number, number][] = [];
+    for (const o of obras) {
+      if ((o.trechos[0]?.bairro?.trim() || 'Sem bairro') !== bairro) continue;
+      for (const t of o.trechos) pts.push(t.inicio, ...(t.fim ? [t.fim] : []));
+    }
+    if (pts.length === 0) return;
+    const b = pts.reduce((acc, p) => acc.extend(p), new maplibregl.LngLatBounds(pts[0], pts[0]));
+    mapa.current.fitBounds(b, { padding: 70, maxZoom: 16, duration: 700 });
+  }, [bairro, pronto]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Leva o mapa até a obra escolhida na lista.
   useEffect(() => {
