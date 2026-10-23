@@ -34,8 +34,8 @@ begin
   perform public.salvar_licenca(jsonb_build_object(
       'setor', 'telecom', 'processo_sei', 'PROC-INTERNO-1', 'numero', '010/2023', 'tipos_obra', array['vala'], 'escopo', 'Vala',
       'executora_razao_social', 'Antiga Ltda.', 'executora_cnpj', '11222333000181', 'contratante_id', op,
-      'observacoes', 'nota interna', 'protocolo_data', '2023-01-02', 'situacao', 'deferida',
-      'decisao_data', '2023-01-10', 'inicio_previsto', '2023-02-01', 'fim_previsto', '2023-03-01'),
+      'observacoes', 'nota interna', 'protocolo_data', '2023-01-10', 'situacao', 'deferida',
+      'inicio_previsto', '2023-02-01', 'fim_previsto', '2023-03-01'),
     jsonb_build_array(
       jsonb_build_object('logradouro', 'Rua A', 'bairro', 'Centro', 'inicio_lat', -22.895, 'inicio_lng', -43.123,
                          'fim_lat', -22.897, 'fim_lng', -43.120),

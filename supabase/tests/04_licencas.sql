@@ -71,35 +71,35 @@ begin
   -- Processo SEI no formato do setor licenciador
   -- Processo em texto livre (SEI ou numeração anterior), mas não vazio
   perform pg_temp.recusa(format($q$insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id, contratante_id, protocolo_data)
-    values ('telecom', '   ', '{vala}', 'x', %L, %L, '2026-09-01')$q$, te, op),
+    values ('telecom', '   ', '{vala}', 'x', %L, %L, '2026-09-10')$q$, te, op),
     'licencas_processo_check', 'aceitou processo vazio');
 
   -- Terceirizada sem concessionária contratante
   perform pg_temp.recusa(format($q$insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id, protocolo_data)
-    values ('telecom', 'NIT-050120/000123/2026', '{vala}', 'x', %L, '2026-09-01')$q$, te),
+    values ('telecom', 'NIT-050120/000123/2026', '{vala}', 'x', %L, '2026-09-10')$q$, te),
     'informe a contratante', 'aceitou terceirizada sem contratante');
 
   -- Executora titular (operadora) não tem OUTRA contratante: ela executa a própria obra.
   -- (A própria titular como contratante é permitida; ver 15_periodo_e_papeis.sql.)
   perform pg_temp.recusa(format($q$insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id, contratante_id, protocolo_data)
-    values ('telecom', 'NIT-050120/000123/2026', '{vala}', 'x', %L, %L, '2026-09-01')$q$, op, op2),
+    values ('telecom', 'NIT-050120/000123/2026', '{vala}', 'x', %L, %L, '2026-09-10')$q$, op, op2),
     'só se aplica quando a executora é terceirizada', 'aceitou contratante com executora titular');
 
   -- Tipo de obra fora do art. 10
   perform pg_temp.recusa(format($q$insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id, contratante_id, protocolo_data)
-    values ('telecom', 'NIT-050120/000123/2026', '{pintura}', 'x', %L, %L, '2026-09-01')$q$, te, op),
+    values ('telecom', 'NIT-050120/000123/2026', '{pintura}', 'x', %L, %L, '2026-09-10')$q$, te, op),
     'não está disponível para o setor telecom', 'aceitou tipo de obra fora do art. 10');
 
   -- Subcontratada sem vínculo com a executora
   perform pg_temp.recusa(format($q$insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id, contratante_id, subcontratada_id, protocolo_data)
-    values ('telecom', 'NIT-050120/000123/2026', '{vala}', 'x', %L, %L, %L, '2026-09-01')$q$, te, op, sub),
+    values ('telecom', 'NIT-050120/000123/2026', '{vala}', 'x', %L, %L, %L, '2026-09-10')$q$, te, op, sub),
     'vínculo ativo', 'aceitou subcontratada sem vínculo');
   insert into vinculos (contratante_id, contratada_id) values (te, sub);
 
   -- Pedido válido, em análise; processo normalizado para maiúsculas
   insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id, contratante_id, subcontratada_id,
                         responsavel_tecnico_id, protocolo_data)
-  values ('telecom', ' nit-050120/000123/2026 ', '{vala,rede}', 'Expansão de rede em vala', te, op, sub, rt, '2026-09-01')
+  values ('telecom', ' nit-050120/000123/2026 ', '{vala,rede}', 'Expansão de rede em vala', te, op, sub, rt, '2026-09-10')
   returning id into lic;
   insert into ids values ('lic', lic);
   perform pg_temp.assert((select processo_sei from licencas where id = lic) = 'NIT-050120/000123/2026',
@@ -107,9 +107,9 @@ begin
 
   -- Um processo SEI pode originar mais de uma licença (números distintos).
   insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id, contratante_id, protocolo_data, numero)
-  values ('telecom', 'NIT-050120/000123/2026', '{vala}', 'x', te, op, '2026-09-01', 'MESMO-PROC-A/2026');
+  values ('telecom', 'NIT-050120/000123/2026', '{vala}', 'x', te, op, '2026-09-10', 'MESMO-PROC-A/2026');
   perform pg_temp.recusa(format($q$insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id, contratante_id, protocolo_data, numero)
-    values ('telecom', 'NIT-050120/000123/2026', '{vala}', 'x', %L, %L, '2026-09-01', 'MESMO-PROC-A/2026')$q$, te, op),
+    values ('telecom', 'NIT-050120/000123/2026', '{vala}', 'x', %L, %L, '2026-09-10', 'MESMO-PROC-A/2026')$q$, te, op),
     'licencas_numero_ativo', 'aceitou número de licença repetido com o mesmo processo');
 
   -- Trecho com latitude e longitude trocadas
@@ -127,18 +127,18 @@ declare lic uuid := (select id from ids where nome = 'lic');
         sub uuid := (select id from ids where nome = 'sub');
         op uuid := (select id from ids where nome = 'op');
 begin
-  perform pg_temp.recusa(format($q$update licencas set situacao = 'deferida', decisao_data = '2026-09-20',
+  perform pg_temp.recusa(format($q$update licencas set situacao = 'deferida',
       numero = 'LIC 001/2026', art_numero = 'ART-1', inicio_previsto = '2026-10-01', fim_previsto = '2026-12-31'
     where id = %L$q$, lic), 'ao menos um trecho', 'deferiu sem trecho');
 
   insert into licenca_trechos (licenca_id, logradouro, bairro, inicio_lat, inicio_lng, fim_lat, fim_lng)
   values (lic, 'Rua Visconde de Sepetiba', 'Centro', -22.8950, -43.1230, -22.8970, -43.1200);
 
-  perform pg_temp.recusa(format($q$update licencas set situacao = 'deferida', decisao_data = '2026-09-20',
+  perform pg_temp.recusa(format($q$update licencas set situacao = 'deferida',
       art_numero = 'ART-1', inicio_previsto = '2026-10-01', fim_previsto = '2026-12-31'
     where id = %L$q$, lic), 'número da licença', 'deferiu sem número');
 
-  perform pg_temp.recusa(format($q$update licencas set situacao = 'deferida', decisao_data = '2026-09-20',
+  perform pg_temp.recusa(format($q$update licencas set situacao = 'deferida',
       numero = 'LIC 001/2026', art_numero = 'ART-1', inicio_previsto = '2026-12-31', fim_previsto = '2026-10-01'
     where id = %L$q$, lic), 'fim da obra ou serviço', 'aceitou período invertido');
 
@@ -147,7 +147,7 @@ begin
   -- situação no snapshot.
   update empresas set situacao = 'apta', portaria_numero = 'P-1', portaria_data = current_date - 10 where id = te;
   update empresas set situacao = 'apta', portaria_numero = 'P-2', portaria_data = current_date - 10 where id = sub;
-  update licencas set situacao = 'deferida', decisao_data = '2026-09-20', numero = 'LIC 001/2026',
+  update licencas set situacao = 'deferida', numero = 'LIC 001/2026',
          art_numero = 'ART-1', inicio_previsto = '2026-10-01', fim_previsto = '2026-12-31'
    where id = lic;
 
@@ -162,7 +162,7 @@ begin
     'foto do deferimento mudou com a empresa');
 
   perform pg_temp.recusa(format($q$insert into licencas (setor, processo_sei, numero, tipos_obra, escopo, executora_id, contratante_id, protocolo_data)
-    values ('telecom', 'NIT-050120/000999/2026', 'LIC 001/2026', '{poste}', 'x', %L, %L, '2026-09-01')$q$, te, op),
+    values ('telecom', 'NIT-050120/000999/2026', 'LIC 001/2026', '{poste}', 'x', %L, %L, '2026-09-10')$q$, te, op),
     'licencas_numero_ativo', 'aceitou número de licença repetido');
 
   perform pg_temp.recusa(format($q$update licencas set situacao = 'em_analise' where id = %L$q$, lic),
@@ -203,8 +203,7 @@ begin
   lic := public.salvar_licenca(jsonb_build_object(
       'setor', 'telecom', 'processo_sei', 'NIT-050120/000200/2026', 'numero', 'LIC 002/2026', 'tipos_obra', array['poste'],
       'escopo', 'Implantação de poste', 'executora_id', te, 'contratante_id', op, 'art_numero', 'ART-2',
-      'protocolo_data', '2026-09-02', 'situacao', 'deferida', 'decisao_data', '2026-09-25',
-      'inicio_previsto', '2026-10-05', 'fim_previsto', '2026-10-10'),
+      'protocolo_data', '2026-09-25', 'situacao', 'deferida', 'inicio_previsto', '2026-10-05', 'fim_previsto', '2026-10-10'),
     jsonb_build_array(jsonb_build_object('logradouro', 'Av. Amaral Peixoto', 'bairro', 'Centro',
       'inicio_lat', -22.8940, 'inicio_lng', -43.1180)));
   perform pg_temp.assert((select situacao from licencas where id = lic) = 'deferida', 'RPC não deferiu');

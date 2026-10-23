@@ -49,12 +49,12 @@ test.describe('mapa de consulta', () => {
     await expect(noMapa(page)).toHaveAttribute('data-trechos', '3');
   });
 
-  test('licença cancelada sem data de decisão nem período não derruba a página', async ({ page }) => {
-    // Reproduz o defeito: o filtro de ano lia `decisao_data.startsWith` e a página inteira ficava em branco.
+  test('licença cancelada sem período não derruba a página', async ({ page }) => {
+    // Reproduz o defeito: o filtro de ano lia uma data nula e a página inteira ficava em branco.
     const erros: string[] = [];
     page.on('pageerror', (e) => erros.push(e.message));
     await instalarBackend(page, {
-      licencas: [licenca({}), licenca({ situacao: 'cancelada', decisao_data: null, inicio_previsto: null, fim_previsto: null })],
+      licencas: [licenca({}), licenca({ situacao: 'cancelada', inicio_previsto: null, fim_previsto: null })],
     });
     await page.goto('/consulta/obras');
     await mostrarEncerradas(page);
@@ -81,7 +81,7 @@ test.describe('mapa de consulta', () => {
       await page.locator('label:has(> span:text-matches("^Nº do processo[*]?$")) input').fill(`NIT-050120/00090${tipo === 'obra' ? 1 : 2}/2026`);
       await page.locator('label:has-text("Abertura de vala") input').check();
       await page.locator('label:has(> span:text-matches("^Escopo d[oa] (obra|serviço)[*]?$")) textarea').fill(`Teste ${tipo}`);
-      await page.locator('label:has(> span:text-matches("^Data da decisão[*]?$")) input').fill(dia(-1));
+      await page.locator('label:has(> span:text-matches("^Início da obra ou serviço[*]?$")) input').fill(dia(-1));
       await page.locator('label:has(> span:text-matches("^Nº da licença[*]?$")) input').fill(`90${tipo === 'obra' ? 1 : 2}/2026`);
       await page.locator('label:has(> span:text-matches("^Fim da obra ou serviço[*]?$")) input').fill(dia(30));
       await page.locator('label:has(> span:text-matches("^Logradouro[*]?$")) input').fill('Rua Mem de Sá');
@@ -136,7 +136,7 @@ test.describe('obras por mês e ficha da obra', () => {
 
   test('sem obra com período no ano, o gráfico diz isso em vez de ficar vazio', async ({ page }) => {
     await instalarBackend(page, {
-      licencas: [licenca({ inicio_previsto: '2019-01-01', fim_previsto: '2019-02-01', decisao_data: '2018-12-20' })],
+      licencas: [licenca({ inicio_previsto: '2019-01-01', fim_previsto: '2019-02-01' })],
     });
     await page.goto('/consulta/obras');
     await expect(grafico(page)).toContainText('Nenhuma obra com período neste ano');

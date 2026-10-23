@@ -44,8 +44,7 @@ begin
   deferida := public.salvar_licenca(jsonb_build_object(
       'setor', 'telecom', 'processo_sei', 'NIT-050120/000777/2026', 'numero', '077/2026', 'tipos_obra', array['vala'],
       'escopo', 'Travessia de rede', 'executora_id', ex, 'contratante_id', op, 'art_numero', 'ART-SIGILO',
-      'observacoes', 'nota interna', 'protocolo_data', hoje - 20, 'situacao', 'deferida', 'decisao_data', hoje - 10,
-      'inicio_previsto', hoje - 1, 'fim_previsto', hoje + 30),
+      'observacoes', 'nota interna', 'protocolo_data', hoje - 10, 'situacao', 'deferida', 'inicio_previsto', hoje - 1, 'fim_previsto', hoje + 30),
     jsonb_build_array(jsonb_build_object('logradouro', 'Rua Gavião Peixoto', 'bairro', 'Icaraí',
       'inicio_lat', -22.9035, 'inicio_lng', -43.1102)));
   analise := public.salvar_licenca(jsonb_build_object(

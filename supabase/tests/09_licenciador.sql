@@ -70,8 +70,7 @@ begin
   lic := public.salvar_licenca(jsonb_build_object(
       'setor', 'telecom', 'processo_sei', 'NIT-050120/000700/2026', 'numero', 'LCN-1', 'tipos_obra', array['vala'],
       'escopo', 'Obra registrada pelo licenciador', 'executora_id', te, 'contratante_id', op,
-      'protocolo_data', '2026-10-01', 'situacao', 'deferida', 'decisao_data', '2026-10-02',
-      'inicio_previsto', '2026-10-05', 'fim_previsto', '2026-11-05'),
+      'protocolo_data', '2026-10-02', 'situacao', 'deferida', 'inicio_previsto', '2026-10-05', 'fim_previsto', '2026-11-05'),
     jsonb_build_array(jsonb_build_object('logradouro', 'Rua Teste', 'inicio_lat', -22.89, 'inicio_lng', -43.12)));
   perform pg_temp.assert((select situacao from licencas where id = lic) = 'deferida',
     'licenciador deveria conseguir registrar a licença');

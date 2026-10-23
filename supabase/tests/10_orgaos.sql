@@ -86,8 +86,7 @@ begin
   lic := public.salvar_licenca(jsonb_build_object(
       'setor', 'viario', 'processo_sei', 'NIT-ORG/000001/2026', 'numero', 'LCN-VIA-1', 'tipos_obra', array['recomposicao'],
       'escopo', 'Ciclovia NIT Bike', 'executora_id', exe, 'orgao_contratante_id', semob, 'origem_intervencao', 'municipio',
-      'protocolo_data', '2026-10-01', 'situacao', 'deferida', 'decisao_data', '2026-10-02',
-      'inicio_previsto', '2026-10-05', 'fim_previsto', '2026-11-05'),
+      'protocolo_data', '2026-10-02', 'situacao', 'deferida', 'inicio_previsto', '2026-10-05', 'fim_previsto', '2026-11-05'),
     jsonb_build_array(jsonb_build_object('logradouro', 'Av. Teste', 'inicio_lat', -22.9, 'inicio_lng', -43.1)));
   perform pg_temp.assert((select situacao from licencas where id = lic) = 'deferida',
     'licença viária com órgão deveria ser deferida');
@@ -100,16 +99,14 @@ begin
   perform public.salvar_licenca(jsonb_build_object(
       'setor', 'viario', 'processo_sei', 'NIT-ORG/000002/2026', 'numero', 'LCN-VIA-2', 'tipos_obra', array['recomposicao'],
       'escopo', 'Outro trecho', 'executora_id', exe, 'orgao_contratante_id', geral, 'origem_intervencao', 'outro_ente',
-      'protocolo_data', '2026-10-01', 'situacao', 'deferida', 'decisao_data', '2026-10-02',
-      'inicio_previsto', '2026-10-05', 'fim_previsto', '2026-11-05'),
+      'protocolo_data', '2026-10-02', 'situacao', 'deferida', 'inicio_previsto', '2026-10-05', 'fim_previsto', '2026-11-05'),
     jsonb_build_array(jsonb_build_object('logradouro', 'Rua B', 'inicio_lat', -22.9, 'inicio_lng', -43.1)));
 
   -- Órgão restrito a {gas} não vale numa licença viária.
   perform pg_temp.recusa(format($q$select public.salvar_licenca(jsonb_build_object(
       'setor', 'viario', 'processo_sei', 'NIT-ORG/000003/2026', 'numero', 'LCN-VIA-3', 'tipos_obra', array['recomposicao'],
       'escopo', 'x', 'executora_id', %L, 'orgao_contratante_id', %L, 'origem_intervencao', 'outro_ente',
-      'protocolo_data', '2026-10-01', 'situacao', 'deferida', 'decisao_data', '2026-10-02',
-      'inicio_previsto', '2026-10-05', 'fim_previsto', '2026-11-05'),
+      'protocolo_data', '2026-10-02', 'situacao', 'deferida', 'inicio_previsto', '2026-10-05', 'fim_previsto', '2026-11-05'),
     jsonb_build_array(jsonb_build_object('logradouro', 'Rua C', 'inicio_lat', -22.9, 'inicio_lng', -43.1)))$q$, exe, gasorg),
     'não atua no setor', 'órgão restrito a gás não deveria valer em viário');
 
@@ -117,8 +114,7 @@ begin
   perform pg_temp.recusa(format($q$select public.salvar_licenca(jsonb_build_object(
       'setor', 'telecom', 'processo_sei', 'NIT-ORG/000004/2026', 'numero', 'LCN-TEL-1', 'tipos_obra', array['rede'],
       'escopo', 'x', 'executora_id', %L, 'contratante_id', %L, 'orgao_contratante_id', %L, 'origem_intervencao', 'outro_ente',
-      'protocolo_data', '2026-10-01', 'situacao', 'deferida', 'decisao_data', '2026-10-02',
-      'inicio_previsto', '2026-10-05', 'fim_previsto', '2026-11-05'),
+      'protocolo_data', '2026-10-02', 'situacao', 'deferida', 'inicio_previsto', '2026-10-05', 'fim_previsto', '2026-11-05'),
     jsonb_build_array(jsonb_build_object('logradouro', 'Rua D', 'inicio_lat', -22.9, 'inicio_lng', -43.1)))$q$, exetel, ope, geral),
     'só uma contratante', 'empresa e órgão juntos deveriam ser recusados');
 end $$;
@@ -136,8 +132,7 @@ begin
   perform public.salvar_licenca(jsonb_build_object(
       'setor', 'viario', 'processo_sei', 'NIT-ORG/000005/2026', 'numero', 'LCN-VIA-5', 'tipos_obra', array['recomposicao'],
       'escopo', 'Trecho do licenciador', 'executora_id', exe, 'orgao_contratante_id', semob, 'origem_intervencao', 'municipio',
-      'protocolo_data', '2026-10-01', 'situacao', 'deferida', 'decisao_data', '2026-10-02',
-      'inicio_previsto', '2026-10-05', 'fim_previsto', '2026-11-05'),
+      'protocolo_data', '2026-10-02', 'situacao', 'deferida', 'inicio_previsto', '2026-10-05', 'fim_previsto', '2026-11-05'),
     jsonb_build_array(jsonb_build_object('logradouro', 'Rua E', 'inicio_lat', -22.9, 'inicio_lng', -43.1)));
 end $$;
 

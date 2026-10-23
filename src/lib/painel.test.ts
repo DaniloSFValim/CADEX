@@ -26,7 +26,7 @@ function lic(o: Partial<LicencaComTrechos> = {}): LicencaComTrechos {
     executora_razao_social: null, executora_cnpj: null, contratante_razao_social: null, contratante_cnpj: null,
     contratante_cpf: null, imovel_endereco: null, processo_urbanismo: null, anterior_resolucao: false,
     subcontratada_id: null, responsavel_tecnico_id: null, art_numero: null, protocolo_data: '2026-09-10',
-    situacao: 'deferida', decisao_data: '2026-09-15', inicio_previsto: '2026-10-01', fim_previsto: '2026-10-30',
+    situacao: 'deferida', inicio_previsto: '2026-10-01', fim_previsto: '2026-10-30',
     validade_ate: (o.fim_previsto as string | undefined) ?? '2026-10-30',
     concluida_em: null, recomposicao_data: null, as_built_sei: null, as_built_data: null, observacoes: null,
     tipo_intervencao: 'obra', origem_intervencao: 'concessionaria', contrato_numero: null, processo_administrativo: null,
@@ -67,7 +67,7 @@ describe('filtros', () => {
   const andamento = lic();
   const vencida = lic({ inicio_previsto: '2026-08-01', fim_previsto: '2026-09-01' });
   const concluida = lic({ concluida_em: '2026-10-05' });
-  const cancelada = lic({ situacao: 'cancelada', decisao_data: null, inicio_previsto: null, fim_previsto: null });
+  const cancelada = lic({ situacao: 'cancelada', inicio_previsto: null, fim_previsto: null });
   const orgao = lic({ contratante_id: null, orgao_contratante_id: 'og1', tipos_obra: ['poste'], executora_id: 'op2' });
   const todas = [programada, andamento, vencida, concluida, cancelada, orgao];
   const f = (p: Partial<typeof SEM_FILTROS>) => aplicarFiltros(todas, { ...SEM_FILTROS, ...p }, HOJE, ctx);
@@ -102,7 +102,7 @@ describe('filtros', () => {
     expect(f({ de: '2026-07-01', ate: '2026-08-15' })).toEqual([vencida]);
     expect(f({ de: '2027-01-01' })).toEqual([]);
   });
-  it('licença sem datas do período usa a decisão (ou o protocolo)', () => {
+  it('licença sem datas do período usa o protocolo', () => {
     expect(f({ de: '2026-09-10', ate: '2026-09-20' })).toContain(cancelada);
   });
   it('por contratante, executora e tipo', () => {
@@ -122,8 +122,8 @@ describe('indicadores', () => {
     lic({ inicio_previsto: '2026-08-01', fim_previsto: '2026-09-01' }),                // prazo vencido
     lic({ inicio_previsto: '2026-09-01', fim_previsto: '2026-09-30', concluida_em: '2026-09-28' }), // concluída sem As Built
     lic({ concluida_em: '2026-10-05', as_built_sei: 'D-1', as_built_data: '2026-10-06' }),          // concluída
-    lic({ situacao: 'cancelada', inicio_previsto: null, fim_previsto: null, decisao_data: null }),
-    lic({ situacao: 'em_analise', inicio_previsto: null, fim_previsto: null, decisao_data: null }),
+    lic({ situacao: 'cancelada', inicio_previsto: null, fim_previsto: null }),
+    lic({ situacao: 'em_analise', inicio_previsto: null, fim_previsto: null }),
   ];
   const i = indicadores(ls, HOJE, 15, ctx);
 
@@ -176,26 +176,26 @@ describe('distribuição por contratante ou executora', () => {
 
 describe('evolução mensal', () => {
   it('preenche com zero os meses sem licença', () => {
-    const ls = [lic({ decisao_data: '2026-07-10' }), lic({ decisao_data: '2026-07-20' }), lic({ decisao_data: '2026-10-02' })];
-    const r = evolucaoMensal(ls, 'decisao');
+    const ls = [lic({ protocolo_data: '2026-07-10' }), lic({ protocolo_data: '2026-07-20' }), lic({ protocolo_data: '2026-10-02' })];
+    const r = evolucaoMensal(ls, 'protocolo');
     expect(r.meses).toEqual([
       { mes: '2026-07', n: 2 }, { mes: '2026-08', n: 0 }, { mes: '2026-09', n: 0 }, { mes: '2026-10', n: 1 },
     ]);
     expect(r.semData).toBe(0);
   });
   it('atravessa a virada do ano', () => {
-    const r = evolucaoMensal([lic({ decisao_data: '2025-12-31' }), lic({ decisao_data: '2026-01-01' })], 'decisao');
+    const r = evolucaoMensal([lic({ protocolo_data: '2025-12-31' }), lic({ protocolo_data: '2026-01-01' })], 'protocolo');
     expect(r.meses.map((m) => m.mes)).toEqual(['2025-12', '2026-01']);
   });
   it('por registro usa o dia de entrada no CADEX; quem não tem a data vai em semData', () => {
-    const ls = [lic({ decisao_data: null, criado_em: '2026-03-05T09:00:00Z' }), lic({ decisao_data: '2026-01-01' })];
+    const ls = [lic({ protocolo_data: null as unknown as string, criado_em: '2026-03-05T09:00:00Z' }), lic({ protocolo_data: '2026-01-01' })];
     expect(evolucaoMensal(ls, 'registro').meses.reduce((s, m) => s + m.n, 0)).toBe(2);
-    const d = evolucaoMensal(ls, 'decisao');
+    const d = evolucaoMensal(ls, 'protocolo');
     expect(d.semData).toBe(1);
     expect(d.meses).toEqual([{ mes: '2026-01', n: 1 }]);
   });
   it('sem licenças, sem meses', () => {
-    expect(evolucaoMensal([], 'decisao')).toEqual({ meses: [], semData: 0 });
+    expect(evolucaoMensal([], 'protocolo')).toEqual({ meses: [], semData: 0 });
   });
 });
 

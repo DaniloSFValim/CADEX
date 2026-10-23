@@ -37,8 +37,8 @@ begin
   -- Emitida, contratada por órgão (sem empresa contratante).
   perform public.salvar_licenca(jsonb_build_object(
       'setor','telecom','processo_sei','ORG-1','numero','061/2026','tipos_obra',array['vala'],'escopo','Vala',
-      'executora_id',op,'orgao_contratante_id',orgao,'origem_intervencao','municipio','protocolo_data','2026-09-01','situacao','deferida',
-      'decisao_data','2026-09-02','inicio_previsto','2026-09-10','fim_previsto','2026-12-01'),
+      'executora_id',op,'orgao_contratante_id',orgao,'origem_intervencao','municipio','protocolo_data','2026-09-02','situacao','deferida',
+      'inicio_previsto','2026-09-10','fim_previsto','2026-12-01'),
     jsonb_build_array(jsonb_build_object('logradouro','Rua do Órgão','inicio_lat',-22.895,'inicio_lng',-43.123)));
 end $$;
 

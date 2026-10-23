@@ -17,8 +17,8 @@ alter table empresas enable trigger user;
 
 alter table licencas disable trigger user;
 insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id, contratante_id, contratante_razao_social,
-                      imovel_endereco, protocolo_data, situacao, decisao_data, inicio_previsto, fim_previsto, codigo_publico)
-select 'drenagem', 'PROC-TRL-1', array['vala'], 'Obra com trilha', e.id, null, 'Prefeitura Municipal de Niterói', 'Rua Teste, 1', '2026-09-10', 'deferida', '2026-09-12',
+                      imovel_endereco, protocolo_data, situacao, inicio_previsto, fim_previsto, codigo_publico)
+select 'drenagem', 'PROC-TRL-1', array['vala'], 'Obra com trilha', e.id, null, 'Prefeitura Municipal de Niterói', 'Rua Teste, 1', '2026-09-10', 'deferida',
        '2026-10-01', '2026-12-31', 'trilhapublica0001'
   from empresas e where e.codigo_cadex = 'CADEX-TRL-0001';
 -- Só a auditoria volta: a regra de negócio (licencas_antes_de_gravar) fica de fora, por ser fixture.

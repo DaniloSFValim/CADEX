@@ -48,8 +48,8 @@ begin
   values ('11222333000181', 'Terceirizada Excl Ltda.', 'TerExcl', 'terceirizada', 'e2@e.test', '{telecom}');
   insert into ids values ('op', op);
   alter table licencas disable trigger licencas_antes_de_gravar;
-  insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id, protocolo_data, situacao, decisao_data)
-  values ('telecom', 'HIST-LEGADO-1', array['vala'], 'Histórico incompleto', op, '2024-01-10', 'indeferida', '2024-02-01')
+  insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id, protocolo_data, situacao)
+  values ('telecom', 'HIST-LEGADO-1', array['vala'], 'Histórico incompleto', op, '2024-01-10', 'indeferida')
   returning id into hist;
   alter table licencas enable trigger licencas_antes_de_gravar;
   insert into ids values ('hist', hist);
@@ -76,10 +76,10 @@ declare
 begin
   a := public.salvar_licenca(jsonb_build_object('setor','telecom','processo_sei','NIT-050120/000801/2026','numero','801/2026',
     'tipo_intervencao','obra','tipos_obra',array['vala'],'escopo','Lançada por engano','executora_id',ter,'contratante_id',op,
-    'protocolo_data','2026-09-10','situacao','deferida','decisao_data','2026-09-15','inicio_previsto','2026-10-01','fim_previsto','2026-10-30'), trecho);
+    'protocolo_data','2026-09-15','situacao','deferida','inicio_previsto','2026-10-01','fim_previsto','2026-10-30'), trecho);
   b := public.salvar_licenca(jsonb_build_object('setor','telecom','processo_sei','NIT-050120/000802/2026','numero','802/2026',
     'tipo_intervencao','servico','tipos_obra',array['rede'],'escopo','Outra licença','executora_id',ter,'contratante_id',op,
-    'protocolo_data','2026-09-10','situacao','deferida','decisao_data','2026-09-15','inicio_previsto','2026-10-01','fim_previsto','2026-10-30'),
+    'protocolo_data','2026-09-15','situacao','deferida','inicio_previsto','2026-10-01','fim_previsto','2026-10-30'),
     jsonb_build_array(jsonb_build_object('logradouro', 'Rua Longe', 'inicio_lat', -22.95, 'inicio_lng', -43.05)));
   insert into ids values ('a', a), ('b', b);
 end $$;
@@ -155,7 +155,7 @@ declare
 begin
   novo := public.salvar_licenca(jsonb_build_object('setor','telecom','processo_sei','NIT-050120/000801/2026','numero','801/2026',
     'tipo_intervencao','obra','tipos_obra',array['vala'],'escopo','Lançada certo','executora_id',ter,'contratante_id',op,
-    'protocolo_data','2026-09-10','situacao','deferida','decisao_data','2026-09-15','inicio_previsto','2026-10-01','fim_previsto','2026-10-30'), trecho);
+    'protocolo_data','2026-09-15','situacao','deferida','inicio_previsto','2026-10-01','fim_previsto','2026-10-30'), trecho);
   insert into ids values ('novo', novo);
   -- Mas duas licenças ativas com o mesmo número continuam proibidas.
   perform pg_temp.recusa(format($q$select public.salvar_licenca(jsonb_build_object('setor','telecom','processo_sei','NIT-050120/000899/2026','numero','801/2026',

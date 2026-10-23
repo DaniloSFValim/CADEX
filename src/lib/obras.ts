@@ -18,10 +18,9 @@ export interface ObraPublica {
   tipo_intervencao: TipoIntervencao;
   origem: OrigemIntervencao;
   escopo: string;
-  /** Podem faltar: licença cancelada ou histórica sem cronograma ou sem decisão. */
+  /** Podem faltar: licença cancelada ou histórica sem cronograma. */
   inicio_previsto: string | null;
   fim_previsto: string | null;
-  decisao_data: string | null;
   situacao: SituacaoPublica;
   executora: string;
   contratante: string | null;
@@ -82,7 +81,7 @@ export function filtrarObras(obras: ObraPublica[], f: FiltroObras): ObraPublica[
   const q = f.busca.trim().toLowerCase();
   return obras.filter((o) =>
     inclui.includes(o.situacao)
-    && (!f.ano || (o.decisao_data ?? '').startsWith(f.ano))
+    && (!f.ano || (o.inicio_previsto ?? '').startsWith(f.ano))
     && (!f.setor || o.setor === f.setor)
     && (!f.intervencao || o.tipo_intervencao === f.intervencao)
     && (!f.origem || o.origem === f.origem)
@@ -91,9 +90,9 @@ export function filtrarObras(obras: ObraPublica[], f: FiltroObras): ObraPublica[
       .some((s) => s.toLowerCase().includes(q))));
 }
 
-/** Anos de emissão presentes, do mais recente ao mais antigo. */
+/** Anos de início previsto presentes, do mais recente ao mais antigo. */
 export const anosDasObras = (obras: ObraPublica[]) =>
-  [...new Set(obras.flatMap((o) => (o.decisao_data ? [o.decisao_data.slice(0, 4)] : [])))].sort().reverse();
+  [...new Set(obras.flatMap((o) => (o.inicio_previsto ? [o.inicio_previsto.slice(0, 4)] : [])))].sort().reverse();
 
 /** Coordenada utilizável no mapa: [longitude, latitude] finitas e dentro do planeta. */
 const coordenadaValida = (c: unknown): c is [number, number] =>

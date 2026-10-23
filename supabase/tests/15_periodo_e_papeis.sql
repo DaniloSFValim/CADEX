@@ -43,8 +43,8 @@ begin
   update empresas set executa_obras = true where id = op;  -- cadastro habilita contratante = executora
 
   alter table licencas disable trigger licencas_antes_de_gravar;
-  insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id, protocolo_data, situacao, decisao_data)
-  values ('telecom', 'HIST-INDEF-1', array['vala'], 'Histórica indeferida', op, '2024-01-10', 'indeferida', '2024-02-01')
+  insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id, protocolo_data, situacao)
+  values ('telecom', 'HIST-INDEF-1', array['vala'], 'Histórica indeferida', op, '2024-01-10', 'indeferida')
   returning id into hist;
   alter table licencas enable trigger licencas_antes_de_gravar;
   insert into ids values ('hist', hist);
@@ -74,7 +74,7 @@ begin
   -- 1. Indeferida: nova licença nasce recusada.
   perform pg_temp.recusa(format($q$select public.salvar_licenca(jsonb_build_object(
       'setor','telecom','processo_sei','NIT-050120/000501/2026','tipos_obra',array['vala'],'escopo','x',
-      'executora_id','%s','protocolo_data','2026-09-10','situacao','indeferida','decisao_data','2026-09-12'), '[]'::jsonb)$q$, op),
+      'executora_id','%s','protocolo_data','2026-09-10','situacao','indeferida'), '[]'::jsonb)$q$, op),
     'não é mais registrada', 'licença nova em "indeferida" foi aceita');
 
   -- 2. O histórico continua legível e editável sem trocar de situação.
@@ -96,21 +96,19 @@ begin
   lic := public.salvar_licenca(jsonb_build_object(
       'setor','telecom','processo_sei','NIT-050120/000502/2026','tipos_obra',array['vala'],'escopo','x',
       'executora_id',op,'protocolo_data','2026-09-10','situacao','em_analise'), '[]'::jsonb);
-  perform pg_temp.recusa(format('update licencas set situacao = %L, decisao_data = %L where id = %L',
-      'indeferida', '2026-09-20', lic), 'não é mais registrada', 'em análise passou a "indeferida"');
+  perform pg_temp.recusa(format('update licencas set situacao = %L where id = %L',
+      'indeferida', lic), 'não é mais registrada', 'em análise passou a "indeferida"');
 
   -- 4. Período da obra ou serviço: fim anterior ao início é recusado.
   perform pg_temp.recusa(format($q$select public.salvar_licenca(jsonb_build_object(
       'setor','telecom','processo_sei','NIT-050120/000503/2026','numero','503/2026','tipos_obra',array['vala'],'escopo','x',
-      'executora_id','%s','protocolo_data','2026-09-10','situacao','deferida','decisao_data','2026-09-15',
-      'inicio_previsto','2026-10-20','fim_previsto','2026-10-10'), %L::jsonb)$q$, op, trecho::text),
+      'executora_id','%s','protocolo_data','2026-09-15','situacao','deferida','inicio_previsto','2026-10-20','fim_previsto','2026-10-10'), %L::jsonb)$q$, op, trecho::text),
     'O fim da obra ou serviço não pode ser anterior ao início', 'período invertido foi aceito');
 
   -- 5. A própria contratante executa: mesma empresa nos dois papéis, um só cadastro.
   lic := public.salvar_licenca(jsonb_build_object(
       'setor','telecom','processo_sei','NIT-050120/000504/2026','numero','504/2026','tipos_obra',array['vala'],'escopo','Vala',
-      'executora_id',op,'contratante_id',op,'protocolo_data','2026-09-10','situacao','deferida','decisao_data','2026-09-15',
-      'inicio_previsto','2026-10-01','fim_previsto','2026-10-30'), trecho);
+      'executora_id',op,'contratante_id',op,'protocolo_data','2026-09-15','situacao','deferida','inicio_previsto','2026-10-01','fim_previsto','2026-10-30'), trecho);
   perform pg_temp.assert((select contratante_id = executora_id from licencas where id = lic),
     'contratante e executora não ficaram na mesma empresa');
   perform pg_temp.assert((select count(*) from empresas where cnpj = '12345678000195') = 1,
@@ -121,35 +119,30 @@ begin
   -- 6. Titular com contratante DIFERENTE continua recusada (a titular executa a própria obra).
   perform pg_temp.recusa(format($q$select public.salvar_licenca(jsonb_build_object(
       'setor','telecom','processo_sei','NIT-050120/000505/2026','numero','505/2026','tipos_obra',array['vala'],'escopo','x',
-      'executora_id','%s','contratante_id','%s','protocolo_data','2026-09-10','situacao','deferida','decisao_data','2026-09-15',
-      'inicio_previsto','2026-10-01','fim_previsto','2026-10-30'), %L::jsonb)$q$, op, op2, trecho::text),
+      'executora_id','%s','contratante_id','%s','protocolo_data','2026-09-15','situacao','deferida','inicio_previsto','2026-10-01','fim_previsto','2026-10-30'), %L::jsonb)$q$, op, op2, trecho::text),
     'só se aplica quando a executora é terceirizada', 'titular com outra contratante foi aceita');
 
   -- 7. Terceirizada não contrata a si mesma.
   perform pg_temp.recusa(format($q$select public.salvar_licenca(jsonb_build_object(
       'setor','telecom','processo_sei','NIT-050120/000506/2026','numero','506/2026','tipos_obra',array['vala'],'escopo','x',
-      'executora_id','%s','contratante_id','%s','protocolo_data','2026-09-10','situacao','deferida','decisao_data','2026-09-15',
-      'inicio_previsto','2026-10-01','fim_previsto','2026-10-30'), %L::jsonb)$q$, ter, ter, trecho::text),
+      'executora_id','%s','contratante_id','%s','protocolo_data','2026-09-15','situacao','deferida','inicio_previsto','2026-10-01','fim_previsto','2026-10-30'), %L::jsonb)$q$, ter, ter, trecho::text),
     'não pode ser a própria contratante', 'terceirizada como própria contratante foi aceita');
 
   -- 8. Terceirizada contratada por outra empresa segue normal.
   perform public.salvar_licenca(jsonb_build_object(
       'setor','telecom','processo_sei','NIT-050120/000507/2026','numero','507/2026','tipos_obra',array['vala'],'escopo','Vala',
-      'executora_id',ter,'contratante_id',op,'protocolo_data','2026-09-10','situacao','deferida','decisao_data','2026-09-15',
-      'inicio_previsto','2026-10-01','fim_previsto','2026-10-30'), trecho);
+      'executora_id',ter,'contratante_id',op,'protocolo_data','2026-09-15','situacao','deferida','inicio_previsto','2026-10-01','fim_previsto','2026-10-30'), trecho);
 
   -- 9. A marca "executa obra ou serviço" do cadastro é que habilita contratante = executora.
   perform pg_temp.assert(not (select executa_obras from empresas where id = op2), 'empresa nova nasceu marcada');
   perform pg_temp.recusa(format($q$select public.salvar_licenca(jsonb_build_object(
       'setor','telecom','processo_sei','NIT-050120/000508/2026','numero','508/2026','tipos_obra',array['vala'],'escopo','x',
-      'executora_id','%s','contratante_id','%s','protocolo_data','2026-09-10','situacao','deferida','decisao_data','2026-09-15',
-      'inicio_previsto','2026-10-01','fim_previsto','2026-10-30'), %L::jsonb)$q$, op2, op2, trecho::text),
+      'executora_id','%s','contratante_id','%s','protocolo_data','2026-09-15','situacao','deferida','inicio_previsto','2026-10-01','fim_previsto','2026-10-30'), %L::jsonb)$q$, op2, op2, trecho::text),
     'não está cadastrada como executora', 'empresa sem a marca foi aceita como contratante e executora');
   -- Também por edição de uma licença existente.
   lic := public.salvar_licenca(jsonb_build_object(
       'setor','telecom','processo_sei','NIT-050120/000509/2026','numero','509/2026','tipos_obra',array['vala'],'escopo','Vala',
-      'executora_id',ter,'contratante_id',op2,'protocolo_data','2026-09-10','situacao','deferida','decisao_data','2026-09-15',
-      'inicio_previsto','2026-10-01','fim_previsto','2026-10-30'), trecho);
+      'executora_id',ter,'contratante_id',op2,'protocolo_data','2026-09-15','situacao','deferida','inicio_previsto','2026-10-01','fim_previsto','2026-10-30'), trecho);
   perform pg_temp.recusa(format('update licencas set executora_id = %L where id = %L', op2, lic),
     'não está cadastrada como executora', 'troca para contratante = executora sem a marca foi aceita');
   -- Terceirizada não recebe a marca.

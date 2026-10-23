@@ -29,7 +29,7 @@ export function licenca(o: Partial<LicencaComTrechos> = {}): LicencaComTrechos {
     tipos_obra: ['vala'], escopo: 'Obra', executora_id: 'ter1', contratante_id: 'op1',
     executora_razao_social: null, executora_cnpj: null, contratante_razao_social: null, contratante_cnpj: null,
     contratante_cpf: null, imovel_endereco: null, processo_urbanismo: null, anterior_resolucao: false, subcontratada_id: null,
-    responsavel_tecnico_id: null, art_numero: null, protocolo_data: dia(-120), situacao: 'deferida', decisao_data: dia(-100),
+    responsavel_tecnico_id: null, art_numero: null, protocolo_data: dia(-120), situacao: 'deferida',
     inicio_previsto: dia(-10), fim_previsto: dia(20), validade_ate: o.fim_previsto !== undefined ? o.fim_previsto : dia(20), orgao_contratante_id: null, concluida_em: null,
     recomposicao_data: null, as_built_sei: null, as_built_data: null, observacoes: null,
     tipo_intervencao: 'obra', origem_intervencao: 'concessionaria', contrato_numero: null, processo_administrativo: null,
