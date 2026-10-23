@@ -15,7 +15,7 @@ export type SituacaoLicenca = 'em_analise' | 'deferida' | 'indeferida' | 'cancel
 export type EstadoLicenca =
   | 'em_analise' | 'indeferida' | 'cancelada'
   | 'aguardando_inicio' | 'em_execucao' | 'prazo_encerrado'
-  | 'concluida_sem_as_built' | 'concluida';
+  | 'concluida_sem_as_built' | 'concluida' | 'registro';
 
 /** Natureza da intervenção: uma obra ou um serviço. */
 export type TipoIntervencao = 'obra' | 'servico';
@@ -71,6 +71,8 @@ export interface Licenca {
   protocolo_data: string;
   situacao: SituacaoLicenca;
   decisao_data: string | null;
+  /** Fim da validade: decisão + 30 dias, prorrogável. Vazio para órgão público (registro, sem prazo). */
+  validade_ate: string | null;
   inicio_previsto: string | null;
   fim_previsto: string | null;
   concluida_em: string | null;
@@ -149,6 +151,7 @@ export const ESTADO_LICENCA_LABEL: Record<EstadoLicenca, string> = {
   prazo_encerrado: 'Prazo encerrado',
   concluida_sem_as_built: 'Sem As Built',
   concluida: 'Concluída',
+  registro: 'Registro, sem prazo',
 };
 
 export const TOM_ESTADO_LICENCA: Record<EstadoLicenca, 'neutro' | 'bom' | 'alerta' | 'ruim'> = {
@@ -160,6 +163,7 @@ export const TOM_ESTADO_LICENCA: Record<EstadoLicenca, 'neutro' | 'bom' | 'alert
   prazo_encerrado: 'ruim',
   concluida_sem_as_built: 'alerta',
   concluida: 'bom',
+  registro: 'neutro',
 };
 
 /**
@@ -191,14 +195,21 @@ export function erroPeriodoObra(p: {
 }
 
 export function estadoLicenca(
-  l: Pick<Licenca, 'situacao' | 'inicio_previsto' | 'fim_previsto' | 'concluida_em' | 'as_built_sei'>,
+  l: Pick<Licenca, 'situacao' | 'orgao_contratante_id' | 'validade_ate' | 'inicio_previsto' | 'concluida_em' | 'as_built_sei'>,
   hoje: string,
 ): EstadoLicenca {
   if (l.situacao !== 'deferida') return l.situacao;
   if (l.concluida_em) return l.as_built_sei ? 'concluida' : 'concluida_sem_as_built';
+  if (l.orgao_contratante_id) return 'registro';
+  if (l.validade_ate && hoje > l.validade_ate) return 'prazo_encerrado';
   if (l.inicio_previsto && hoje < l.inicio_previsto) return 'aguardando_inicio';
-  if (l.fim_previsto && hoje > l.fim_previsto) return 'prazo_encerrado';
   return 'em_execucao';
+}
+
+/** Prorroga a validade. A gravação passa pela política de licenças (gestor ou licenciador). */
+export async function prorrogarLicenca(id: string, validadeAte: string): Promise<void> {
+  const { error } = await supabase.from('licencas').update({ validade_ate: validadeAte }).eq('id', id);
+  if (error) throw error;
 }
 
 // ---------------------------------------------------------------------
@@ -308,7 +319,7 @@ function ordenarTrechos(l: LicencaComTrechos): LicencaComTrechos {
 
 export type LicencaInput = Omit<Licenca,
   'id' | 'empresas_no_deferimento' | 'codigo_publico' | 'anterior_resolucao' | 'criado_em' | 'atualizado_em'
-  | 'excluida_em' | 'excluida_por' | 'excluida_motivo'> & { id?: string };
+  | 'excluida_em' | 'excluida_por' | 'excluida_motivo' | 'validade_ate'> & { id?: string };
 
 /** Grava licença e trechos numa só transação (função salvar_licenca). */
 export async function salvarLicenca(licenca: LicencaInput, trechos: Trecho[]): Promise<string> {
@@ -368,7 +379,7 @@ export async function buscarConflitos(id: string): Promise<Conflito[]> {
 // ---------------------------------------------------------------------
 // Página pública da licença (QR Code da placa, art. 14): sem login
 // ---------------------------------------------------------------------
-export type SituacaoPublica = 'vigente' | 'aguardando_inicio' | 'prazo_encerrado' | 'concluida' | 'cancelada';
+export type SituacaoPublica = 'vigente' | 'aguardando_inicio' | 'prazo_encerrado' | 'concluida' | 'cancelada' | 'registro';
 
 export interface LicencaPublica {
   setor: Setor;
@@ -473,7 +484,7 @@ export interface Desempenho {
 
 export function desempenhoExecutora(
   licencas: Pick<Licenca, 'executora_id' | 'situacao' | 'anterior_resolucao' | 'concluida_em'
-    | 'fim_previsto' | 'inicio_previsto' | 'recomposicao_data' | 'as_built_sei'>[],
+    | 'fim_previsto' | 'inicio_previsto' | 'recomposicao_data' | 'as_built_sei' | 'orgao_contratante_id' | 'validade_ate'>[],
   empresaId: string,
   hoje: string,
 ): Desempenho {

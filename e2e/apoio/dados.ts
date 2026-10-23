@@ -26,12 +26,12 @@ export function licenca(o: Partial<LicencaComTrechos> = {}): LicencaComTrechos {
   seq += 1;
   return {
     id: uuid(seq), setor: 'telecom', processo_sei: `NIT-050120/${String(seq).padStart(6, '0')}/2026`, numero: `${seq}/2026`,
-    tipos_obra: ['vala'], escopo: 'Obra', executora_id: 'ter1', contratante_id: 'op1', orgao_contratante_id: null,
+    tipos_obra: ['vala'], escopo: 'Obra', executora_id: 'ter1', contratante_id: 'op1',
     executora_razao_social: null, executora_cnpj: null, contratante_razao_social: null, contratante_cnpj: null,
     contratante_cpf: null, imovel_endereco: null, processo_urbanismo: null, anterior_resolucao: false, subcontratada_id: null,
     responsavel_tecnico_id: null, art_numero: null, protocolo_data: dia(-120), situacao: 'deferida', decisao_data: dia(-100),
-    inicio_previsto: dia(-10), fim_previsto: dia(20), concluida_em: null, recomposicao_data: null, as_built_sei: null,
-    as_built_data: null, observacoes: null,
+    inicio_previsto: dia(-10), fim_previsto: dia(20), validade_ate: o.fim_previsto !== undefined ? o.fim_previsto : dia(20), orgao_contratante_id: null, concluida_em: null,
+    recomposicao_data: null, as_built_sei: null, as_built_data: null, observacoes: null,
     tipo_intervencao: 'obra', origem_intervencao: 'concessionaria', contrato_numero: null, processo_administrativo: null,
     ordem_servico_numero: null, objeto_contrato: null, excluida_em: null, excluida_por: null, excluida_motivo: null, empresas_no_deferimento: null, codigo_publico: `c${seq}`,
     criado_em: `${dia(-seq % 90)}T10:00:00Z`, atualizado_em: `${dia(-1)}T10:00:00Z`,

@@ -12,7 +12,7 @@ import {
   nomeEmpresa, podeAtuar, situacaoEfetiva, type Empresa, type Registro, type Setor, type Vinculo,
 } from '../lib/empresas';
 import {
-  ESTADO_LICENCA_LABEL, ORIGENS, ORIGEM_LABEL, TIPOS_INTERVENCAO, TIPO_INTERVENCAO_LABEL, origemPublica, TOM_ESTADO_LICENCA, buscarConflitos, buscarLicenca,
+  ESTADO_LICENCA_LABEL, ORIGENS, ORIGEM_LABEL, TIPOS_INTERVENCAO, TIPO_INTERVENCAO_LABEL, origemPublica, TOM_ESTADO_LICENCA, buscarConflitos, buscarLicenca, prorrogarLicenca,
   anteriorResolucao, coordenadaTexto, segueResolucao, estadoLicenca, lerCoordenada, linkMapa, salvarLicenca,
   erroPeriodoObra, mesmaEmpresaNosPapeis, situacoesRegistraveis,
   urlPublicaLicenca,
@@ -166,6 +166,9 @@ export default function LicencaPage() {
       )}
       {/* Obra já concluída não precisa de placa nem de QR Code. */}
       {licenca?.situacao === 'deferida' && !licenca.excluida_em && !licenca.concluida_em && <Placa licenca={licenca} />}
+      {licenca?.situacao === 'deferida' && !licenca.excluida_em && (
+        <Validade licenca={licenca} hoje={hoje} onProrrogada={async () => setLicenca(await buscarLicenca(licenca.id))} />
+      )}
       {licenca && <Conflitos key={licenca.atualizado_em} licencaId={licenca.id} />}
       <LicencaForm
         key={licenca?.id ?? 'nova'}
@@ -576,7 +579,7 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
               <input type="date" className={inputClass} disabled={ro} value={f.inicio_previsto}
                      onChange={(e) => set('inicio_previsto', e.target.value)} />
             </Field>
-            <Field label="Fim da obra ou serviço" required hint="É a validade da licença (art. 13, parágrafo único).">
+            <Field label="Fim da obra ou serviço" required hint="Previsão de término. A validade da licença é outra: veja o cartão de validade.">
               <input type="date" className={inputClass} required disabled={ro} value={f.fim_previsto}
                      min={f.inicio_previsto || undefined} onChange={(e) => set('fim_previsto', e.target.value)} />
             </Field>
@@ -927,6 +930,54 @@ function Conflitos({ licencaId }: { licencaId: string }) {
 }
 
 /** QR Code da placa do canteiro (art. 14) e atalho para imprimir. */
+/** Validade da licença: 30 dias a partir da decisão, prorrogável. Órgão público é registro, sem prazo. */
+function Validade({ licenca, hoje, onProrrogada }: { licenca: LicencaComTrechos; hoje: string; onProrrogada: () => Promise<void> }) {
+  const [nova, setNova] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [erro, setErro] = useState<unknown>(null);
+  const semPrazo = !!licenca.orgao_contratante_id;
+  const vencida = !!licenca.validade_ate && hoje > licenca.validade_ate;
+  const prorrogar = async () => {
+    setBusy(true);
+    setErro(null);
+    try {
+      await prorrogarLicenca(licenca.id, nova);
+      setNova('');
+      await onProrrogada();
+    } catch (e) {
+      setErro(e);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <section className="cartao mb-10 p-5" aria-label="Validade da licença">
+      <h2 className="font-display text-base font-bold text-tinta-900">Validade</h2>
+      {semPrazo ? (
+        <p className="mt-2 text-sm text-tinta-700">Licença vinculada a órgão público: registro para controle, sem prazo de validade.</p>
+      ) : (
+        <>
+          <p className="mt-2 text-sm text-tinta-700">
+            {licenca.validade_ate
+              ? <>Válida até <strong>{dataBR(licenca.validade_ate)}</strong>{vencida ? ' (vencida)' : ''}. A licença vale 30 dias a partir da decisão, salvo prorrogação.</>
+              : 'Sem validade registrada. Salve a licença com a data da decisão para calcular.'}
+          </p>
+          <div className="mt-4 flex flex-wrap items-end gap-3">
+            <Field label="Nova validade">
+              <input type="date" className={inputClass} value={nova} min={licenca.validade_ate ?? hoje}
+                     onChange={(e) => setNova(e.target.value)} />
+            </Field>
+            <Button type="button" variant="secondary" disabled={!nova || busy} onClick={() => void prorrogar()}>
+              {busy ? 'Prorrogando…' : 'Prorrogar validade'}
+            </Button>
+          </div>
+          <div className="mt-2"><ErrorNote error={erro} /></div>
+        </>
+      )}
+    </section>
+  );
+}
+
 function Placa({ licenca }: { licenca: LicencaComTrechos }) {
   const url = urlPublicaLicenca(licenca.codigo_publico);
   const [copiado, setCopiado] = useState(false);

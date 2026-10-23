@@ -45,13 +45,21 @@ describe('coordenadas', () => {
 });
 
 describe('situação da licença', () => {
-  const base = { situacao: 'deferida' as const, inicio_previsto: '2026-10-01', fim_previsto: '2026-10-31',
-                 concluida_em: null, as_built_sei: null };
-  it('segue o cronograma', () => {
-    expect(estadoLicenca(base, '2026-09-30')).toBe('aguardando_inicio');
-    expect(estadoLicenca(base, '2026-10-01')).toBe('em_execucao');
-    expect(estadoLicenca(base, '2026-10-31')).toBe('em_execucao');
-    expect(estadoLicenca(base, '2026-11-01')).toBe('prazo_encerrado');
+  const base = { situacao: 'deferida' as const, orgao_contratante_id: null, validade_ate: '2026-10-22',
+                 inicio_previsto: '2026-10-01', concluida_em: null, as_built_sei: null };
+  it('a validade de 30 dias vence a licença, mesmo com a obra prevista para depois', () => {
+    expect(estadoLicenca(base, '2026-10-22')).toBe('em_execucao');
+    expect(estadoLicenca(base, '2026-10-23')).toBe('prazo_encerrado');
+  });
+  it('antes do início previsto, aguarda; depois, em execução', () => {
+    expect(estadoLicenca({ ...base, validade_ate: '2026-12-31' }, '2026-09-30')).toBe('aguardando_inicio');
+    expect(estadoLicenca({ ...base, validade_ate: '2026-12-31' }, '2026-10-01')).toBe('em_execucao');
+  });
+  it('prorrogar a validade volta a deixá-la vigente', () => {
+    expect(estadoLicenca({ ...base, validade_ate: '2026-11-30' }, '2026-11-01')).toBe('em_execucao');
+  });
+  it('órgão público é registro, sem prazo, mesmo com data passada', () => {
+    expect(estadoLicenca({ ...base, orgao_contratante_id: 'o1', validade_ate: null }, '2030-01-01')).toBe('registro');
   });
   it('conclusão e As Built', () => {
     expect(estadoLicenca({ ...base, concluida_em: '2026-10-20' }, '2026-11-01')).toBe('concluida_sem_as_built');
@@ -73,6 +81,7 @@ describe('página pública', () => {
 describe('pendências do painel', () => {
   const l = (o: Record<string, unknown>) => ({
     id: String(o.id), situacao: 'deferida', inicio_previsto: '2026-09-10', fim_previsto: '2026-09-20',
+    validade_ate: (o.fim_previsto as string | undefined) ?? '2026-09-20', orgao_contratante_id: null,
     concluida_em: null, as_built_sei: null, anterior_resolucao: false, licenca_trechos: [], ...o,
   }) as unknown as Parameters<typeof pendenciasLicencas>[0][number];
   const hoje = '2026-10-01';
@@ -102,6 +111,7 @@ describe('desempenho da executora', () => {
   const l = (o: Record<string, unknown>) => ({
     executora_id: 'X', situacao: 'deferida', anterior_resolucao: false,
     inicio_previsto: '2026-09-01', fim_previsto: '2026-09-20', concluida_em: null,
+    validade_ate: (o.fim_previsto as string | undefined) ?? '2026-09-20', orgao_contratante_id: null,
     recomposicao_data: null, as_built_sei: null, ...o,
   }) as unknown as Parameters<typeof desempenhoExecutora>[0][number];
   const hoje = '2026-10-01';

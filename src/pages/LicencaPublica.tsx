@@ -32,6 +32,10 @@ const VEREDITO: Record<SituacaoPublica, { titulo: string; cor: string; frase: (d
     titulo: 'Obra concluída', cor: 'border-tinta-400 bg-tinta-50 text-tinta-700',
     frase: (d) => `Concluída em ${dataBR(d.concluida_em)}. Não há obra autorizada neste local por esta licença.`,
   },
+  registro: {
+    titulo: 'Registro, sem prazo', cor: 'border-tinta-400 bg-tinta-50 text-tinta-700',
+    frase: () => 'Licença vinculada a órgão público. Ela é registrada para controle e não tem prazo de validade.',
+  },
   cancelada: {
     titulo: 'Licença cancelada', cor: 'border-baixa bg-baixa/6 text-baixa',
     frase: () => 'Esta licença foi cancelada pela SECONSER. A obra não está autorizada.',
