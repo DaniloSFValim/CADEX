@@ -17,7 +17,7 @@ const cenario = () => ({
     licenca({ inicio_previsto: dia(40), fim_previsto: dia(90) }),
     licenca({ inicio_previsto: dia(-90), fim_previsto: dia(-30) }),
     licenca({ inicio_previsto: dia(-70), fim_previsto: dia(-40), concluida_em: dia(-42), as_built_sei: 'D-1', as_built_data: dia(-41) }),
-    licenca({ situacao: 'cancelada', decisao_data: null, inicio_previsto: null, fim_previsto: null }),
+    licenca({ situacao: 'cancelada', inicio_previsto: null, fim_previsto: null }),
   ],
 });
 

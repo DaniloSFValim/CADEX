@@ -34,8 +34,7 @@ begin
   -- Emitida, com um trecho linear (tem fim) e um pontual (sem fim).
   perform public.salvar_licenca(jsonb_build_object(
       'setor','telecom','processo_sei','GEO-INTERNO-1','numero','050/2026','tipos_obra',array['vala','poste'],'escopo','Vala e poste',
-      'executora_id',op,'protocolo_data','2026-09-01','situacao','deferida','decisao_data','2026-09-02',
-      'inicio_previsto','2026-09-10','fim_previsto','2026-12-01'),
+      'executora_id',op,'protocolo_data','2026-09-02','situacao','deferida','inicio_previsto','2026-09-10','fim_previsto','2026-12-01'),
     jsonb_build_array(
       jsonb_build_object('logradouro','Rua Linear','bairro','Centro','inicio_lat',-22.895,'inicio_lng',-43.123,'fim_lat',-22.897,'fim_lng',-43.120),
       jsonb_build_object('logradouro','Rua Pontual','inicio_lat',-22.900,'inicio_lng',-43.110)));

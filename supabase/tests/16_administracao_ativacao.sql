@@ -158,8 +158,7 @@ begin
   -- Licença já existente com a empresa ainda ativa.
   lic := public.salvar_licenca(jsonb_build_object(
       'setor','telecom','processo_sei','NIT-050120/000601/2026','numero','601/2026','tipos_obra',array['vala'],'escopo','Vala',
-      'executora_id',v_parada,'contratante_id',v_parada,'protocolo_data','2026-09-10','situacao','deferida','decisao_data','2026-09-15',
-      'inicio_previsto','2026-10-01','fim_previsto','2026-10-30'), trecho);
+      'executora_id',v_parada,'contratante_id',v_parada,'protocolo_data','2026-09-15','situacao','deferida','inicio_previsto','2026-10-01','fim_previsto','2026-10-30'), trecho);
 
   update empresas set ativa = false where id = v_parada;
   perform pg_temp.assert(not (select ativa from empresas where id = v_parada), 'o administrador não desativou a empresa');
@@ -178,8 +177,7 @@ begin
   -- Trocar a executora de uma licença para a desativada também é recusado.
   lic2 := public.salvar_licenca(jsonb_build_object(
       'setor','telecom','processo_sei','NIT-050120/000603/2026','numero','603/2026','tipos_obra',array['vala'],'escopo','Vala',
-      'executora_id',v_ativa,'contratante_id',v_ativa,'protocolo_data','2026-09-10','situacao','deferida','decisao_data','2026-09-15',
-      'inicio_previsto','2026-10-01','fim_previsto','2026-10-30'), trecho);
+      'executora_id',v_ativa,'contratante_id',v_ativa,'protocolo_data','2026-09-15','situacao','deferida','inicio_previsto','2026-10-01','fim_previsto','2026-10-30'), trecho);
   perform pg_temp.recusa(format('update licencas set executora_id = %L, contratante_id = %L where id = %L', v_parada, v_parada, lic2),
     'está desativada', 'licença passou a usar empresa desativada');
 

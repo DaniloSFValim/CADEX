@@ -21,7 +21,7 @@ const lic = (o: Partial<LicencaComTrechos> = {}): LicencaComTrechos => {
     executora_id: 'op1', contratante_id: null, orgao_contratante_id: null, executora_razao_social: null, executora_cnpj: null,
     contratante_razao_social: null, contratante_cnpj: null, contratante_cpf: null, imovel_endereco: null, processo_urbanismo: null,
     anterior_resolucao: false, subcontratada_id: null, responsavel_tecnico_id: null, art_numero: null, protocolo_data: '2026-09-10',
-    situacao: 'deferida', decisao_data: '2026-09-15', inicio_previsto: '2026-10-01', fim_previsto: '2026-10-30', concluida_em: null,
+    situacao: 'deferida', inicio_previsto: '2026-10-01', fim_previsto: '2026-10-30', concluida_em: null,
     recomposicao_data: null, as_built_sei: null, as_built_data: null, observacoes: null, empresas_no_deferimento: null,
     codigo_publico: `c${seq}`, criado_em: '2026-09-16T10:00:00Z', atualizado_em: '2026-09-16T10:00:00Z',
     licenca_trechos: [{ id: 't', ordem: 1, logradouro: 'Rua A', bairro: null, referencia: null, inicio_lat: -22.9, inicio_lng: -43.1, fim_lat: null, fim_lng: null }],

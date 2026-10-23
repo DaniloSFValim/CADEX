@@ -3,7 +3,7 @@ import { distanciaMetros, obrasProximas, textoDistancia, type ObraPublica } from
 
 const obra = (codigo: string, lng: number, lat: number): ObraPublica => ({
   codigo, setor: 'viario', numero: '1/2026', tipos_obra: ['vala'], tipo_intervencao: 'obra', origem: 'municipio',
-  escopo: 'x', inicio_previsto: '2026-10-01', fim_previsto: '2026-10-30', decisao_data: '2026-09-15',
+  escopo: 'x', inicio_previsto: '2026-10-01', fim_previsto: '2026-10-30',
   situacao: 'vigente', executora: 'Exec', contratante: 'Cont',
   trechos: [{ logradouro: 'R', bairro: null, inicio: [lng, lat], fim: null }],
 } as unknown as ObraPublica);

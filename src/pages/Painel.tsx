@@ -31,7 +31,7 @@ export default function Painel() {
   const [atualizadoEm, setAtualizadoEm] = useState<Date | null>(null);
   const [filtros, setFiltros] = useState<Filtros>(SEM_FILTROS);
   const [janela, setJanela] = useState<(typeof JANELAS)[number]>(15);
-  const [refData, setRefData] = useState<RefData>('decisao');
+  const [refData, setRefData] = useState<RefData>('protocolo');
   const [mostrar, setMostrar] = useState(PASSO_REGISTROS);
 
   const carregar = useCallback(async () => {
@@ -256,13 +256,13 @@ export default function Painel() {
 
         {/* Gráficos */}
         <div className="mt-8 grid gap-6 lg:grid-cols-2">
-          <Bloco titulo="Situação administrativa" nota="A decisão registrada. Clique para filtrar.">
+          <Bloco titulo="Situação administrativa" nota="A situação registrada. Clique para filtrar.">
             <BarrasHorizontais itens={barrasAdmin} total={ind.total} selecionada={filtros.status}
                                onSelecionar={(c) => alternarStatus(c as FiltroStatus)} />
           </Bloco>
           <Bloco titulo="Licenças por mês"
                  acao={<select className={`${inputClass} w-auto! py-1.5!`} value={refData} onChange={(e) => setRefData(e.target.value as RefData)} aria-label="Data de referência">
-                   <option value="decisao">Mês da decisão</option>
+                   <option value="protocolo">Mês do protocolo</option>
                    <option value="registro">Mês do registro no CADEX</option>
                  </select>}>
             {mensal.meses.length === 0
@@ -336,7 +336,7 @@ export default function Painel() {
             <li><strong>Aguardando início</strong> (programada): deferida, sem conclusão registrada, com o início previsto ainda por vir. <strong>Em execução</strong> (em andamento): deferida, sem conclusão registrada, com o período previsto em curso. <strong>Prazo encerrado</strong>: deferida, sem conclusão registrada, com o fim previsto já passado.</li>
             <li><strong>Concluída</strong>: tem a conclusão registrada. <strong>Começam / terminam em até N dias</strong>: obras abertas com a data prevista entre hoje e hoje mais N dias.</li>
             <li>Cada licença tem uma contratante e uma executora, e é contada uma vez em cada. Quando a própria contratante executa, a mesma empresa aparece nas duas listas.</li>
-            <li>O filtro de período mostra as licenças cujo período previsto cruza o intervalo; sem período, vale a data da decisão.</li>
+            <li>O filtro de período mostra as licenças cujo período previsto cruza o intervalo; sem período, vale a data do protocolo.</li>
           </ul>
         </details>
       </>)}

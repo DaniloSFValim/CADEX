@@ -36,7 +36,7 @@ export const COLUNAS_LICENCA: ColunaLicenca[] = [
   { chave: 'imovel', rotulo: 'Imóvel atendido', valor: (l) => l.imovel_endereco ?? '' },
   { chave: 'inicio', rotulo: 'Início da obra ou serviço', valor: (l) => dataBR(l.inicio_previsto) },
   { chave: 'fim', rotulo: 'Fim da obra ou serviço', valor: (l) => dataBR(l.fim_previsto) },
-  { chave: 'decisao', rotulo: 'Decisão', valor: (l) => dataBR(l.decisao_data) },
+  { chave: 'protocolo', rotulo: 'Protocolo', valor: (l) => dataBR(l.protocolo_data) },
   { chave: 'situacao', rotulo: 'Situação', valor: (l, c) => ESTADO_LICENCA_LABEL[estadoLicenca(l, c.hoje)] },
   { chave: 'art', rotulo: 'ART/RRT', valor: (l) => l.art_numero ?? '' },
   { chave: 'conclusao', rotulo: 'Conclusão', valor: (l) => dataBR(l.concluida_em) },
@@ -53,7 +53,7 @@ export const AGRUPAR_LICENCAS = [
   { valor: 'executora', rotulo: 'Executora' },
   { valor: 'contratante', rotulo: 'Contratante' },
   { valor: 'bairro', rotulo: 'Bairro' },
-  { valor: 'ano', rotulo: 'Ano da decisão' },
+  { valor: 'ano', rotulo: 'Ano do protocolo' },
 ] as const;
 
 export type AgrupamentoLicencas = (typeof AGRUPAR_LICENCAS)[number]['valor'];
@@ -68,7 +68,7 @@ function grupos(l: LicencaComTrechos, por: AgrupamentoLicencas, c: ContextoLicen
       const b = [...new Set(l.licenca_trechos.map((t) => t.bairro?.trim()).filter((x): x is string => Boolean(x)))];
       return b.length ? b : ['Sem bairro informado'];
     }
-    case 'ano': return [l.decisao_data ? l.decisao_data.slice(0, 4) : 'Sem decisão'];
+    case 'ano': return [l.protocolo_data ? l.protocolo_data.slice(0, 4) : 'Sem protocolo'];
     default: return [''];
   }
 }

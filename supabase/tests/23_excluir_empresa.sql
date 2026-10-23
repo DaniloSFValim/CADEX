@@ -65,10 +65,10 @@ begin
 
   alter table empresas enable trigger user;
   alter table licencas disable trigger user;
-  insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id, contratante_id, protocolo_data, situacao, decisao_data,
+  insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id, contratante_id, protocolo_data, situacao,
                         inicio_previsto, fim_previsto)
   values ('telecom', 'LIC-EXC-1', array['vala'], 'Licença que prende a empresa', com_licenca, com_licenca, '2026-09-10',
-          'deferida', '2026-09-15', '2026-10-01', '2026-10-30');
+          'deferida', '2026-10-01', '2026-10-30');
   alter table licencas enable trigger user;
 
   insert into ids values ('em_analise', em_analise), ('habilitada', habilitada), ('desativada', desativada),

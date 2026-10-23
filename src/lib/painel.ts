@@ -97,9 +97,9 @@ export function partesDistintas(ls: LicencaComTrechos[], papel: 'contratante' | 
 // ---------------------------------------------------------------------
 // Filtros
 // ---------------------------------------------------------------------
-/** Período da licença para o filtro: início e fim previstos; sem eles, a data da decisão ou do protocolo. */
+/** Período da licença para o filtro: início e fim previstos; sem eles, a data do protocolo. */
 function periodoDaLicenca(l: LicencaComTrechos): { inicio: string; fim: string } {
-  const ref = l.decisao_data ?? l.protocolo_data;
+  const ref = l.protocolo_data;
   const inicio = l.inicio_previsto ?? ref;
   const fim = l.fim_previsto ?? inicio;
   return { inicio, fim };
@@ -197,7 +197,7 @@ export function indicadores(ls: LicencaComTrechos[], hoje: string, janelaDias: n
   };
 }
 
-/** Situação administrativa registrada (a decisão), sem desdobrar a deferida. */
+/** Situação administrativa registrada, sem desdobrar a deferida. */
 export function porSituacaoAdministrativa(ls: LicencaComTrechos[]): Record<SituacaoLicenca, number> {
   const r: Record<SituacaoLicenca, number> = { em_analise: 0, deferida: 0, indeferida: 0, cancelada: 0 };
   for (const l of ls) r[l.situacao]++;
@@ -230,7 +230,7 @@ export function distribuicaoPorParte(
   return { barras, semInformacao, demais };
 }
 
-export type RefData = 'decisao' | 'registro';
+export type RefData = 'protocolo' | 'registro';
 
 /** AAAA-MM de uma data ISO (a de um timestamp usa os dez primeiros caracteres). */
 const mesDe = (iso: string) => iso.slice(0, 7);
@@ -242,14 +242,14 @@ function proximoMes(mes: string): string {
 
 /**
  * Licenças por mês, sem buracos: meses sem licença aparecem com zero.
- * `decisao` agrupa pela data da decisão; `registro`, pelo dia em que a licença
+ * `protocolo` agrupa pela data de protocolo; `registro`, pelo dia em que a licença
  * entrou no CADEX. Quem não tem a data escolhida vai em `semData`.
  */
 export function evolucaoMensal(ls: LicencaComTrechos[], ref: RefData): { meses: { mes: string; n: number }[]; semData: number } {
   const cont = new Map<string, number>();
   let semData = 0;
   for (const l of ls) {
-    const d = ref === 'decisao' ? l.decisao_data : l.criado_em;
+    const d = ref === 'protocolo' ? l.protocolo_data : l.criado_em;
     if (!d) { semData++; continue; }
     cont.set(mesDe(d), (cont.get(mesDe(d)) ?? 0) + 1);
   }

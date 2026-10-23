@@ -42,7 +42,7 @@ do $$
 declare
   op uuid; emp uuid; pref uuid; aut uuid; est uuid; lic uuid; pub jsonb;
   trecho jsonb := jsonb_build_array(jsonb_build_object('logradouro', 'Rua Mem de Sá', 'inicio_lat', -22.905, 'inicio_lng', -43.11));
-  base text := $q$'protocolo_data','2026-09-10','situacao','deferida','decisao_data','2026-09-15','inicio_previsto','2026-10-01','fim_previsto','2026-10-30'$q$;
+  base text := $q$'protocolo_data','2026-09-15','situacao','deferida','inicio_previsto','2026-10-01','fim_previsto','2026-10-30'$q$;
 begin
   insert into empresas (cnpj, razao_social, nome_fantasia, tipo, email, setores, executa_obras)
   values ('12345678000195', 'Operadora Interv S.A.', 'OpInterv', 'operadora', 'i1@i.test', '{telecom}', true) returning id into op;
@@ -56,14 +56,14 @@ begin
   -- 1. Concessionária (fluxo antigo) segue igual; tipo e origem têm padrão.
   lic := public.salvar_licenca(jsonb_build_object('setor','telecom','processo_sei','NIT-050120/000701/2026','numero','701/2026',
     'tipos_obra',array['vala'],'escopo','Vala','executora_id',op,'contratante_id',op,
-    'protocolo_data','2026-09-10','situacao','deferida','decisao_data','2026-09-15','inicio_previsto','2026-10-01','fim_previsto','2026-10-30'), trecho);
+    'protocolo_data','2026-09-15','situacao','deferida','inicio_previsto','2026-10-01','fim_previsto','2026-10-30'), trecho);
   perform pg_temp.assert((select tipo_intervencao = 'obra' and origem_intervencao = 'concessionaria' from licencas where id = lic),
     'padrão de tipo e origem não é obra/concessionária');
 
   -- 2. Serviço de concessionária executado pela própria concessionária.
   lic := public.salvar_licenca(jsonb_build_object('setor','telecom','processo_sei','NIT-050120/000702/2026','numero','702/2026',
     'tipo_intervencao','servico','tipos_obra',array['rede'],'escopo','Manutenção de rede','executora_id',op,
-    'protocolo_data','2026-09-10','situacao','deferida','decisao_data','2026-09-15','inicio_previsto','2026-10-01','fim_previsto','2026-10-30'), trecho);
+    'protocolo_data','2026-09-15','situacao','deferida','inicio_previsto','2026-10-01','fim_previsto','2026-10-30'), trecho);
   perform pg_temp.assert((select tipo_intervencao = 'servico' from licencas where id = lic), 'serviço não gravou');
   perform pg_temp.recusa(format($q$select public.salvar_licenca(jsonb_build_object('setor','telecom','processo_sei','X-1','tipo_intervencao','reforma',
     'tipos_obra',array['vala'],'escopo','x','executora_id','%s','protocolo_data','2026-09-10'), '[]'::jsonb)$q$, op),
@@ -74,7 +74,7 @@ begin
     'tipo_intervencao','obra','origem_intervencao','municipio','tipos_obra',array['recomposicao'],'escopo','Pavimentação da Rua A',
     'executora_id',emp,'orgao_contratante_id',pref,'contrato_numero','CT 12/2026','processo_administrativo','PA 999/2026',
     'ordem_servico_numero','OS 5','objeto_contrato','Pavimentação',
-    'protocolo_data','2026-09-10','situacao','deferida','decisao_data','2026-09-15','inicio_previsto','2026-10-01','fim_previsto','2026-10-30'), trecho);
+    'protocolo_data','2026-09-15','situacao','deferida','inicio_previsto','2026-10-01','fim_previsto','2026-10-30'), trecho);
   perform pg_temp.assert((select origem_intervencao = 'municipio' and contrato_numero = 'CT 12/2026' and orgao_contratante_id = pref
                             and executora_id = emp from licencas where id = lic), 'obra municipal não gravou os campos');
 
@@ -82,7 +82,7 @@ begin
   lic := public.salvar_licenca(jsonb_build_object('setor','drenagem','processo_sei','NIT-050120/000704/2026','numero','704/2026',
     'tipo_intervencao','servico','origem_intervencao','autarquia','tipos_obra',array['galeria_drenagem'],'escopo','Limpeza de galeria',
     'executora_id',emp,'orgao_contratante_id',aut,'imovel_endereco','Rua B','processo_urbanismo','URB-1',
-    'protocolo_data','2026-09-10','situacao','deferida','decisao_data','2026-09-15','inicio_previsto','2026-10-01','fim_previsto','2026-10-30'), trecho);
+    'protocolo_data','2026-09-15','situacao','deferida','inicio_previsto','2026-10-01','fim_previsto','2026-10-30'), trecho);
   perform pg_temp.assert((select origem_intervencao = 'autarquia' from licencas where id = lic), 'serviço de autarquia não gravou');
 
   -- 5. Origem e órgão têm de combinar.
@@ -104,7 +104,7 @@ begin
   -- Órgão estadual como contratante continua possível.
   perform public.salvar_licenca(jsonb_build_object('setor','viario','processo_sei','NIT-050120/000710/2026','numero','710/2026',
     'tipos_obra',array['recomposicao'],'escopo','Obra estadual','executora_id',emp,'orgao_contratante_id',est,'origem_intervencao','outro_ente',
-    'protocolo_data','2026-09-10','situacao','deferida','decisao_data','2026-09-15','inicio_previsto','2026-10-01','fim_previsto','2026-10-30'), trecho);
+    'protocolo_data','2026-09-15','situacao','deferida','inicio_previsto','2026-10-01','fim_previsto','2026-10-30'), trecho);
 
   -- 6. Prefeitura executando por conta própria não existe como executora: a executora é sempre empresa.
   perform pg_temp.recusa(format($q$select public.salvar_licenca(jsonb_build_object('setor','viario','processo_sei','NIT-050120/000711/2026',

@@ -108,8 +108,7 @@ begin
   perform public.salvar_licenca(jsonb_build_object(
       'setor', 'gas', 'processo_sei', 'GAS-1', 'numero', 'G-1', 'tipos_obra', array['vala', 'ligacao_predial'],
       'escopo', 'Ramal de gás', 'executora_id', terc_gas, 'contratante_id', gas,
-      'protocolo_data', '2026-09-20', 'situacao', 'deferida', 'decisao_data', '2026-09-25',
-      'inicio_previsto', '2026-10-01', 'fim_previsto', '2026-10-10'), trecho);
+      'protocolo_data', '2026-09-25', 'situacao', 'deferida', 'inicio_previsto', '2026-10-01', 'fim_previsto', '2026-10-10'), trecho);
 
   -- Executora fora do setor
   perform pg_temp.recusa(format($q$select public.salvar_licenca(jsonb_build_object(
@@ -133,8 +132,8 @@ begin
       'escopo', 'Ligação da casa à rede pública', 'executora_id', con,
       'contratante_razao_social', 'Fulano de Tal', 'contratante_cpf', '529.982.247-25',
       'imovel_endereco', 'Rua A, 100', 'processo_urbanismo', 'URB-123/2026',
-      'protocolo_data', '2026-09-20', 'situacao', 'deferida',
-      'decisao_data', '2026-09-25', 'inicio_previsto', '2026-10-01', 'fim_previsto', '2026-10-05'), trecho);
+      'protocolo_data', '2026-09-25', 'situacao', 'deferida',
+      'inicio_previsto', '2026-10-01', 'fim_previsto', '2026-10-05'), trecho);
   -- Drenagem: terceirizada contratada pela construtora
   perform public.salvar_licenca(jsonb_build_object(
       'setor', 'drenagem', 'processo_sei', 'DRE-2', 'tipos_obra', array['galeria_drenagem', 'recomposicao'],
@@ -178,8 +177,8 @@ begin
   -- Flexibilização: telecom defere mesmo com executora não APTA (sem ART).
   perform pg_temp.assert(public.salvar_licenca(jsonb_build_object(
       'setor', 'telecom', 'processo_sei', 'NIT-050120/000500/2026', 'numero', 'T-1', 'tipos_obra', array['rede'],
-      'escopo', 'x', 'executora_id', terc_multi, 'contratante_id', op, 'protocolo_data', '2026-09-20',
-      'situacao', 'deferida', 'decisao_data', '2026-09-25', 'inicio_previsto', '2026-10-01', 'fim_previsto', '2026-10-10'),
+      'escopo', 'x', 'executora_id', terc_multi, 'contratante_id', op, 'protocolo_data', '2026-09-25',
+      'situacao', 'deferida', 'inicio_previsto', '2026-10-01', 'fim_previsto', '2026-10-10'),
     trecho::jsonb) is not null, 'telecom deveria deferir sem exigir APTA nem ART');
 end $$;
 

@@ -59,9 +59,9 @@ begin
   insert into orgaos_publicos (nome, sigla, esfera, natureza, setores)
   values ('Secretaria de Conservação ISL', 'SECISL', 'municipal', 'administracao_direta', '{}') returning id into sec;
   alter table licencas disable trigger licencas_antes_de_gravar;
-  insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id, contratante_id, protocolo_data, situacao, decisao_data,
+  insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id, contratante_id, protocolo_data, situacao,
                         inicio_previsto, fim_previsto)
-  values ('telecom', 'LIC-ISL-1', array['vala'], 'Licença de referência', op, op, '2026-09-10', 'deferida', '2026-09-15',
+  values ('telecom', 'LIC-ISL-1', array['vala'], 'Licença de referência', op, op, '2026-09-10', 'deferida',
           '2026-10-01', '2026-10-30') returning id into lic;
   alter table licencas enable trigger licencas_antes_de_gravar;
   insert into ids values ('op', op), ('ter', ter), ('org', org), ('sec', sec), ('lic', lic);

@@ -262,7 +262,7 @@ function obrasPublicas(estado: Cenario) {
     return {
       codigo: l.codigo_publico, setor: l.setor, numero: l.numero, tipos_obra: l.tipos_obra, tipo_intervencao: l.tipo_intervencao,
       origem: l.origem_intervencao, escopo: l.escopo, inicio_previsto: l.inicio_previsto, fim_previsto: l.fim_previsto,
-      decisao_data: l.decisao_data, situacao,
+      situacao,
       executora: nome(estado.empresas.find((e) => e.id === l.executora_id)) ?? l.executora_razao_social,
       contratante: nome(estado.empresas.find((e) => e.id === l.contratante_id)) ?? og?.sigla ?? og?.nome ?? null,
       trechos: l.licenca_trechos.map((t) => ({

@@ -57,37 +57,32 @@ begin
   -- A = alvo (vigente, ponto -43.12300 / -22.89500)
   a := public.salvar_licenca(jsonb_build_object(
       'setor','telecom','processo_sei','CONF-A','numero','A/2026','tipos_obra',array['vala'],'escopo','x',
-      'executora_id',op,'protocolo_data','2026-09-01','situacao','deferida','decisao_data','2026-09-02',
-      'inicio_previsto','2026-09-10','fim_previsto','2026-12-01'),
+      'executora_id',op,'protocolo_data','2026-09-02','situacao','deferida','inicio_previsto','2026-09-10','fim_previsto','2026-12-01'),
     jsonb_build_array(jsonb_build_object('logradouro','Rua Alvo','inicio_lat',-22.89500,'inicio_lng',-43.12300)));
 
   -- B = vigente a ~5 m, janela sobreposta  → deve conflitar (vigente).
   --     Passa recomposicao_data sem conclusão: o gatilho deve zerá-la.
   b := public.salvar_licenca(jsonb_build_object(
       'setor','telecom','processo_sei','CONF-B','numero','B/2026','tipos_obra',array['vala'],'escopo','x',
-      'executora_id',op,'protocolo_data','2026-09-01','situacao','deferida','decisao_data','2026-09-02',
-      'inicio_previsto','2026-10-01','fim_previsto','2026-11-01','recomposicao_data', recente),
+      'executora_id',op,'protocolo_data','2026-09-02','situacao','deferida','inicio_previsto','2026-10-01','fim_previsto','2026-11-01','recomposicao_data', recente),
     jsonb_build_array(jsonb_build_object('logradouro','Rua B','inicio_lat',-22.89505,'inicio_lng',-43.12300)));
 
   -- C = concluída a ~10 m, recomposta há 30 dias (na garantia) → recomposicao.
   c := public.salvar_licenca(jsonb_build_object(
       'setor','telecom','processo_sei','CONF-C','numero','C/2026','tipos_obra',array['vala'],'escopo','x',
-      'executora_id',op,'protocolo_data','2026-09-01','situacao','deferida','decisao_data','2026-09-02',
-      'inicio_previsto','2026-09-10','fim_previsto','2026-12-01','concluida_em','2026-09-20','recomposicao_data', recente),
+      'executora_id',op,'protocolo_data','2026-09-02','situacao','deferida','inicio_previsto','2026-09-10','fim_previsto','2026-12-01','concluida_em','2026-09-20','recomposicao_data', recente),
     jsonb_build_array(jsonb_build_object('logradouro','Rua C','inicio_lat',-22.89500,'inicio_lng',-43.12310)));
 
   -- D = vigente, porém a ~30 m → fora do raio, não conflita.
   d := public.salvar_licenca(jsonb_build_object(
       'setor','telecom','processo_sei','CONF-D','numero','D/2026','tipos_obra',array['vala'],'escopo','x',
-      'executora_id',op,'protocolo_data','2026-09-01','situacao','deferida','decisao_data','2026-09-02',
-      'inicio_previsto','2026-10-01','fim_previsto','2026-11-01'),
+      'executora_id',op,'protocolo_data','2026-09-02','situacao','deferida','inicio_previsto','2026-10-01','fim_previsto','2026-11-01'),
     jsonb_build_array(jsonb_build_object('logradouro','Rua D','inicio_lat',-22.89527,'inicio_lng',-43.12300)));
 
   -- E = concluída a ~5 m, mas recomposta há 30 meses → garantia vencida, não conflita.
   e := public.salvar_licenca(jsonb_build_object(
       'setor','telecom','processo_sei','CONF-E','numero','E/2026','tipos_obra',array['vala'],'escopo','x',
-      'executora_id',op,'protocolo_data','2023-01-01','situacao','deferida','decisao_data','2023-01-05',
-      'inicio_previsto','2023-01-15','fim_previsto','2023-06-01','concluida_em','2023-02-01','recomposicao_data', antiga),
+      'executora_id',op,'protocolo_data','2023-01-05','situacao','deferida','inicio_previsto','2023-01-15','fim_previsto','2023-06-01','concluida_em','2023-02-01','recomposicao_data', antiga),
     jsonb_build_array(jsonb_build_object('logradouro','Rua E','inicio_lat',-22.89500,'inicio_lng',-43.12295)));
 
   insert into ids values ('a',a),('b',b),('c',c),('d',d),('e',e);
@@ -121,8 +116,7 @@ declare op uuid := (select id from empresas where cnpj = '12345678000195');
 begin
   perform pg_temp.recusa(format($q$select public.salvar_licenca(jsonb_build_object(
       'setor','telecom','processo_sei','CONF-F','numero','F/2026','tipos_obra',array['vala'],'escopo','x',
-      'executora_id',%L,'protocolo_data','2026-09-01','situacao','deferida','decisao_data','2026-09-02',
-      'inicio_previsto','2026-09-10','fim_previsto','2026-12-01','concluida_em','2026-09-20','recomposicao_data','2026-09-15'),
+      'executora_id',%L,'protocolo_data','2026-09-02','situacao','deferida','inicio_previsto','2026-09-10','fim_previsto','2026-12-01','concluida_em','2026-09-20','recomposicao_data','2026-09-15'),
     jsonb_build_array(jsonb_build_object('logradouro','Rua F','inicio_lat',-22.898,'inicio_lng',-43.118)))$q$, op),
     'recomposição do pavimento não pode ser anterior', 'aceitou recomposição anterior à conclusão');
 end $$;

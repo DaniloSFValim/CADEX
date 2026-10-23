@@ -63,15 +63,14 @@ export interface Licenca {
   /** Drenagem: imóvel ligado à rede e processo da obra no Urbanismo. */
   imovel_endereco: string | null;
   processo_urbanismo: string | null;
-  /** Decisão anterior a 09/09/2026 (calculado no banco). */
+  /** Protocolo anterior a 09/09/2026 (calculado no banco). */
   anterior_resolucao: boolean;
   subcontratada_id: string | null;
   responsavel_tecnico_id: string | null;
   art_numero: string | null;
   protocolo_data: string;
   situacao: SituacaoLicenca;
-  decisao_data: string | null;
-  /** Fim da validade: decisão + 30 dias, prorrogável. Vazio para órgão público (registro, sem prazo). */
+  /** Validade: 30 dias a partir do início, prorrogável. Vazio para órgão público (registro, sem prazo). */
   validade_ate: string | null;
   inicio_previsto: string | null;
   fim_previsto: string | null;
@@ -180,14 +179,15 @@ export function situacoesRegistraveis<T extends string>(todas: readonly T[], atu
 
 /**
  * Período da obra ou serviço (início e fim, em AAAA-MM-DD). O início em branco
- * vale a data da decisão, como no envio. Devolve a mensagem do erro, ou nulo.
+ * vale o protocolo, como no envio. Devolve a mensagem do erro, ou nulo.
  */
 export function erroPeriodoObra(p: {
-  deferida: boolean; decisao: string; inicio: string; fim: string; concluidaEm: string;
+  deferida: boolean; inicio: string; fim: string; concluidaEm: string;
 }): string | null {
   if (!p.deferida) return null;
-  const inicio = p.inicio || p.decisao;
-  if (inicio && p.fim && p.fim < inicio) return 'O fim da obra ou serviço não pode ser anterior ao início.';
+  if (!p.inicio) return 'Informe o início da obra ou serviço. A validade de 30 dias conta a partir dele.';
+  const inicio = p.inicio;
+  if (p.fim && p.fim < inicio) return 'O fim da obra ou serviço não pode ser anterior ao início.';
   if (inicio && p.concluidaEm && p.concluidaEm < inicio) {
     return 'A conclusão não pode ser anterior ao início da obra ou serviço.';
   }
@@ -218,7 +218,7 @@ export async function prorrogarLicenca(id: string, validadeAte: string): Promise
 /** Publicação da Resolução Conjunta nº 001/2026; mesma data do banco. */
 export const DATA_RESOLUCAO = '2026-09-09';
 
-/** Decisão antes da Resolução: registro histórico, com regras próprias. */
+/** Protocolo antes da Resolução: registro histórico, com regras próprias. */
 export const anteriorResolucao = (decisao: string | null) => Boolean(decisao) && decisao! < DATA_RESOLUCAO;
 
 /** Nome da executora, cadastrada ou digitada. */

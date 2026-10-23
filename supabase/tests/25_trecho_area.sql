@@ -30,9 +30,9 @@ alter table empresas enable trigger user;
 
 alter table licencas disable trigger user;
 insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id, contratante_razao_social, imovel_endereco,
-                      protocolo_data, situacao, decisao_data, inicio_previsto, fim_previsto)
+                      protocolo_data, situacao, inicio_previsto, fim_previsto)
 select 'drenagem', 'PROC-ARE-1', array['vala'], 'Obra com área', e.id, 'Prefeitura Municipal de Niterói', 'Rua Teste, 1',
-       '2026-09-10', 'em_analise', null, '2026-10-01', '2026-12-31'
+       '2026-09-10', 'em_analise', '2026-10-01', '2026-12-31'
   from empresas e where e.codigo_cadex = 'CADEX-ARE-0001';
 insert into licenca_trechos (licenca_id, ordem, logradouro, inicio_lat, inicio_lng, fim_lat, fim_lng)
 select id, 1, 'Rua Teste', -22.90, -43.10, null, null from licencas where processo_sei = 'PROC-ARE-1';

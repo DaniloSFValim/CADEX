@@ -188,13 +188,13 @@ begin
   alter table licencas disable trigger licencas_antes_de_gravar;
   perform pg_temp.recusa(
     format($q$insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id, contratante_id, protocolo_data,
-      situacao, decisao_data, inicio_previsto, fim_previsto)
-      values ('telecom', 'LIC-TIP-OUTROS', array['outros'], 'x', '%s', '%s', '2026-09-10', 'deferida', '2026-09-15',
+      situacao, inicio_previsto, fim_previsto)
+      values ('telecom', 'LIC-TIP-OUTROS', array['outros'], 'x', '%s', '%s', '2026-09-10', 'deferida',
       '2026-10-01', '2026-10-30')$q$, op, op),
     'não está disponível', 'licença de telecom aceitou "outros"');
   insert into licencas (setor, processo_sei, tipos_obra, escopo, executora_id, contratante_id, protocolo_data,
-                        situacao, decisao_data, inicio_previsto, fim_previsto)
-  values ('telecom', 'LIC-TIP-OK', array['vala'], 'x', op, op, '2026-09-10', 'deferida', '2026-09-15',
+                        situacao, inicio_previsto, fim_previsto)
+  values ('telecom', 'LIC-TIP-OK', array['vala'], 'x', op, op, '2026-09-10', 'deferida',
           '2026-10-01', '2026-10-30');
   alter table licencas enable trigger licencas_antes_de_gravar;
 end $$;

@@ -4,7 +4,7 @@ import { dia, licenca, uuid } from './apoio/dados';
 
 /**
  * O campo de um formulário, achado pelo texto do próprio rótulo (e não por uma dica
- * que cite o mesmo nome: "assume a data da decisão" não é o campo "Data da decisão").
+ * que cite o mesmo nome).
  */
 const rotulo = (page: Page, texto: string) =>
   page.locator(`label:has(> span:text-matches("^${texto}[*]?$"))`).first();
@@ -18,7 +18,7 @@ async function preencherBasico(page: Page) {
   await lista(page, 'Tipo de intervenção').selectOption('obra');
   await page.locator('label:has-text("Abertura de vala") input').check();
   await campo(page, 'Escopo da obra').fill('Vala para rede');
-  await campo(page, 'Data da decisão').fill(dia(0));
+  await campo(page, 'Início da obra ou serviço').fill(dia(0));
   await campo(page, 'Nº da licença').fill('900/2026');
   await campo(page, 'Fim da obra ou serviço').fill(dia(30));
   await campo(page, 'Logradouro').fill('Rua Mem de Sá');

@@ -5,7 +5,7 @@ import {
 } from './licencas';
 
 describe('licença anterior à Resolução', () => {
-  it('vale para decisão antes de 09/09/2026', () => {
+  it('vale para protocolo antes de 09/09/2026', () => {
     expect(anteriorResolucao('2022-03-20')).toBe(true);
     expect(anteriorResolucao('2026-09-08')).toBe(true);
     expect(anteriorResolucao('2026-09-09')).toBe(false);
@@ -152,7 +152,7 @@ describe('situação "Indeferida"', () => {
 });
 
 describe('período da obra ou serviço', () => {
-  const base = { deferida: true, decisao: '2026-09-15', inicio: '', fim: '2026-10-30', concluidaEm: '' };
+  const base = { deferida: true, inicio: '2026-10-01', fim: '2026-10-30', concluidaEm: '' };
   it('aceita fim igual ou posterior ao início', () => {
     expect(erroPeriodoObra({ ...base, inicio: '2026-10-01' })).toBeNull();
     expect(erroPeriodoObra({ ...base, inicio: '2026-10-30' })).toBeNull();
@@ -161,7 +161,9 @@ describe('período da obra ou serviço', () => {
     expect(erroPeriodoObra({ ...base, inicio: '2026-11-01' }))
       .toBe('O fim da obra ou serviço não pode ser anterior ao início.');
   });
-  it('início em branco vale a data da decisão', () => {
+  it('início em branco é recusado: é obrigatório na licença deferida', () => {
+    expect(erroPeriodoObra({ ...base, inicio: '' }))
+      .toBe('Informe o início da obra ou serviço. A validade de 30 dias conta a partir dele.');
     expect(erroPeriodoObra({ ...base, fim: '2026-09-14' }))
       .toBe('O fim da obra ou serviço não pode ser anterior ao início.');
     expect(erroPeriodoObra(base)).toBeNull();

@@ -38,7 +38,7 @@ type Form = {
   /** CNPJ, ou CPF do dono do imóvel na drenagem. */
   contratante_cnpj: string;
   imovel_endereco: string; processo_urbanismo: string;
-  art_numero: string; protocolo_data: string; situacao: SituacaoLicenca; decisao_data: string;
+  art_numero: string; protocolo_data: string; situacao: SituacaoLicenca;
   inicio_previsto: string; fim_previsto: string; concluida_em: string; recomposicao_data: string;
   as_built_sei: string; as_built_data: string;
 };
@@ -50,7 +50,7 @@ const ORGAO_PREFIXO = 'orgao:';
 /** Órgão que contrata neste setor (sem setores = sem restrição). */
 const orgaoNoSetor = (o: Orgao, s: Setor) => o.setores.length === 0 || o.setores.includes(s);
 
-/** Situação como o registro enxerga: o ciclo da obra, não a decisão administrativa. */
+/** Situação como o registro enxerga: o ciclo da obra. */
 type UiSituacao = 'em_execucao' | 'concluida' | 'indeferida' | 'cancelada';
 const UI_SITUACAO_LABEL: Record<UiSituacao, string> = {
   em_execucao: 'Em execução',
@@ -79,7 +79,7 @@ const VAZIO: Form = {
   executora_id: '', contratante_id: '', subcontratada_id: '', responsavel_tecnico_id: '',
   executora_razao_social: '', executora_cnpj: '', contratante_razao_social: '', contratante_cnpj: '',
   imovel_endereco: '', processo_urbanismo: '',
-  art_numero: '', protocolo_data: '', situacao: 'deferida', decisao_data: '',
+  art_numero: '', protocolo_data: '', situacao: 'deferida',
   inicio_previsto: '', fim_previsto: '', concluida_em: '', recomposicao_data: '', as_built_sei: '', as_built_data: '',
 };
 
@@ -100,7 +100,7 @@ function paraForm(l: LicencaComTrechos): Form {
     imovel_endereco: s(l.imovel_endereco), processo_urbanismo: s(l.processo_urbanismo),
     subcontratada_id: s(l.subcontratada_id), responsavel_tecnico_id: s(l.responsavel_tecnico_id),
     art_numero: s(l.art_numero), protocolo_data: l.protocolo_data, situacao: l.situacao,
-    decisao_data: s(l.decisao_data), inicio_previsto: s(l.inicio_previsto), fim_previsto: s(l.fim_previsto),
+    inicio_previsto: s(l.inicio_previsto), fim_previsto: s(l.fim_previsto),
     concluida_em: s(l.concluida_em), recomposicao_data: s(l.recomposicao_data),
     as_built_sei: s(l.as_built_sei), as_built_data: s(l.as_built_data),
   };
@@ -232,9 +232,9 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
     if (u === 'concluida') { if (!f.concluida_em) set('concluida_em', hoje); }
     else set('concluida_em', '');
   };
-  const anterior = anteriorResolucao(f.decisao_data || null);
+  const anterior = anteriorResolucao(f.protocolo_data || null);
   // Regras da Resolução (APTA, ART, vínculo da subcontratada): só telecom a partir de 09/09/2026.
-  const resolucao = segueResolucao(f.setor, f.decisao_data || null);
+  const resolucao = segueResolucao(f.setor, f.protocolo_data || null);
   const drenagem = f.setor === 'drenagem';
   const executoraSemCadastro = f.executora_id === SEM_CADASTRO;
   const contratanteSemCadastro = f.contratante_id === SEM_CADASTRO;
@@ -353,10 +353,10 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
     if (!f.tipo_intervencao) return 'Escolha o tipo de intervenção: obra ou serviço.';
     if (publica && !contratanteOrgaoId) return 'Obra ou serviço público: escolha o órgão ou a autarquia contratante.';
     if (executoraSemCadastro && !anterior) {
-      return 'Executora sem cadastro no CADEX só em licença com decisão anterior a 09/09/2026. Cadastre a empresa ou corrija a data da decisão.';
+      return 'Executora sem cadastro no CADEX só em licença com protocolo anterior a 09/09/2026. Cadastre a empresa ou corrija a data de protocolo.';
     }
     if (contratanteSemCadastro && !anterior && !drenagem) {
-      return 'Contratante sem cadastro no CADEX só em drenagem ou em licença com decisão anterior a 09/09/2026.';
+      return 'Contratante sem cadastro no CADEX só em drenagem ou em licença com protocolo anterior a 09/09/2026.';
     }
     if (executoraSemCadastro && !f.executora_razao_social.trim()) return 'Informe a razão social da executora.';
     if (contratanteSemCadastro && !f.contratante_razao_social.trim()) return 'Informe a razão social da contratante.';
@@ -375,7 +375,7 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
       return 'Descreva o tipo "Outros" no campo de descrição.';
     }
     const erroPeriodo = erroPeriodoObra({
-      deferida: deferindo, decisao: f.decisao_data, inicio: f.inicio_previsto, fim: f.fim_previsto, concluidaEm: f.concluida_em,
+      deferida: deferindo, inicio: f.inicio_previsto, fim: f.fim_previsto, concluidaEm: f.concluida_em,
     });
     if (erroPeriodo) return erroPeriodo;
     const lista: Trecho[] = [];
@@ -426,9 +426,7 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
         processo_urbanismo: drenagem ? n(f.processo_urbanismo) : null,
         subcontratada_id: n(f.subcontratada_id), responsavel_tecnico_id: n(f.responsavel_tecnico_id),
         art_numero: n(f.art_numero), protocolo_data: f.protocolo_data, situacao: f.situacao,
-        decisao_data: n(f.decisao_data),
-        // Início em branco assume a data da decisão (cronograma simplificado).
-        inicio_previsto: n(f.inicio_previsto) ?? (deferindo ? n(f.decisao_data) : null),
+        inicio_previsto: n(f.inicio_previsto),
         fim_previsto: n(f.fim_previsto),
         concluida_em: deferindo ? n(f.concluida_em) : null,
         recomposicao_data: deferindo && f.concluida_em ? n(f.recomposicao_data) : null,
@@ -551,7 +549,7 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
         )}
       </Card>
 
-      <Card title="Decisão">
+      <Card title="Situação e período">
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="Situação" required>
             <select className={inputClass} disabled={ro}
@@ -561,12 +559,6 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
                 .map((s) => <option key={s} value={s}>{UI_SITUACAO_LABEL[s]}</option>)}
             </select>
           </Field>
-          {uiSituacao !== 'cancelada' && (
-            <Field label="Data da decisão" required hint="Quando a licença foi concedida.">
-              <input type="date" className={inputClass} disabled={ro} value={f.decisao_data}
-                     required onChange={(e) => set('decisao_data', e.target.value)} />
-            </Field>
-          )}
           {deferindo && (
             <Field label="Nº da licença" required hint="Numeração própria da SECONSER.">
               <input className={inputClass} required disabled={ro} value={f.numero} onChange={(e) => set('numero', e.target.value)} />
@@ -575,8 +567,8 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
         </div>
         {deferindo && (
           <div className="mt-4 grid gap-4 sm:grid-cols-3">
-            <Field label="Início da obra ou serviço" hint="Opcional; em branco, assume a data da decisão.">
-              <input type="date" className={inputClass} disabled={ro} value={f.inicio_previsto}
+            <Field label="Início da obra ou serviço" required hint="A validade de 30 dias conta a partir do início.">
+              <input type="date" className={inputClass} required disabled={ro} value={f.inicio_previsto}
                      onChange={(e) => set('inicio_previsto', e.target.value)} />
             </Field>
             <Field label="Fim da obra ou serviço" required hint="Previsão de término. A validade da licença é outra: veja o cartão de validade.">
@@ -587,7 +579,7 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
         )}
         {f.setor === 'telecom' && anterior && (
           <p className="mt-4 rounded-sm border-l-4 border-tinta-300 bg-tinta-50 px-3 py-2 text-sm text-tinta-700">
-            Decisão anterior a 09/09/2026: registro histórico, anterior à Resolução. Não exige empresa APTA nem ART,
+            Protocolo anterior a 09/09/2026: registro histórico, anterior à Resolução. Não exige empresa APTA nem ART,
             e aceita executora e contratante sem cadastro no CADEX.
           </p>
         )}
@@ -595,7 +587,7 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
           <p className="mt-4 rounded-sm border-l-4 border-tinta-300 bg-tinta-50 px-3 py-2 text-sm text-tinta-700">
             {SETOR_LABEL[f.setor]}: a Resolução nº 001/2026 vale só para telecomunicações. Não se exige empresa APTA,
             ART da obra nem vínculo da subcontratada.
-            {anterior && ' Decisão anterior a 09/09/2026: aceita executora sem cadastro no CADEX.'}
+            {anterior && ' Protocolo anterior a 09/09/2026: aceita executora sem cadastro no CADEX.'}
           </p>
         )}
         {licenca?.situacao === 'deferida' && (
@@ -930,7 +922,7 @@ function Conflitos({ licencaId }: { licencaId: string }) {
 }
 
 /** QR Code da placa do canteiro (art. 14) e atalho para imprimir. */
-/** Validade da licença: 30 dias a partir da decisão, prorrogável. Órgão público é registro, sem prazo. */
+/** Validade da licença: 30 dias a partir do início, prorrogável. Órgão público é registro, sem prazo. */
 function Validade({ licenca, hoje, onProrrogada }: { licenca: LicencaComTrechos; hoje: string; onProrrogada: () => Promise<void> }) {
   const [nova, setNova] = useState('');
   const [busy, setBusy] = useState(false);
@@ -959,8 +951,8 @@ function Validade({ licenca, hoje, onProrrogada }: { licenca: LicencaComTrechos;
         <>
           <p className="mt-2 text-sm text-tinta-700">
             {licenca.validade_ate
-              ? <>Válida até <strong>{dataBR(licenca.validade_ate)}</strong>{vencida ? ' (vencida)' : ''}. A licença vale 30 dias a partir da decisão, salvo prorrogação.</>
-              : 'Sem validade registrada. Salve a licença com a data da decisão para calcular.'}
+              ? <>Válida até <strong>{dataBR(licenca.validade_ate)}</strong>{vencida ? ' (vencida)' : ''}. A licença vale 30 dias a partir do início, salvo prorrogação.</>
+              : 'Sem validade registrada. Informe o início da obra ou serviço e salve para calcular.'}
           </p>
           <div className="mt-4 flex flex-wrap items-end gap-3">
             <Field label="Nova validade">
