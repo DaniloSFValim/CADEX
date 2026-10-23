@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { anosDasObras, barraNoAno, filtrarObras, fracaoDoAno, obrasNoMes, obrasParaGeoJSON, temLocalizacao, type ObraPublica } from './obras';
+import { anosDasObras, barraNoAno, filtrarObras, filtrarPainel, fracaoDoAno, obrasNoMes, obrasParaGeoJSON, temLocalizacao, type ObraPublica } from './obras';
 
 const obra = (o: Partial<ObraPublica>): ObraPublica => ({
   codigo: 'c1', setor: 'telecom', numero: '001/2026', tipos_obra: ['vala'], tipo_intervencao: 'obra', origem: 'concessionaria', escopo: 'Rede', inicio_previsto: '2026-10-01',
@@ -152,5 +152,25 @@ describe('área da intervenção no mapa', () => {
 
   it('trecho sem área continua só com o ponto ou a linha', () => {
     expect(obrasParaGeoJSON([obra({})]).features.map((f) => f.geometry.type)).toEqual(['Point']);
+  });
+});
+
+describe('filtro do painel', () => {
+  const lista = [
+    obra({ codigo: 'a', situacao: 'vigente', executora: 'Rede Fibra' }),
+    obra({ codigo: 'b', situacao: 'aguardando_inicio', executora: 'Rede Fibra' }),
+    obra({ codigo: 'c', situacao: 'concluida', executora: 'Outra Ltda.' }),
+  ];
+  it('sem filtro devolve todas', () => {
+    expect(filtrarPainel(lista, { situacao: null, executora: null })).toHaveLength(3);
+  });
+  it('vigentes inclui as que aguardam início e exclui as concluídas', () => {
+    expect(filtrarPainel(lista, { situacao: 'vigentes', executora: null }).map((o) => o.codigo)).toEqual(['a', 'b']);
+  });
+  it('executora compara sem diferenciar maiúsculas e ignora espaços', () => {
+    expect(filtrarPainel(lista, { situacao: null, executora: '  rede fibra ' }).map((o) => o.codigo)).toEqual(['a', 'b']);
+  });
+  it('os dois filtros se combinam', () => {
+    expect(filtrarPainel(lista, { situacao: 'vigentes', executora: 'Outra Ltda.' })).toEqual([]);
   });
 });

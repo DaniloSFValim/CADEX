@@ -11,8 +11,8 @@ import { hojeISO } from '../lib/empresas';
 import { ORIGEM_LABEL, TIPO_INTERVENCAO_LABEL, origemPublica } from '../lib/licencas';
 import { listarTipos, mapaRotulosTipos, rotuloDoTipo } from '../lib/tiposIntervencao';
 import {
-  COR_SITUACAO, SITUACAO_PUBLICA_LABEL, baixarObrasGeojson, buscarObrasPublicas, obrasProximas,
-  temLocalizacao, textoDistancia, type ObraPublica,
+  COR_SITUACAO, SITUACAO_PUBLICA_LABEL, baixarObrasGeojson, buscarObrasPublicas, filtrarPainel, obrasProximas,
+  temLocalizacao, textoDistancia, type FiltroPainel, type ObraPublica,
 } from '../lib/obras';
 
 // O mapa (MapLibre) é pesado: só carrega nesta página.
@@ -28,7 +28,9 @@ export default function ConsultaObras() {
   const [mostrarEncerradas, setMostrarEncerradas] = useState(false);
   const [bairro, setBairro] = useState<string | null>(null);
   const [baixando, setBaixando] = useState(false);
+  const [filtro, setFiltro] = useState<FiltroPainel>({ situacao: null, executora: null });
   const mapaRef = useRef<HTMLDivElement>(null);
+  const filtroAtivo = filtro.situacao !== null || filtro.executora !== null;
 
   const [rotulos, setRotulos] = useState<Record<string, string>>({});
   useEffect(() => { buscarObrasPublicas().then(setObras).catch(setError); }, []);
@@ -51,7 +53,8 @@ export default function ConsultaObras() {
   const todas = obras ?? [];
   const ativas = useMemo(() => todas.filter(obraAtiva), [todas]);
   const porBairro = bairro ? (o: ObraPublica) => (o.trechos[0]?.bairro?.trim() || 'Sem bairro') === bairro : () => true;
-  const listadas = (mostrarEncerradas ? todas : ativas).filter(porBairro);
+  const obrasPainel = useMemo(() => filtrarPainel(obras ?? [], filtro), [obras, filtro]);
+  const listadas = (filtroAtivo ? obrasPainel : mostrarEncerradas ? todas : ativas).filter(porBairro);
   const grupos = useMemo(() => agruparPorBairro(listadas), [listadas]);
   const executoras = useMemo(() => resumoExecutoras(todas), [todas]);
   const stats = useMemo(() => resumo(todas), [todas]);
@@ -70,7 +73,11 @@ export default function ConsultaObras() {
 
         {obras && (
           <div className="mt-8 grid grid-cols-2 gap-x-8 gap-y-6 md:grid-cols-4">
-            <Kpi rotulo="Vigentes agora" valor={stats.vigentes} detalhe="obras autorizadas" tom="alta" />
+            <button type="button" aria-pressed={filtro.situacao === 'vigentes'}
+                    onClick={() => setFiltro((f) => ({ ...f, situacao: f.situacao ? null : 'vigentes' }))}
+                    className="rounded-xl text-left transition-colors hover:bg-tinta-100/60 focus-visible:outline-2 focus-visible:outline-marca-700">
+              <Kpi rotulo="Vigentes agora" valor={stats.vigentes} detalhe="obras autorizadas · clique para filtrar" tom="alta" />
+            </button>
             <Kpi rotulo={stats.bairros === 1 ? 'Bairro' : 'Bairros'} valor={stats.bairros} detalhe="com obra licenciada" />
             <Kpi rotulo={stats.execs === 1 ? 'Executora' : 'Executoras'} valor={stats.execs} detalhe="com obra licenciada" />
             <Kpi rotulo="No cadastro" valor={stats.total} detalhe="licenças registradas" />
@@ -103,7 +110,7 @@ export default function ConsultaObras() {
                   </div>
                 </div>
                 <div ref={mapaRef} className="relative scroll-mt-4 overflow-hidden rounded-xl border border-tinta-200 shadow-xs">
-                  <MapaObras obras={todas} foco={foco} destaque={destaque} modo={modo} bairro={bairro}
+                  <MapaObras obras={obrasPainel} foco={foco} destaque={destaque} modo={modo} bairro={bairro}
                              onSelecionar={setFoco} onBairro={setBairro} onDestacar={setDestaque} />
                   {selecionada && <FichaObra obra={selecionada} onFechar={() => setFoco(null)} />}
                 </div>
@@ -124,7 +131,9 @@ export default function ConsultaObras() {
             <ObrasPorMes obras={todas} ano={new Date().getFullYear()} hoje={hojeISO()} foco={foco} onSelecionar={setFoco} />
 
             <ObrasPerto obras={todas} onSelecionar={verNoMapa} />
-            <ResumoExecutoras executoras={executoras} />
+            <ResumoExecutoras executoras={executoras}
+                              selecionada={filtro.executora}
+                              onEscolher={(nome) => setFiltro((f) => ({ ...f, executora: f.executora === nome ? null : nome }))} />
 
             {/* Lista das obras, agrupada por bairro. Por padrão, só as vigentes ou aguardando início. */}
             <section aria-live="polite" aria-label="Lista das obras e serviços licenciados">
@@ -138,6 +147,28 @@ export default function ConsultaObras() {
                     </button>
                   ))}
                 </div>
+                {filtroAtivo && (
+                  <div className="flex w-full flex-wrap items-center gap-2 text-sm" role="status">
+                    <span className="text-tinta-600">Filtrando:</span>
+                    {filtro.situacao && (
+                      <button type="button" onClick={() => setFiltro((f) => ({ ...f, situacao: null }))}
+                              className="inline-flex items-center gap-2 rounded-full border border-marca-700 bg-marca-50 px-3 py-1 font-semibold text-marca-700">
+                        Vigentes e a começar <span aria-hidden>✕</span>
+                        <span className="sr-only">Remover o filtro de situação</span>
+                      </button>
+                    )}
+                    {filtro.executora && (
+                      <button type="button" onClick={() => setFiltro((f) => ({ ...f, executora: null }))}
+                              className="inline-flex items-center gap-2 rounded-full border border-marca-700 bg-marca-50 px-3 py-1 font-semibold text-marca-700">
+                        {filtro.executora} <span aria-hidden>✕</span>
+                        <span className="sr-only">Remover o filtro de executora</span>
+                      </button>
+                    )}
+                    <button type="button" className={linkTexto} onClick={() => setFiltro({ situacao: null, executora: null })}>
+                      Limpar filtros
+                    </button>
+                  </div>
+                )}
                 {bairro && (
                   <button type="button" onClick={() => setBairro(null)}
                           className="inline-flex items-center gap-2 rounded-full border border-marca-700 bg-marca-50 px-3 py-1 text-sm font-semibold text-marca-700">
@@ -290,19 +321,26 @@ function rotuloTipos(tipos: string[], rotulos: Record<string, string>) {
   return tipos.map((t) => rotuloDoTipo(t, rotulos).toLowerCase()).join(', ');
 }
 
-function ResumoExecutoras({ executoras }: { executoras: { nome: string; vigentes: number; total: number }[] }) {
+function ResumoExecutoras({ executoras, selecionada, onEscolher }: {
+  executoras: { nome: string; vigentes: number; total: number }[]; selecionada: string | null; onEscolher: (nome: string) => void;
+}) {
   if (executoras.length === 0) return null;
   return (
     <section className="mt-4 rounded-xl border border-tinta-200 bg-white p-4" aria-labelledby="exec-titulo">
       <h2 id="exec-titulo" className="text-sm font-semibold text-tinta-900">Executoras com obras</h2>
-      <p className="mt-1 text-xs text-tinta-500">Obras vigentes e total de licenças de cada executora.</p>
+      <p className="mt-1 text-xs text-tinta-500">Obras vigentes e total de licenças de cada executora. Clique para ver só as dela.</p>
       <ul className="mt-3 grid gap-x-8 gap-y-1 text-sm sm:grid-cols-2">
         {executoras.map((e) => (
-          <li key={e.nome} className="flex items-baseline justify-between gap-3 border-b border-tinta-100 py-1.5">
-            <span className="min-w-0 truncate text-tinta-800">{e.nome}</span>
-            <span className="tabular shrink-0 text-tinta-600">
-              <strong className="font-semibold text-alta">{e.vigentes}</strong> vigentes · {e.total} no total
-            </span>
+          <li key={e.nome}>
+            <button type="button" aria-pressed={selecionada?.toLowerCase() === e.nome.toLowerCase()}
+                    onClick={() => onEscolher(e.nome)}
+                    className={`flex w-full items-baseline justify-between gap-3 border-b border-tinta-100 py-1.5 text-left hover:bg-tinta-50 ${
+                      selecionada?.toLowerCase() === e.nome.toLowerCase() ? 'font-semibold' : ''}`}>
+              <span className="min-w-0 truncate text-tinta-800">{e.nome}</span>
+              <span className="tabular shrink-0 text-tinta-600">
+                <strong className="font-semibold text-alta">{e.vigentes}</strong> vigentes · {e.total} no total
+              </span>
+            </button>
           </li>
         ))}
       </ul>

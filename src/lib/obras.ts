@@ -212,3 +212,21 @@ export function obrasProximas(obras: ObraPublica[], ponto: [number, number], lim
 /** Distância para leitura: "320 m" ou "1,4 km". */
 export const textoDistancia = (metros: number) =>
   metros < 1000 ? `${Math.round(metros)} m` : `${(metros / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} km`;
+
+/** Filtro do painel público, clicado nos indicadores e nas executoras. */
+export interface FiltroPainel {
+  /** "vigentes": vigente ou aguardando início. Nulo: todas as situações. */
+  situacao: 'vigentes' | null;
+  /** Nome da executora, sem diferenciar maiúsculas. Nulo: todas. */
+  executora: string | null;
+}
+
+/** Obras que atendem ao filtro do painel. Sem filtro, devolve todas. */
+export function filtrarPainel(obras: ObraPublica[], f: FiltroPainel): ObraPublica[] {
+  const exec = f.executora?.trim().toLowerCase() ?? null;
+  return obras.filter((o) => {
+    if (f.situacao === 'vigentes' && o.situacao !== 'vigente' && o.situacao !== 'aguardando_inicio') return false;
+    if (exec && (o.executora?.trim().toLowerCase() ?? '') !== exec) return false;
+    return true;
+  });
+}
