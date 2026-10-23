@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AbasConsulta } from '../components/AbasConsulta';
 import ObrasPorMes from '../components/ObrasPorMes';
+import HistoricoAcervo from '../components/HistoricoAcervo';
 import FichaObra from '../components/FichaObra';
 import { Cabecalho } from '../components/Cabecalho';
 import { Rodape } from '../components/Rodape';
@@ -129,6 +130,7 @@ export default function ConsultaObras() {
             </div>
 
             <ObrasPorMes obras={todas} ano={new Date().getFullYear()} hoje={hojeISO()} foco={foco} onSelecionar={setFoco} />
+            <HistoricoAcervo obras={todas} rotulos={rotulos} />
 
             <ObrasPerto obras={todas} onSelecionar={verNoMapa} />
             <ResumoExecutoras executoras={executoras}
