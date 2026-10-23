@@ -27,6 +27,7 @@ function lic(o: Partial<LicencaComTrechos> = {}): LicencaComTrechos {
     contratante_cpf: null, imovel_endereco: null, processo_urbanismo: null, anterior_resolucao: false,
     subcontratada_id: null, responsavel_tecnico_id: null, art_numero: null, protocolo_data: '2026-09-10',
     situacao: 'deferida', decisao_data: '2026-09-15', inicio_previsto: '2026-10-01', fim_previsto: '2026-10-30',
+    validade_ate: (o.fim_previsto as string | undefined) ?? '2026-10-30',
     concluida_em: null, recomposicao_data: null, as_built_sei: null, as_built_data: null, observacoes: null,
     tipo_intervencao: 'obra', origem_intervencao: 'concessionaria', contrato_numero: null, processo_administrativo: null,
     ordem_servico_numero: null, objeto_contrato: null,

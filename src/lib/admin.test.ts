@@ -101,7 +101,7 @@ describe('inconsistências', () => {
     expect(com.some((t) => t.includes('não marca que ela executa obras'))).toBe(false);
   });
   it('fim vencido sem conclusão', () => {
-    expect(acha(lic({ inicio_previsto: '2026-08-01', fim_previsto: '2026-09-01' }))).toContain('Fim da obra ou serviço vencido, sem conclusão registrada.');
+    expect(acha(lic({ inicio_previsto: '2026-08-01', fim_previsto: '2026-09-01', validade_ate: '2026-09-01' }))).toContain('Fim da obra ou serviço vencido, sem conclusão registrada.');
   });
   it('concluída sem As Built e sem recomposição; histórica não é cobrada', () => {
     const c = lic({ concluida_em: '2026-10-05' });
@@ -126,7 +126,7 @@ describe('inconsistências', () => {
     expect(acha(lic({ fim_previsto: null }))).toContain('Sem início ou fim da obra ou serviço.');
   });
   it('mais problemas primeiro', () => {
-    const muitos = lic({ executora_id: 'off', licenca_trechos: [], inicio_previsto: '2026-08-01', fim_previsto: '2026-09-01' });
+    const muitos = lic({ executora_id: 'off', licenca_trechos: [], inicio_previsto: '2026-08-01', fim_previsto: '2026-09-01', validade_ate: '2026-09-01' });
     const um = lic({ licenca_trechos: [] });
     const r = inconsistencias([um, muitos], HOJE, empresas);
     expect(r[0].licenca).toBe(muitos);
