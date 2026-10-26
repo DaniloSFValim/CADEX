@@ -1,3 +1,0 @@
-# Cloudflare Pages — fallback da SPA (mesmo papel do rewrite "/(.*)" na vercel.json).
-# As Functions em functions/ têm precedência, então /anatel/* é tratado antes desta regra.
-/*    /index.html   200
