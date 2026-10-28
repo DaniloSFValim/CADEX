@@ -8,7 +8,7 @@ import { inconsistencias } from '../lib/admin';
 import { hojeISO, listarEmpresas, type Empresa } from '../lib/empresas';
 import {
   ESTADO_LICENCA_LABEL, buscarLicencasPagina, estadoLicenca, excluirLicencaDefinitivamente, listarLicencas, listarLicencasExcluidas,
-  cadastroRetroativo, nomeExecutora, prorrogarLicenca, restaurarLicenca, type LicencaComTrechos, type PaginaLicencas,
+  cadastroRetroativo, nomeExecutora, prorrogarLicenca, rotuloProrrogacao, restaurarLicenca, type LicencaComTrechos, type PaginaLicencas,
 } from '../lib/licencas';
 import { listarContas, type Conta } from '../lib/contas';
 import { listarOrgaos, type Orgao } from '../lib/orgaos';
@@ -287,6 +287,7 @@ function ProrrogarLinha({ licenca: l, onMudou }: { licenca: LicencaComTrechos; o
   };
   return (
     <span className="flex flex-wrap items-center gap-2 text-xs text-tinta-600">
+      {l.prorrogacoes > 0 && <span className="font-semibold text-tinta-800">{rotuloProrrogacao(l.prorrogacoes)}</span>}
       <label className="flex items-center gap-1">
         Validade
         <input type="date" className={inputClass} value={data} onChange={(e) => setData(e.target.value)}

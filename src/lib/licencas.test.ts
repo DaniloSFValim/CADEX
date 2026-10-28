@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   anteriorResolucao, cadastroRetroativo, desempenhoExecutora, erroPeriodoObra, estadoLicenca, lerCoordenada, linkMapa, mesmaEmpresaNosPapeis,
-  nomeExecutora, pendenciasLicencas, situacoesRegistraveis, urlPublicaLicenca,
+  nomeExecutora, pendenciasLicencas, rotuloProrrogacao, situacoesRegistraveis, urlPublicaLicenca,
 } from './licencas';
 
 describe('licença anterior à Resolução', () => {
@@ -204,5 +204,14 @@ describe('cadastro retroativo', () => {
   it('conclusão recente, sem conclusão ou cadastro no mesmo mês não é retroativa', () => {
     expect(cadastroRetroativo({ concluida_em: '2026-10-10', criado_em: '2026-10-20T10:00:00Z' })).toBe(false);
     expect(cadastroRetroativo({ concluida_em: null, criado_em: '2026-10-20T10:00:00Z' })).toBe(false);
+  });
+});
+
+describe('prorrogação contada', () => {
+  it('rótulo cresce com a contagem e fica vazio sem prorrogação', () => {
+    expect(rotuloProrrogacao(0)).toBe('');
+    expect(rotuloProrrogacao(1)).toBe('1ª prorrogação');
+    expect(rotuloProrrogacao(2)).toBe('2ª prorrogação');
+    expect(rotuloProrrogacao(3)).toBe('3ª prorrogação');
   });
 });

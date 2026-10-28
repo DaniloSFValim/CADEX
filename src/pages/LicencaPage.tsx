@@ -12,7 +12,7 @@ import {
   nomeEmpresa, podeAtuar, situacaoEfetiva, type Empresa, type Registro, type Setor, type Vinculo,
 } from '../lib/empresas';
 import {
-  ESTADO_LICENCA_LABEL, ORIGENS, ORIGEM_LABEL, TIPOS_INTERVENCAO, TIPO_INTERVENCAO_LABEL, origemPublica, TOM_ESTADO_LICENCA, buscarConflitos, buscarLicenca, prorrogarLicenca,
+  ESTADO_LICENCA_LABEL, ORIGENS, ORIGEM_LABEL, TIPOS_INTERVENCAO, TIPO_INTERVENCAO_LABEL, origemPublica, TOM_ESTADO_LICENCA, buscarConflitos, buscarLicenca, prorrogarLicenca, rotuloProrrogacao,
   anteriorResolucao, coordenadaTexto, segueResolucao, estadoLicenca, lerCoordenada, linkMapa, salvarLicenca,
   erroPeriodoObra, mesmaEmpresaNosPapeis, situacoesRegistraveis,
   urlPublicaLicenca,
@@ -972,7 +972,7 @@ function Validade({ licenca, hoje, onProrrogada }: { licenca: LicencaComTrechos;
         <>
           <p className="mt-2 text-sm text-tinta-700">
             {licenca.validade_ate
-              ? <>Válida até <strong>{dataBR(licenca.validade_ate)}</strong>{vencida ? ' (vencida)' : ''}. A licença vale 30 dias a partir do início, salvo prorrogação.</>
+              ? <>Válida até <strong>{dataBR(licenca.validade_ate)}</strong>{vencida ? ' (vencida)' : ''}. A licença vale 30 dias a partir do início, salvo prorrogação.{licenca.prorrogacoes > 0 && <> Já prorrogada: {rotuloProrrogacao(licenca.prorrogacoes)}.</>}</>
               : 'Sem validade registrada. Informe o início da obra ou serviço e salve para calcular.'}
           </p>
           <div className="mt-4 flex flex-wrap items-end gap-3">

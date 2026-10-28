@@ -31,7 +31,7 @@ export function licenca(o: Partial<LicencaComTrechos> = {}): LicencaComTrechos {
     contratante_cpf: null, imovel_endereco: null, processo_urbanismo: null, anterior_resolucao: false, subcontratada_id: null,
     responsavel_tecnico_id: null, art_numero: null, protocolo_data: dia(-120), situacao: 'deferida',
     inicio_previsto: dia(-10), fim_previsto: dia(20), validade_ate: o.fim_previsto !== undefined ? o.fim_previsto : dia(20), orgao_contratante_id: null, concluida_em: null,
-    recomposicao_data: null, as_built_sei: null, as_built_data: null, observacoes: null,
+    recomposicao_data: null, as_built_sei: null, as_built_data: null, observacoes: null, prorrogacoes: 0,
     tipo_intervencao: 'obra', origem_intervencao: 'concessionaria', contrato_numero: null, processo_administrativo: null,
     ordem_servico_numero: null, objeto_contrato: null, excluida_em: null, excluida_por: null, excluida_motivo: null, empresas_no_deferimento: null, codigo_publico: `c${seq}`,
     criado_em: `${dia(-seq % 90)}T10:00:00Z`, atualizado_em: `${dia(-1)}T10:00:00Z`,
