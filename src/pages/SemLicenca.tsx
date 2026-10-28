@@ -169,7 +169,16 @@ function FormSemLicenca({ atual, empresas, orgaos, tipos, somenteLeitura, onSalv
   const [mapaAberto, setMapaAberto] = useState(false);
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState<unknown>(null);
-  const ro = somenteLeitura;
+  // Registro já feito abre só para leitura; "Editar" libera o formulário.
+  const [editando, setEditando] = useState(!atual);
+  const ro = somenteLeitura || !editando;
+  // Cancelar descarta o que não foi salvo e volta à leitura do registro.
+  function cancelar() {
+    if (!atual) return;
+    setF(paraForm(atual));
+    setErro(null);
+    setEditando(false);
+  }
   const set = <K extends keyof FormSemLicenca>(k: K, v: FormSemLicenca[K]) => setF((x) => ({ ...x, [k]: v }));
 
   // Empresa e órgão que servem ao setor escolhido.
@@ -190,6 +199,7 @@ function FormSemLicenca({ atual, empresas, orgaos, tipos, somenteLeitura, onSalv
     setBusy(true);
     try {
       await salvarSemLicenca(m.linha, atual?.id);
+      if (atual) setEditando(false);
       onSalvo(atual ? 'Registro atualizado.' : 'Obra ou serviço sem licença registrado.');
     } catch (err) { setErro(err); } finally { setBusy(false); }
   }
@@ -349,7 +359,14 @@ function FormSemLicenca({ atual, empresas, orgaos, tipos, somenteLeitura, onSalv
       {!ro && (
         <div className="flex flex-wrap items-center gap-3">
           <Button type="submit" disabled={busy}>{busy ? 'Salvando…' : atual ? 'Salvar alterações' : 'Registrar'}</Button>
-          <Link to={atual ? `/obras/sem-licenca/${atual.id}` : '/obras/sem-licenca'} className="text-sm font-semibold text-tinta-600 hover:underline">Cancelar</Link>
+          {atual
+            ? <Button variant="secondary" type="button" onClick={cancelar}>Cancelar</Button>
+            : <Link to="/obras/sem-licenca" className="text-sm font-semibold text-tinta-600 hover:underline">Cancelar</Link>}
+        </div>
+      )}
+      {ro && atual && !somenteLeitura && (
+        <div className="flex">
+          <Button type="button" onClick={() => setEditando(true)}>Editar registro</Button>
         </div>
       )}
       <ErrorNote error={erro} />

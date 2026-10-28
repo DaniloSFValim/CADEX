@@ -240,6 +240,7 @@ test.describe('administrador corrige licença de outro cadastro', () => {
     const alheia = licenca({ id: uuid(4242), escopo: 'Escopo com erro de digitação' });
     const backend = await instalarBackend(page, { administrador: true, licencas: [alheia] });
     await page.goto(`/obras/${alheia.id}`);
+    await page.getByRole('button', { name: 'Editar licença' }).click();
     await campo(page, 'Escopo da obra').fill('Escopo corrigido pelo administrador');
     await page.getByRole('button', { name: 'Salvar alterações' }).click();
 
