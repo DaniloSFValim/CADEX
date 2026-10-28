@@ -507,7 +507,7 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
           </Field>
         </div>
         <fieldset className="mt-5">
-          <legend className="text-[13px] font-medium text-tinta-700">
+          <legend className="text-sm font-medium text-tinta-700">
             Tipo de obra <span className="text-baixa" aria-hidden>*</span>
             <span className="ml-2 font-normal text-tinta-500">
               {f.setor === 'telecom' ? 'art. 10; ' : ''}marque todos que se aplicam

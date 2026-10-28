@@ -220,7 +220,7 @@ function FormSemLicenca({ atual, empresas, orgaos, tipos, somenteLeitura, onSalv
           </Field>
         </div>
         <fieldset className="mt-4" disabled={ro}>
-          <legend className="text-[13px] font-medium text-tinta-700">
+          <legend className="text-sm font-medium text-tinta-700">
             Tipo de obra ou serviço <span className="ml-0.5 text-baixa" aria-hidden>*</span>{' '}
             <span className="font-normal text-tinta-500">marque todos que se aplicam</span>
           </legend>

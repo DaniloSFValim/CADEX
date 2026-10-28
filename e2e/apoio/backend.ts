@@ -244,6 +244,14 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
       return responder({ numero: l.numero, processo_sei: l.processo_sei, trechos_apagados: l.licenca_trechos.length });
     }
     if (caminho === 'rpc/obras_publicas') return responder(obrasPublicas(estado));
+    // Licença pública pelo código do QR. Sem executora vinculada, a resposta vem sem o campo.
+    if (caminho === 'rpc/licenca_publica') {
+      const achada = obrasPublicas(estado).find((o) => o.codigo === (corpo as { p_codigo?: string } | null)?.p_codigo);
+      if (!achada) return responder(null);
+      const { executora: _executora, ...resto } = achada;
+      void _executora;
+      return responder({ ...resto, contratante: null, trechos: [], numero: achada.numero });
+    }
     if (caminho === 'rpc/licenca_publica_historico') return responder([]);
 
     semSimulacao.push(`${req.method()} ${caminho}`);

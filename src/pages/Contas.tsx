@@ -155,7 +155,9 @@ function NovaConta({ onCriada }: { onCriada: (msg: string) => void }) {
           <div className="flex gap-2">
             <input className={`${inputClass} tabular`} required minLength={SENHA_MINIMA} value={senha}
                    onChange={(e) => setSenha(e.target.value)} autoComplete="new-password" />
-            <Button variant="secondary" onClick={() => setSenha(gerarSenhaProvisoria())}>Gerar outra</Button>
+            <Button variant="secondary" className="whitespace-nowrap" onClick={() => setSenha(gerarSenhaProvisoria())}>Gerar outra</Button>
+            <Button variant="secondary" className="whitespace-nowrap"
+                    onClick={() => { void navigator.clipboard?.writeText(senha).catch(() => undefined); }}>Copiar</Button>
           </div>
         </Field>
         <label className="flex items-start gap-2 text-sm text-tinta-700 md:col-span-2">

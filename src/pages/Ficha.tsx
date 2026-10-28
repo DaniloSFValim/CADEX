@@ -80,7 +80,7 @@ export default function Ficha() {
   const ultimos = ultimoPorTipo(d.docs);
 
   return (
-    <div className="min-h-screen bg-tinta-100 print:bg-white">
+    <main id="conteudo" tabIndex={-1} className="min-h-screen bg-tinta-100 print:bg-white">
       <div className="border-b border-tinta-200 bg-white print:hidden">
         <div className="mx-auto flex max-w-4xl flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3 text-sm">
           <Link to={`/empresas/${e.id}`} className="text-marca-700 hover:underline">← Voltar</Link>
@@ -219,7 +219,7 @@ export default function Ficha() {
           Fiscalização de Serviços Concedidos – SECONSER. Uso interno.
         </footer>
       </article>
-    </div>
+    </main>
   );
 }
 

@@ -64,6 +64,7 @@ export default function LicencaPublica() {
                     Licença de obra em via pública
         </p>
         <ErrorNote error={error} />
+        {d && <h1 className="sr-only">Licença nº {d.numero}</h1>}
         {d === undefined && !error && <Spinner label="Consultando a licença…" />}
         {d === null && (
           <div className="mt-4 rounded-2xl border border-baixa bg-baixa/6 p-5 sm:p-6">
@@ -86,7 +87,9 @@ function Conteudo({ d }: { d: Dados }) {
   const [rotulos, setRotulos] = useState<Record<string, string>>({});
   useEffect(() => { listarTipos().then((t) => setRotulos(mapaRotulosTipos(t))).catch(() => setRotulos({})); }, []);
   const v = VEREDITO[d.situacao];
-  const sitCadex = d.executora.situacao_cadex as SituacaoEfetiva | null;
+  // A executora pode faltar (registro sem empresa vinculada): a página mostra o que houver, sem quebrar.
+  const executora = d.executora ?? { razao_social: '', nome_fantasia: null, codigo_cadex: null, situacao_cadex: null };
+  const sitCadex = executora.situacao_cadex as SituacaoEfetiva | null;
   return (
     <>
       <div className={`mt-4 rounded-2xl border p-5 sm:p-6 ${v.cor}`} role="status">
@@ -107,10 +110,10 @@ function Conteudo({ d }: { d: Dados }) {
           <span className="tabular">{dataBR(d.fim_previsto)}</span>
         </Item>
         <Item rotulo="Empresa executora" largo>
-          {nome(d.executora)}
+          {nome(executora) || 'Não informada'}
           <span className="block text-sm text-tinta-500">
-            {d.executora.codigo_cadex && sitCadex
-              ? `${d.executora.codigo_cadex}; inscrição no CADEX hoje: ${SITUACAO_LABEL[sitCadex] ?? sitCadex}`
+            {executora.codigo_cadex && sitCadex
+              ? `${executora.codigo_cadex}; inscrição no CADEX hoje: ${SITUACAO_LABEL[sitCadex] ?? sitCadex}`
               : 'Sem inscrição no CADEX: licença emitida antes do cadastro.'}
           </span>
         </Item>
@@ -171,7 +174,7 @@ function TrilhaPublica({ eventos }: { eventos: EventoPublico[] }) {
 function Item({ rotulo, largo, children }: { rotulo: string; largo?: boolean; children: React.ReactNode }) {
   return (
     <div className={largo ? 'sm:col-span-2' : ''}>
-      <dt className="text-[13px] font-medium text-tinta-500">{rotulo}</dt>
+      <dt className="text-sm font-medium text-tinta-500">{rotulo}</dt>
       <dd className="mt-0.5 text-base text-tinta-900">{children}</dd>
     </div>
   );

@@ -35,6 +35,7 @@ test.describe('exclusão de licenças', () => {
     const backend = await instalarBackend(page, cenario());
     await page.goto('/admin/licencas');
     await page.getByLabel('Buscar licença').fill('501/2026');
+    await page.locator('li', { hasText: '501/2026' }).locator('details').evaluate((d) => { (d as HTMLDetailsElement).open = true; });
     await page.getByRole('button', { name: 'Excluir' }).click();
 
     // O resumo identifica o registro antes de excluir.
@@ -76,6 +77,7 @@ test.describe('exclusão de licenças', () => {
     const backend = await instalarBackend(page, cenario());
     await page.goto('/admin/licencas');
     await page.getByLabel('Buscar licença').fill('501/2026');
+    await page.locator('li', { hasText: '501/2026' }).locator('details').evaluate((d) => { (d as HTMLDetailsElement).open = true; });
     await page.getByRole('button', { name: 'Excluir' }).click();
     await page.getByRole('button', { name: 'Confirmar exclusão' }).click();
     await expect(page.getByRole('heading', { name: 'Lixeira (1)' })).toBeVisible();
@@ -88,6 +90,7 @@ test.describe('exclusão de licenças', () => {
 
     // De novo para a lixeira, e apagar de vez.
     await page.getByLabel('Buscar licença').fill('501/2026');
+    await page.locator('li', { hasText: '501/2026' }).locator('details').evaluate((d) => { (d as HTMLDetailsElement).open = true; });
     await page.getByRole('button', { name: 'Excluir' }).click();
     await page.getByRole('button', { name: 'Confirmar exclusão' }).click();
     await expect(page.getByRole('heading', { name: 'Lixeira (1)' })).toBeVisible();

@@ -9,6 +9,7 @@ import {
   ESTADO_LICENCA_LABEL, ORIGENS, ORIGEM_LABEL, SITUACAO_LICENCA_LABEL, TIPOS_INTERVENCAO, TIPO_INTERVENCAO_LABEL, TIPO_OBRA_LABEL,
   estadoLicenca, listarLicencas, nomeExecutora,
   type LicencaComTrechos, type OrigemIntervencao, type SituacaoLicenca, type TipoIntervencao, type TipoObra,
+  cadastroRetroativo,
 } from '../lib/licencas';
 import { listarOrgaos, type Orgao } from '../lib/orgaos';
 import {
@@ -160,7 +161,7 @@ export default function Painel() {
           </label>
         </div>
         <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <label className="block text-[13px] font-medium text-tinta-700">Situação
+          <label className="block text-sm font-medium text-tinta-700">Situação
             <select className={`${inputClass} mt-1`} value={filtros.status} onChange={(e) => set('status', e.target.value as FiltroStatus)}>
               <option value="">Todas</option>
               <optgroup label="Andamento da obra">
@@ -178,31 +179,31 @@ export default function Painel() {
               </optgroup>
             </select>
           </label>
-          <label className="block text-[13px] font-medium text-tinta-700">Contratante
+          <label className="block text-sm font-medium text-tinta-700">Contratante
             <select className={`${inputClass} mt-1`} value={filtros.contratante} onChange={(e) => set('contratante', e.target.value)}>
               <option value="">Todas</option>
               {contratantesLista.map((p) => <option key={p.chave} value={p.chave}>{p.rotulo}</option>)}
             </select>
           </label>
-          <label className="block text-[13px] font-medium text-tinta-700">Executora
+          <label className="block text-sm font-medium text-tinta-700">Executora
             <select className={`${inputClass} mt-1`} value={filtros.executora} onChange={(e) => set('executora', e.target.value)}>
               <option value="">Todas</option>
               {executorasLista.map((p) => <option key={p.chave} value={p.chave}>{p.rotulo}</option>)}
             </select>
           </label>
-          <label className="block text-[13px] font-medium text-tinta-700">Tipo de intervenção
+          <label className="block text-sm font-medium text-tinta-700">Tipo de intervenção
             <select className={`${inputClass} mt-1`} value={filtros.intervencao} onChange={(e) => set('intervencao', e.target.value as TipoIntervencao | '')}>
               <option value="">Todos</option>
               {TIPOS_INTERVENCAO.map((t) => <option key={t} value={t}>{TIPO_INTERVENCAO_LABEL[t]}</option>)}
             </select>
           </label>
-          <label className="block text-[13px] font-medium text-tinta-700">Origem da intervenção
+          <label className="block text-sm font-medium text-tinta-700">Origem da intervenção
             <select className={`${inputClass} mt-1`} value={filtros.origem} onChange={(e) => set('origem', e.target.value as OrigemIntervencao | '')}>
               <option value="">Todas</option>
               {ORIGENS.map((o) => <option key={o} value={o}>{ORIGEM_LABEL[o]}</option>)}
             </select>
           </label>
-          <label className="block text-[13px] font-medium text-tinta-700">Tipo de obra
+          <label className="block text-sm font-medium text-tinta-700">Tipo de obra
             <select className={`${inputClass} mt-1`} value={filtros.tipo} onChange={(e) => set('tipo', e.target.value as TipoObra | '')}>
               <option value="">Todos</option>
               {(Object.keys(TIPO_OBRA_LABEL) as TipoObra[]).map((t) => <option key={t} value={t}>{TIPO_OBRA_LABEL[t]}</option>)}
@@ -232,7 +233,7 @@ export default function Painel() {
                        onClick={() => alternarStatus('estado:aguardando_inicio')} ativo={filtros.status === 'estado:aguardando_inicio'} />
             <Indicador rotulo="Em execução" valor={ind.emAndamento} detalhe="em andamento: período previsto em curso" cor="border-marca-600"
                        onClick={() => alternarStatus('estado:em_execucao')} ativo={filtros.status === 'estado:em_execucao'} />
-            <Indicador rotulo="Concluídas" valor={ind.concluidas} detalhe="conclusão registrada" cor="border-alta"
+            <Indicador rotulo="Concluídas" valor={ind.concluidas} detalhe={`conclusão registrada${filtradas.filter(cadastroRetroativo).length ? `; ${filtradas.filter(cadastroRetroativo).length} cadastradas depois da conclusão` : ''}`} cor="border-alta"
                        onClick={() => alternarStatus('grupo:concluidas')} ativo={filtros.status === 'grupo:concluidas'} />
             <Indicador rotulo="Prazo encerrado" valor={ind.prazoVencido} detalhe="fim previsto vencido, sem conclusão" cor="border-baixa"
                        onClick={() => alternarStatus('estado:prazo_encerrado')} ativo={filtros.status === 'estado:prazo_encerrado'} />

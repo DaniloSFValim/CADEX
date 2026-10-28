@@ -55,29 +55,29 @@ export default function AdminAuditoria() {
     <div className="flex flex-col gap-6">
       <Card title="Filtros">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <label className="block text-[13px] font-medium text-tinta-700">O que mudou
+          <label className="block text-sm font-medium text-tinta-700">O que mudou
             <select className={`${inputClass} mt-1`} value={filtro.tabela} onChange={(e) => set('tabela', e.target.value)}>
               <option value="">Tudo</option>
               {Object.entries(TABELA_AUDITORIA_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               {filtro.tabela && !(filtro.tabela in TABELA_AUDITORIA_LABEL) && <option value={filtro.tabela}>{filtro.tabela}</option>}
             </select>
           </label>
-          <label className="block text-[13px] font-medium text-tinta-700">Operação
+          <label className="block text-sm font-medium text-tinta-700">Operação
             <select className={`${inputClass} mt-1`} value={filtro.operacao} onChange={(e) => set('operacao', e.target.value as OperacaoAuditoria | '')}>
               <option value="">Todas</option>
               {(Object.keys(OPERACAO_LABEL) as OperacaoAuditoria[]).map((o) => <option key={o} value={o}>{OPERACAO_LABEL[o]}</option>)}
             </select>
           </label>
-          <label className="block text-[13px] font-medium text-tinta-700">Quem fez (nome)
+          <label className="block text-sm font-medium text-tinta-700">Quem fez (nome)
             <input className={`${inputClass} mt-1`} value={filtro.quem} onChange={(e) => set('quem', e.target.value)} />
           </label>
-          <label className="block text-[13px] font-medium text-tinta-700">De
+          <label className="block text-sm font-medium text-tinta-700">De
             <input type="date" className={`${inputClass} mt-1`} value={filtro.de} max={filtro.ate || undefined} onChange={(e) => set('de', e.target.value)} />
           </label>
-          <label className="block text-[13px] font-medium text-tinta-700">Até
+          <label className="block text-sm font-medium text-tinta-700">Até
             <input type="date" className={`${inputClass} mt-1`} value={filtro.ate} min={filtro.de || undefined} onChange={(e) => set('ate', e.target.value)} />
           </label>
-          <label className="block text-[13px] font-medium text-tinta-700">Código do registro
+          <label className="block text-sm font-medium text-tinta-700">Código do registro
             <input className={`${inputClass} tabular mt-1`} value={filtro.registro} onChange={(e) => set('registro', e.target.value)}
                    placeholder="Ex.: a licença que veio do botão Histórico" aria-invalid={!registroValido(filtro.registro)} />
           </label>
