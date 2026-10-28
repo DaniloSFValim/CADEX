@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { anosDasObras, barraNoAno, filtrarObras, filtrarPainel, fracaoDoAno, obrasNoMes, obrasParaGeoJSON, temLocalizacao, type ObraPublica } from './obras';
+import { anosDasObras, barraNoAno, filtrarObras, filtrarPainel, fracaoDoAno, obrasNoMes, obrasParaGeoJSON, pontosDeCalor, temLocalizacao, type ObraPublica } from './obras';
 
 const obra = (o: Partial<ObraPublica>): ObraPublica => ({
   codigo: 'c1', setor: 'telecom', numero: '001/2026', tipos_obra: ['vala'], tipo_intervencao: 'obra', origem: 'concessionaria', escopo: 'Rede', inicio_previsto: '2026-10-01',
@@ -172,5 +172,35 @@ describe('filtro do painel', () => {
   });
   it('os dois filtros se combinam', () => {
     expect(filtrarPainel(lista, { situacao: 'vigentes', executora: 'Outra Ltda.' })).toEqual([]);
+  });
+});
+
+describe('mapa de calor', () => {
+  const soma = (fc: ReturnType<typeof pontosDeCalor>) => fc.features.reduce((s, f) => s + (f.properties?.peso as number), 0);
+
+  it('uma obra soma um peso, não um por trecho', () => {
+    const cinco = obra({ trechos: Array.from({ length: 5 }, (_, i) => ({
+      logradouro: `R${i}`, bairro: null, inicio: [-43.1 - i * 0.001, -22.9] as [number, number], fim: null,
+    })) });
+    expect(soma(pontosDeCalor([cinco]))).toBeCloseTo(1);
+  });
+
+  it('trecho com fim vira pontos ao longo da linha, então entra na mancha', () => {
+    const linha = obra({ trechos: [{ logradouro: 'Av. Longa', bairro: null, inicio: [-43.1, -22.9], fim: [-43.1, -22.91], area: null }] });
+    const fc = pontosDeCalor([linha]);
+    expect(fc.features.length).toBeGreaterThan(10);
+    expect(soma(fc)).toBeCloseTo(1);
+  });
+
+  it('vigente pesa mais que concluída', () => {
+    const v = pontosDeCalor([obra({ situacao: 'vigente' })]);
+    const c = pontosDeCalor([obra({ situacao: 'concluida' })]);
+    expect(soma(v)).toBeGreaterThan(soma(c));
+  });
+
+  it('filtra pelo ano do início previsto', () => {
+    const lista = [obra({ inicio_previsto: '2025-03-01' }), obra({ codigo: 'x', inicio_previsto: '2026-01-10' })];
+    expect(pontosDeCalor(lista, '2026').features).toHaveLength(1);
+    expect(pontosDeCalor(lista).features).toHaveLength(2);
   });
 });
