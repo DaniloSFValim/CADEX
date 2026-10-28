@@ -72,6 +72,8 @@ export interface Licenca {
   situacao: SituacaoLicenca;
   /** Validade: 30 dias a partir do início, prorrogável. Vazio para órgão público (registro, sem prazo). */
   validade_ate: string | null;
+  /** Quantas vezes a validade foi prorrogada pela administração (zera quando a decisão é recalculada). */
+  prorrogacoes: number;
   inicio_previsto: string | null;
   fim_previsto: string | null;
   concluida_em: string | null;
@@ -216,11 +218,14 @@ export function cadastroRetroativo(l: { concluida_em: string | null; criado_em: 
   return dias > DIAS_CADASTRO_RETROATIVO;
 }
 
-/** Prorroga a validade. A gravação passa pela política de licenças (gestor ou licenciador). */
+/** Prorroga a validade e soma 1 à contagem. O banco confere permissão e se a nova data é posterior. */
 export async function prorrogarLicenca(id: string, validadeAte: string): Promise<void> {
-  const { error } = await supabase.from('licencas').update({ validade_ate: validadeAte }).eq('id', id);
+  const { error } = await supabase.rpc('prorrogar_licenca', { p_id: id, p_validade: validadeAte });
   if (error) throw error;
 }
+
+/** "1ª prorrogação", "2ª prorrogação"…; vazio quando a licença nunca foi prorrogada. */
+export const rotuloProrrogacao = (n: number) => (n > 0 ? `${n}ª prorrogação` : '');
 
 // ---------------------------------------------------------------------
 // Licenças anteriores à Resolução (registro histórico)
@@ -329,7 +334,7 @@ function ordenarTrechos(l: LicencaComTrechos): LicencaComTrechos {
 
 export type LicencaInput = Omit<Licenca,
   'id' | 'empresas_no_deferimento' | 'codigo_publico' | 'anterior_resolucao' | 'criado_em' | 'atualizado_em'
-  | 'excluida_em' | 'excluida_por' | 'excluida_motivo' | 'validade_ate'> & { id?: string };
+  | 'excluida_em' | 'excluida_por' | 'excluida_motivo' | 'validade_ate' | 'prorrogacoes'> & { id?: string };
 
 /** Grava licença e trechos numa só transação (função salvar_licenca). */
 export async function salvarLicenca(licenca: LicencaInput, trechos: Trecho[]): Promise<string> {

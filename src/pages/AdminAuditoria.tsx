@@ -137,7 +137,7 @@ function LinhaEvento({ evento: e }: { evento: EventoAuditoria }) {
           <Badge tom={TOM_OPERACAO[e.operacao]}>{OPERACAO_LABEL[e.operacao]}</Badge>
           <span className="text-sm text-tinta-800">{nomeTabela(e.tabela)}</span>
         </div>
-        {e.registro_id && <div className="tabular mt-0.5 text-2xs text-tinta-400">{e.registro_id}</div>}
+        {e.registro_id && <div className="tabular mt-0.5 text-xs text-tinta-400">{e.registro_id}</div>}
       </td>
       <td className={tabela.td}>
         <details>

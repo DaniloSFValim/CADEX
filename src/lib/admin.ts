@@ -96,9 +96,23 @@ export function inconsistencias(
   ls: LicencaComTrechos[], hoje: string, empresas: Map<string, Empresa>,
 ): Inconsistencia[] {
   const r: Inconsistencia[] = [];
+  // Mesmo processo SEI em mais de uma licença ativa: quase sempre é digitação, mas pode ser caso legítimo. Aviso, não bloqueio.
+  const extras = new Map<string, string[]>();
+  const porSei = new Map<string, LicencaComTrechos[]>();
+  for (const l of ls) {
+    if (l.situacao === 'cancelada' || !l.processo_sei) continue;
+    porSei.set(l.processo_sei, [...(porSei.get(l.processo_sei) ?? []), l]);
+  }
+  for (const grupo of porSei.values()) {
+    if (grupo.length < 2) continue;
+    for (const l of grupo) {
+      const outras = grupo.filter((o) => o !== l).map((o) => o.numero ?? 'sem número').join(', ');
+      extras.set(l.id, [`Processo SEI repetido em outra licença ativa (${outras}).`]);
+    }
+  }
   for (const l of ls) {
     if (l.situacao === 'cancelada') continue;
-    const p: string[] = [];
+    const p: string[] = [...(extras.get(l.id) ?? [])];
     const estado = estadoLicenca(l, hoje);
     const exec = l.executora_id ? empresas.get(l.executora_id) : undefined;
 

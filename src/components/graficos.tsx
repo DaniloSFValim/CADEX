@@ -89,10 +89,10 @@ export function ColunasMensais({ meses }: { meses: { mes: string; n: number }[] 
             return (
               <div key={m.mes} className="relative flex min-w-0 flex-1 flex-col items-center justify-end" style={{ maxWidth: 28 }}
                    title={`${rotuloMes(m.mes)}: ${m.n}`}>
-                <span className="h-4 text-2xs font-semibold text-tinta-800">{rotulado ? m.n : ''}</span>
+                <span className="h-4 text-xs font-semibold text-tinta-800">{rotulado ? m.n : ''}</span>
                 <span className="w-full max-w-6 rounded-t bg-marca-600"
                       style={{ height: Math.max((m.n / maximo) * ALTURA, m.n > 0 ? 3 : 0) }} />
-                <span className="mt-1 h-4 w-0 whitespace-nowrap text-center text-2xs text-tinta-500">
+                <span className="mt-1 h-4 w-0 whitespace-nowrap text-center text-xs text-tinta-500">
                   {i % passo === 0 ? <span className="relative -left-4 inline-block w-8">{rotuloMes(m.mes)}</span> : ''}
                 </span>
               </div>
@@ -150,7 +150,7 @@ export function LinhaDoTempo({ itens, janela, hoje }: {
             <span />
             <div className="relative h-5">
               {meses.map((m) => (
-                <span key={m.mes} className="absolute top-0 -translate-x-0 whitespace-nowrap pl-1 text-2xs text-tinta-500" style={{ left: `${m.pos}%` }}>
+                <span key={m.mes} className="absolute top-0 -translate-x-0 whitespace-nowrap pl-1 text-xs text-tinta-500" style={{ left: `${m.pos}%` }}>
                   {rotuloMes(m.mes)}
                 </span>
               ))}

@@ -152,3 +152,21 @@ describe('dados a revisar: prazo e número', () => {
     expect(problemas(lic({ numero: '027/2025' })).some((x) => x.includes('fora do padrão'))).toBe(false);
   });
 });
+
+describe('processo SEI repetido', () => {
+  const empresas = new Map([['op1', emp('op1')]]);
+  it('avisa as duas licenças ativas que compartilham o mesmo processo', () => {
+    const a = lic({ processo_sei: 'NIT-1/900/2026', numero: '900/2026' });
+    const b = lic({ processo_sei: 'NIT-1/900/2026', numero: '901/2026' });
+    const r = inconsistencias([a, b], HOJE, empresas);
+    expect(r).toHaveLength(2);
+    expect(r.find((x) => x.licenca === a)?.problemas).toContain('Processo SEI repetido em outra licença ativa (901/2026).');
+    expect(r.find((x) => x.licenca === b)?.problemas).toContain('Processo SEI repetido em outra licença ativa (900/2026).');
+  });
+
+  it('não avisa licença cancelada nem processo que aparece uma vez só', () => {
+    const a = lic({ processo_sei: 'NIT-1/910/2026' });
+    const cancelada = lic({ processo_sei: 'NIT-1/910/2026', situacao: 'cancelada' });
+    expect(inconsistencias([a, cancelada], HOJE, empresas).some((x) => x.problemas.some((p) => p.includes('SEI repetido')))).toBe(false);
+  });
+});

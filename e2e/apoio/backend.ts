@@ -170,7 +170,7 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
         { setor: 'viario', codigo: 'vala', rotulo: 'Abertura de vala', ativo: true },
         { setor: 'viario', codigo: 'bicicletario', rotulo: 'Bicicletário', ativo: true },
         { setor: 'viario', codigo: 'outros', rotulo: 'Outros (descrever)', ativo: true },
-      ].map((t) => ({ ...t, id: uuid(8000 + t.codigo.length), fonte: 'Catálogo de teste', atualizado_em: '2026-10-14' }));
+      ].map((t, i) => ({ ...t, id: uuid(8001 + i), fonte: 'Catálogo de teste', atualizado_em: '2026-10-14' }));
       return lista(estado.tipos ?? padrao);
     }
     if (caminho === 'intervencoes_sem_licenca') {
@@ -242,6 +242,16 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
       }
       estado.licencas = estado.licencas.filter((x) => x.id !== p_id);
       return responder({ numero: l.numero, processo_sei: l.processo_sei, trechos_apagados: l.licenca_trechos.length });
+    }
+    if (caminho === 'rpc/prorrogar_licenca') {
+      // Como o banco: órgão público não se prorroga, a nova data precisa ser posterior, e a contagem sobe 1.
+      const { p_id, p_validade } = corpo as { p_id: string; p_validade: string };
+      const l = estado.licencas.find((x) => x.id === p_id);
+      if (!l) return route.fulfill({ status: 400, headers: CORS, contentType: 'application/json', body: JSON.stringify({ message: 'Licença não encontrada.' }) });
+      if (l.orgao_contratante_id) return route.fulfill({ status: 400, headers: CORS, contentType: 'application/json', body: JSON.stringify({ message: 'Licença de órgão público é registro, sem prazo de validade.' }) });
+      if (l.validade_ate && p_validade <= l.validade_ate) return route.fulfill({ status: 400, headers: CORS, contentType: 'application/json', body: JSON.stringify({ message: 'A nova validade precisa ser posterior à validade atual.' }) });
+      estado.licencas = estado.licencas.map((x) => (x.id === p_id ? { ...x, validade_ate: p_validade, prorrogacoes: (x.prorrogacoes ?? 0) + 1 } : x));
+      return vazio();
     }
     if (caminho === 'rpc/obras_publicas') return responder(obrasPublicas(estado));
     // Licença pública pelo código do QR. Sem executora vinculada, a resposta vem sem o campo.
