@@ -41,22 +41,22 @@ export default function PlacaLicenca() {
 
   const url = urlPublicaLicenca(l.codigo_publico);
   return (
-    <div className="min-h-screen bg-tinta-100 py-8 print:bg-white print:py-0">
+    <main id="conteudo" tabIndex={-1} className="min-h-screen bg-tinta-100 py-8 print:bg-white print:py-0">
       <div className="mx-auto mb-4 flex max-w-[210mm] items-center justify-between px-4 print:hidden">
         <Link to={`/obras/${l.id}`} className="text-sm text-tinta-600 hover:underline">Voltar à licença</Link>
         <Button onClick={() => window.print()}>Imprimir placa</Button>
       </div>
 
-      <article className="mx-auto flex max-w-[210mm] flex-col bg-white p-[14mm] shadow-sm print:shadow-none"
+      <article className="mx-auto flex w-full max-w-[210mm] min-w-0 flex-col bg-white p-4 shadow-sm sm:p-[14mm] print:shadow-none"
                style={{ minHeight: '148mm' }}>
         <header className="flex items-center justify-between gap-6 border-b-2 border-marca-800 pb-4">
           <div className="text-right">
             <div className="text-xs font-semibold text-tinta-500">Obra licenciada</div>
-            <div className="tabular text-3xl font-extrabold text-marca-800">Licença nº {l.numero}</div>
+            <h1 className="tabular text-3xl font-extrabold text-marca-800">Licença nº {l.numero}</h1>
           </div>
         </header>
 
-        <div className="mt-6 grid flex-1 grid-cols-[1fr_auto] gap-8">
+        <div className="mt-6 grid flex-1 grid-cols-1 gap-8 sm:grid-cols-[1fr_auto]">
           <dl className="space-y-4">
             <div>
               <dt className="text-xs font-semibold text-tinta-500">Empresa executora</dt>
@@ -87,6 +87,6 @@ export default function PlacaLicenca() {
           Endereço de conferência: <span className="break-all">{url}</span>
         </footer>
       </article>
-    </div>
+    </main>
   );
 }

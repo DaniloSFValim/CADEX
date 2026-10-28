@@ -86,7 +86,9 @@ function Conteudo({ d }: { d: Dados }) {
   const [rotulos, setRotulos] = useState<Record<string, string>>({});
   useEffect(() => { listarTipos().then((t) => setRotulos(mapaRotulosTipos(t))).catch(() => setRotulos({})); }, []);
   const v = VEREDITO[d.situacao];
-  const sitCadex = d.executora.situacao_cadex as SituacaoEfetiva | null;
+  // A executora pode faltar (registro sem empresa vinculada): a página mostra o que houver, sem quebrar.
+  const executora = d.executora ?? { razao_social: '', nome_fantasia: null, codigo_cadex: null, situacao_cadex: null };
+  const sitCadex = executora.situacao_cadex as SituacaoEfetiva | null;
   return (
     <>
       <div className={`mt-4 rounded-2xl border p-5 sm:p-6 ${v.cor}`} role="status">
@@ -107,10 +109,10 @@ function Conteudo({ d }: { d: Dados }) {
           <span className="tabular">{dataBR(d.fim_previsto)}</span>
         </Item>
         <Item rotulo="Empresa executora" largo>
-          {nome(d.executora)}
+          {nome(executora) || 'Não informada'}
           <span className="block text-sm text-tinta-500">
-            {d.executora.codigo_cadex && sitCadex
-              ? `${d.executora.codigo_cadex}; inscrição no CADEX hoje: ${SITUACAO_LABEL[sitCadex] ?? sitCadex}`
+            {executora.codigo_cadex && sitCadex
+              ? `${executora.codigo_cadex}; inscrição no CADEX hoje: ${SITUACAO_LABEL[sitCadex] ?? sitCadex}`
               : 'Sem inscrição no CADEX: licença emitida antes do cadastro.'}
           </span>
         </Item>
