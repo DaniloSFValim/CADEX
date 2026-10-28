@@ -17,7 +17,7 @@ let seq = 0;
 const lic = (o: Partial<LicencaComTrechos> = {}): LicencaComTrechos => {
   seq++;
   return {
-    id: `l${seq}`, setor: 'telecom', processo_sei: `P-${String(seq).padStart(3, '0')}`, numero: `${seq}/2026`, tipos_obra: ['vala'], escopo: 'x',
+    id: `l${seq}`, setor: 'telecom', processo_sei: `P-${String(seq).padStart(3, '0')}`, numero: `${String(seq).padStart(3, '0')}/2026`, tipos_obra: ['vala'], escopo: 'x',
     executora_id: 'op1', contratante_id: null, orgao_contratante_id: null, executora_razao_social: null, executora_cnpj: null,
     contratante_razao_social: null, contratante_cnpj: null, contratante_cpf: null, imovel_endereco: null, processo_urbanismo: null,
     anterior_resolucao: false, subcontratada_id: null, responsavel_tecnico_id: null, art_numero: null, protocolo_data: '2026-09-10',
@@ -130,5 +130,25 @@ describe('inconsistências', () => {
     const um = lic({ licenca_trechos: [] });
     const r = inconsistencias([um, muitos], HOJE, empresas);
     expect(r[0].licenca).toBe(muitos);
+  });
+});
+
+describe('dados a revisar: prazo e número', () => {
+  const empresas = new Map([['op1', emp('op1')]]);
+  const problemas = (l: LicencaComTrechos) => inconsistencias([l], HOJE, empresas)[0]?.problemas ?? [];
+
+  it('prazo de mais de um ano entre início e fim é apontado', () => {
+    expect(problemas(lic({ inicio_previsto: '2025-08-19', fim_previsto: '2026-11-05' }))
+      .some((x) => x.includes('Mais de um ano'))).toBe(true);
+  });
+
+  it('prazo de até um ano não é apontado', () => {
+    expect(problemas(lic({ inicio_previsto: '2026-01-01', fim_previsto: '2026-12-31' }))
+      .some((x) => x.includes('Mais de um ano'))).toBe(false);
+  });
+
+  it('número fora do padrão 000/AAAA é apontado; o padrão não', () => {
+    expect(problemas(lic({ numero: '27/2025' })).some((x) => x.includes('fora do padrão'))).toBe(true);
+    expect(problemas(lic({ numero: '027/2025' })).some((x) => x.includes('fora do padrão'))).toBe(false);
   });
 });

@@ -79,6 +79,12 @@ export function participacoes(ls: LicencaComTrechos[]): Map<string, Participacao
   return m;
 }
 
+/** Número no padrão do CADEX: três dígitos, barra e ano com quatro dígitos. */
+export const PADRAO_NUMERO = /^\d{3}\/\d{4}$/;
+
+/** Dias entre duas datas ISO (AAAA-MM-DD), em UTC. */
+const diasEntre = (a: string, b: string) => (Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86400000;
+
 export interface Inconsistencia { licenca: LicencaComTrechos; problemas: string[] }
 
 /**
@@ -110,6 +116,12 @@ export function inconsistencias(
       p.push('Executora terceirizada sem contratante.');
     }
     if (!l.executora_id && l.executora_razao_social) p.push('Executora sem cadastro no CADEX (registro histórico).');
+    // Número no padrão 000/AAAA (um formato só, para busca e relatórios).
+    if (l.numero && !PADRAO_NUMERO.test(l.numero)) p.push(`Número fora do padrão 000/AAAA: "${l.numero}".`);
+    // Prazo de obra de mais de um ano costuma ser ano digitado errado; é um aviso, não um bloqueio.
+    if (l.inicio_previsto && l.fim_previsto && diasEntre(l.inicio_previsto, l.fim_previsto) > 365) {
+      p.push('Mais de um ano entre o início e o fim da obra ou serviço: confira as datas.');
+    }
 
     if (exec && l.contratante_id === l.executora_id && !exec.executa_obras) {
       p.push(`A ${exec.nome_fantasia || exec.razao_social} executa a própria obra, mas o cadastro não marca que ela executa obras ou serviços por conta própria.`);
