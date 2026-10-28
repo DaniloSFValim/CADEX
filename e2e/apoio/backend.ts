@@ -78,11 +78,20 @@ const contaVoce = (administrador: boolean, perfil: Perfil): Conta => ({
   criado_em: '2026-01-01T00:00:00Z', ultimo_acesso: '2026-10-12T10:00:00Z', mfa_ativa: true,
 });
 
-/** Filtros do PostgREST que as telas usam: coluna=eq.valor e as comparações de data. */
+/** Filtros do PostgREST que as telas usam: coluna=eq.valor, as comparações de data, ilike e or de texto. */
 function filtrar<T extends Record<string, unknown>>(linhas: T[], q: URLSearchParams): T[] {
   return linhas.filter((l) => {
     for (const [k, v] of q) {
       if (['select', 'order', 'offset', 'limit'].includes(k)) continue;
+      // or=(campo.ilike.*termo*,...): a busca de texto; basta uma das colunas bater.
+      if (k === 'or') {
+        const bate = v.replace(/^\(|\)$/g, '').split(',').some((t) => {
+          const m = t.match(/^(\w+)\.ilike\.(.*)$/);
+          return !!m && String(l[m[1]] ?? '').toLowerCase().includes(m[2].replace(/\*/g, '').toLowerCase());
+        });
+        if (!bate) return false;
+        continue;
+      }
       const [op, ...resto] = v.split('.');
       const val = resto.join('.');
       const campo = l[k];
