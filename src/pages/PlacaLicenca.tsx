@@ -83,7 +83,7 @@ export default function PlacaLicenca() {
           </div>
         </div>
 
-        <footer className="mt-6 border-t border-tinta-200 pt-3 text-[11px] text-tinta-500">
+        <footer className="mt-6 border-t border-tinta-200 pt-3 text-xs text-tinta-500">
           Endereço de conferência: <span className="break-all">{url}</span>
         </footer>
       </article>

@@ -329,6 +329,22 @@ export async function salvarLicenca(licenca: LicencaInput, trechos: Trecho[]): P
 }
 
 /** Lixeira: o que o administrador excluiu e ainda pode restaurar ou apagar de vez. */
+export interface PaginaLicencas { itens: LicencaComTrechos[]; total: number }
+
+/**
+ * Uma página das licenças ativas, buscada no servidor pelo número, pelo processo SEI ou pelo escopo.
+ * Vírgulas e parênteses saem do termo porque quebram o filtro do PostgREST.
+ */
+export async function buscarLicencasPagina(busca: string, desde: number, tamanho: number): Promise<PaginaLicencas> {
+  const termo = busca.trim().replace(/[%_,()*]/g, ' ').trim();
+  let q = supabase.from('licencas').select('*, licenca_trechos(*)', { count: 'exact' })
+    .is('excluida_em', null).order('protocolo_data', { ascending: false }).order('id');
+  if (termo) q = q.or(`numero.ilike.*${termo}*,processo_sei.ilike.*${termo}*,escopo.ilike.*${termo}*`);
+  const { data, error, count } = await q.range(desde, desde + tamanho - 1);
+  if (error) throw error;
+  return { itens: ((data ?? []) as LicencaComTrechos[]).map(ordenarTrechos), total: count ?? 0 };
+}
+
 export async function listarLicencasExcluidas(): Promise<LicencaComTrechos[]> {
   const { data, error } = await supabase.from('licencas').select('*, licenca_trechos(*)')
     .not('excluida_em', 'is', null).order('excluida_em', { ascending: false });

@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { GuardaSessao } from './components/GuardaSessao';
 import { Layout } from './components/Layout';
@@ -5,38 +6,43 @@ import { Button, Spinner } from './components/ui';
 import { useAuth } from './lib/auth';
 import { isConfigured } from './lib/supabase';
 import { lerMotivo } from './lib/sessao';
-import Consulta from './pages/Consulta';
-import ConsultaObras from './pages/ConsultaObras';
-import Login from './pages/Login';
-import Painel from './pages/Painel';
-import Pendencias from './pages/Pendencias';
-import CruzamentoAnatel from './pages/CruzamentoAnatel';
-import Empresas from './pages/Empresas';
-import EmpresaPage from './pages/EmpresaPage';
-import Documentos from './pages/Documentos';
 
-import Ficha from './pages/Ficha';
-import Administracao from './pages/Administracao';
-import AdminAuditoria from './pages/AdminAuditoria';
-import AdminConfiguracoes from './pages/AdminConfiguracoes';
-import AdminEmpresas from './pages/AdminEmpresas';
-import AdminLicencas from './pages/AdminLicencas';
-import AdminTipos from './pages/AdminTipos';
-import Contas from './pages/Contas';
-import Orgaos from './pages/Orgaos';
-import MinhaConta from './pages/MinhaConta';
-import Licencas from './pages/Licencas';
-import LicencaPage from './pages/LicencaPage';
-import LicencaPublica from './pages/LicencaPublica';
-import VerificarDocumento from './pages/VerificarDocumento';
-import PlacaLicenca from './pages/PlacaLicenca';
-import SemLicenca, { FormSemLicencaPage } from './pages/SemLicenca';
-import { CadastrarMfa, ConfirmarMfa } from './pages/Mfa';
+/* Cada tela entra só quando é aberta: o público (consulta e mapa) não baixa o código da área restrita. */
+const Consulta = lazy(() => import('./pages/Consulta'));
+const ConsultaObras = lazy(() => import('./pages/ConsultaObras'));
+const Login = lazy(() => import('./pages/Login'));
+const Painel = lazy(() => import('./pages/Painel'));
+const Pendencias = lazy(() => import('./pages/Pendencias'));
+const CruzamentoAnatel = lazy(() => import('./pages/CruzamentoAnatel'));
+const Empresas = lazy(() => import('./pages/Empresas'));
+const EmpresaPage = lazy(() => import('./pages/EmpresaPage'));
+const Documentos = lazy(() => import('./pages/Documentos'));
+const Ficha = lazy(() => import('./pages/Ficha'));
+const Administracao = lazy(() => import('./pages/Administracao'));
+const AdminAuditoria = lazy(() => import('./pages/AdminAuditoria'));
+const AdminConfiguracoes = lazy(() => import('./pages/AdminConfiguracoes'));
+const AdminEmpresas = lazy(() => import('./pages/AdminEmpresas'));
+const AdminLicencas = lazy(() => import('./pages/AdminLicencas'));
+const AdminTipos = lazy(() => import('./pages/AdminTipos'));
+const Contas = lazy(() => import('./pages/Contas'));
+const Orgaos = lazy(() => import('./pages/Orgaos'));
+const MinhaConta = lazy(() => import('./pages/MinhaConta'));
+const Licencas = lazy(() => import('./pages/Licencas'));
+const LicencaPage = lazy(() => import('./pages/LicencaPage'));
+const LicencaPublica = lazy(() => import('./pages/LicencaPublica'));
+const VerificarDocumento = lazy(() => import('./pages/VerificarDocumento'));
+const PlacaLicenca = lazy(() => import('./pages/PlacaLicenca'));
+const SemLicenca = lazy(() => import('./pages/SemLicenca'));
+const FormSemLicencaPage = lazy(() => import('./pages/SemLicenca').then((m) => ({ default: m.FormSemLicencaPage })));
+const CadastrarMfa = lazy(() => import('./pages/Mfa').then((m) => ({ default: m.CadastrarMfa })));
+const ConfirmarMfa = lazy(() => import('./pages/Mfa').then((m) => ({ default: m.ConfirmarMfa })));
+
 
 export function App() {
   return (
     <>
     <GuardaSessao />
+    <Suspense fallback={<Spinner />}>
     <Routes>
       {/* Consulta pública: aberta, com ou sem login (art. 7º, § 2º). */}
       <Route path="consulta" element={<Consulta />} />
@@ -48,6 +54,7 @@ export function App() {
       <Route path="entrar" element={<Login />} />
       <Route path="*" element={<AreaRestrita />} />
     </Routes>
+    </Suspense>
     </>
   );
 }
