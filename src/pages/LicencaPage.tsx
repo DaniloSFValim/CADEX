@@ -198,6 +198,8 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [salvo, setSalvo] = useState(false);
+  // Licença já registrada abre só para leitura; "Editar" libera o formulário. Cadastro novo já abre editável.
+  const [editando, setEditando] = useState(!licenca);
   const hoje = hojeISO();
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => { setF((x) => ({ ...x, [k]: v })); setSalvo(false); };
@@ -447,6 +449,7 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
       const novoId = await salvarLicenca(m.licenca, m.trechos);
       await onSalvo(novoId);
       setSalvo(true);
+      if (licenca) setEditando(false);
     } catch (err) {
       setError(err);
     } finally {
@@ -454,7 +457,17 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
     }
   }
 
-  const ro = somenteLeitura;
+  const ro = somenteLeitura || !editando;
+
+  // Cancelar descarta o que não foi salvo e volta à leitura da licença.
+  function cancelar() {
+    if (!licenca) return;
+    setF(paraForm(licenca));
+    setTrechos(licenca.licenca_trechos.length ? licenca.licenca_trechos.map(trechoParaForm) : [TRECHO_VAZIO]);
+    setError(null);
+    setSalvo(false);
+    setEditando(false);
+  }
 
   return (
     <form onSubmit={submit} className="space-y-10">
@@ -861,8 +874,15 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
         <div className="sticky bottom-0 -mx-4 flex flex-wrap items-center justify-end gap-3 border-t border-tinta-200 bg-white/95 px-4 py-3 backdrop-blur-sm">
           <div className="mr-auto min-w-0"><ErrorNote error={error} /></div>
           {salvo && <span className="text-sm text-alta" role="status">Licença salva.</span>}
-          <Link to={licenca ? `/obras/${licenca.id}` : '/obras'} className="text-sm font-semibold text-tinta-600 hover:underline">Cancelar</Link>
+          {licenca
+            ? <Button variant="secondary" type="button" onClick={cancelar}>Cancelar</Button>
+            : <Link to="/obras" className="text-sm font-semibold text-tinta-600 hover:underline">Cancelar</Link>}
           <Button type="submit" disabled={busy}>{busy ? 'Salvando…' : licenca ? 'Salvar alterações' : 'Registrar licença'}</Button>
+        </div>
+      )}
+      {ro && licenca && !somenteLeitura && (
+        <div className="flex justify-end">
+          <Button type="button" onClick={() => setEditando(true)}>Editar licença</Button>
         </div>
       )}
       {ro && <ErrorNote error={error} />}
