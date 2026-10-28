@@ -861,6 +861,7 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
         <div className="sticky bottom-0 -mx-4 flex flex-wrap items-center justify-end gap-3 border-t border-tinta-200 bg-white/95 px-4 py-3 backdrop-blur-sm">
           <div className="mr-auto min-w-0"><ErrorNote error={error} /></div>
           {salvo && <span className="text-sm text-alta" role="status">Licença salva.</span>}
+          <Link to={licenca ? `/obras/${licenca.id}` : '/obras'} className="text-sm font-semibold text-tinta-600 hover:underline">Cancelar</Link>
           <Button type="submit" disabled={busy}>{busy ? 'Salvando…' : licenca ? 'Salvar alterações' : 'Registrar licença'}</Button>
         </div>
       )}

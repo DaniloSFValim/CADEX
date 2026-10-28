@@ -137,6 +137,8 @@ export function Inscricao({
           </Field>
           <div className="flex flex-wrap items-center gap-3 sm:col-span-6">
             <Button type="submit" disabled={busy}>{busy ? 'Salvando…' : 'Salvar inscrição'}</Button>
+            <button type="button" className="text-sm font-semibold text-tinta-600 hover:underline"
+                    onClick={() => { setV(paraInput(empresa)); setError(null); }}>Cancelar</button>
             {salvo && <span className="text-sm text-alta">Inscrição salva.</span>}
           </div>
           <div className="sm:col-span-6"><ErrorNote error={error} /></div>
