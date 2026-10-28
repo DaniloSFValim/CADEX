@@ -64,6 +64,7 @@ export default function LicencaPublica() {
                     Licença de obra em via pública
         </p>
         <ErrorNote error={error} />
+        {d && <h1 className="sr-only">Licença nº {d.numero}</h1>}
         {d === undefined && !error && <Spinner label="Consultando a licença…" />}
         {d === null && (
           <div className="mt-4 rounded-2xl border border-baixa bg-baixa/6 p-5 sm:p-6">
@@ -173,7 +174,7 @@ function TrilhaPublica({ eventos }: { eventos: EventoPublico[] }) {
 function Item({ rotulo, largo, children }: { rotulo: string; largo?: boolean; children: React.ReactNode }) {
   return (
     <div className={largo ? 'sm:col-span-2' : ''}>
-      <dt className="text-[13px] font-medium text-tinta-500">{rotulo}</dt>
+      <dt className="text-sm font-medium text-tinta-500">{rotulo}</dt>
       <dd className="mt-0.5 text-base text-tinta-900">{children}</dd>
     </div>
   );

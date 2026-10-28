@@ -256,7 +256,12 @@ function LinhaBusca({ licenca: l, porId, orgaos, hoje, onExcluida }: {
         <Link to={`/admin/auditoria?tabela=licencas&registro=${l.id}`} className="font-semibold text-marca-700 hover:underline">Histórico</Link>
       </span>
       <ProrrogarLinha licenca={l} onMudou={onExcluida} />
-      <ExcluirLicenca licenca={l} empresas={porId} orgaos={orgaos} hoje={hoje} onExcluida={onExcluida} rotulo="Excluir" />
+      <details className="relative">
+        <summary className="cursor-pointer list-none rounded px-2 py-1 text-sm font-semibold text-tinta-600 hover:bg-tinta-100 hover:text-tinta-900">Mais ações</summary>
+        <div className="absolute right-0 z-10 mt-1 rounded-sm border border-tinta-200 bg-white p-2 shadow-md">
+          <ExcluirLicenca licenca={l} empresas={porId} orgaos={orgaos} hoje={hoje} onExcluida={onExcluida} rotulo="Excluir" />
+        </div>
+      </details>
     </li>
   );
 }

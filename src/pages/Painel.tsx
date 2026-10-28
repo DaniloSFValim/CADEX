@@ -161,7 +161,7 @@ export default function Painel() {
           </label>
         </div>
         <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <label className="block text-[13px] font-medium text-tinta-700">Situação
+          <label className="block text-sm font-medium text-tinta-700">Situação
             <select className={`${inputClass} mt-1`} value={filtros.status} onChange={(e) => set('status', e.target.value as FiltroStatus)}>
               <option value="">Todas</option>
               <optgroup label="Andamento da obra">
@@ -179,31 +179,31 @@ export default function Painel() {
               </optgroup>
             </select>
           </label>
-          <label className="block text-[13px] font-medium text-tinta-700">Contratante
+          <label className="block text-sm font-medium text-tinta-700">Contratante
             <select className={`${inputClass} mt-1`} value={filtros.contratante} onChange={(e) => set('contratante', e.target.value)}>
               <option value="">Todas</option>
               {contratantesLista.map((p) => <option key={p.chave} value={p.chave}>{p.rotulo}</option>)}
             </select>
           </label>
-          <label className="block text-[13px] font-medium text-tinta-700">Executora
+          <label className="block text-sm font-medium text-tinta-700">Executora
             <select className={`${inputClass} mt-1`} value={filtros.executora} onChange={(e) => set('executora', e.target.value)}>
               <option value="">Todas</option>
               {executorasLista.map((p) => <option key={p.chave} value={p.chave}>{p.rotulo}</option>)}
             </select>
           </label>
-          <label className="block text-[13px] font-medium text-tinta-700">Tipo de intervenção
+          <label className="block text-sm font-medium text-tinta-700">Tipo de intervenção
             <select className={`${inputClass} mt-1`} value={filtros.intervencao} onChange={(e) => set('intervencao', e.target.value as TipoIntervencao | '')}>
               <option value="">Todos</option>
               {TIPOS_INTERVENCAO.map((t) => <option key={t} value={t}>{TIPO_INTERVENCAO_LABEL[t]}</option>)}
             </select>
           </label>
-          <label className="block text-[13px] font-medium text-tinta-700">Origem da intervenção
+          <label className="block text-sm font-medium text-tinta-700">Origem da intervenção
             <select className={`${inputClass} mt-1`} value={filtros.origem} onChange={(e) => set('origem', e.target.value as OrigemIntervencao | '')}>
               <option value="">Todas</option>
               {ORIGENS.map((o) => <option key={o} value={o}>{ORIGEM_LABEL[o]}</option>)}
             </select>
           </label>
-          <label className="block text-[13px] font-medium text-tinta-700">Tipo de obra
+          <label className="block text-sm font-medium text-tinta-700">Tipo de obra
             <select className={`${inputClass} mt-1`} value={filtros.tipo} onChange={(e) => set('tipo', e.target.value as TipoObra | '')}>
               <option value="">Todos</option>
               {(Object.keys(TIPO_OBRA_LABEL) as TipoObra[]).map((t) => <option key={t} value={t}>{TIPO_OBRA_LABEL[t]}</option>)}
