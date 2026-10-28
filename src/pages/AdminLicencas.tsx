@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Badge, Button, Card, Empty, ErrorNote, Spinner, inputClass, tabela } from '../components/ui';
 import { ExcluirLicenca, ResumoLicenca } from '../components/ExclusaoLicenca';
+import { ExportarLicencas } from '../components/ExportarLicencas';
 import { dataBR } from '../components/Situacao';
 import { inconsistencias } from '../lib/admin';
 import { hojeISO, listarEmpresas, type Empresa } from '../lib/empresas';
@@ -27,6 +28,7 @@ export default function AdminLicencas() {
   // Vindo da exclusão feita na página da licença, já traz a mensagem.
   const [aviso, setAviso] = useState((useLocation().state as { aviso?: string } | null)?.aviso ?? '');
   const [busca, setBusca] = useState('');
+  const [exportando, setExportando] = useState(false);
 
   const carregar = () => Promise.all([listarLicencas(), listarLicencasExcluidas(), listarEmpresas(), listarOrgaos(), listarContas()])
     .then(([l, x, e, o, c]) => { setLicencas(l); setLixeira(x); setEmpresas(e); setOrgaos(o); setContas(c); })
@@ -39,11 +41,13 @@ export default function AdminLicencas() {
   const porId = useMemo(() => new Map(empresas.map((e) => [e.id, e])), [empresas]);
   const revisar = useMemo(() => (licencas ? inconsistencias(licencas, hoje, porId) : []), [licencas, hoje, porId]);
   const q = busca.trim().toLowerCase();
-  const achadas = useMemo(() => {
+  // Tudo o que a busca encontra; a tela mostra só o começo, mas a exportação sai com a lista inteira.
+  const filtradas = useMemo(() => {
     if (!licencas) return [];
-    if (!q) return licencas.slice(0, MAX_LISTA);
-    return licencas.filter((l) => [l.numero ?? '', l.processo_sei, l.escopo].some((s) => s.toLowerCase().includes(q))).slice(0, MAX_BUSCA);
+    if (!q) return licencas;
+    return licencas.filter((l) => [l.numero ?? '', l.processo_sei, l.escopo].some((s) => s.toLowerCase().includes(q)));
   }, [licencas, q]);
+  const achadas = useMemo(() => filtradas.slice(0, q ? MAX_BUSCA : MAX_LISTA), [filtradas, q]);
 
   if (!licencas && !erro) return <Spinner />;
   if (!licencas) return <ErrorNote error={erro} />;
@@ -54,6 +58,16 @@ export default function AdminLicencas() {
       <Card title="Licenças no CADEX">
         <input className={inputClass} value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar licença"
                placeholder="Nº da licença, processo SEI ou parte do escopo" />
+        {exportando && (
+          <div className="mt-4">
+            <ExportarLicencas
+              licencas={filtradas}
+              contexto={{ hoje, porId }}
+              filtros={q ? [`Busca: "${busca.trim()}".`] : ['Todas as licenças.']}
+              onFechar={() => setExportando(false)}
+            />
+          </div>
+        )}
         {achadas.length === 0
           ? <p className="mt-3 text-sm text-tinta-500">Nenhuma licença encontrada.</p>
           : (
@@ -64,13 +78,14 @@ export default function AdminLicencas() {
         <p className="mt-3 text-xs text-tinta-500">
           {licencas.length} licença{licencas.length === 1 ? '' : 's'} no CADEX.
           {!q && licencas.length > MAX_LISTA && ` Mostrando as ${MAX_LISTA} mais recentes; use a busca para achar as demais.`}
+          {' '}<button type="button" className="text-marca-700 hover:underline" onClick={() => setExportando(true)}>Exportar a lista</button>.
           {' '}Lançada por engano? Use Excluir: ela vai para a lixeira, abaixo. O histórico mostra quem alterou o quê e quando, direto da auditoria.
         </p>
       </Card>
 
       <Card title={`Registros a revisar (${revisar.length})`} semPadding>
         <p className="border-b border-tinta-100 px-4 py-3 text-sm text-tinta-500">
-          Dado faltando, prazo vencido ou empresa que deixou de poder atuar. É um aviso: a correção é feita no próprio registro.
+          Dado faltando, prazo vencido, prazo de mais de um ano, número fora do padrão 000/AAAA ou empresa que deixou de poder atuar. É um aviso: a correção é feita no próprio registro.
         </p>
         {revisar.length === 0 ? <Empty>Nenhuma licença com pendência de revisão.</Empty> : (
           <div className={tabela.moldura}>
