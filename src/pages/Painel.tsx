@@ -9,6 +9,7 @@ import {
   ESTADO_LICENCA_LABEL, ORIGENS, ORIGEM_LABEL, SITUACAO_LICENCA_LABEL, TIPOS_INTERVENCAO, TIPO_INTERVENCAO_LABEL, TIPO_OBRA_LABEL,
   estadoLicenca, listarLicencas, nomeExecutora,
   type LicencaComTrechos, type OrigemIntervencao, type SituacaoLicenca, type TipoIntervencao, type TipoObra,
+  cadastroRetroativo,
 } from '../lib/licencas';
 import { listarOrgaos, type Orgao } from '../lib/orgaos';
 import {
@@ -232,7 +233,7 @@ export default function Painel() {
                        onClick={() => alternarStatus('estado:aguardando_inicio')} ativo={filtros.status === 'estado:aguardando_inicio'} />
             <Indicador rotulo="Em execução" valor={ind.emAndamento} detalhe="em andamento: período previsto em curso" cor="border-marca-600"
                        onClick={() => alternarStatus('estado:em_execucao')} ativo={filtros.status === 'estado:em_execucao'} />
-            <Indicador rotulo="Concluídas" valor={ind.concluidas} detalhe="conclusão registrada" cor="border-alta"
+            <Indicador rotulo="Concluídas" valor={ind.concluidas} detalhe={`conclusão registrada${filtradas.filter(cadastroRetroativo).length ? `; ${filtradas.filter(cadastroRetroativo).length} cadastradas depois da conclusão` : ''}`} cor="border-alta"
                        onClick={() => alternarStatus('grupo:concluidas')} ativo={filtros.status === 'grupo:concluidas'} />
             <Indicador rotulo="Prazo encerrado" valor={ind.prazoVencido} detalhe="fim previsto vencido, sem conclusão" cor="border-baixa"
                        onClick={() => alternarStatus('estado:prazo_encerrado')} ativo={filtros.status === 'estado:prazo_encerrado'} />

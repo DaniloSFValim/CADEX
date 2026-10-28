@@ -208,6 +208,14 @@ export function estadoLicenca(
   return 'em_execucao';
 }
 
+/** Conclusão registrada mais de 30 dias antes do cadastro: a data de conclusão não é de acompanhamento. */
+export const DIAS_CADASTRO_RETROATIVO = 30;
+export function cadastroRetroativo(l: { concluida_em: string | null; criado_em: string }): boolean {
+  if (!l.concluida_em) return false;
+  const dias = (Date.parse(`${l.criado_em.slice(0, 10)}T00:00:00Z`) - Date.parse(`${l.concluida_em}T00:00:00Z`)) / 86400000;
+  return dias > DIAS_CADASTRO_RETROATIVO;
+}
+
 /** Prorroga a validade. A gravação passa pela política de licenças (gestor ou licenciador). */
 export async function prorrogarLicenca(id: string, validadeAte: string): Promise<void> {
   const { error } = await supabase.from('licencas').update({ validade_ate: validadeAte }).eq('id', id);

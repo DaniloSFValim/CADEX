@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  anteriorResolucao, desempenhoExecutora, erroPeriodoObra, estadoLicenca, lerCoordenada, linkMapa, mesmaEmpresaNosPapeis,
+  anteriorResolucao, cadastroRetroativo, desempenhoExecutora, erroPeriodoObra, estadoLicenca, lerCoordenada, linkMapa, mesmaEmpresaNosPapeis,
   nomeExecutora, pendenciasLicencas, situacoesRegistraveis, urlPublicaLicenca,
 } from './licencas';
 
@@ -194,5 +194,15 @@ describe('As Built de registro anterior à Resolução', () => {
   it('concluída sem As Built sob a Resolução continua pendente', () => {
     expect(estadoLicenca({ situacao: 'deferida', orgao_contratante_id: null, validade_ate: null, inicio_previsto: '2026-10-01',
       concluida_em: '2026-10-20', as_built_sei: null, anterior_resolucao: false }, '2026-10-28')).toBe('concluida_sem_as_built');
+  });
+});
+
+describe('cadastro retroativo', () => {
+  it('conclusão registrada mais de 30 dias antes do cadastro é retroativa', () => {
+    expect(cadastroRetroativo({ concluida_em: '2025-04-06', criado_em: '2026-10-20T10:00:00Z' })).toBe(true);
+  });
+  it('conclusão recente, sem conclusão ou cadastro no mesmo mês não é retroativa', () => {
+    expect(cadastroRetroativo({ concluida_em: '2026-10-10', criado_em: '2026-10-20T10:00:00Z' })).toBe(false);
+    expect(cadastroRetroativo({ concluida_em: null, criado_em: '2026-10-20T10:00:00Z' })).toBe(false);
   });
 });

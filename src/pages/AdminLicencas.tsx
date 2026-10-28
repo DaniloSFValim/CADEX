@@ -8,7 +8,7 @@ import { inconsistencias } from '../lib/admin';
 import { hojeISO, listarEmpresas, type Empresa } from '../lib/empresas';
 import {
   ESTADO_LICENCA_LABEL, buscarLicencasPagina, estadoLicenca, excluirLicencaDefinitivamente, listarLicencas, listarLicencasExcluidas,
-  nomeExecutora, prorrogarLicenca, restaurarLicenca, type LicencaComTrechos, type PaginaLicencas,
+  cadastroRetroativo, nomeExecutora, prorrogarLicenca, restaurarLicenca, type LicencaComTrechos, type PaginaLicencas,
 } from '../lib/licencas';
 import { listarContas, type Conta } from '../lib/contas';
 import { listarOrgaos, type Orgao } from '../lib/orgaos';
@@ -244,6 +244,9 @@ function LinhaBusca({ licenca: l, porId, orgaos, hoje, onExcluida }: {
     <li className="flex flex-wrap items-start justify-between gap-3 py-2 text-sm">
       <span className="min-w-0">
         <span className="font-medium text-tinta-900">{l.numero ?? 'Sem número'}</span>{' '}
+        {cadastroRetroativo(l) && (
+          <span className="ml-1 rounded-sm bg-atencao/15 px-1.5 text-xs text-tinta-800" title="A conclusão foi registrada mais de 30 dias antes do cadastro.">Cadastro retroativo</span>
+        )}{' '}
         <span className="tabular text-xs text-tinta-500">{l.processo_sei}</span>
         <span className="block truncate text-xs text-tinta-500">{nomeExecutora(l, porId)}, {ESTADO_LICENCA_LABEL[estadoLicenca(l, hoje)].toLowerCase()}</span>
       </span>
