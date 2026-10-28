@@ -7,13 +7,12 @@ import { dataBR } from '../components/Situacao';
 import { inconsistencias } from '../lib/admin';
 import { hojeISO, listarEmpresas, type Empresa } from '../lib/empresas';
 import {
-  ESTADO_LICENCA_LABEL, estadoLicenca, excluirLicencaDefinitivamente, listarLicencas, listarLicencasExcluidas, nomeExecutora,
-  restaurarLicenca, type LicencaComTrechos,
+  ESTADO_LICENCA_LABEL, buscarLicencasPagina, estadoLicenca, excluirLicencaDefinitivamente, listarLicencas, listarLicencasExcluidas,
+  nomeExecutora, prorrogarLicenca, restaurarLicenca, type LicencaComTrechos, type PaginaLicencas,
 } from '../lib/licencas';
 import { listarContas, type Conta } from '../lib/contas';
 import { listarOrgaos, type Orgao } from '../lib/orgaos';
 
-const MAX_BUSCA = 8;
 /** Sem busca, a lista mostra as licenças mais recentes; o resto aparece pela busca. */
 const MAX_LISTA = 20;
 
@@ -29,6 +28,10 @@ export default function AdminLicencas() {
   const [aviso, setAviso] = useState((useLocation().state as { aviso?: string } | null)?.aviso ?? '');
   const [busca, setBusca] = useState('');
   const [exportando, setExportando] = useState(false);
+  // A lista da tela vem do servidor, uma página por vez. A revisão e a exportação usam o conjunto completo.
+  const [lista, setLista] = useState<PaginaLicencas | null>(null);
+  const [carregandoLista, setCarregandoLista] = useState(false);
+  const [erroLista, setErroLista] = useState<unknown>(null);
 
   const carregar = () => Promise.all([listarLicencas(), listarLicencasExcluidas(), listarEmpresas(), listarOrgaos(), listarContas()])
     .then(([l, x, e, o, c]) => { setLicencas(l); setLixeira(x); setEmpresas(e); setOrgaos(o); setContas(c); })
@@ -36,6 +39,29 @@ export default function AdminLicencas() {
   useEffect(() => { void carregar(); }, []);
   /** Depois de excluir, restaurar ou apagar: mostra o resultado e lê o banco de novo. */
   const mudou = (mensagem: string) => { setAviso(mensagem); void carregar(); };
+
+  // Busca no servidor com pausa de 250 ms; refaz a lista quando a busca ou os dados mudam.
+  useEffect(() => {
+    if (!licencas) return;
+    let vivo = true;
+    const espera = setTimeout(() => {
+      setCarregandoLista(true);
+      buscarLicencasPagina(busca, 0, MAX_LISTA)
+        .then((p) => { if (vivo) { setLista(p); setErroLista(null); } })
+        .catch((e) => { if (vivo) setErroLista(e); })
+        .finally(() => { if (vivo) setCarregandoLista(false); });
+    }, 250);
+    return () => { vivo = false; clearTimeout(espera); };
+  }, [busca, licencas]);
+
+  const mostrarMais = () => {
+    if (!lista) return;
+    setCarregandoLista(true);
+    buscarLicencasPagina(busca, lista.itens.length, MAX_LISTA)
+      .then((p) => { setLista({ total: p.total, itens: [...lista.itens, ...p.itens] }); setErroLista(null); })
+      .catch(setErroLista)
+      .finally(() => setCarregandoLista(false));
+  };
 
   const hoje = hojeISO();
   const porId = useMemo(() => new Map(empresas.map((e) => [e.id, e])), [empresas]);
@@ -47,7 +73,6 @@ export default function AdminLicencas() {
     if (!q) return licencas;
     return licencas.filter((l) => [l.numero ?? '', l.processo_sei, l.escopo].some((s) => s.toLowerCase().includes(q)));
   }, [licencas, q]);
-  const achadas = useMemo(() => filtradas.slice(0, q ? MAX_BUSCA : MAX_LISTA), [filtradas, q]);
 
   if (!licencas && !erro) return <Spinner />;
   if (!licencas) return <ErrorNote error={erro} />;
@@ -68,16 +93,24 @@ export default function AdminLicencas() {
             />
           </div>
         )}
-        {achadas.length === 0
+        {erroLista ? <ErrorNote error={erroLista} /> : null}
+        {!lista ? <Spinner /> : lista.itens.length === 0
           ? <p className="mt-3 text-sm text-tinta-500">Nenhuma licença encontrada.</p>
           : (
             <ul className="mt-3 divide-y divide-tinta-100">
-              {achadas.map((l) => <LinhaBusca key={l.id} licenca={l} porId={porId} orgaos={orgaos} hoje={hoje} onExcluida={mudou} />)}
+              {lista.itens.map((l) => <LinhaBusca key={l.id} licenca={l} porId={porId} orgaos={orgaos} hoje={hoje} onExcluida={mudou} />)}
             </ul>
           )}
+        {lista && lista.itens.length < lista.total && (
+          <div className="mt-3">
+            <Button variant="secondary" disabled={carregandoLista} onClick={mostrarMais}>
+              Mostrar mais ({lista.total - lista.itens.length} restantes)
+            </Button>
+          </div>
+        )}
         <p className="mt-3 text-xs text-tinta-500">
           {licencas.length} licença{licencas.length === 1 ? '' : 's'} no CADEX.
-          {!q && licencas.length > MAX_LISTA && ` Mostrando as ${MAX_LISTA} mais recentes; use a busca para achar as demais.`}
+          {lista && (q ? ` ${lista.total} encontrada${lista.total === 1 ? '' : 's'} na busca.` : '')}
           {' '}<button type="button" className="text-marca-700 hover:underline" onClick={() => setExportando(true)}>Exportar a lista</button>.
           {' '}Lançada por engano? Use Excluir: ela vai para a lixeira, abaixo. O histórico mostra quem alterou o quê e quando, direto da auditoria.
         </p>
@@ -219,7 +252,40 @@ function LinhaBusca({ licenca: l, porId, orgaos, hoje, onExcluida }: {
         <span className="mx-2 text-tinta-300" aria-hidden>|</span>
         <Link to={`/admin/auditoria?tabela=licencas&registro=${l.id}`} className="font-semibold text-marca-700 hover:underline">Histórico</Link>
       </span>
+      <ProrrogarLinha licenca={l} onMudou={onExcluida} />
       <ExcluirLicenca licenca={l} empresas={porId} orgaos={orgaos} hoje={hoje} onExcluida={onExcluida} rotulo="Excluir" />
     </li>
+  );
+}
+
+/** Prorroga a validade de uma licença, uma de cada vez. Só aparece quando a licença tem validade. */
+function ProrrogarLinha({ licenca: l, onMudou }: { licenca: LicencaComTrechos; onMudou: (m: string) => void }) {
+  const [data, setData] = useState(l.validade_ate ?? '');
+  const [busy, setBusy] = useState(false);
+  const [erro, setErro] = useState<unknown>(null);
+  if (!l.validade_ate) return null;
+  const nome = l.numero ?? l.processo_sei;
+  const salvar = async () => {
+    setBusy(true);
+    setErro(null);
+    try {
+      await prorrogarLicenca(l.id, data);
+      onMudou(`Validade de ${nome} prorrogada até ${dataBR(data)}.`);
+    } catch (e) {
+      setErro(e);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <span className="flex flex-wrap items-center gap-2 text-xs text-tinta-600">
+      <label className="flex items-center gap-1">
+        Validade
+        <input type="date" className={inputClass} value={data} onChange={(e) => setData(e.target.value)}
+               aria-label={`Nova validade de ${nome}`} />
+      </label>
+      <Button variant="secondary" disabled={busy || !data || data === l.validade_ate} onClick={() => void salvar()}>Prorrogar</Button>
+      {erro ? <ErrorNote error={erro} /> : null}
+    </span>
   );
 }
