@@ -40,7 +40,7 @@ export default function ObrasPorMes({ obras, ano, hoje, foco, onSelecionar }: {
         <div className="px-4 pb-4 pt-4">
           <div className="relative flex h-44 items-end gap-1.5 sm:gap-3" role="group" aria-label="Colunas por mês">
             <div className="pointer-events-none absolute inset-x-0 border-t border-dashed border-tinta-900/40" style={{ bottom: `${(media / maximo) * ALTURA_BARRA}px` }} aria-hidden>
-              <span className="absolute right-0 -top-4 text-[10px] text-tinta-600">média {media.toFixed(1).replace('.', ',')}</span>
+              <span className="absolute right-0 -top-4 text-xs text-tinta-600">média {media.toFixed(1).replace('.', ',')}</span>
             </div>
             {meses.map((m) => {
               const total = m.obras.length;
@@ -57,7 +57,7 @@ export default function ObrasPorMes({ obras, ano, hoje, foco, onSelecionar }: {
                   className={`flex h-full min-w-0 flex-1 flex-col items-stretch justify-end rounded-sm transition-opacity hover:opacity-80 ${
                     ativo ? 'ring-2 ring-tinta-900 ring-offset-1' : ''}`}
                 >
-                  <span className={`tabular mb-1 text-center text-[11px] ${total === pico && total > 0 ? 'font-bold text-tinta-900' : 'font-semibold text-tinta-700'}`} aria-hidden>
+                  <span className={`tabular mb-1 text-center text-xs ${total === pico && total > 0 ? 'font-bold text-tinta-900' : 'font-semibold text-tinta-700'}`} aria-hidden>
                     {total > 0 ? total : ''}
                   </span>
                   <span className={`flex flex-col-reverse overflow-hidden rounded-t-sm ${m.mes === mesHoje ? 'ring-1 ring-tinta-900' : ''}`} style={{ height: `${(total / maximo) * ALTURA_BARRA}px` }} aria-hidden>
@@ -71,10 +71,10 @@ export default function ObrasPorMes({ obras, ano, hoje, foco, onSelecionar }: {
           </div>
           <div className="mt-1 flex gap-1.5 sm:gap-3" aria-hidden>
             {MESES.map((nome, i) => (
-              <span key={nome} className={`min-w-0 flex-1 text-center text-[11px] ${
+              <span key={nome} className={`min-w-0 flex-1 text-center text-xs ${
                 i === mesHoje ? 'font-bold text-tinta-900' : 'text-tinta-500'}`}>
                 {nome}
-                {i === mesHoje && <span className="block text-[10px] font-semibold text-tinta-900">hoje</span>}
+                {i === mesHoje && <span className="block text-xs font-semibold text-tinta-900">hoje</span>}
               </span>
             ))}
           </div>
