@@ -349,7 +349,7 @@ function FormSemLicenca({ atual, empresas, orgaos, tipos, somenteLeitura, onSalv
       {!ro && (
         <div className="flex flex-wrap items-center gap-3">
           <Button type="submit" disabled={busy}>{busy ? 'Salvando…' : atual ? 'Salvar alterações' : 'Registrar'}</Button>
-          <Link to="/obras/sem-licenca" className="text-sm font-semibold text-tinta-600 hover:underline">Cancelar</Link>
+          <Link to={atual ? `/obras/sem-licenca/${atual.id}` : '/obras/sem-licenca'} className="text-sm font-semibold text-tinta-600 hover:underline">Cancelar</Link>
         </div>
       )}
       <ErrorNote error={erro} />
