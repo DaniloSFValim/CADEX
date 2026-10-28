@@ -10,7 +10,7 @@ maplibregl.setWorkerUrl(workerUrl);
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { Protocol } from 'pmtiles';
 import { useEffect, useRef, useState } from 'react';
-import { COR_SITUACAO, obrasParaGeoJSON, type ObraPublica } from '../lib/obras';
+import { COR_SITUACAO, anosDasObras, obrasParaGeoJSON, pontosDeCalor, type ObraPublica } from '../lib/obras';
 import type { SituacaoPublica } from '../lib/licencas';
 
 /** Niterói, com folga. */
@@ -96,6 +96,8 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
   const caixa = useRef<HTMLDivElement>(null);
   const mapa = useRef<maplibregl.Map | null>(null);
   const [pronto, setPronto] = useState(false);
+  // Ano do início previsto no calor; vazio mostra todos os anos.
+  const [ano, setAno] = useState('');
   const [erro, setErro] = useState('');
   // O evento de clique é registrado uma vez; a referência garante que ele use a função atual.
   const onSelecionarRef = useRef(onSelecionar);
@@ -122,6 +124,8 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
           obras: { type: 'geojson', data: obrasParaGeoJSON([]), cluster: true, clusterRadius: 40, clusterMaxZoom: 14 },
           // Calor e área de toque usam cada obra, sem agrupar: a densidade precisa contar obra por obra.
           brutas: { type: 'geojson', data: obrasParaGeoJSON([]) },
+          // Pontos do calor: linhas viram pontos ao longo do traçado, e cada obra soma um peso pela situação.
+          'calor-pontos': { type: 'geojson', data: pontosDeCalor([]) },
           // Anel que pulsa sobre a área de calor sob o cursor. Vazio quando o cursor não está no calor.
           'calor-foco': { type: 'geojson', data: { type: 'FeatureCollection', features: [] } },
         },
@@ -165,10 +169,10 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
           },
           {
             // Visão de densidade: onde há mais intervenções. Ligada pelo botão "Mapa de calor".
-            id: 'obras-calor', type: 'heatmap', source: 'brutas', filter: ['==', ['geometry-type'], 'Point'],
+            id: 'obras-calor', type: 'heatmap', source: 'calor-pontos',
             layout: { visibility: 'none' },
             paint: {
-              'heatmap-weight': 1,
+              'heatmap-weight': ['get', 'peso'] as unknown as maplibregl.ExpressionSpecification,
               'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 11, 1.4, 16, 3.5],
               'heatmap-radius': RAIO_CALOR,
               'heatmap-opacity': 0.85,
@@ -332,6 +336,12 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
     if (obras.length > 0) crescerAgrupamentos(mapa.current);
   }, [obras, pronto]);
 
+  // Mapa de calor: refaz os pontos quando muda a lista ou o ano escolhido.
+  useEffect(() => {
+    if (!pronto || !mapa.current) return;
+    (mapa.current.getSource('calor-pontos') as maplibregl.GeoJSONSource).setData(pontosDeCalor(obras, ano || undefined));
+  }, [obras, ano, pronto]);
+
   // Halo pulsante das obras vigentes. Com "reduzir movimento", fica parado, em tamanho fixo.
   useEffect(() => {
     const m = mapa.current;
@@ -444,6 +454,25 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
     <div className="relative" data-trechos={desenhados}>
       <div ref={caixa} className="h-[60vh] min-h-[360px] w-full overflow-hidden rounded-sm border border-tinta-200 bg-tinta-50"
            role="region" aria-label="Mapa das obras licenciadas em Niterói" />
+      {modo === 'calor' && (
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-3 text-xs text-tinta-600">
+          <div className="flex items-center gap-2">
+            <span>Menos</span>
+            <span aria-hidden className="h-2 w-32 rounded-full"
+                  style={{ background: 'linear-gradient(to right, #67c1cf, #f5b841, #c2410c)' }} />
+            <span>Mais intervenções</span>
+          </div>
+          <p className="text-tinta-500">Obras vigentes pesam mais que as concluídas.</p>
+          <label className="flex items-center gap-2">
+            Ano de início
+            <select value={ano} onChange={(e) => setAno(e.target.value)}
+                    className="rounded-sm border border-tinta-300 bg-white px-2 py-1 text-tinta-900">
+              <option value="">Todos</option>
+              {anosDasObras(obras).map((a) => <option key={a} value={a}>{a}</option>)}
+            </select>
+          </label>
+        </div>
+      )}
       {erro && (
         <p role="alert" className="absolute inset-x-3 bottom-3 rounded-sm bg-white/95 px-3 py-2 text-sm text-baixa shadow-sm">
           O mapa não carregou ({erro}). A lista abaixo continua com todas as obras.

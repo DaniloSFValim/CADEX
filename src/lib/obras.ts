@@ -230,3 +230,46 @@ export function filtrarPainel(obras: ObraPublica[], f: FiltroPainel): ObraPublic
     return true;
   });
 }
+
+// ---------------------------------------------------------------------
+// Mapa de calor: peso por obra, não por trecho. Linhas viram pontos ao
+// longo do traçado, para que trechos longos entrem na mancha.
+// ---------------------------------------------------------------------
+
+/** Espaçamento, em metros, dos pontos ao longo de um trecho com fim. */
+export const PASSO_CALOR_METROS = 25;
+
+/** Peso da obra no calor pela situação: as vigentes pesam mais. */
+export const pesoCalor = (situacao: ObraPublica['situacao']): number =>
+  situacao === 'vigente' ? 1 : situacao === 'aguardando_inicio' ? 0.6 : 0.35;
+
+/** Pontos de um trecho: o início, ou uma sequência de pontos entre início e fim. */
+function pontosDoTrecho(t: ObraPublica['trechos'][number]): [number, number][] {
+  if (!coordenadaValida(t.inicio)) return [];
+  if (!coordenadaValida(t.fim) || mesmoPonto(t.inicio, t.fim)) return [t.inicio];
+  const [a, b] = [t.inicio, t.fim];
+  const n = Math.max(1, Math.ceil(distanciaMetros(a, b) / PASSO_CALOR_METROS));
+  return Array.from({ length: n + 1 }, (_, i) => {
+    const f = i / n;
+    return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f] as [number, number];
+  });
+}
+
+/**
+ * Pontos para o mapa de calor. Cada obra soma um peso (pela situação), dividido
+ * entre os seus pontos: uma obra de cinco trechos conta uma vez, não cinco.
+ * Com `ano`, só entram as obras cujo início previsto é nesse ano.
+ */
+export function pontosDeCalor(obras: ObraPublica[], ano?: string): FeatureCollection {
+  const features: Feature[] = [];
+  for (const o of obras) {
+    if (ano && !(o.inicio_previsto ?? '').startsWith(ano)) continue;
+    const pontos = o.trechos.flatMap(pontosDoTrecho);
+    if (pontos.length === 0) continue;
+    const peso = pesoCalor(o.situacao) / pontos.length;
+    for (const p of pontos) {
+      features.push({ type: 'Feature', properties: { peso }, geometry: { type: 'Point', coordinates: p } });
+    }
+  }
+  return { type: 'FeatureCollection', features };
+}
