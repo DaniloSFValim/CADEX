@@ -185,3 +185,14 @@ describe('contratante e executora', () => {
     expect(mesmaEmpresaNosPapeis({ contratante_id: null, executora_id: 'a' })).toBe(false);
   });
 });
+
+describe('As Built de registro anterior à Resolução', () => {
+  it('concluída sem As Built, mas anterior à Resolução: fica concluída, não cobrada', () => {
+    expect(estadoLicenca({ situacao: 'deferida', orgao_contratante_id: null, validade_ate: null, inicio_previsto: '2025-01-01',
+      concluida_em: '2025-03-01', as_built_sei: null, anterior_resolucao: true }, '2026-10-28')).toBe('concluida');
+  });
+  it('concluída sem As Built sob a Resolução continua pendente', () => {
+    expect(estadoLicenca({ situacao: 'deferida', orgao_contratante_id: null, validade_ate: null, inicio_previsto: '2026-10-01',
+      concluida_em: '2026-10-20', as_built_sei: null, anterior_resolucao: false }, '2026-10-28')).toBe('concluida_sem_as_built');
+  });
+});
