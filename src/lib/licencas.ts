@@ -195,11 +195,13 @@ export function erroPeriodoObra(p: {
 }
 
 export function estadoLicenca(
-  l: Pick<Licenca, 'situacao' | 'orgao_contratante_id' | 'validade_ate' | 'inicio_previsto' | 'concluida_em' | 'as_built_sei'>,
+  l: Pick<Licenca, 'situacao' | 'orgao_contratante_id' | 'validade_ate' | 'inicio_previsto' | 'concluida_em' | 'as_built_sei'>
+    & Partial<Pick<Licenca, 'anterior_resolucao'>>,
   hoje: string,
 ): EstadoLicenca {
   if (l.situacao !== 'deferida') return l.situacao;
-  if (l.concluida_em) return l.as_built_sei ? 'concluida' : 'concluida_sem_as_built';
+  // Registro anterior à Resolução não é cobrado de As Built (art. 26): concluída é concluída.
+  if (l.concluida_em) return l.as_built_sei || l.anterior_resolucao ? 'concluida' : 'concluida_sem_as_built';
   if (l.orgao_contratante_id) return 'registro';
   if (l.validade_ate && hoje > l.validade_ate) return 'prazo_encerrado';
   if (l.inicio_previsto && hoje < l.inicio_previsto) return 'aguardando_inicio';
