@@ -30,7 +30,7 @@ const VEREDITO: Record<SituacaoPublica, { titulo: string; cor: string; frase: (d
   },
   concluida: {
     titulo: 'Obra concluída', cor: 'border-tinta-400 bg-tinta-50 text-tinta-700',
-    frase: () => 'A obra ou serviço desta licença foi concluída. Não há obra autorizada neste local por ela.',
+    frase: () => 'A obra ou serviço desta licença foi concluída.',
   },
   registro: {
     titulo: 'Registro, sem prazo', cor: 'border-tinta-400 bg-tinta-50 text-tinta-700',
@@ -78,6 +78,15 @@ export default function LicencaPublica() {
   );
 }
 
+/** Pin azul que marca o status da obra no topo da página. */
+function PinStatus() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-10 w-10 flex-none text-blue-700" aria-hidden>
+      <path fill="currentColor" d="M12 2a7.5 7.5 0 0 0-7.5 7.5C4.5 15 12 22 12 22s7.5-7 7.5-12.5A7.5 7.5 0 0 0 12 2Zm0 10.2a2.7 2.7 0 1 1 0-5.4 2.7 2.7 0 0 1 0 5.4Z" />
+    </svg>
+  );
+}
+
 /**
  * "Obra concluída" só aparece depois do fim do período. Dentro dele, a licença segue a data:
  * vigente ou, se ainda não começou, aguardando o início.
@@ -99,7 +108,7 @@ function Conteudo({ d }: { d: Dados }) {
     <>
       <div className={`mt-4 rounded-2xl border p-5 sm:p-6 ${v.cor}`} role="status">
         <h1 className="flex items-center gap-3 font-display text-3xl font-bold leading-tight tracking-[-0.01em]">
-          <span className="h-3 w-3 flex-none rounded-full bg-current" aria-hidden />
+          <PinStatus />
           {v.titulo}
         </h1>
         <p className="mt-3 text-base text-tinta-800">{v.frase(d)}</p>
