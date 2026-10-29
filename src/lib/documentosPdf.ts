@@ -7,11 +7,18 @@ import {
 /**
  * PDF de um documento já emitido. Lê só o registro guardado: se o cadastro
  * da empresa mudar depois, o documento continua como foi emitido.
+ *
+ * Todo documento é uma única folha A4. O layout é feito numa escala; se o
+ * conteúdo não cabe, tenta-se a escala seguinte, menor, até caber.
  */
 
 const MARGEM = 15;
 const LARGURA = 210;
-const ALTURA_UTIL = 297 - 22;
+/** Último ponto do corpo. Acima da tarja de verificação (BLOCO_Y) e do rodapé. */
+const LIMITE_CORPO = 264;
+const BLOCO_Y = 269;
+/** Escalas tentadas em ordem: a primeira em que tudo cabe numa folha vence. */
+const ESCALAS = [1, 0.95, 0.9, 0.85, 0.8, 0.75];
 
 // Cores da identidade, as mesmas da ficha e dos relatórios (tailwind.config.js).
 const COR_MARCA: [number, number, number] = [11, 91, 104];
@@ -24,6 +31,9 @@ type Dados = Record<string, unknown>;
 /** Campos com bloco próprio no layout, fora do corpo genérico. */
 const CHAVES_FIXAS = new Set(['local_infracao', 'data', 'hora', 'processo', 'licenca', 'termo_permissao',
   'recebimento', 'fiscal_nome', 'fiscal_matricula']);
+
+/** Conteúdo que não cabe na escala atual. Interno: quem chama tenta a próxima escala. */
+class ErroNaoCabe extends Error {}
 
 function texto(valor: unknown): string {
   if (valor === null || valor === undefined || valor === '') return '—';
@@ -87,26 +97,31 @@ function tarjaDoDocumento(doc: DocumentoOficial, validadeCertidao: string | null
 }
 
 /**
- * Termo e certidão precisam caber em uma folha. Primeiro sai no tamanho normal;
- * se passar de uma página, refaz em modo compacto (fontes e espaços menores).
+ * Gera o PDF numa única folha A4. Tenta a escala normal; se não couber,
+ * reduz as fontes e os espaços até caber. Se nem na menor escala couber, falha
+ * em vez de emitir um documento com mais de uma folha.
  */
 export async function gerarPdfDocumento(
   doc: DocumentoOficial,
   logo?: string,
   origem: string = typeof window !== 'undefined' ? window.location.origin : '',
 ): Promise<ArrayBuffer> {
-  const normal = await montarPdf(doc, logo, origem, false);
-  const umaFolha = doc.tipo === 'termo_compromisso' || doc.tipo === 'certidao_regularidade';
-  if (!umaFolha || normal.paginas === 1) return normal.bytes;
-  return (await montarPdf(doc, logo, origem, true)).bytes;
+  for (const escala of ESCALAS) {
+    try {
+      return await montarPdf(doc, logo, origem, escala);
+    } catch (erro) {
+      if (!(erro instanceof ErroNaoCabe)) throw erro;
+    }
+  }
+  throw new Error('O documento não cabe em uma folha A4 mesmo na menor escala. Avise o suporte.');
 }
 
 async function montarPdf(
   doc: DocumentoOficial,
   logo: string | undefined,
   origem: string,
-  compacta: boolean,
-): Promise<{ bytes: ArrayBuffer; paginas: number }> {
+  k: number,
+): Promise<ArrayBuffer> {
   const { jsPDF } = await import('jspdf');
   const QRCode = (await import('qrcode')).default;
   const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
@@ -114,15 +129,14 @@ async function montarPdf(
   const autuado = (dados.autuado ?? {}) as Dados;
   const data = (v: unknown) => (v ? dataExibicao(String(v)) : '—');
   const LARG_UTIL = LARGURA - 2 * MARGEM;
-  const tamanhoCampo = compacta ? 8 : 9;
+  const tamanhoCampo = 9 * k;
+  const passo = 4 * k;
   let y = MARGEM;
 
   const quebrar = (t: string, largura: number) => pdf.splitTextToSize(t, largura) as string[];
+  /** Reserva altura no corpo. Se não couber na folha, a escala atual falha. */
   const garantir = (altura: number) => {
-    if (y + altura > ALTURA_UTIL) {
-      pdf.addPage();
-      y = MARGEM;
-    }
+    if (y + altura > LIMITE_CORPO) throw new ErroNaoCabe();
   };
 
   /** Borda fina, como nos formulários e certidões impressas. */
@@ -132,28 +146,28 @@ async function montarPdf(
 
   /** Faixa de título: fundo azul-marca e texto em branco, como nas certidões on-line. */
   const faixa = (titulo: string) => {
-    garantir(12);
+    garantir(12 * k);
     pdf.setFillColor(...COR_MARCA);
-    pdf.rect(MARGEM, y, LARG_UTIL, 9, 'F');
+    pdf.rect(MARGEM, y, LARG_UTIL, 9 * k, 'F');
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(11);
+    pdf.setFontSize(11 * k);
     pdf.setTextColor(255, 255, 255);
-    pdf.text(titulo, LARGURA / 2, y + 6, { align: 'center' });
+    pdf.text(titulo, LARGURA / 2, y + 6 * k, { align: 'center' });
     pdf.setTextColor(...COR_TINTA);
-    y += 11;
+    y += 11 * k;
   };
 
   /** Seção numerada, como nos atos da fiscalização. */
   let numeroSecao = 0;
   const secao = (titulo: string) => {
     numeroSecao += 1;
-    garantir(12);
+    garantir(12 * k);
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(8.5);
+    pdf.setFontSize(8.5 * k);
     pdf.setTextColor(...COR_MARCA);
-    pdf.text(`${numeroSecao}. ${titulo.toUpperCase()}`, MARGEM, y + 4);
+    pdf.text(`${numeroSecao}. ${titulo.toUpperCase()}`, MARGEM, y + 4 * k);
     pdf.setTextColor(...COR_TINTA);
-    y += 6;
+    y += 6 * k;
   };
 
   /** Campos em células com borda: rótulo pequeno em caixa-alta e valor embaixo. */
@@ -161,75 +175,66 @@ async function montarPdf(
     const w = LARG_UTIL / colunas;
     for (let i = 0; i < itens.length; i += colunas) {
       const linha = itens.slice(i, i + colunas);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(tamanhoCampo);
       const partes = linha.map(([, valor]) => quebrar(valor || '—', w - 4));
-      const passo = compacta ? 3.5 : 4;
-      const h = 4.6 + Math.max(...partes.map((p) => p.length)) * passo + 1.2;
+      const h = 4.6 * k + Math.max(...partes.map((p) => p.length)) * passo + 1.2 * k;
       garantir(h);
-      linha.forEach(([rotulo], k) => {
-        const x = MARGEM + k * w;
+      linha.forEach(([rotulo], c) => {
+        const x = MARGEM + c * w;
         caixa(x, y, w, h);
         pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(6.8);
+        pdf.setFontSize(6.8 * k);
         pdf.setTextColor(...COR_CINZA);
-        pdf.text(rotulo.toUpperCase(), x + 2, y + 3.4);
+        pdf.text(rotulo.toUpperCase(), x + 2, y + 3.4 * k);
         pdf.setFontSize(tamanhoCampo);
         pdf.setTextColor(...COR_TINTA);
-        pdf.text(partes[k], x + 2, y + 4.6 + passo);
+        pdf.text(partes[c], x + 2, y + 4.6 * k + passo);
       });
       y += h;
     }
-    y += 2;
+    y += 2 * k;
   };
 
-  /** Texto longo dentro de uma caixa, com o rótulo no alto. Se não couber numa página, quebra. */
-  const bloco = (rotulo: string, texto: string) => {
+  /** Texto longo dentro de uma caixa, com o rótulo no alto. */
+  const bloco = (rotulo: string, conteudo: string) => {
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(tamanhoCampo);
-    const partes = quebrar(texto, LARG_UTIL - 6);
-    let inicio = 0;
-    while (inicio < partes.length) {
-      const passo = compacta ? 3.5 : 4;
-      const cabe = Math.max(1, Math.floor((ALTURA_UTIL - y - 7) / passo));
-      const trecho = partes.slice(inicio, inicio + cabe);
-      const h = 4.6 + trecho.length * passo + 1.6;
-      garantir(h);
-      caixa(MARGEM, y, LARG_UTIL, h);
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(6.8);
-      pdf.setTextColor(...COR_CINZA);
-      if (inicio === 0) pdf.text(rotulo.toUpperCase(), MARGEM + 2, y + 3.4);
-      pdf.setFontSize(tamanhoCampo);
-      pdf.setTextColor(...COR_TINTA);
-      pdf.text(trecho, MARGEM + 3, y + 4.6 + passo);
-      y += h;
-      inicio += trecho.length;
-      if (inicio < partes.length) {
-        pdf.addPage();
-        y = MARGEM;
-      }
-    }
-    y += 2;
+    const partes = quebrar(conteudo, LARG_UTIL - 6);
+    const h = 4.6 * k + partes.length * passo + 1.6 * k;
+    garantir(h);
+    caixa(MARGEM, y, LARG_UTIL, h);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(6.8 * k);
+    pdf.setTextColor(...COR_CINZA);
+    pdf.text(rotulo.toUpperCase(), MARGEM + 2, y + 3.4 * k);
+    pdf.setFontSize(tamanhoCampo);
+    pdf.setTextColor(...COR_TINTA);
+    pdf.text(partes, MARGEM + 3, y + 4.6 * k + passo);
+    y += h;
+    y += 2 * k;
   };
 
   /** Assinaturas em caixas lado a lado: linha, nome e descrição, como nos documentos impressos. */
   const assinaturas = (blocos: { nome: string; descricao: string }[]) => {
-    garantir(32);
-    y += compacta ? 1 : 4;
+    const altura = 26 * k;
+    garantir(altura + 6 * k);
+    y += 4 * k;
     const w = LARG_UTIL / blocos.length;
     blocos.forEach((b, i) => {
       const x = MARGEM + i * w;
-      caixa(x, y, w, 26);
-      pdf.setDrawColor(...COR_TINTA).setLineWidth(0.3).line(x + 8, y + 16, x + w - 8, y + 16);
+      caixa(x, y, w, altura);
+      pdf.setDrawColor(...COR_TINTA).setLineWidth(0.3).line(x + 8, y + 16 * k, x + w - 8, y + 16 * k);
       pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(8);
+      pdf.setFontSize(8 * k);
       pdf.setTextColor(...COR_TINTA);
-      pdf.text(b.nome, x + w / 2, y + 20, { align: 'center' });
+      pdf.text(b.nome, x + w / 2, y + 20 * k, { align: 'center' });
       pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(6.8);
+      pdf.setFontSize(6.8 * k);
       pdf.setTextColor(...COR_CINZA);
-      pdf.text(quebrar(b.descricao, w - 6)[0] ?? '', x + w / 2, y + 23.5, { align: 'center' });
+      pdf.text(quebrar(b.descricao, w - 6)[0] ?? '', x + w / 2, y + 23.5 * k, { align: 'center' });
     });
-    y += compacta ? 27 : 30;
+    y += altura + 4 * k;
   };
 
   /** Termo de compromisso: registro completo da empresa, compromisso e assinatura do representante legal. */
@@ -250,12 +255,12 @@ async function montarPdf(
     bloco('Compromisso assumido', TEXTO_TERMO_COMPROMISSO.compromisso.join('\n\n'));
     secao('Responsabilidade pelas informações');
     bloco('Responsabilidade', TEXTO_TERMO_COMPROMISSO.responsabilidade.join('\n\n'));
-    garantir(8);
+    garantir(8 * k);
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(tamanhoCampo);
     pdf.setTextColor(...COR_TINTA);
-    pdf.text(`${texto(dados.local)}, ${data(dados.data)}.`, MARGEM, y + 4);
-    y += 8;
+    pdf.text(`${texto(dados.local)}, ${data(dados.data)}.`, MARGEM, y + 4 * k);
+    y += 8 * k;
     assinaturas([{ nome: texto(reg.representante), descricao: 'Representante legal da empresa' }]);
   };
 
@@ -325,13 +330,13 @@ async function montarPdf(
   };
 
   // Cabeçalho oficial: brasão centralizado, órgão em caixa-alta e a faixa com o tipo do documento.
-  const ALTURA_BRASAO = compacta ? 18 : 22;
+  const ALTURA_BRASAO = 22 * k;
   if (logo) {
     const { width, height } = pdf.getImageProperties(logo);
     const largura = ALTURA_BRASAO * (width / height);
     pdf.addImage(logo, 'PNG', (LARGURA - largura) / 2, y, largura, ALTURA_BRASAO);
   }
-  y += ALTURA_BRASAO + 2;
+  y += ALTURA_BRASAO + 2 * k;
   const orgao: [string, number, [number, number, number], 'normal' | 'bold'][] = [
     ['ESTADO DO RIO DE JANEIRO', 7.5, COR_CINZA, 'normal'],
     ['PREFEITURA MUNICIPAL DE NITERÓI', 9.5, COR_TINTA, 'bold'],
@@ -340,12 +345,12 @@ async function montarPdf(
   ];
   for (const [t, tamanho, cor, estilo] of orgao) {
     pdf.setFont('helvetica', estilo);
-    pdf.setFontSize(tamanho);
+    pdf.setFontSize(tamanho * k);
     pdf.setTextColor(...cor);
-    pdf.text(t, LARGURA / 2, y + 3.5, { align: 'center' });
-    y += compacta ? 3.6 : 4.2;
+    pdf.text(t, LARGURA / 2, y + 3.5 * k, { align: 'center' });
+    y += 4.2 * k;
   }
-  y += 3;
+  y += 3 * k;
   pdf.setTextColor(...COR_TINTA);
 
   const titulo = TITULO_DOCUMENTO[doc.tipo].toUpperCase();
@@ -366,15 +371,13 @@ async function montarPdf(
       ['Processo', texto(dados.processo)],
     ], 4);
   }
-  y += 2;
+  y += 2 * k;
 
   if (doc.tipo === 'termo_compromisso') corpoTermo();
   else if (doc.tipo === 'certidao_regularidade') corpoCertidao();
   else corpoAuto();
 
-  // Tarja e QR Code de verificação, sempre na última página, acima do rodapé.
-  const BLOCO_Y = 269;
-  if (y > BLOCO_Y - 3) pdf.addPage();
+  // Tarja e QR Code de verificação, sempre na mesma folha, acima do rodapé.
   const compacto = doc.codigo_verificacao.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
   const validadeCertidao = doc.tipo === 'certidao_regularidade'
     ? (((dados.autuado ?? {}) as Dados).validade_ate as string | null) ?? null
@@ -399,18 +402,15 @@ async function montarPdf(
   pdf.setTextColor(...COR_CINZA);
   pdf.text('Ou aponte a câmera para o QR Code.', MARGEM + 22, BLOCO_Y + 17.5);
 
-  // Rodapé em todas as páginas: código de verificação e página.
-  const total = pdf.getNumberOfPages();
-  for (let i = 1; i <= total; i += 1) {
-    pdf.setPage(i);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(7.5);
-    pdf.setTextColor(...COR_CINZA);
-    pdf.text(
-      `Código de verificação: ${codigoLegivel(doc.codigo_verificacao)} · Emitido em ${instanteExibicao(doc.emitido_em)} · Página ${i} de ${total}`,
-      LARGURA / 2, 293, { align: 'center' },
-    );
-  }
+  // Rodapé: código de verificação e data de emissão.
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(7.5);
+  pdf.setTextColor(...COR_CINZA);
+  pdf.text(
+    `Código de verificação: ${codigoLegivel(doc.codigo_verificacao)} · Emitido em ${instanteExibicao(doc.emitido_em)} · Página 1 de 1`,
+    LARGURA / 2, 293, { align: 'center' },
+  );
 
-  return { bytes: pdf.output('arraybuffer'), paginas: pdf.getNumberOfPages() };
+  if (pdf.getNumberOfPages() !== 1) throw new ErroNaoCabe();
+  return pdf.output('arraybuffer');
 }
