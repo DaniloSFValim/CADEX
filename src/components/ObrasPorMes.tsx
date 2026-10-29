@@ -4,7 +4,7 @@ import type { SituacaoPublica } from '../lib/licencas';
 
 const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 /** Ordem da pilha, de baixo para cima: o que está em andamento fica na base. */
-const ORDEM: SituacaoPublica[] = ['vigente', 'aguardando_inicio', 'prazo_encerrado', 'concluida', 'cancelada', 'registro'];
+const ORDEM: SituacaoPublica[] = ['vigente', 'aguardando_inicio', 'prazo_encerrado', 'concluida', 'suspensa', 'cancelada', 'registro'];
 /** Quantas obras a lista do mês mostra; o resto fica na lista geral, abaixo. */
 const MAX_LISTA = 10;
 /** Altura, em pixels, da coluna do mês com mais obras. Fixa para as barras não depender da altura do pai. */

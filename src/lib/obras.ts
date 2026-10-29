@@ -55,6 +55,7 @@ export const SITUACAO_PUBLICA_LABEL: Record<SituacaoPublica, string> = {
   concluida: 'Concluída',
   cancelada: 'Cancelada',
   registro: 'Registro, sem prazo',
+  suspensa: 'Suspensa a pedido',
 };
 
 /** Cores do mapa: as mesmas da situação no restante do sistema. */
@@ -65,12 +66,13 @@ export const COR_SITUACAO: Record<SituacaoPublica, string> = {
   concluida: '#1d4ed8',
   cancelada: '#1f2937',
   registro: '#6b7280',
+  suspensa: '#7c3aed',
 };
 
 /** Ao abrir, o mapa mostra o que está autorizado agora ou prestes a começar. */
 export const FILTRO_OBRAS: { valor: string; rotulo: string; inclui: SituacaoPublica[] }[] = [
   { valor: 'vigentes', rotulo: 'Vigentes e a começar', inclui: ['vigente', 'aguardando_inicio'] },
-  { valor: 'todas', rotulo: 'Todas as licenças', inclui: ['vigente', 'aguardando_inicio', 'prazo_encerrado', 'concluida', 'cancelada', 'registro'] },
+  { valor: 'todas', rotulo: 'Todas as licenças', inclui: ['vigente', 'aguardando_inicio', 'prazo_encerrado', 'concluida', 'cancelada', 'registro', 'suspensa'] },
   { valor: 'encerradas', rotulo: 'Encerradas, concluídas ou canceladas', inclui: ['prazo_encerrado', 'concluida', 'cancelada'] },
 ];
 

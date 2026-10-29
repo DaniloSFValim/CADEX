@@ -6,6 +6,7 @@ import { SituacaoBadge, dataBR } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { formatCnpj } from '../lib/cnpj';
 import { supabase } from '../lib/supabase';
+import { contarPedidosPorLicenca, diasAberto, listarPedidosAbertos, type PedidoCorrecao } from '../lib/suspensoes';
 import { hojeISO, listarEmpresas, type Empresa } from '../lib/empresas';
 import {
   listarLicencas, nomeExecutora, pendenciasLicencas, type LicencaComTrechos, type PendenciaLicenca,
@@ -63,7 +64,15 @@ export default function Pendencias() {
   const [licencas, setLicencas] = useState<LicencaComTrechos[]>([]);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pedidosAbertos, setPedidosAbertos] = useState<(PedidoCorrecao & { licencas: { numero: string | null; processo_sei: string } | null })[]>([]);
+  const [contagemPedidos, setContagemPedidos] = useState<Record<string, number>>({});
   const [error, setError] = useState<unknown>(null);
+
+  useEffect(() => {
+    if (!podeEditar) return;
+    listarPedidosAbertos().then(setPedidosAbertos).catch(() => setPedidosAbertos([]));
+    contarPedidosPorLicenca().then(setContagemPedidos).catch(() => setContagemPedidos({}));
+  }, [podeEditar]);
 
   useEffect(() => {
     if (!podeEditar) return;
@@ -166,6 +175,35 @@ export default function Pendencias() {
           tom={sumario?.inscricoes_vencendo ? 'atencao' : undefined}
         />
       </div>
+
+      {/* Pedidos de correção: o mais antigo primeiro, e quem já voltou mais de uma vez (reincidência). */}
+      <section aria-labelledby="pedidos-correcao-titulo">
+        <CabecalhoSecao
+          titulo="Pedidos de correção abertos"
+          descricao="Pendências registradas por licença, sem mudar a situação. Os mais antigos aparecem primeiro; reincidência é a licença com mais de um pedido."
+        />
+        <div className="mb-4 grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2">
+          <Kpi rotulo="Abertos" valor={pedidosAbertos.length} detalhe={pedidosAbertos[0] ? `o mais antigo há ${diasAberto(pedidosAbertos[0].pedido_em, hojeISO())} dias` : 'nenhum aberto'} tom={pedidosAbertos.length ? 'atencao' : undefined} />
+          <Kpi rotulo="Reincidentes" valor={Object.values(contagemPedidos).filter((n) => n > 1).length} detalhe="licenças com mais de um pedido" />
+        </div>
+        {pedidosAbertos.length === 0 ? (
+          <Empty>Nenhum pedido de correção aberto.</Empty>
+        ) : (
+          <ul className="divide-y divide-tinta-200 rounded-sm border border-tinta-200 bg-white">
+            {pedidosAbertos.map((p) => (
+              <li key={p.id} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-3 text-sm">
+                <span>
+                  <Link to={`/obras/${p.licenca_id}`} className={linkTexto}>{p.licencas?.numero ?? p.licencas?.processo_sei ?? 'Licença'}</Link>
+                  <span className="text-tinta-700"> · {p.motivo}</span>
+                </span>
+                <span className="tabular text-tinta-500">
+                  {diasAberto(p.pedido_em, hojeISO())} dias abertos{(contagemPedidos[p.licenca_id] ?? 0) > 1 ? ` · ${contagemPedidos[p.licenca_id]} pedidos nesta licença` : ''}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       {/* Fila de ação: uma empresa por linha, com todos os seus motivos */}
       <section>
