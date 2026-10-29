@@ -524,3 +524,13 @@ export function desempenhoExecutora(
 
   return { obras: base.length, concluidas: concluidas.length, noPrazo, atrasadas, recompostas, comAsBuilt, nivel };
 }
+
+/** Suspensão e prorrogação só são pedidas nos 30 dias a partir do início da obra ou serviço. */
+export const PRAZO_DE_ACAO_DIAS = 30;
+
+/** Último dia do prazo de ação: início + 30 dias. */
+export const prazoDeAcaoAte = (inicio: string) =>
+  new Date(Date.parse(`${inicio}T00:00:00Z`) + PRAZO_DE_ACAO_DIAS * 86400000).toISOString().slice(0, 10);
+
+export const dentroDoPrazoDeAcao = (inicio: string | null, hoje: string) =>
+  Boolean(inicio) && hoje <= prazoDeAcaoAte(inicio!);

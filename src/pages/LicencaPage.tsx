@@ -16,7 +16,7 @@ import {
   ESTADO_LICENCA_LABEL, ORIGENS, ORIGEM_LABEL, TIPOS_INTERVENCAO, TIPO_INTERVENCAO_LABEL, origemPublica, TOM_ESTADO_LICENCA, buscarConflitos, buscarLicenca, prorrogarLicenca, rotuloProrrogacao,
   anteriorResolucao, coordenadaTexto, segueResolucao, estadoLicenca, lerCoordenada, linkMapa, salvarLicenca,
   erroPeriodoObra, mesmaEmpresaNosPapeis, situacoesRegistraveis,
-  urlPublicaLicenca,
+  urlPublicaLicenca, dentroDoPrazoDeAcao, prazoDeAcaoAte,
   type Conflito, type LicencaComTrechos, type LicencaInput, type OrigemIntervencao, type SituacaoLicenca, type TipoIntervencao, type TipoObra, type Trecho,
 } from '../lib/licencas';
 import { listarOrgaos, nomeOrgao, orgaoServeOrigem, type Orgao } from '../lib/orgaos';
@@ -950,6 +950,7 @@ function Conflitos({ licencaId }: { licencaId: string }) {
 /** Validade da licença: 30 dias a partir do início, prorrogável. Órgão público é registro, sem prazo. */
 function Validade({ licenca, hoje, onProrrogada }: { licenca: LicencaComTrechos; hoje: string; onProrrogada: () => Promise<void> }) {
   const [nova, setNova] = useState('');
+  const [pedidoEmpresa, setPedidoEmpresa] = useState(false);
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState<unknown>(null);
   const semPrazo = !!licenca.orgao_contratante_id;
@@ -979,15 +980,27 @@ function Validade({ licenca, hoje, onProrrogada }: { licenca: LicencaComTrechos;
               ? <>Válida até <strong>{dataBR(licenca.validade_ate)}</strong>{vencida ? ' (vencida)' : ''}. A licença vale 30 dias a partir do início, salvo prorrogação.{licenca.prorrogacoes > 0 && <> Já prorrogada: {rotuloProrrogacao(licenca.prorrogacoes)}.</>}</>
               : 'Sem validade registrada. Informe o início da obra ou serviço e salve para calcular.'}
           </p>
+          {!dentroDoPrazoDeAcao(licenca.inicio_previsto, hoje) && (
+            <p className="mt-3 text-sm text-tinta-600">
+              Fora do prazo: a prorrogação só é pedida até {dataBR(prazoDeAcaoAte(licenca.inicio_previsto!))}, 30 dias a partir do início.
+            </p>
+          )}
+          {dentroDoPrazoDeAcao(licenca.inicio_previsto, hoje) && (<>
+          <p className="mt-3 text-sm text-tinta-600">A prorrogação é sempre a pedido da empresa.</p>
+          <label className="mt-3 flex items-center gap-2 text-sm text-tinta-700">
+            <input type="checkbox" checked={pedidoEmpresa} onChange={(e) => setPedidoEmpresa(e.target.checked)} />
+            O pedido foi feito pela empresa
+          </label>
           <div className="mt-4 flex flex-wrap items-end gap-3">
             <Field label="Nova validade">
               <input type="date" className={inputClass} value={nova} min={licenca.validade_ate ?? hoje}
                      onChange={(e) => setNova(e.target.value)} />
             </Field>
-            <Button type="button" variant="secondary" disabled={!nova || busy} onClick={() => void prorrogar()}>
+            <Button type="button" variant="secondary" disabled={!nova || !pedidoEmpresa || busy} onClick={() => void prorrogar()}>
               {busy ? 'Prorrogando…' : 'Prorrogar validade'}
             </Button>
           </div>
+          </>)}
           <div className="mt-2"><ErrorNote error={erro} /></div>
         </>
       )}
