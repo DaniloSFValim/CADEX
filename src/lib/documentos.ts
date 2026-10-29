@@ -75,7 +75,7 @@ export const CAMPOS_DOCUMENTO: Record<TipoDocumento, CampoDocumento[]> = {
     { chave: 'infringencia', rotulo: 'Infringência', tipo: 'texto', obrigatorio: true },
     { chave: 'sancao', rotulo: 'Sanção', tipo: 'texto', obrigatorio: true },
     { chave: 'valor', rotulo: 'Valor da multa (R$)', tipo: 'dinheiro', obrigatorio: true },
-    { chave: 'prazo', rotulo: 'Prazo para pagamento ou impugnação', tipo: 'texto', obrigatorio: true },
+    { chave: 'prazo', rotulo: 'Prazo para pagamento', tipo: 'texto', obrigatorio: true },
     CAMPO_FUNDAMENTO,
     CAMPO_INFORMACOES,
     CAMPO_RECEBIMENTO,
@@ -229,7 +229,6 @@ export interface DocumentoOficial {
   codigo_verificacao: string;
 }
 
-/** "001 - SFSC", como no modelo da fiscalização. */
 /** Prefixo de cada tipo: cada documento tem a sua sequência de números. */
 const PREFIXO_DOCUMENTO: Record<TipoDocumento, string> = {
   notificacao: 'NOT',
@@ -240,9 +239,34 @@ const PREFIXO_DOCUMENTO: Record<TipoDocumento, string> = {
   termo_compromisso: 'TCR',
 };
 
-export function numeroDocumento(numero: number, tipo: TipoDocumento): string {
-  return `${PREFIXO_DOCUMENTO[tipo]}-${String(numero).padStart(3, '0')} - SFSC`;
+/** Ano da emissão no calendário de Brasília. */
+function anoBrasilia(emitidoEm: string): number {
+  return Number(new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric' }).format(new Date(emitidoEm)));
 }
+
+/** "AI-007/2026 - SFSC", como no modelo da fiscalização. A sequência é por tipo; o ano é o da emissão. */
+export function numeroDocumento(numero: number, tipo: TipoDocumento, emitidoEm: string): string {
+  return `${PREFIXO_DOCUMENTO[tipo]}-${String(numero).padStart(3, '0')}/${anoBrasilia(emitidoEm)} - SFSC`;
+}
+
+/** Anos de validade de certidão e termo, contados da emissão. */
+export const ANOS_VALIDADE_DOCUMENTO = 1;
+
+/**
+ * Último dia de validade de certidão e termo: um ano depois da emissão, no calendário de Brasília.
+ * Em 29 de fevereiro, cai em 28 de fevereiro quando o ano seguinte não é bissexto.
+ */
+export function validadeDocumento(emitidoEm: string): string {
+  const [ano, mes, dia] = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date(emitidoEm)).split('-').map(Number);
+  const anoFinal = ano + ANOS_VALIDADE_DOCUMENTO;
+  const ultimoDia = new Date(Date.UTC(anoFinal, mes, 0)).getUTCDate();
+  return `${anoFinal}-${String(mes).padStart(2, '0')}-${String(Math.min(dia, ultimoDia)).padStart(2, '0')}`;
+}
+
+/** Prazo de defesa ou recurso, impresso em todo auto (notificação, infração, embargo e apreensão). */
+export const TEXTO_DEFESA_AUTO = 'Defesa ou recurso no prazo de 30 dias, contados do recebimento deste documento ou da sua publicação no Diário Oficial do Município, dirigidos à própria Fiscalização de Serviços Concedidos.';
 
 /** Código de verificação em blocos de quatro, para ler e digitar. */
 export function codigoLegivel(codigo: string): string {

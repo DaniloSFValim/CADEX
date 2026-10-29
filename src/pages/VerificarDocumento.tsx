@@ -48,7 +48,7 @@ export default function VerificarDocumento() {
               <p className="font-semibold text-alta">Documento autêntico</p>
               <h2 className="mt-2 font-semibold text-tinta-900">{TITULO_DOCUMENTO[resultado.tipo]}</h2>
               <dl className="mt-4 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
-                <div><dt className="text-tinta-500">Número</dt><dd className="font-semibold text-tinta-800">{numeroDocumento(resultado.numero, resultado.tipo)}</dd></div>
+                <div><dt className="text-tinta-500">Número</dt><dd className="font-semibold text-tinta-800">{numeroDocumento(resultado.numero, resultado.tipo, resultado.emitido_em)}</dd></div>
                 <div><dt className="text-tinta-500">Emitido em</dt><dd className="text-tinta-800">{dataBR(resultado.emitido_em.slice(0, 10))}</dd></div>
                 <div><dt className="text-tinta-500">Empresa</dt><dd className="text-tinta-800">{resultado.razao_social}</dd></div>
                 <div><dt className="text-tinta-500">Código CADEX</dt><dd className="text-tinta-800">{resultado.codigo_cadex}</dd></div>
