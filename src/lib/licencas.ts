@@ -410,7 +410,7 @@ export async function buscarConflitos(id: string): Promise<Conflito[]> {
 // ---------------------------------------------------------------------
 // Página pública da licença (QR Code da placa, art. 14): sem login
 // ---------------------------------------------------------------------
-export type SituacaoPublica = 'vigente' | 'aguardando_inicio' | 'prazo_encerrado' | 'concluida' | 'cancelada' | 'registro';
+export type SituacaoPublica = 'vigente' | 'aguardando_inicio' | 'prazo_encerrado' | 'concluida' | 'cancelada' | 'registro' | 'suspensa';
 
 export interface LicencaPublica {
   setor: Setor;

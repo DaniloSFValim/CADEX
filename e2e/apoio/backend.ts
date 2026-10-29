@@ -36,6 +36,9 @@ export interface Cenario {
   semLicenca?: Record<string, unknown>[];
   /** Catálogo de tipos (tabela tipos_intervencao). Sem ele, vale o catálogo padrão de viário. */
   tipos?: Record<string, unknown>[];
+  /** Suspensões e pedidos de correção gravados pela tela durante o teste. */
+  suspensoes?: Record<string, unknown>[];
+  pedidos?: Record<string, unknown>[];
 }
 
 export interface Chamada {
@@ -173,6 +176,11 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
       ].map((t, i) => ({ ...t, id: uuid(8001 + i), fonte: 'Catálogo de teste', atualizado_em: '2026-10-14' }));
       return lista(estado.tipos ?? padrao);
     }
+    if (caminho === 'licenca_suspensoes' || caminho === 'licenca_pedidos_correcao') {
+      const linhas = (caminho === 'licenca_suspensoes' ? estado.suspensoes : estado.pedidos) ?? [];
+      const lid = (url.searchParams.get('licenca_id') ?? '').replace('eq.', '');
+      return lista(linhas.filter((x) => x.licenca_id === lid));
+    }
     if (caminho === 'intervencoes_sem_licenca') {
       if (req.method() === 'POST') {
         const nova = { id: uuid(9000 + (estado.semLicenca?.length ?? 0) + 1), ...(corpo as object), atualizado_em: new Date().toISOString() };
@@ -251,6 +259,28 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
       if (l.orgao_contratante_id) return route.fulfill({ status: 400, headers: CORS, contentType: 'application/json', body: JSON.stringify({ message: 'Licença de órgão público é registro, sem prazo de validade.' }) });
       if (l.validade_ate && p_validade <= l.validade_ate) return route.fulfill({ status: 400, headers: CORS, contentType: 'application/json', body: JSON.stringify({ message: 'A nova validade precisa ser posterior à validade atual.' }) });
       estado.licencas = estado.licencas.map((x) => (x.id === p_id ? { ...x, validade_ate: p_validade, prorrogacoes: (x.prorrogacoes ?? 0) + 1 } : x));
+      return vazio();
+    }
+    if (caminho === 'rpc/suspender_licenca') {
+      const { p_id, p_inicio, p_motivo } = corpo as { p_id: string; p_inicio: string; p_motivo: string };
+      const n = (estado.suspensoes ?? []).length;
+      estado.suspensoes = [...(estado.suspensoes ?? []), { id: uuid(9500 + n), licenca_id: p_id, inicio: p_inicio, fim: null, motivo: p_motivo, criado_em: new Date().toISOString() }];
+      return vazio();
+    }
+    if (caminho === 'rpc/retomar_licenca') {
+      const { p_id, p_fim } = corpo as { p_id: string; p_fim: string };
+      estado.suspensoes = (estado.suspensoes ?? []).map((s) => (s.licenca_id === p_id && s.fim === null ? { ...s, fim: p_fim } : s));
+      return vazio();
+    }
+    if (caminho === 'rpc/pedir_correcao') {
+      const { p_id, p_motivo } = corpo as { p_id: string; p_motivo: string };
+      const n = (estado.pedidos ?? []).length;
+      estado.pedidos = [...(estado.pedidos ?? []), { id: uuid(9700 + n), licenca_id: p_id, motivo: p_motivo, pedido_em: new Date().toISOString(), resolucao: null, resolvido_em: null }];
+      return responder(uuid(9700 + n));
+    }
+    if (caminho === 'rpc/resolver_correcao') {
+      const { p_pedido, p_resolucao } = corpo as { p_pedido: string; p_resolucao: string };
+      estado.pedidos = (estado.pedidos ?? []).map((p) => (p.id === p_pedido ? { ...p, resolucao: p_resolucao, resolvido_em: new Date().toISOString() } : p));
       return vazio();
     }
     if (caminho === 'rpc/obras_publicas') return responder(obrasPublicas(estado));

@@ -16,6 +16,10 @@ import {
  * pergunta do fiscal na rua: esta obra está autorizada hoje?
  */
 const VEREDITO: Record<SituacaoPublica, { titulo: string; cor: string; frase: (d: Dados) => string }> = {
+  suspensa: {
+    titulo: 'Obra suspensa', cor: 'border-atencao bg-atencao/6 text-atencao',
+    frase: () => 'A obra ou serviço está suspensa a pedido. Não está autorizada enquanto durar a suspensão.',
+  },
   vigente: {
     titulo: 'Licença vigente', cor: 'border-alta bg-alta/6 text-alta',
     frase: (d) => `Obra autorizada até ${dataBR(d.fim_previsto)}.`,
