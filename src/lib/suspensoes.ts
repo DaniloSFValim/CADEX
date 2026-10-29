@@ -7,8 +7,17 @@ export interface Suspensao {
   inicio: string;
   fim: string | null;
   motivo: string;
+  /** Suspensão é sempre determinada pela fiscalização; a origem diz quem pediu. */
+  origem: OrigemSuspensao;
   criado_em: string;
 }
+
+export type OrigemSuspensao = 'pedido_da_empresa' | 'ato_proprio';
+
+export const ORIGEM_SUSPENSAO_LABEL: Record<OrigemSuspensao, string> = {
+  pedido_da_empresa: 'a pedido da empresa',
+  ato_proprio: 'ato próprio da fiscalização',
+};
 
 /** Pedido de correção: pendência aberta até alguém registrar a resolução. Não muda a situação da licença. */
 export interface PedidoCorrecao {
@@ -30,8 +39,8 @@ export async function listarSuspensoes(licencaId: string): Promise<Suspensao[]> 
 /** A suspensão ativa é a que ainda não tem data de fim. */
 export const suspensaoAtiva = (lista: Suspensao[]) => lista.find((s) => s.fim === null) ?? null;
 
-export async function suspenderLicenca(id: string, inicio: string, motivo: string): Promise<void> {
-  const { error } = await supabase.rpc('suspender_licenca', { p_id: id, p_inicio: inicio, p_motivo: motivo });
+export async function suspenderLicenca(id: string, inicio: string, motivo: string, origem: OrigemSuspensao): Promise<void> {
+  const { error } = await supabase.rpc('suspender_licenca', { p_id: id, p_inicio: inicio, p_motivo: motivo, p_origem: origem });
   if (error) throw error;
 }
 

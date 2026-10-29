@@ -269,6 +269,7 @@ function LinhaBusca({ licenca: l, porId, orgaos, hoje, onExcluida }: {
 /** Prorroga a validade de uma licença, uma de cada vez. Só aparece quando a licença tem validade. */
 function ProrrogarLinha({ licenca: l, onMudou }: { licenca: LicencaComTrechos; onMudou: (m: string) => void }) {
   const [data, setData] = useState(l.validade_ate ?? '');
+  const [pedidoEmpresa, setPedidoEmpresa] = useState(false);
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState<unknown>(null);
   if (!l.validade_ate) return null;
@@ -293,7 +294,12 @@ function ProrrogarLinha({ licenca: l, onMudou }: { licenca: LicencaComTrechos; o
         <input type="date" className={inputClass} value={data} onChange={(e) => setData(e.target.value)}
                aria-label={`Nova validade de ${nome}`} />
       </label>
-      <Button variant="secondary" disabled={busy || !data || data === l.validade_ate} onClick={() => void salvar()}>Prorrogar</Button>
+      <label className="flex items-center gap-1">
+        <input type="checkbox" checked={pedidoEmpresa} onChange={(e) => setPedidoEmpresa(e.target.checked)}
+               aria-label={`Pedido da empresa para ${nome}`} />
+        a pedido da empresa
+      </label>
+      <Button variant="secondary" disabled={busy || !data || !pedidoEmpresa || data === l.validade_ate} onClick={() => void salvar()}>Prorrogar</Button>
       {erro ? <ErrorNote error={erro} /> : null}
     </span>
   );
