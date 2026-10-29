@@ -49,7 +49,7 @@ export function SuspensaoECorrecoes({ licenca, hoje, onMudou }: {
   const ativa = suspensaoAtiva(suspensoes);
   const historico = suspensoes.filter((s) => s.fim !== null);
   const noPrazo = dentroDoPrazoDeAcao(licenca.inicio_previsto, hoje);
-  const podeSuspender = podeLicenciar && noPrazo && licenca.situacao === 'deferida' && !licenca.concluida_em && !licenca.orgao_contratante_id;
+  const podeSuspender = podeLicenciar && noPrazo && licenca.situacao === 'deferida' && !licenca.concluida_em;
   const abertos = pedidos.filter((p) => p.resolvido_em === null);
   const resolvidos = pedidos.filter((p) => p.resolvido_em !== null);
 

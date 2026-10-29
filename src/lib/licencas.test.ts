@@ -58,8 +58,9 @@ describe('situação da licença', () => {
   it('prorrogar a validade volta a deixá-la vigente', () => {
     expect(estadoLicenca({ ...base, validade_ate: '2026-11-30' }, '2026-11-01')).toBe('em_execucao');
   });
-  it('órgão público é registro, sem prazo, mesmo com data passada', () => {
-    expect(estadoLicenca({ ...base, orgao_contratante_id: 'o1', validade_ate: null }, '2030-01-01')).toBe('registro');
+  it('órgão público tem os mesmos 30 dias de prazo', () => {
+    expect(estadoLicenca({ ...base, orgao_contratante_id: 'o1', validade_ate: '2026-10-31' }, '2026-10-30')).toBe('em_execucao');
+    expect(estadoLicenca({ ...base, orgao_contratante_id: 'o1', validade_ate: '2026-10-31' }, '2030-01-01')).toBe('prazo_encerrado');
   });
   it('conclusão e As Built', () => {
     expect(estadoLicenca({ ...base, concluida_em: '2026-10-20' }, '2026-11-01')).toBe('concluida_sem_as_built');

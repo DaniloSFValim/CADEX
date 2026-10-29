@@ -256,7 +256,6 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
       const { p_id, p_validade } = corpo as { p_id: string; p_validade: string };
       const l = estado.licencas.find((x) => x.id === p_id);
       if (!l) return route.fulfill({ status: 400, headers: CORS, contentType: 'application/json', body: JSON.stringify({ message: 'Licença não encontrada.' }) });
-      if (l.orgao_contratante_id) return route.fulfill({ status: 400, headers: CORS, contentType: 'application/json', body: JSON.stringify({ message: 'Licença de órgão público é registro, sem prazo de validade.' }) });
       if (l.validade_ate && p_validade <= l.validade_ate) return route.fulfill({ status: 400, headers: CORS, contentType: 'application/json', body: JSON.stringify({ message: 'A nova validade precisa ser posterior à validade atual.' }) });
       estado.licencas = estado.licencas.map((x) => (x.id === p_id ? { ...x, validade_ate: p_validade, prorrogacoes: (x.prorrogacoes ?? 0) + 1 } : x));
       return vazio();
@@ -314,9 +313,13 @@ function obrasPublicas(estado: Cenario) {
   const nome = (e?: Empresa) => (e ? (e.nome_fantasia?.trim() || e.razao_social) : null);
   return estado.licencas.filter((l) => !l.excluida_em && (l.situacao === 'deferida' || l.situacao === 'cancelada')).map((l) => {
     const og = estado.orgaos.find((o) => o.id === l.orgao_contratante_id);
-    const situacao = l.situacao === 'cancelada' ? 'cancelada' : l.concluida_em ? 'concluida'
-      : l.inicio_previsto && hoje < l.inicio_previsto ? 'aguardando_inicio'
-        : l.fim_previsto && hoje > l.fim_previsto ? 'prazo_encerrado' : 'vigente';
+    // Mesma ordem de situacao_publica() no banco (migração 20261106120000).
+    const suspensa = (estado.suspensoes ?? []).some((s) => s.licenca_id === l.id && s.fim === null);
+    const situacao = l.situacao === 'cancelada' ? 'cancelada'
+      : l.concluida_em && (!l.fim_previsto || hoje > l.fim_previsto) ? 'concluida'
+        : suspensa ? 'suspensa'
+          : l.validade_ate && hoje > l.validade_ate ? 'prazo_encerrado'
+              : l.inicio_previsto && hoje < l.inicio_previsto ? 'aguardando_inicio' : 'vigente';
     return {
       codigo: l.codigo_publico, setor: l.setor, numero: l.numero, tipos_obra: l.tipos_obra, tipo_intervencao: l.tipo_intervencao,
       origem: l.origem_intervencao, escopo: l.escopo, inicio_previsto: l.inicio_previsto, fim_previsto: l.fim_previsto,

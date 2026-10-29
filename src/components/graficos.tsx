@@ -13,7 +13,6 @@ import { posicaoNaJanela, type ItemLinha } from '../lib/painel';
 /** Cor da marca de cada situação. A cor reforça; o nome da situação sempre está escrito. */
 export const COR_ESTADO: Record<EstadoLicenca, string> = {
   aguardando_inicio: 'bg-tinta-400',
-  registro: 'bg-tinta-300',
   em_execucao: 'bg-marca-600',
   prazo_encerrado: 'bg-baixa',
   concluida: 'bg-alta',

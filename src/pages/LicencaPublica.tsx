@@ -36,10 +36,6 @@ const VEREDITO: Record<SituacaoPublica, { titulo: string; cor: string; frase: (d
     titulo: 'Obra concluída', cor: 'border-tinta-400 bg-tinta-50 text-tinta-700',
     frase: () => 'A obra ou serviço desta licença foi concluída.',
   },
-  registro: {
-    titulo: 'Registro, sem prazo', cor: 'border-tinta-400 bg-tinta-50 text-tinta-700',
-    frase: () => 'Licença vinculada a órgão público. Ela é registrada para controle e não tem prazo de validade.',
-  },
   cancelada: {
     titulo: 'Licença cancelada', cor: 'border-baixa bg-baixa/6 text-baixa',
     frase: () => 'Esta licença foi cancelada pela SECONSER. A obra não está autorizada.',
@@ -91,21 +87,10 @@ function PinStatus() {
   );
 }
 
-/**
- * "Obra concluída" só aparece depois do fim do período. Dentro dele, a licença segue a data:
- * vigente ou, se ainda não começou, aguardando o início.
- */
-function situacaoExibida(d: Dados): SituacaoPublica {
-  if (d.situacao !== 'concluida') return d.situacao;
-  if (d.inicio_previsto && d.hoje < d.inicio_previsto) return 'aguardando_inicio';
-  if (!d.fim_previsto || d.hoje <= d.fim_previsto) return 'vigente';
-  return 'concluida';
-}
-
 function Conteudo({ d }: { d: Dados }) {
   const [rotulos, setRotulos] = useState<Record<string, string>>({});
   useEffect(() => { listarTipos().then((t) => setRotulos(mapaRotulosTipos(t))).catch(() => setRotulos({})); }, []);
-  const v = VEREDITO[situacaoExibida(d)];
+  const v = VEREDITO[d.situacao];
   // A executora pode faltar (registro sem empresa vinculada): a página mostra o que houver, sem quebrar.
   const executora = d.executora ?? { razao_social: '', nome_fantasia: null, codigo_cadex: null, situacao_cadex: null };
   return (

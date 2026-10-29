@@ -15,7 +15,7 @@ export type SituacaoLicenca = 'em_analise' | 'deferida' | 'indeferida' | 'cancel
 export type EstadoLicenca =
   | 'em_analise' | 'indeferida' | 'cancelada'
   | 'aguardando_inicio' | 'em_execucao' | 'prazo_encerrado'
-  | 'concluida_sem_as_built' | 'concluida' | 'registro';
+  | 'concluida_sem_as_built' | 'concluida';
 
 /** Natureza da intervenção: uma obra ou um serviço. */
 export type TipoIntervencao = 'obra' | 'servico';
@@ -70,7 +70,7 @@ export interface Licenca {
   art_numero: string | null;
   protocolo_data: string;
   situacao: SituacaoLicenca;
-  /** Validade: 30 dias a partir do início, prorrogável. Vazio para órgão público (registro, sem prazo). */
+  /** Validade: 30 dias a partir do início, para qualquer licença; prorrogável. */
   validade_ate: string | null;
   /** Quantas vezes a validade foi prorrogada pela administração (zera quando a decisão é recalculada). */
   prorrogacoes: number;
@@ -152,7 +152,6 @@ export const ESTADO_LICENCA_LABEL: Record<EstadoLicenca, string> = {
   prazo_encerrado: 'Prazo encerrado',
   concluida_sem_as_built: 'Sem As Built',
   concluida: 'Concluída',
-  registro: 'Registro, sem prazo',
 };
 
 export const TOM_ESTADO_LICENCA: Record<EstadoLicenca, 'neutro' | 'bom' | 'alerta' | 'ruim'> = {
@@ -164,7 +163,6 @@ export const TOM_ESTADO_LICENCA: Record<EstadoLicenca, 'neutro' | 'bom' | 'alert
   prazo_encerrado: 'ruim',
   concluida_sem_as_built: 'alerta',
   concluida: 'bom',
-  registro: 'neutro',
 };
 
 /**
@@ -204,7 +202,6 @@ export function estadoLicenca(
   if (l.situacao !== 'deferida') return l.situacao;
   // Registro anterior à Resolução não é cobrado de As Built (art. 26): concluída é concluída.
   if (l.concluida_em) return l.as_built_sei || l.anterior_resolucao ? 'concluida' : 'concluida_sem_as_built';
-  if (l.orgao_contratante_id) return 'registro';
   if (l.validade_ate && hoje > l.validade_ate) return 'prazo_encerrado';
   if (l.inicio_previsto && hoje < l.inicio_previsto) return 'aguardando_inicio';
   return 'em_execucao';
@@ -410,7 +407,7 @@ export async function buscarConflitos(id: string): Promise<Conflito[]> {
 // ---------------------------------------------------------------------
 // Página pública da licença (QR Code da placa, art. 14): sem login
 // ---------------------------------------------------------------------
-export type SituacaoPublica = 'vigente' | 'aguardando_inicio' | 'prazo_encerrado' | 'concluida' | 'cancelada' | 'registro' | 'suspensa';
+export type SituacaoPublica = 'vigente' | 'aguardando_inicio' | 'prazo_encerrado' | 'concluida' | 'cancelada' | 'suspensa';
 
 export interface LicencaPublica {
   setor: Setor;
