@@ -113,6 +113,8 @@ async function montarPdf(
   const dados = doc.dados as Dados;
   const autuado = (dados.autuado ?? {}) as Dados;
   const data = (v: unknown) => (v ? dataExibicao(String(v)) : '—');
+  const LARG_UTIL = LARGURA - 2 * MARGEM;
+  const tamanhoCampo = compacta ? 8 : 9;
   let y = MARGEM;
 
   const quebrar = (t: string, largura: number) => pdf.splitTextToSize(t, largura) as string[];
@@ -123,88 +125,120 @@ async function montarPdf(
     }
   };
 
-  /** Seção: título em azul-marca e fio fino embaixo, como na ficha. */
-  const secao = (t: string) => {
-    garantir(16);
-    y += compacta ? 1 : 2;
+  /** Borda fina, como nos formulários e certidões impressas. */
+  const caixa = (x: number, yy: number, w: number, h: number) => {
+    pdf.setDrawColor(...COR_FIO).setLineWidth(0.3).rect(x, yy, w, h);
+  };
+
+  /** Faixa de título: fundo azul-marca e texto em branco, como nas certidões on-line. */
+  const faixa = (titulo: string) => {
+    garantir(12);
+    pdf.setFillColor(...COR_MARCA);
+    pdf.rect(MARGEM, y, LARG_UTIL, 9, 'F');
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(9);
+    pdf.setFontSize(11);
+    pdf.setTextColor(255, 255, 255);
+    pdf.text(titulo, LARGURA / 2, y + 6, { align: 'center' });
+    pdf.setTextColor(...COR_TINTA);
+    y += 11;
+  };
+
+  /** Seção numerada, como nos atos da fiscalização. */
+  let numeroSecao = 0;
+  const secao = (titulo: string) => {
+    numeroSecao += 1;
+    garantir(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(8.5);
     pdf.setTextColor(...COR_MARCA);
-    pdf.text(t.toUpperCase(), MARGEM, y);
-    y += 2;
-    pdf.setDrawColor(...COR_MARCA).setLineWidth(0.3).line(MARGEM, y, LARGURA - MARGEM, y);
-    y += 4;
+    pdf.text(`${numeroSecao}. ${titulo.toUpperCase()}`, MARGEM, y + 4);
     pdf.setTextColor(...COR_TINTA);
+    y += 6;
   };
 
-  /** Campos em duas colunas: rótulo pequeno em cinza e valor embaixo, com fio fino entre as linhas. */
-  const grade = (itens: [string, string][]) => {
-    const COLUNAS = [MARGEM, 110];
-    const LARGURA_CAMPO = 85;
-    for (let i = 0; i < itens.length; i += 2) {
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(compacta ? 8 : 9);
-      const celulas = [0, 1].map((k) => {
-        const item = itens[i + k];
-        return item ? { rotulo: item[0], partes: quebrar(item[1], LARGURA_CAMPO) } : undefined;
-      });
-      const linhas = Math.max(...celulas.map((c) => c?.partes.length ?? 1));
-      garantir(linhas * 4 + 7);
-      celulas.forEach((c, k) => {
-        if (!c) return;
+  /** Campos em células com borda: rótulo pequeno em caixa-alta e valor embaixo. */
+  const tabela = (itens: [string, string][], colunas: 2 | 4 = 2) => {
+    const w = LARG_UTIL / colunas;
+    for (let i = 0; i < itens.length; i += colunas) {
+      const linha = itens.slice(i, i + colunas);
+      const partes = linha.map(([, valor]) => quebrar(valor || '—', w - 4));
+      const passo = compacta ? 3.5 : 4;
+      const h = 4.6 + Math.max(...partes.map((p) => p.length)) * passo + 1.2;
+      garantir(h);
+      linha.forEach(([rotulo], k) => {
+        const x = MARGEM + k * w;
+        caixa(x, y, w, h);
         pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(7.5);
+        pdf.setFontSize(6.8);
         pdf.setTextColor(...COR_CINZA);
-        pdf.text(c.rotulo, COLUNAS[k], y);
-        pdf.setFontSize(compacta ? 8 : 9);
+        pdf.text(rotulo.toUpperCase(), x + 2, y + 3.4);
+        pdf.setFontSize(tamanhoCampo);
         pdf.setTextColor(...COR_TINTA);
-        pdf.text(c.partes, COLUNAS[k], y + 4);
+        pdf.text(partes[k], x + 2, y + 4.6 + passo);
       });
-      // Fio logo abaixo do último valor da linha.
-      const fio = y + 4 + (linhas - 1) * 4 + 2.2;
-      pdf.setDrawColor(...COR_FIO).setLineWidth(0.2).line(MARGEM, fio, LARGURA - MARGEM, fio);
-      y = fio + 2.8;
+      y += h;
     }
+    y += 2;
   };
 
-  const paragrafo = (t: string, tamanho = compacta ? 8 : 9) => {
-    const entrelinha = tamanho * 0.5;
+  /** Texto longo dentro de uma caixa, com o rótulo no alto. Se não couber numa página, quebra. */
+  const bloco = (rotulo: string, texto: string) => {
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(tamanho);
-    pdf.setTextColor(...COR_TINTA);
-    const partes = quebrar(t, LARGURA - 2 * MARGEM);
-    garantir(partes.length * entrelinha + 1);
-    pdf.text(partes, MARGEM, y);
-    y += partes.length * entrelinha + 1;
+    pdf.setFontSize(tamanhoCampo);
+    const partes = quebrar(texto, LARG_UTIL - 6);
+    let inicio = 0;
+    while (inicio < partes.length) {
+      const passo = compacta ? 3.5 : 4;
+      const cabe = Math.max(1, Math.floor((ALTURA_UTIL - y - 7) / passo));
+      const trecho = partes.slice(inicio, inicio + cabe);
+      const h = 4.6 + trecho.length * passo + 1.6;
+      garantir(h);
+      caixa(MARGEM, y, LARG_UTIL, h);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(6.8);
+      pdf.setTextColor(...COR_CINZA);
+      if (inicio === 0) pdf.text(rotulo.toUpperCase(), MARGEM + 2, y + 3.4);
+      pdf.setFontSize(tamanhoCampo);
+      pdf.setTextColor(...COR_TINTA);
+      pdf.text(trecho, MARGEM + 3, y + 4.6 + passo);
+      y += h;
+      inicio += trecho.length;
+      if (inicio < partes.length) {
+        pdf.addPage();
+        y = MARGEM;
+      }
+    }
+    y += 2;
   };
 
-  /** Assinaturas: uma ou duas colunas, cada uma com linha, nome e descrição. */
+  /** Assinaturas em caixas lado a lado: linha, nome e descrição, como nos documentos impressos. */
   const assinaturas = (blocos: { nome: string; descricao: string }[]) => {
-    garantir(26);
-    y += compacta ? 5 : 10;
-    const colunas = blocos.length === 1 ? [LARGURA / 2] : [LARGURA / 4 + MARGEM / 2, (3 * LARGURA) / 4 - MARGEM / 2];
+    garantir(32);
+    y += compacta ? 1 : 4;
+    const w = LARG_UTIL / blocos.length;
     blocos.forEach((b, i) => {
-      const cx = colunas[i];
-      pdf.setDrawColor(...COR_TINTA).setLineWidth(0.3).line(cx - 35, y, cx + 35, y);
+      const x = MARGEM + i * w;
+      caixa(x, y, w, 26);
+      pdf.setDrawColor(...COR_TINTA).setLineWidth(0.3).line(x + 8, y + 16, x + w - 8, y + 16);
       pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(8.5);
+      pdf.setFontSize(8);
       pdf.setTextColor(...COR_TINTA);
-      pdf.text(b.nome, cx, y + 4.5, { align: 'center' });
+      pdf.text(b.nome, x + w / 2, y + 20, { align: 'center' });
       pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(7.5);
+      pdf.setFontSize(6.8);
       pdf.setTextColor(...COR_CINZA);
-      pdf.text(b.descricao, cx, y + 8.5, { align: 'center' });
+      pdf.text(quebrar(b.descricao, w - 6)[0] ?? '', x + w / 2, y + 23.5, { align: 'center' });
     });
-    y += 12;
+    y += compacta ? 27 : 30;
   };
 
   /** Termo de compromisso: registro completo da empresa, compromisso e assinatura do representante legal. */
   const corpoTermo = () => {
     const reg = autuado as unknown as RegistroDoCadastro;
     secao('Identificação da empresa');
-    grade(pairsDoCadastro(autuado));
+    tabela(pairsDoCadastro(autuado));
     secao('Inscrição no CADEX');
-    grade([
+    tabela([
       ['Situação', texto(reg.situacao_cadastro)],
       ['Processo', texto(reg.processo_numero)],
       ['Data do requerimento', data(reg.data_requerimento)],
@@ -213,11 +247,15 @@ async function montarPdf(
       ['Válida até', data(reg.validade_ate)],
     ]);
     secao('Compromisso');
-    for (const p of TEXTO_TERMO_COMPROMISSO.compromisso) paragrafo(p);
+    bloco('Compromisso assumido', TEXTO_TERMO_COMPROMISSO.compromisso.join('\n\n'));
     secao('Responsabilidade pelas informações');
-    for (const p of TEXTO_TERMO_COMPROMISSO.responsabilidade) paragrafo(p);
-    y += 4;
-    paragrafo(`${texto(dados.local)}, ${data(dados.data)}.`);
+    bloco('Responsabilidade', TEXTO_TERMO_COMPROMISSO.responsabilidade.join('\n\n'));
+    garantir(8);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(tamanhoCampo);
+    pdf.setTextColor(...COR_TINTA);
+    pdf.text(`${texto(dados.local)}, ${data(dados.data)}.`, MARGEM, y + 4);
+    y += 8;
     assinaturas([{ nome: texto(reg.representante), descricao: 'Representante legal da empresa' }]);
   };
 
@@ -225,16 +263,14 @@ async function montarPdf(
   const corpoCertidao = () => {
     const reg = autuado as unknown as RegistroDoCadastro;
     secao('Identificação da empresa');
-    grade(pairsDoCadastro(autuado));
+    tabela(pairsDoCadastro(autuado));
     secao('Responsável técnico');
     const rts = Array.isArray(reg.responsaveis) ? reg.responsaveis : [];
-    if (rts.length === 0) {
-      paragrafo('Nenhum responsável técnico ativo cadastrado na data de emissão.');
-    } else {
-      for (const rt of rts) paragrafo(textoResponsavel(rt));
-    }
+    bloco('Responsável técnico', rts.length === 0
+      ? 'Nenhum responsável técnico ativo cadastrado na data de emissão.'
+      : rts.map((rt) => textoResponsavel(rt)).join('\n\n'));
     secao('Certidão');
-    for (const p of textoCertidaoRegularidade(reg, doc.emitido_em)) paragrafo(p);
+    bloco('Certifica-se que', textoCertidaoRegularidade(reg, doc.emitido_em).join('\n\n'));
     assinaturas([{
       nome: texto(dados.fiscal_nome),
       descricao: `Fiscal responsável pela emissão · Matrícula ${texto(dados.fiscal_matricula)}`,
@@ -244,7 +280,7 @@ async function montarPdf(
   /** Autos (notificação, infração, embargo, apreensão): identificação, fato, conteúdo e recebimento. */
   const corpoAuto = () => {
     secao('Identificação do autuado');
-    grade([
+    tabela([
       ['Razão social', texto(autuado.razao_social)],
       ['Nome fantasia', texto(autuado.nome_fantasia)],
       ['CPF/CNPJ', texto(autuado.cnpj)],
@@ -254,7 +290,7 @@ async function montarPdf(
       ['Telefone', texto(autuado.telefone)],
     ]);
 
-    secao('Fato');
+    secao('Fato constatado');
     const fato: [string, string][] = [
       ['Local da infração', texto(dados.local_infracao)],
       ['Data e hora', `${dados.data ? dataExibicao(String(dados.data)) : '—'} às ${texto(dados.hora)}`],
@@ -262,7 +298,7 @@ async function montarPdf(
     ];
     if (dados.licenca) fato.push(['Licença nº', String(dados.licenca)]);
     if (dados.termo_permissao) fato.push(['Termo de permissão', String(dados.termo_permissao)]);
-    grade(fato);
+    tabela(fato);
 
     const corpo = CAMPOS_DOCUMENTO[doc.tipo].filter((c) => !CHAVES_FIXAS.has(c.chave) && !c.chave.startsWith('fiscal_'));
     const campos = corpo.filter((c) => c.tipo !== 'area' || dados[c.chave]);
@@ -275,19 +311,11 @@ async function montarPdf(
       else pares.push([c.rotulo, v]);
     }
     if (pares.length > 0 || textos.length > 0) secao('Conteúdo');
-    grade(pares);
-    for (const t of textos) {
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(7.5);
-      pdf.setTextColor(...COR_CINZA);
-      garantir(8);
-      pdf.text(t.rotulo, MARGEM, y);
-      y += 4;
-      paragrafo(t.valor);
-    }
+    tabela(pares);
+    for (const t of textos) bloco(t.rotulo, t.valor);
 
     secao('Recebimento');
-    paragrafo(texto(dados.recebimento));
+    bloco('Forma de recebimento', texto(dados.recebimento));
 
     // O fiscal assina com a identificação do cadastro; o autuado registra a situação de recebimento.
     assinaturas([
@@ -296,38 +324,49 @@ async function montarPdf(
     ]);
   };
 
-  // Cabeçalho: brasão na proporção original, órgão e número do documento.
-  const ALTURA_BRASAO = 16;
-  let recuo = MARGEM;
+  // Cabeçalho oficial: brasão centralizado, órgão em caixa-alta e a faixa com o tipo do documento.
+  const ALTURA_BRASAO = compacta ? 18 : 22;
   if (logo) {
     const { width, height } = pdf.getImageProperties(logo);
     const largura = ALTURA_BRASAO * (width / height);
-    pdf.addImage(logo, 'PNG', MARGEM, y, largura, ALTURA_BRASAO);
-    recuo = MARGEM + largura + 5;
+    pdf.addImage(logo, 'PNG', (LARGURA - largura) / 2, y, largura, ALTURA_BRASAO);
   }
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(10);
+  y += ALTURA_BRASAO + 2;
+  const orgao: [string, number, [number, number, number], 'normal' | 'bold'][] = [
+    ['ESTADO DO RIO DE JANEIRO', 7.5, COR_CINZA, 'normal'],
+    ['PREFEITURA MUNICIPAL DE NITERÓI', 9.5, COR_TINTA, 'bold'],
+    ['SECRETARIA DE CONSERVAÇÃO E SERVIÇOS PÚBLICOS', 7.5, COR_CINZA, 'normal'],
+    ['FISCALIZAÇÃO DE SERVIÇOS CONCEDIDOS', 7.5, COR_MARCA, 'bold'],
+  ];
+  for (const [t, tamanho, cor, estilo] of orgao) {
+    pdf.setFont('helvetica', estilo);
+    pdf.setFontSize(tamanho);
+    pdf.setTextColor(...cor);
+    pdf.text(t, LARGURA / 2, y + 3.5, { align: 'center' });
+    y += compacta ? 3.6 : 4.2;
+  }
+  y += 3;
   pdf.setTextColor(...COR_TINTA);
-  pdf.text('PREFEITURA MUNICIPAL DE NITERÓI', recuo, y + 4.5);
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(8.5);
-  pdf.setTextColor(...COR_CINZA);
-  pdf.text('SECRETARIA DE CONSERVAÇÃO E SERVIÇOS PÚBLICOS', recuo, y + 9.5);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setTextColor(...COR_MARCA);
-  pdf.text('FISCALIZAÇÃO DE SERVIÇOS CONCEDIDOS', recuo, y + 14);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(9);
-  pdf.setTextColor(...COR_TINTA);
-  pdf.text(`Documento nº ${numeroDocumento(doc.numero, doc.tipo)}`, LARGURA - MARGEM, y + 4.5, { align: 'right' });
-  y += ALTURA_BRASAO + 6;
-  pdf.setDrawColor(...COR_FIO).setLineWidth(0.3).line(MARGEM, y, LARGURA - MARGEM, y);
 
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(14);
-  pdf.setTextColor(...COR_TINTA);
-  pdf.text(TITULO_DOCUMENTO[doc.tipo].toUpperCase(), LARGURA / 2, y + 9, { align: 'center' });
-  y += 14;
+  const titulo = TITULO_DOCUMENTO[doc.tipo].toUpperCase();
+  faixa(titulo);
+  if (doc.tipo === 'certidao_regularidade' || doc.tipo === 'termo_compromisso') {
+    const validade = (autuado.validade_ate as string | null | undefined) ?? null;
+    tabela([
+      ['Número', numeroDocumento(doc.numero, doc.tipo)],
+      ['Emitida em', instanteExibicao(doc.emitido_em)],
+      ['Válida até', validade ? data(validade) : 'Sem validade própria'],
+      ['Código de controle', codigoLegivel(doc.codigo_verificacao)],
+    ], 4);
+  } else {
+    tabela([
+      ['Auto nº', numeroDocumento(doc.numero, doc.tipo)],
+      ['Data', data(dados.data)],
+      ['Hora', texto(dados.hora)],
+      ['Processo', texto(dados.processo)],
+    ], 4);
+  }
+  y += 2;
 
   if (doc.tipo === 'termo_compromisso') corpoTermo();
   else if (doc.tipo === 'certidao_regularidade') corpoCertidao();
@@ -341,23 +380,24 @@ async function montarPdf(
     ? (((dados.autuado ?? {}) as Dados).validade_ate as string | null) ?? null
     : null;
   pdf.setFillColor(238, 246, 246);
-  pdf.rect(MARGEM, BLOCO_Y, LARGURA - 2 * MARGEM, 5, 'F');
+  pdf.rect(MARGEM, BLOCO_Y, LARG_UTIL, 5, 'F');
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(7.5);
   pdf.setTextColor(...COR_MARCA);
-  pdf.text(quebrar(tarjaDoDocumento(doc, validadeCertidao), LARGURA - 2 * MARGEM - 4)[0], MARGEM + 2, BLOCO_Y + 3.4);
+  pdf.text(quebrar(tarjaDoDocumento(doc, validadeCertidao), LARG_UTIL - 4)[0], MARGEM + 2, BLOCO_Y + 3.4);
   const qr = await QRCode.toDataURL(`${origem}/documento/${compacto}`, { margin: 0, errorCorrectionLevel: 'M', width: 240 });
-  pdf.addImage(qr, 'PNG', MARGEM, BLOCO_Y + 6.5, 15, 15);
+  caixa(MARGEM, BLOCO_Y + 6, 19, 19);
+  pdf.addImage(qr, 'PNG', MARGEM + 2, BLOCO_Y + 8, 15, 15);
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(7.5);
   pdf.setTextColor(...COR_CINZA);
-  pdf.text('Verifique a autenticidade e a situação atual em:', MARGEM + 18, BLOCO_Y + 9.5);
+  pdf.text('Verifique a autenticidade e a situação atual em:', MARGEM + 22, BLOCO_Y + 9.5);
   pdf.setFont('helvetica', 'bold');
   pdf.setTextColor(...COR_TINTA);
-  pdf.text(`${origem.replace(/^https?:\/\//, '')}/documento/${codigoLegivel(doc.codigo_verificacao)}`, MARGEM + 18, BLOCO_Y + 13.5);
+  pdf.text(`${origem.replace(/^https?:\/\//, '')}/documento/${codigoLegivel(doc.codigo_verificacao)}`, MARGEM + 22, BLOCO_Y + 13.5);
   pdf.setFont('helvetica', 'normal');
   pdf.setTextColor(...COR_CINZA);
-  pdf.text('Ou aponte a câmera para o QR Code.', MARGEM + 18, BLOCO_Y + 17.5);
+  pdf.text('Ou aponte a câmera para o QR Code.', MARGEM + 22, BLOCO_Y + 17.5);
 
   // Rodapé em todas as páginas: código de verificação e página.
   const total = pdf.getNumberOfPages();

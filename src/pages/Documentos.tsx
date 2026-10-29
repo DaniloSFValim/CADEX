@@ -221,7 +221,7 @@ function LinhaEmitido({ documento }: { documento: DocumentoOficial }) {
 /** Brasão para o cabeçalho do PDF, como data URL. Se falhar, o PDF sai sem ele. */
 async function lerLogo(): Promise<string | undefined> {
   try {
-    const r = await fetch('/logo-prefeitura-seconser.png');
+    const r = await fetch('/brasao-oficial.png');
     if (!r.ok) return undefined;
     const blob = await r.blob();
     return await new Promise<string>((resolve, reject) => {
