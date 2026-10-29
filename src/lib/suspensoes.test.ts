@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { diasAberto, suspensaoAtiva, type Suspensao } from './suspensoes';
 
-const sus = (o: Partial<Suspensao>): Suspensao => ({ id: 's', licenca_id: 'l', inicio: '2026-10-01', fim: null, motivo: 'x', criado_em: '', ...o });
+const sus = (o: Partial<Suspensao>): Suspensao => ({ id: 's', licenca_id: 'l', inicio: '2026-10-01', fim: null, motivo: 'x', origem: 'pedido_da_empresa', criado_em: '', ...o });
 
 describe('suspensão e pedidos de correção', () => {
   it('a suspensão ativa é a que não tem fim', () => {

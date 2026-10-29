@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react';
 import { Button, ErrorNote, Field, inputClass } from './ui';
 import { dataBR } from './Situacao';
 import { useAuth } from '../lib/auth';
-import type { LicencaComTrechos } from '../lib/licencas';
+import { dentroDoPrazoDeAcao, prazoDeAcaoAte, type LicencaComTrechos } from '../lib/licencas';
 import {
-  listarPedidosCorrecao, listarSuspensoes, pedirCorrecao, resolverCorrecao, retomarLicenca, suspenderLicenca, suspensaoAtiva,
-  type PedidoCorrecao, type Suspensao,
+  listarPedidosCorrecao, listarSuspensoes, ORIGEM_SUSPENSAO_LABEL, pedirCorrecao, resolverCorrecao, retomarLicenca, suspenderLicenca, suspensaoAtiva,
+  type OrigemSuspensao, type PedidoCorrecao, type Suspensao,
 } from '../lib/suspensoes';
 
 /**
@@ -23,6 +23,7 @@ export function SuspensaoECorrecoes({ licenca, hoje, onMudou }: {
   const [inicio, setInicio] = useState(hoje);
   const [fim, setFim] = useState(hoje);
   const [motivo, setMotivo] = useState('');
+  const [origem, setOrigem] = useState<OrigemSuspensao>('pedido_da_empresa');
   const [novoPedido, setNovoPedido] = useState('');
   const [resolucoes, setResolucoes] = useState<Record<string, string>>({});
 
@@ -47,7 +48,8 @@ export function SuspensaoECorrecoes({ licenca, hoje, onMudou }: {
 
   const ativa = suspensaoAtiva(suspensoes);
   const historico = suspensoes.filter((s) => s.fim !== null);
-  const podeSuspender = podeLicenciar && licenca.situacao === 'deferida' && !licenca.concluida_em;
+  const noPrazo = dentroDoPrazoDeAcao(licenca.inicio_previsto, hoje);
+  const podeSuspender = podeLicenciar && noPrazo && licenca.situacao === 'deferida' && !licenca.concluida_em;
   const abertos = pedidos.filter((p) => p.resolvido_em === null);
   const resolvidos = pedidos.filter((p) => p.resolvido_em !== null);
 
@@ -57,7 +59,7 @@ export function SuspensaoECorrecoes({ licenca, hoje, onMudou }: {
       {ativa ? (
         <>
           <p className="mt-2 text-sm text-tinta-700">
-            Suspensa desde <strong>{dataBR(ativa.inicio)}</strong>: {ativa.motivo}. Os dias suspensos não contam na validade.
+            Suspensa desde <strong>{dataBR(ativa.inicio)}</strong>, determinada pela fiscalização {ORIGEM_SUSPENSAO_LABEL[ativa.origem]}: {ativa.motivo}. Os dias suspensos não contam na validade.
           </p>
           {podeLicenciar && (
             <div className="mt-4 flex flex-wrap items-end gap-3">
@@ -76,18 +78,29 @@ export function SuspensaoECorrecoes({ licenca, hoje, onMudou }: {
         <p className="mt-2 text-sm text-tinta-700">Não está suspensa.</p>
       )}
 
+      {podeLicenciar && !ativa && !noPrazo && licenca.inicio_previsto && (
+        <p className="mt-3 text-sm text-tinta-600">
+          Fora do prazo: a suspensão só é pedida até {dataBR(prazoDeAcaoAte(licenca.inicio_previsto))}, 30 dias a partir do início.
+        </p>
+      )}
       {podeSuspender && !ativa && (
         <div className="mt-4 grid gap-3 sm:grid-cols-[auto_1fr_auto] sm:items-end">
           <Field label="Suspender a partir de">
             <input type="date" className={inputClass} value={inicio} min={licenca.inicio_previsto ?? undefined} max={hoje}
                    onChange={(e) => setInicio(e.target.value)} />
           </Field>
+          <Field label="Origem">
+            <select className={inputClass} value={origem} onChange={(e) => setOrigem(e.target.value as OrigemSuspensao)}>
+              <option value="pedido_da_empresa">{ORIGEM_SUSPENSAO_LABEL.pedido_da_empresa}</option>
+              <option value="ato_proprio">{ORIGEM_SUSPENSAO_LABEL.ato_proprio}</option>
+            </select>
+          </Field>
           <Field label="Motivo">
             <input type="text" className={inputClass} value={motivo} maxLength={500}
                    onChange={(e) => setMotivo(e.target.value)} />
           </Field>
           <Button type="button" variant="secondary" disabled={busy || !inicio || motivo.trim().length < 3}
-                  onClick={() => void acao(async () => { await suspenderLicenca(licenca.id, inicio, motivo.trim()); setMotivo(''); })}>
+                  onClick={() => void acao(async () => { await suspenderLicenca(licenca.id, inicio, motivo.trim(), origem); setMotivo(''); })}>
             Suspender
           </Button>
         </div>
@@ -98,7 +111,7 @@ export function SuspensaoECorrecoes({ licenca, hoje, onMudou }: {
           <h3 className="mt-5 text-sm font-semibold text-tinta-800">Suspensões anteriores</h3>
           <ul className="mt-2 space-y-1 text-sm text-tinta-700">
             {historico.map((s) => (
-              <li key={s.id}>{dataBR(s.inicio)} a {dataBR(s.fim!)}: {s.motivo}</li>
+              <li key={s.id}>{dataBR(s.inicio)} a {dataBR(s.fim!)}, {ORIGEM_SUSPENSAO_LABEL[s.origem]}: {s.motivo}</li>
             ))}
           </ul>
         </>

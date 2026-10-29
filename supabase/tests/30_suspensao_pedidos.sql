@@ -71,14 +71,14 @@ end $$;
 
 -- 1. Consulta não suspende.
 select set_config('cadex.test_user_id', '00000000-0000-4000-8000-0000000000e2', true);
-select pg_temp.recusa(format('select public.suspender_licenca(%L, %L, %L)', (select id from ids where nome = 'a'),
-  to_char(current_date - 5,'YYYY-MM-DD'), 'Pedido da obra'), 'Sem permissão', 'consulta não pode suspender');
+select pg_temp.recusa(format('select public.suspender_licenca(%L, %L, %L, %L)', (select id from ids where nome = 'a'),
+  to_char(current_date - 5,'YYYY-MM-DD'), 'Pedido da obra', 'pedido_da_empresa'), 'Sem permissão', 'consulta não pode suspender');
 
 -- 2. Gestor suspende desde 5 dias atrás: aparece suspensa no mapa público.
 select set_config('cadex.test_user_id', '00000000-0000-4000-8000-0000000000e1', true);
 do $$
 begin
-  perform public.suspender_licenca((select id from ids where nome = 'a'), current_date - 5, 'Obra parada por ordem da fiscalização');
+  perform public.suspender_licenca((select id from ids where nome = 'a'), current_date - 5, 'Obra parada por ordem da fiscalização', 'ato_proprio');
   perform pg_temp.assert((select count(*) from licenca_suspensoes where licenca_id = (select id from ids where nome = 'a') and fim is null) = 1,
     'suspensão ativa criada');
   perform pg_temp.assert((select elem->>'situacao' from jsonb_array_elements(public.obras_publicas()) elem
@@ -87,8 +87,8 @@ begin
 end $$;
 
 -- 3. Segunda suspensão ativa é recusada.
-select pg_temp.recusa(format('select public.suspender_licenca(%L, %L, %L)', (select id from ids where nome = 'a'),
-  to_char(current_date - 3,'YYYY-MM-DD'), 'Outra'), null, 'não pode haver duas suspensões ativas');
+select pg_temp.recusa(format('select public.suspender_licenca(%L, %L, %L, %L)', (select id from ids where nome = 'a'),
+  to_char(current_date - 3,'YYYY-MM-DD'), 'Outra', 'pedido_da_empresa'), null, 'não pode haver duas suspensões ativas');
 
 -- 4. Retomar em 2 dias atrás: suspensão de 4 dias (inclusive) estende a validade.
 do $$
@@ -116,5 +116,25 @@ begin
   perform pg_temp.assert((select count(*) from licenca_pedidos_correcao where licenca_id = (select id from ids where nome = 'a') and resolvido_em is null) = 0,
     'pedido resolvido sai dos abertos');
 end $$;
+
+
+-- 6. Fora dos 30 dias a partir do início, não se suspende nem se prorroga.
+select set_config('cadex.test_user_id', '00000000-0000-4000-8000-0000000000e1', true);
+do $$
+declare
+  op uuid := (select id from ids where nome = 'op');
+  f uuid;
+begin
+  f := public.salvar_licenca(jsonb_build_object('setor','telecom','processo_sei','NIT-050120/000931/2026','numero','931/2026',
+    'tipo_intervencao','obra','tipos_obra',array['vala'],'escopo','Fora do prazo','executora_id',op,
+    'protocolo_data',to_char(current_date - 60,'YYYY-MM-DD'),'situacao','deferida',
+    'inicio_previsto',to_char(current_date - 40,'YYYY-MM-DD'),'fim_previsto',to_char(current_date - 10,'YYYY-MM-DD')),
+    jsonb_build_array(jsonb_build_object('logradouro', 'Rua Fora', 'inicio_lat', -22.9, 'inicio_lng', -43.1)));
+  insert into ids values ('f', f);
+end $$;
+select pg_temp.recusa(format('select public.suspender_licenca(%L, %L, %L, %L)', (select id from ids where nome = 'f'),
+  to_char(current_date - 35,'YYYY-MM-DD'), 'Fora do prazo', 'pedido_da_empresa'), '30 dias', 'suspensão fora dos 30 dias deve ser recusada');
+select pg_temp.recusa(format('select public.prorrogar_licenca(%L, %L)', (select id from ids where nome = 'f'),
+  to_char(current_date + 20,'YYYY-MM-DD')), '30 dias', 'prorrogação fora dos 30 dias deve ser recusada');
 
 rollback;

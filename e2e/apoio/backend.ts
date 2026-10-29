@@ -261,9 +261,9 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
       return vazio();
     }
     if (caminho === 'rpc/suspender_licenca') {
-      const { p_id, p_inicio, p_motivo } = corpo as { p_id: string; p_inicio: string; p_motivo: string };
+      const { p_id, p_inicio, p_motivo, p_origem } = corpo as { p_id: string; p_inicio: string; p_motivo: string; p_origem: string };
       const n = (estado.suspensoes ?? []).length;
-      estado.suspensoes = [...(estado.suspensoes ?? []), { id: uuid(9500 + n), licenca_id: p_id, inicio: p_inicio, fim: null, motivo: p_motivo, criado_em: new Date().toISOString() }];
+      estado.suspensoes = [...(estado.suspensoes ?? []), { id: uuid(9500 + n), licenca_id: p_id, inicio: p_inicio, fim: null, motivo: p_motivo, origem: p_origem, criado_em: new Date().toISOString() }];
       return vazio();
     }
     if (caminho === 'rpc/retomar_licenca') {

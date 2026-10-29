@@ -12,6 +12,7 @@ test.describe('prorrogação de validade contada', () => {
     await page.getByLabel('Buscar licença').fill('511/2026');
     const campo = page.getByLabel('Nova validade de 511/2026');
     await campo.fill(dia(50));
+    await page.getByLabel('Pedido da empresa para 511/2026').check();
     await page.getByRole('button', { name: 'Prorrogar', exact: true }).click();
     await expect(page.getByText('1ª prorrogação')).toBeVisible();
     await campo.fill(dia(80));

@@ -63,8 +63,8 @@ declare
 begin
   a := public.salvar_licenca(jsonb_build_object('setor','telecom','processo_sei','NIT-050120/000901/2026','numero','901/2026',
     'tipo_intervencao','obra','tipos_obra',array['vala'],'escopo','Prorrogável','executora_id',op,
-    'protocolo_data','2026-09-15','situacao','deferida',
-    'inicio_previsto','2026-10-01','fim_previsto','2026-11-30'),
+    'protocolo_data',to_char(current_date - 40,'YYYY-MM-DD'),'situacao','deferida',
+    'inicio_previsto',to_char(current_date - 5,'YYYY-MM-DD'),'fim_previsto',to_char(current_date + 60,'YYYY-MM-DD')),
     jsonb_build_array(jsonb_build_object('logradouro', 'Rua Mem de Sá', 'inicio_lat', -22.905, 'inicio_lng', -43.11)));
   insert into ids values ('a', a);
 end $$;
@@ -74,27 +74,27 @@ do $$
 declare r licencas;
 begin
   select * into r from licencas where id = (select id from ids where nome = 'a');
-  perform pg_temp.assert(r.validade_ate = date '2026-10-31' and r.prorrogacoes = 0, 'validade inicial = início + 30, sem prorrogação');
+  perform pg_temp.assert(r.validade_ate = current_date + 25 and r.prorrogacoes = 0, 'validade inicial = início + 30, sem prorrogação');
 end $$;
 
 -- 2. Gestor prorroga: vai para 1ª prorrogação.
 do $$
 begin
-  perform public.prorrogar_licenca((select id from ids where nome = 'a'), date '2026-12-15');
-  perform pg_temp.assert((select validade_ate = date '2026-12-15' and prorrogacoes = 1 from licencas where id = (select id from ids where nome = 'a')),
+  perform public.prorrogar_licenca((select id from ids where nome = 'a'), current_date + 40);
+  perform pg_temp.assert((select validade_ate = current_date + 40 and prorrogacoes = 1 from licencas where id = (select id from ids where nome = 'a')),
     'primeira prorrogação grava a data e soma 1');
 end $$;
 
 -- 3. Segunda prorrogação: 2ª.
 do $$
 begin
-  perform public.prorrogar_licenca((select id from ids where nome = 'a'), date '2027-02-15');
+  perform public.prorrogar_licenca((select id from ids where nome = 'a'), current_date + 55);
   perform pg_temp.assert((select prorrogacoes = 2 from licencas where id = (select id from ids where nome = 'a')),
     'segunda prorrogação soma 2');
 end $$;
 
 -- 4. Data que não é posterior à atual é recusada, e a contagem não muda.
-select pg_temp.recusa(format('select public.prorrogar_licenca(%L, %L)', (select id from ids where nome = 'a'), '2027-01-01'),
+select pg_temp.recusa(format('select public.prorrogar_licenca(%L, %L)', (select id from ids where nome = 'a'), to_char(current_date + 30,'YYYY-MM-DD')),
   'posterior', 'prorrogar para data anterior à atual deve ser recusado');
 do $$
 begin
@@ -109,10 +109,10 @@ select pg_temp.recusa(format('select public.prorrogar_licenca(%L, %L)', (select 
 
 -- 6. Mudar o início não recalcula uma validade já prorrogada, e a contagem fica.
 select set_config('cadex.test_user_id', '00000000-0000-4000-8000-0000000000d1', true);
-update licencas set inicio_previsto = date '2026-10-05' where id = (select id from ids where nome = 'a');
+update licencas set inicio_previsto = current_date - 3 where id = (select id from ids where nome = 'a');
 do $$
 begin
-  perform pg_temp.assert((select validade_ate = date '2027-02-15' and prorrogacoes = 2 from licencas where id = (select id from ids where nome = 'a')),
+  perform pg_temp.assert((select validade_ate = current_date + 55 and prorrogacoes = 2 from licencas where id = (select id from ids where nome = 'a')),
     'alterar o início preserva a prorrogação e a contagem');
 end $$;
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   anteriorResolucao, cadastroRetroativo, desempenhoExecutora, erroPeriodoObra, estadoLicenca, lerCoordenada, linkMapa, mesmaEmpresaNosPapeis,
-  nomeExecutora, pendenciasLicencas, rotuloProrrogacao, situacoesRegistraveis, urlPublicaLicenca,
+  nomeExecutora, pendenciasLicencas, prazoDeAcaoAte, dentroDoPrazoDeAcao, rotuloProrrogacao, situacoesRegistraveis, urlPublicaLicenca,
 } from './licencas';
 
 describe('licença anterior à Resolução', () => {
@@ -214,5 +214,17 @@ describe('prorrogação contada', () => {
     expect(rotuloProrrogacao(1)).toBe('1ª prorrogação');
     expect(rotuloProrrogacao(2)).toBe('2ª prorrogação');
     expect(rotuloProrrogacao(3)).toBe('3ª prorrogação');
+  });
+});
+
+describe('prazo de ação: suspensão e prorrogação nos 30 dias a partir do início', () => {
+  it('vale até o 30º dia a partir do início, inclusive', () => {
+    expect(prazoDeAcaoAte('2026-10-01')).toBe('2026-10-31');
+    expect(dentroDoPrazoDeAcao('2026-10-01', '2026-10-31')).toBe(true);
+    expect(dentroDoPrazoDeAcao('2026-10-01', '2026-11-01')).toBe(false);
+  });
+
+  it('sem início não há prazo para agir', () => {
+    expect(dentroDoPrazoDeAcao(null, '2026-10-01')).toBe(false);
   });
 });
