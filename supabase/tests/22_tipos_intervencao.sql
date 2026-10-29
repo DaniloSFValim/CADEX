@@ -51,8 +51,9 @@ insert into ids select 'org', id from orgaos_publicos where sigla = 'SEMOBI-T';
 -- 1. Carga inicial (como dono da tabela).
 do $$
 begin
-  perform pg_temp.assert((select count(*) from tipos_intervencao where setor = 'telecom') = 9,
-    'telecom deveria ter exatamente os 9 tipos do art. 10');
+  -- 9 da carga inicial + caixa R2 e galeria (migração 20261102120000).
+  perform pg_temp.assert((select count(*) from tipos_intervencao where setor = 'telecom') = 11,
+    'telecom deveria ter exatamente os 11 tipos do art. 10');
   perform pg_temp.assert(not exists (select 1 from tipos_intervencao where setor = 'telecom' and codigo = 'outros'),
     'telecom não pode ter "outros"');
   perform pg_temp.assert(exists (select 1 from tipos_intervencao where setor = 'viario' and codigo = 'bicicletario' and ativo),
