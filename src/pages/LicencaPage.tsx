@@ -947,12 +947,11 @@ function Conflitos({ licencaId }: { licencaId: string }) {
 }
 
 /** QR Code da placa do canteiro (art. 14) e atalho para imprimir. */
-/** Validade da licença: 30 dias a partir do início, prorrogável. Órgão público é registro, sem prazo. */
+/** Validade da licença: 30 dias a partir do início, prorrogável, para qualquer licença. */
 function Validade({ licenca, hoje, onProrrogada }: { licenca: LicencaComTrechos; hoje: string; onProrrogada: () => Promise<void> }) {
   const [nova, setNova] = useState('');
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState<unknown>(null);
-  const semPrazo = !!licenca.orgao_contratante_id;
   const vencida = !!licenca.validade_ate && hoje > licenca.validade_ate;
   const prorrogar = async () => {
     setBusy(true);
@@ -970,9 +969,7 @@ function Validade({ licenca, hoje, onProrrogada }: { licenca: LicencaComTrechos;
   return (
     <section className="cartao mb-10 p-5" aria-label="Validade da licença">
       <h2 className="font-display text-base font-bold text-tinta-900">Validade</h2>
-      {semPrazo ? (
-        <p className="mt-2 text-sm text-tinta-700">Licença vinculada a órgão público: registro para controle, sem prazo de validade.</p>
-      ) : (
+      <>
         <>
           <p className="mt-2 text-sm text-tinta-700">
             {licenca.validade_ate
@@ -990,7 +987,7 @@ function Validade({ licenca, hoje, onProrrogada }: { licenca: LicencaComTrechos;
           </div>
           <div className="mt-2"><ErrorNote error={erro} /></div>
         </>
-      )}
+      </>
     </section>
   );
 }
