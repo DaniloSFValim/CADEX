@@ -262,7 +262,6 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
       void _executora;
       return responder({ ...resto, contratante: null, trechos: [], numero: achada.numero });
     }
-    if (caminho === 'rpc/licenca_publica_historico') return responder([]);
 
     semSimulacao.push(`${req.method()} ${caminho}`);
     return responder(unico ? {} : []);
