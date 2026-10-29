@@ -4,10 +4,10 @@ import { Cabecalho } from '../components/Cabecalho';
 import { Rodape } from '../components/Rodape';
 import { ErrorNote, Spinner, linkTexto } from '../components/ui';
 import { dataBR } from '../components/Situacao';
-import { SETOR_LABEL, SITUACAO_LABEL, type SituacaoEfetiva } from '../lib/empresas';
+import { SETOR_LABEL } from '../lib/empresas';
 import { listarTipos, mapaRotulosTipos, rotuloDoTipo } from '../lib/tiposIntervencao';
 import {
-  ORIGEM_LABEL, TIPO_INTERVENCAO_LABEL, buscarLicencaPublica, buscarTrilhaPublica, linkMapa, type EventoPublico,
+  ORIGEM_LABEL, TIPO_INTERVENCAO_LABEL, buscarLicencaPublica, linkMapa,
   type LicencaPublica as Dados, type SituacaoPublica,
 } from '../lib/licencas';
 
@@ -30,7 +30,7 @@ const VEREDITO: Record<SituacaoPublica, { titulo: string; cor: string; frase: (d
   },
   concluida: {
     titulo: 'Obra concluída', cor: 'border-tinta-400 bg-tinta-50 text-tinta-700',
-    frase: (d) => `Concluída em ${dataBR(d.concluida_em)}. Não há obra autorizada neste local por esta licença.`,
+    frase: () => 'A obra ou serviço desta licença foi concluída. Não há obra autorizada neste local por ela.',
   },
   registro: {
     titulo: 'Registro, sem prazo', cor: 'border-tinta-400 bg-tinta-50 text-tinta-700',
@@ -50,11 +50,7 @@ export default function LicencaPublica() {
   const [d, setD] = useState<Dados | null | undefined>(undefined);
   const [error, setError] = useState<unknown>(null);
 
-  const [trilha, setTrilha] = useState<EventoPublico[]>([]);
-
   useEffect(() => { buscarLicencaPublica(codigo).then(setD).catch(setError); }, [codigo]);
-  // A trilha é secundária: se falhar, a licença continua visível sem ela.
-  useEffect(() => { if (d) buscarTrilhaPublica(codigo).then(setTrilha).catch(() => setTrilha([])); }, [codigo, d]);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -76,20 +72,29 @@ export default function LicencaPublica() {
           </div>
         )}
         {d && <Conteudo d={d} />}
-        {d && trilha.length > 0 && <TrilhaPublica eventos={trilha} />}
       </main>
       <Rodape />
     </div>
   );
 }
 
+/**
+ * "Obra concluída" só aparece depois do fim do período. Dentro dele, a licença segue a data:
+ * vigente ou, se ainda não começou, aguardando o início.
+ */
+function situacaoExibida(d: Dados): SituacaoPublica {
+  if (d.situacao !== 'concluida') return d.situacao;
+  if (d.inicio_previsto && d.hoje < d.inicio_previsto) return 'aguardando_inicio';
+  if (!d.fim_previsto || d.hoje <= d.fim_previsto) return 'vigente';
+  return 'concluida';
+}
+
 function Conteudo({ d }: { d: Dados }) {
   const [rotulos, setRotulos] = useState<Record<string, string>>({});
   useEffect(() => { listarTipos().then((t) => setRotulos(mapaRotulosTipos(t))).catch(() => setRotulos({})); }, []);
-  const v = VEREDITO[d.situacao];
+  const v = VEREDITO[situacaoExibida(d)];
   // A executora pode faltar (registro sem empresa vinculada): a página mostra o que houver, sem quebrar.
   const executora = d.executora ?? { razao_social: '', nome_fantasia: null, codigo_cadex: null, situacao_cadex: null };
-  const sitCadex = executora.situacao_cadex as SituacaoEfetiva | null;
   return (
     <>
       <div className={`mt-4 rounded-2xl border p-5 sm:p-6 ${v.cor}`} role="status">
@@ -112,9 +117,7 @@ function Conteudo({ d }: { d: Dados }) {
         <Item rotulo="Empresa executora" largo>
           {nome(executora) || 'Não informada'}
           <span className="block text-sm text-tinta-500">
-            {executora.codigo_cadex && sitCadex
-              ? `${executora.codigo_cadex}; inscrição no CADEX hoje: ${SITUACAO_LABEL[sitCadex] ?? sitCadex}`
-              : 'Sem inscrição no CADEX: licença emitida antes do cadastro.'}
+            {executora.codigo_cadex ?? 'Sem inscrição no CADEX: licença emitida antes do cadastro.'}
           </span>
         </Item>
         {d.contratante && (
@@ -151,23 +154,6 @@ function Conteudo({ d }: { d: Dados }) {
         Para conferir a inscrição das empresas, use a <Link to="/consulta" className={linkTexto}>consulta pública do CADEX</Link>.
       </p>
     </>
-  );
-}
-
-/** Histórico da situação, em ordem cronológica. Só data e evento: nenhum dado de quem alterou. */
-function TrilhaPublica({ eventos }: { eventos: EventoPublico[] }) {
-  return (
-    <section className="mt-8" aria-labelledby="trilha-titulo">
-      <h2 id="trilha-titulo" className="font-display text-lg font-semibold text-tinta-900">Histórico da situação</h2>
-      <ol className="mt-3 divide-y divide-tinta-100 rounded-xl border border-tinta-200 bg-white">
-        {eventos.map((e) => (
-          <li key={`${e.data}-${e.evento}`} className="flex items-baseline justify-between gap-4 px-4 py-2.5 text-sm">
-            <span className="text-tinta-800">{e.evento}</span>
-            <time dateTime={e.data} className="tabular whitespace-nowrap text-tinta-500">{dataBR(e.data)}</time>
-          </li>
-        ))}
-      </ol>
-    </section>
   );
 }
 

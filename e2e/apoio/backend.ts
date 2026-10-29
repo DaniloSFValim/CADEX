@@ -260,9 +260,10 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
       if (!achada) return responder(null);
       const { executora: _executora, ...resto } = achada;
       void _executora;
-      return responder({ ...resto, contratante: null, trechos: [], numero: achada.numero });
+      const d = new Date();
+      const hoje = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      return responder({ ...resto, contratante: null, trechos: [], numero: achada.numero, hoje });
     }
-    if (caminho === 'rpc/licenca_publica_historico') return responder([]);
 
     semSimulacao.push(`${req.method()} ${caminho}`);
     return responder(unico ? {} : []);
