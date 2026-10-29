@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { gerarPdfDocumento } from './documentosPdf';
-import type { DocumentoOficial } from './documentos';
+import { TIPOS_DOCUMENTO, type DocumentoOficial } from './documentos';
+
+/** Número de páginas de um PDF: cada página é um objeto /Type /Page. */
+function paginas(bytes: ArrayBuffer): number {
+  return (new TextDecoder('latin1').decode(bytes).match(/\/Type\s*\/Page(?!s)/g) ?? []).length;
+}
 
 const registro: DocumentoOficial = {
   id: '00000000-0000-4000-8000-000000000010',
@@ -31,5 +36,16 @@ describe('PDF do documento emitido', () => {
     const a = await gerarPdfDocumento(registro);
     const b = await gerarPdfDocumento(registro);
     expect(a.byteLength).toBe(b.byteLength);
+  });
+
+  it.each(TIPOS_DOCUMENTO)('%s cabe em uma única folha A4', async (tipo) => {
+    const bytes = await gerarPdfDocumento({ ...registro, tipo });
+    expect(paginas(bytes)).toBe(1);
+  });
+
+  it('texto longo reduz a escala e continua em uma folha', async () => {
+    const longo = 'Fato constatado em vistoria no local, com detalhes e referências. '.repeat(40);
+    const bytes = await gerarPdfDocumento({ ...registro, dados: { ...registro.dados, descricao: longo } });
+    expect(paginas(bytes)).toBe(1);
   });
 });
