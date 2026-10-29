@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   CAMPOS_DOCUMENTO, TIPOS_DOCUMENTO, TITULO_DOCUMENTO, TEXTO_TERMO_COMPROMISSO, textoCertidaoRegularidade, codigoLegivel, dinheiroParaNumero,
-  montarDados, numeroDocumento, registroDoCadastro, validarDados, valorPorExtenso, autuadoDoCadastro,
+  montarDados, numeroDocumento, registroDoCadastro, validadeDocumento, validarDados, valorPorExtenso, autuadoDoCadastro,
 } from './documentos';
 import type { Empresa } from './empresas';
 
@@ -47,12 +47,25 @@ describe('dinheiro digitado', () => {
   });
 });
 
+describe('validade de certidão e termo', () => {
+  it('vale um ano a partir da emissão', () => {
+    expect(validadeDocumento('2026-10-19T12:00:00Z')).toBe('2027-10-19');
+  });
+
+  it('em 29 de fevereiro cai em 28 de fevereiro quando o ano seguinte não é bissexto', () => {
+    expect(validadeDocumento('2028-02-29T12:00:00Z')).toBe('2029-02-28');
+  });
+
+  it('usa a data de Brasília: emissão às 22h de 31/12 já é 31/12', () => {
+    expect(validadeDocumento('2026-01-01T01:00:00Z')).toBe('2026-12-31');
+  });
+});
+
 describe('numeração e código', () => {
-  it('formata como o modelo: 001 - SFSC', () => {
-    
-    expect(numeroDocumento(1, 'notificacao')).toBe('NOT-001 - SFSC');
-    expect(numeroDocumento(42, 'certidao_regularidade')).toBe('CER-042 - SFSC');
-    expect(numeroDocumento(1234, 'termo_compromisso')).toBe('TCR-1234 - SFSC');
+  it('formata como o modelo, com o ano da emissão: 001/2026 - SFSC', () => {
+    expect(numeroDocumento(1, 'notificacao', '2026-03-10T12:00:00Z')).toBe('NOT-001/2026 - SFSC');
+    expect(numeroDocumento(42, 'certidao_regularidade', '2026-03-10T12:00:00Z')).toBe('CER-042/2026 - SFSC');
+    expect(numeroDocumento(1234, 'termo_compromisso', '2026-03-10T12:00:00Z')).toBe('TCR-1234/2026 - SFSC');
   });
 
   it('código legível em blocos de quatro', () => {

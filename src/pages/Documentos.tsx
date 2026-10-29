@@ -97,7 +97,7 @@ function Emissao({ empresa, onEmitido }: { empresa: Empresa; onEmitido: () => Pr
         : autuadoDoCadastro(empresa, empresa.situacao);
       const dados = montarDados(tipo, campos, copia);
       const r = await emitirDocumento(tipo, empresa.id, dados);
-      setResultado(`${TITULO_DOCUMENTO[tipo]} emitido: documento nº ${numeroDocumento(r.numero, tipo)}. Código de verificação ${codigoLegivel(r.codigo_verificacao)}.`);
+      setResultado(`${TITULO_DOCUMENTO[tipo]} emitido: documento nº ${numeroDocumento(r.numero, tipo, r.emitido_em)}. Código de verificação ${codigoLegivel(r.codigo_verificacao)}.`);
       setCampos({});
       setConfirmado(false);
       await onEmitido();
@@ -207,7 +207,7 @@ function LinhaEmitido({ documento }: { documento: DocumentoOficial }) {
     <li className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
       <div className="min-w-0">
         <span className="font-semibold text-tinta-900">{TITULO_DOCUMENTO[documento.tipo]}</span>{' '}
-        <span className="tabular text-tinta-600">nº {numeroDocumento(documento.numero, documento.tipo)}</span>
+        <span className="tabular text-tinta-600">nº {numeroDocumento(documento.numero, documento.tipo, documento.emitido_em)}</span>
         <div className="text-xs text-tinta-500">Código {codigoLegivel(documento.codigo_verificacao)}</div>
         <ErrorNote error={erro} />
       </div>

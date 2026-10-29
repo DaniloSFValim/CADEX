@@ -1,7 +1,7 @@
 import type { DocumentoOficial, RegistroDoCadastro, ResponsavelDoCadastro, TipoDocumento } from './documentos';
 import {
-  CAMPOS_DOCUMENTO, TEXTO_TERMO_COMPROMISSO, TITULO_DOCUMENTO, codigoLegivel, dataExibicao, instanteExibicao, numeroDocumento,
-  textoCertidaoRegularidade,
+  CAMPOS_DOCUMENTO, RECEBIMENTO, TEXTO_DEFESA_AUTO, TEXTO_TERMO_COMPROMISSO, TITULO_DOCUMENTO, codigoLegivel, dataExibicao,
+  instanteExibicao, numeroDocumento, textoCertidaoRegularidade, validadeDocumento,
 } from './documentos';
 
 /**
@@ -83,17 +83,15 @@ function textoResponsavel(rt: ResponsavelDoCadastro): string {
   return `${rt.nome} · ${registro}${rt.art_rrt_numero ? ` · ART/RRT ${rt.art_rrt_numero}` : ''}`;
 }
 
-/** Texto da tarja: o que vale o documento, sem depender de conferir o cadastro. */
-function tarjaDoDocumento(doc: DocumentoOficial, validadeCertidao: string | null): string {
+/** Texto da tarja: o que vale o documento. Certidão e termo valem um ano da emissão. */
+function tarjaDoDocumento(doc: DocumentoOficial): string {
   if (doc.tipo === 'certidao_regularidade') {
-    return validadeCertidao
-      ? `Certidão válida até ${dataExibicao(validadeCertidao)}, enquanto a inscrição permanecer APTA. A situação atual está no QR Code.`
-      : 'Certidão de regularidade. A situação atual da inscrição está no QR Code.';
+    return `Certidão válida até ${dataExibicao(validadeDocumento(doc.emitido_em))}. A situação atual da inscrição está no QR Code.`;
   }
   if (doc.tipo === 'termo_compromisso') {
-    return 'Termo sem prazo próprio: vale enquanto a inscrição da empresa estiver vigente. Confira a situação atual no QR Code.';
+    return `Termo válido até ${dataExibicao(validadeDocumento(doc.emitido_em))}. Confira a situação atual da inscrição no QR Code.`;
   }
-  return 'Documento oficial da fiscalização. Confira a autenticidade no QR Code.';
+  return `${TITULO_DOCUMENTO[doc.tipo]} ${numeroDocumento(doc.numero, doc.tipo, doc.emitido_em)}. Confira a autenticidade no QR Code.`;
 }
 
 /**
@@ -215,7 +213,10 @@ async function montarPdf(
     y += 2 * k;
   };
 
-  /** Assinaturas em caixas lado a lado: linha, nome e descrição, como nos documentos impressos. */
+  /**
+   * Área de assinatura digital: os documentos são baixados em PDF e assinados digitalmente,
+   * então a caixa fica vazia para o certificado, com nome e descrição do signatário abaixo.
+   */
   const assinaturas = (blocos: { nome: string; descricao: string }[]) => {
     const altura = 26 * k;
     garantir(altura + 6 * k);
@@ -224,17 +225,49 @@ async function montarPdf(
     blocos.forEach((b, i) => {
       const x = MARGEM + i * w;
       caixa(x, y, w, altura);
-      pdf.setDrawColor(...COR_TINTA).setLineWidth(0.3).line(x + 8, y + 16 * k, x + w - 8, y + 16 * k);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(8 * k);
-      pdf.setTextColor(...COR_TINTA);
-      pdf.text(b.nome, x + w / 2, y + 20 * k, { align: 'center' });
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(6.8 * k);
       pdf.setTextColor(...COR_CINZA);
-      pdf.text(quebrar(b.descricao, w - 6)[0] ?? '', x + w / 2, y + 23.5 * k, { align: 'center' });
+      pdf.text('ASSINATURA DIGITAL', x + 2, y + 3.4 * k);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(8 * k);
+      pdf.setTextColor(...COR_TINTA);
+      pdf.text(b.nome, x + w / 2, y + altura - 5.5 * k, { align: 'center' });
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(6.8 * k);
+      pdf.setTextColor(...COR_CINZA);
+      pdf.text(quebrar(b.descricao, w - 6)[0] ?? '', x + w / 2, y + altura - 2 * k, { align: 'center' });
     });
     y += altura + 4 * k;
+  };
+
+  /** Opções marcáveis com quadradinho: a escolhida leva um X, como nos formulários. */
+  const opcoesMarcaveis = (titulo: string, opcoes: readonly string[], escolhida: string) => {
+    const passoOpcao = 4.8 * k;
+    const quadro = 3 * k;
+    const h = 4.6 * k + opcoes.length * passoOpcao + 1.6 * k;
+    garantir(h);
+    caixa(MARGEM, y, LARG_UTIL, h);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(6.8 * k);
+    pdf.setTextColor(...COR_CINZA);
+    pdf.text(titulo.toUpperCase(), MARGEM + 2, y + 3.4 * k);
+    opcoes.forEach((opcao, i) => {
+      const yo = y + 4.6 * k + i * passoOpcao;
+      const x = MARGEM + 3;
+      const marcada = opcao === escolhida;
+      pdf.setDrawColor(...COR_TINTA).setLineWidth(0.25).rect(x, yo, quadro, quadro);
+      if (marcada) {
+        pdf.setLineWidth(0.4);
+        pdf.line(x + 0.5, yo + 0.5, x + quadro - 0.5, yo + quadro - 0.5);
+        pdf.line(x + quadro - 0.5, yo + 0.5, x + 0.5, yo + quadro - 0.5);
+      }
+      pdf.setFont('helvetica', marcada ? 'bold' : 'normal');
+      pdf.setFontSize(tamanhoCampo);
+      pdf.setTextColor(...COR_TINTA);
+      pdf.text(opcao, x + quadro + 2, yo + quadro - 0.4 * k);
+    });
+    y += h + 2 * k;
   };
 
   /** Termo de compromisso: registro completo da empresa, compromisso e assinatura do representante legal. */
@@ -249,7 +282,7 @@ async function montarPdf(
       ['Data do requerimento', data(reg.data_requerimento)],
       ['Portaria', texto(reg.portaria_numero)],
       ['Publicada em', data(reg.portaria_data)],
-      ['Válida até', data(reg.validade_ate)],
+      ['Inscrição válida até', data(reg.validade_ate)],
     ]);
     secao('Compromisso');
     bloco('Compromisso assumido', TEXTO_TERMO_COMPROMISSO.compromisso.join('\n\n'));
@@ -319,13 +352,14 @@ async function montarPdf(
     tabela(pares);
     for (const t of textos) bloco(t.rotulo, t.valor);
 
-    secao('Recebimento');
-    bloco('Forma de recebimento', texto(dados.recebimento));
+    secao('Defesa ou recurso');
+    bloco('Prazo e destino', TEXTO_DEFESA_AUTO);
 
-    // O fiscal assina com a identificação do cadastro; o autuado registra a situação de recebimento.
+    secao('Recebimento');
+    opcoesMarcaveis('Forma de recebimento', RECEBIMENTO, texto(dados.recebimento));
+
     assinaturas([
       { nome: texto(dados.fiscal_nome), descricao: `Fiscal autuante · Matrícula ${texto(dados.fiscal_matricula)}` },
-      { nome: 'Autuado', descricao: texto(dados.recebimento) },
     ]);
   };
 
@@ -355,16 +389,15 @@ async function montarPdf(
   const titulo = TITULO_DOCUMENTO[doc.tipo].toUpperCase();
   faixa(titulo);
   if (doc.tipo === 'certidao_regularidade' || doc.tipo === 'termo_compromisso') {
-    const validade = (autuado.validade_ate as string | null | undefined) ?? null;
     tabela([
-      ['Número', numeroDocumento(doc.numero, doc.tipo)],
+      ['Número', numeroDocumento(doc.numero, doc.tipo, doc.emitido_em)],
       ['Emitida em', instanteExibicao(doc.emitido_em)],
-      ['Válida até', validade ? data(validade) : 'Sem validade própria'],
+      ['Válida até', dataExibicao(validadeDocumento(doc.emitido_em))],
       ['Código de controle', codigoLegivel(doc.codigo_verificacao)],
     ], 4);
   } else {
     tabela([
-      ['Auto nº', numeroDocumento(doc.numero, doc.tipo)],
+      ['Auto nº', numeroDocumento(doc.numero, doc.tipo, doc.emitido_em)],
       ['Data', data(dados.data)],
       ['Hora', texto(dados.hora)],
       ['Processo', texto(dados.processo)],
@@ -378,15 +411,12 @@ async function montarPdf(
 
   // Tarja e QR Code de verificação, sempre na mesma folha, acima do rodapé.
   const compacto = doc.codigo_verificacao.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-  const validadeCertidao = doc.tipo === 'certidao_regularidade'
-    ? (((dados.autuado ?? {}) as Dados).validade_ate as string | null) ?? null
-    : null;
   pdf.setFillColor(238, 246, 246);
   pdf.rect(MARGEM, BLOCO_Y, LARG_UTIL, 5, 'F');
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(7.5);
   pdf.setTextColor(...COR_MARCA);
-  pdf.text(quebrar(tarjaDoDocumento(doc, validadeCertidao), LARG_UTIL - 4)[0], MARGEM + 2, BLOCO_Y + 3.4);
+  pdf.text(quebrar(tarjaDoDocumento(doc), LARG_UTIL - 4)[0], MARGEM + 2, BLOCO_Y + 3.4);
   const qr = await QRCode.toDataURL(`${origem}/documento/${compacto}`, { margin: 0, errorCorrectionLevel: 'M', width: 240 });
   caixa(MARGEM, BLOCO_Y + 6, 19, 19);
   pdf.addImage(qr, 'PNG', MARGEM + 2, BLOCO_Y + 8, 15, 15);
