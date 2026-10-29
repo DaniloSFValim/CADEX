@@ -338,7 +338,6 @@ async function montarPdf(
   }
   y += ALTURA_BRASAO + 2 * k;
   const orgao: [string, number, [number, number, number], 'normal' | 'bold'][] = [
-    ['ESTADO DO RIO DE JANEIRO', 7.5, COR_CINZA, 'normal'],
     ['PREFEITURA MUNICIPAL DE NITERÓI', 9.5, COR_TINTA, 'bold'],
     ['SECRETARIA DE CONSERVAÇÃO E SERVIÇOS PÚBLICOS', 7.5, COR_CINZA, 'normal'],
     ['FISCALIZAÇÃO DE SERVIÇOS CONCEDIDOS', 7.5, COR_MARCA, 'bold'],
