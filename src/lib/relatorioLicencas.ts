@@ -1,6 +1,6 @@
 import { SETOR_LABEL, nomeEmpresa, type Empresa } from './empresas';
 import {
-  ESTADO_LICENCA_LABEL, TIPO_OBRA_LABEL, estadoLicenca, nomeExecutora, type LicencaComTrechos,
+  ESTADO_LICENCA_LABEL, TIPO_OBRA_LABEL, estadoLicenca, nomeExecutora, type LicencaComTrechos, type TipoObra,
 } from './licencas';
 import { agrupar, type Relatorio } from './relatorio';
 
@@ -25,7 +25,7 @@ export const COLUNAS_LICENCA: ColunaLicenca[] = [
   { chave: 'numero', rotulo: 'Licença', valor: (l) => l.numero ?? 'Sem número' },
   { chave: 'processo', rotulo: 'Processo', valor: (l) => l.processo_sei },
   { chave: 'setor', rotulo: 'Setor', valor: (l) => SETOR_LABEL[l.setor] },
-  { chave: 'tipos', rotulo: 'Tipo de obra', valor: (l) => l.tipos_obra.map((t) => TIPO_OBRA_LABEL[t]).join(', ') },
+  { chave: 'tipos', rotulo: 'Tipo de obra', valor: (l) => l.tipos_obra.map((t) => TIPO_OBRA_LABEL[t as TipoObra] ?? t).join(', ') },
   { chave: 'escopo', rotulo: 'Escopo', valor: (l) => l.escopo },
   { chave: 'executora', rotulo: 'Executora', valor: (l, c) => nomeExecutora(l, c.porId) },
   { chave: 'contratante', rotulo: 'Contratante', valor: contratante },

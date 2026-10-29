@@ -6,9 +6,10 @@ import { dataBR } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { ExcluirLicenca } from '../components/ExclusaoLicenca';
 import { listarOrgaos, type Orgao } from '../lib/orgaos';
+import { listarTipos, mapaRotulosTipos, rotuloDoTipo } from '../lib/tiposIntervencao';
 import { SETORES, SETOR_LABEL, hojeISO, listarEmpresas, nomeEmpresa, type Empresa } from '../lib/empresas';
 import {
-  ESTADO_LICENCA_LABEL, ORIGENS, ORIGEM_LABEL, TIPOS_INTERVENCAO, TIPO_INTERVENCAO_LABEL, TIPO_OBRA_LABEL, origemPublica, TOM_ESTADO_LICENCA, desempenhoExecutora, estadoLicenca, listarLicencas, mesmaEmpresaNosPapeis, nomeExecutora, pendenciasLicencas,
+  ESTADO_LICENCA_LABEL, ORIGENS, ORIGEM_LABEL, TIPOS_INTERVENCAO, TIPO_INTERVENCAO_LABEL, origemPublica, TOM_ESTADO_LICENCA, desempenhoExecutora, estadoLicenca, listarLicencas, mesmaEmpresaNosPapeis, nomeExecutora, pendenciasLicencas,
   type Desempenho, type EstadoLicenca, type LicencaComTrechos, type NivelDesempenho,
 } from '../lib/licencas';
 
@@ -149,6 +150,9 @@ export function TabelaLicencas({ licencas, porId, hoje, semExecutora = false, ex
   /** Presente só para o administrador: mostra "Excluir" em cada linha. */
   excluir?: { orgaos: Orgao[]; hoje: string; onExcluida: (mensagem: string) => void };
 }) {
+  // Rótulos do catálogo: os tipos de obra vêm do banco, não de uma lista fixa no código.
+  const [rotulos, setRotulos] = useState<Record<string, string>>({});
+  useEffect(() => { listarTipos().then((t) => setRotulos(mapaRotulosTipos(t))).catch(() => setRotulos({})); }, []);
   return (
     <div className={tabela.moldura}>
       <table className={tabela.tabela}>
@@ -189,7 +193,7 @@ export function TabelaLicencas({ licencas, porId, hoje, semExecutora = false, ex
                 <td className={tabela.td}>
                   {t1 ? <>{t1.logradouro}{t1.bairro && <span className="text-tinta-500">, {t1.bairro}</span>}</> : '—'}
                   <div className="text-xs text-tinta-500">
-                    {TIPO_INTERVENCAO_LABEL[l.tipo_intervencao]}{origemPublica(l.origem_intervencao) ? ` pública (${ORIGEM_LABEL[l.origem_intervencao].toLowerCase()})` : ''} · {SETOR_LABEL[l.setor]}: {l.tipos_obra.map((t) => TIPO_OBRA_LABEL[t].toLowerCase()).join(', ')}
+                    {TIPO_INTERVENCAO_LABEL[l.tipo_intervencao]}{origemPublica(l.origem_intervencao) ? ` pública (${ORIGEM_LABEL[l.origem_intervencao].toLowerCase()})` : ''} · {SETOR_LABEL[l.setor]}: {l.tipos_obra.map((t) => rotuloDoTipo(t, rotulos).toLowerCase()).join(', ')}
                     {resto.length > 0 && `; mais ${resto.length} trecho${resto.length > 1 ? 's' : ''}`}
                   </div>
                 </td>
