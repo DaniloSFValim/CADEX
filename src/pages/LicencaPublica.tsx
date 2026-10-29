@@ -4,7 +4,7 @@ import { Cabecalho } from '../components/Cabecalho';
 import { Rodape } from '../components/Rodape';
 import { ErrorNote, Spinner, linkTexto } from '../components/ui';
 import { dataBR } from '../components/Situacao';
-import { SETOR_LABEL, SITUACAO_LABEL, type SituacaoEfetiva } from '../lib/empresas';
+import { SETOR_LABEL } from '../lib/empresas';
 import { listarTipos, mapaRotulosTipos, rotuloDoTipo } from '../lib/tiposIntervencao';
 import {
   ORIGEM_LABEL, TIPO_INTERVENCAO_LABEL, buscarLicencaPublica, linkMapa,
@@ -78,13 +78,23 @@ export default function LicencaPublica() {
   );
 }
 
+/**
+ * "Obra concluída" só aparece depois do fim do período. Dentro dele, a licença segue a data:
+ * vigente ou, se ainda não começou, aguardando o início.
+ */
+function situacaoExibida(d: Dados): SituacaoPublica {
+  if (d.situacao !== 'concluida') return d.situacao;
+  if (d.inicio_previsto && d.hoje < d.inicio_previsto) return 'aguardando_inicio';
+  if (!d.fim_previsto || d.hoje <= d.fim_previsto) return 'vigente';
+  return 'concluida';
+}
+
 function Conteudo({ d }: { d: Dados }) {
   const [rotulos, setRotulos] = useState<Record<string, string>>({});
   useEffect(() => { listarTipos().then((t) => setRotulos(mapaRotulosTipos(t))).catch(() => setRotulos({})); }, []);
-  const v = VEREDITO[d.situacao];
+  const v = VEREDITO[situacaoExibida(d)];
   // A executora pode faltar (registro sem empresa vinculada): a página mostra o que houver, sem quebrar.
   const executora = d.executora ?? { razao_social: '', nome_fantasia: null, codigo_cadex: null, situacao_cadex: null };
-  const sitCadex = executora.situacao_cadex as SituacaoEfetiva | null;
   return (
     <>
       <div className={`mt-4 rounded-2xl border p-5 sm:p-6 ${v.cor}`} role="status">
@@ -107,9 +117,7 @@ function Conteudo({ d }: { d: Dados }) {
         <Item rotulo="Empresa executora" largo>
           {nome(executora) || 'Não informada'}
           <span className="block text-sm text-tinta-500">
-            {executora.codigo_cadex && sitCadex
-              ? `${executora.codigo_cadex}; inscrição no CADEX hoje: ${SITUACAO_LABEL[sitCadex] ?? sitCadex}`
-              : 'Sem inscrição no CADEX: licença emitida antes do cadastro.'}
+            {executora.codigo_cadex ?? 'Sem inscrição no CADEX: licença emitida antes do cadastro.'}
           </span>
         </Item>
         {d.contratante && (
