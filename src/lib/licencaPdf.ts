@@ -65,7 +65,8 @@ export interface DadosLicencaPdf {
 export const CONDICOES_LICENCA: readonly string[] = [
   'Autoriza apenas os trechos e o período indicados. Outra execução depende de nova licença, por trecho (Resolução Conjunta SECONSER/SEOP nº 001/2026, art. 11).',
   'Sinalização conforme os padrões da SECONSER, com segurança de pedestres, ciclistas e veículos e mínima interferência no trânsito (Lei nº 3.988/2025, art. 6º, IV a VI).',
-  'Concluída a intervenção, a via é recomposta e os danos reparados, e o As Built é protocolado na SECONSER (Lei nº 3.988/2025, art. 6º, VII e IX; Resolução, art. 26).',
+  'Concluída a intervenção, a via é recomposta nas condições anteriores e os danos são reparados (Lei nº 3.988/2025, art. 6º, VII e IX). Antes de encerrar o processo, a empresa pede vistoria de encerramento e de reposição do pavimento, e protocola o As Built na SECONSER (Resolução, art. 26).',
+  'Obra que interfira na pista depende de permissão do órgão de trânsito (Código de Trânsito, art. 95) e de comunicação à NitTrans para apoio de trânsito (Decreto Municipal nº 14.218/2021). A interdição segue o plano de sinalização aprovado.',
   'O canteiro mantém a placa ou o QR Code desta licença, com a razão social da executora, o número, o escopo e o prazo (Resolução, art. 14).',
   'A comunidade afetada é informada antes do início sobre a duração e os impactos (Lei nº 3.988/2025, art. 6º, XIV).',
   'A intervenção se conclui no período desta licença. A prorrogação é pedida pela empresa, dentro dos 30 dias do início.',
