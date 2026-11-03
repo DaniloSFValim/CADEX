@@ -97,19 +97,26 @@ export function problemasParaLicenca(dados: DadosLicencaPdf): string[] {
  * Gera a licença numa única folha A4. Tenta a escala normal e reduz até caber; se nem
  * na menor escala couber, falha. Quem chama deve checar `problemasParaLicenca` antes.
  */
+/**
+ * `previa` gera a versão de conferência, com marca d'água "PRÉVIA · NÃO EMITIDA". Nada é
+ * gravado; o PDF oficial sai sem a marca.
+ */
 export async function gerarPdfLicenca(
   dados: DadosLicencaPdf,
   logo?: string,
   origem: string = typeof window !== 'undefined' ? window.location.origin : '',
+  previa = false,
 ): Promise<ArrayBuffer> {
   return emFolhaUnica(
     ESCALAS_FOLHA,
-    (k) => montarLicenca(dados, logo, origem, k),
+    (k) => montarLicenca(dados, logo, origem, k, previa),
     'A licença não cabe em uma folha A4 mesmo na menor escala. Reduza o número de trechos ou avise o suporte.',
   );
 }
 
-async function montarLicenca(dados: DadosLicencaPdf, logo: string | undefined, origem: string, k: number): Promise<ArrayBuffer> {
+async function montarLicenca(
+  dados: DadosLicencaPdf, logo: string | undefined, origem: string, k: number, previa: boolean,
+): Promise<ArrayBuffer> {
   const { jsPDF } = await import('jspdf');
   const QRCode = (await import('qrcode')).default;
   const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
@@ -169,6 +176,12 @@ async function montarLicenca(dados: DadosLicencaPdf, logo: string | undefined, o
 
   const endereco = `${origem.replace(/^https?:\/\//, '')}/licenca/${dados.codigo_publico}`;
   const qr = await QRCode.toDataURL(`${origem}/licenca/${dados.codigo_publico}`, { margin: 0, errorCorrectionLevel: 'M', width: 240 });
+  if (previa) {
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(44);
+    pdf.setTextColor(220, 224, 227);
+    pdf.text('PRÉVIA · NÃO EMITIDA', 105, 175, { align: 'center', angle: 45 });
+  }
   verificacao(f, {
     tarja: `Licença válida até ${dataExibicao(dados.validade_ate)}. Confira a situação atual no QR Code.`,
     qr,

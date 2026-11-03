@@ -38,6 +38,11 @@ describe('licença de obra em via pública', () => {
     expect(await paginas(bytes)).toBe(1);
   });
 
+  it('a prévia tem uma folha e a mesma estrutura da licença', async () => {
+    const previa = await gerarPdfLicenca(base, undefined, undefined, true);
+    expect(await paginas(previa)).toBe(1);
+  });
+
   it('exige número, início, trecho e tipo antes de gerar', () => {
     expect(problemasParaLicenca(base)).toEqual([]);
     expect(problemasParaLicenca({ ...base, numero: '  ', inicio_previsto: '', trechos: [], escolhidos: [] })).toHaveLength(4);

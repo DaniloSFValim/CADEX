@@ -22,6 +22,7 @@ export function DocumentoLicenca({ licenca, empresas, orgaos, tipos }: {
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState<unknown>(null);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [previaUrl, setPreviaUrl] = useState<string | null>(null);
 
   const porId = new Map(empresas.map((e) => [e.id, e]));
   const rotuloCatalogo = new Map(tipos.map((t) => [t.codigo, t.rotulo]));
@@ -42,7 +43,14 @@ export function DocumentoLicenca({ licenca, empresas, orgaos, tipos }: {
     ...(secretariaNome.trim() ? [] : ['Informe o nome da Secretária.']),
   ];
 
-  const gerar = async () => {
+  const fecharPrevia = () => {
+    setPreviaUrl((antiga) => {
+      if (antiga) URL.revokeObjectURL(antiga);
+      return null;
+    });
+  };
+
+  const gerar = async (previa: boolean) => {
     setBusy(true);
     setErro(null);
     setAviso(null);
@@ -95,8 +103,13 @@ export function DocumentoLicenca({ licenca, empresas, orgaos, tipos }: {
       if (problemas.length > 0) throw new Error(problemas.join(' '));
 
       const logo = await lerBrasao();
-      const bytes = await gerarPdfLicenca(dados, logo);
+      const bytes = await gerarPdfLicenca(dados, logo, undefined, previa);
       const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+      if (previa) {
+        fecharPrevia();
+        setPreviaUrl(url);
+        return;
+      }
       const a = document.createElement('a');
       a.href = url;
       a.download = `licenca-${(licenca.numero ?? 'sem-numero').replace(/\//g, '-')}.pdf`;
@@ -132,11 +145,23 @@ export function DocumentoLicenca({ licenca, empresas, orgaos, tipos }: {
         </ul>
       )}
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <Button type="button" variant="secondary" disabled={busy || !licenca.numero} onClick={() => void gerar()}>
+        <Button type="button" variant="secondary" disabled={busy || !licenca.numero} onClick={() => void gerar(true)}>
+          Visualizar prévia
+        </Button>
+        <Button type="button" disabled={busy || !licenca.numero} onClick={() => void gerar(false)}>
           {busy ? 'Gerando…' : 'Gerar PDF da licença'}
         </Button>
         {aviso && <p className="text-sm text-tinta-600">{aviso}</p>}
       </div>
+      {previaUrl && (
+        <div className="mt-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-tinta-700">Prévia: marca d'água, nada foi emitido. Confira antes de gerar o PDF.</p>
+            <Button type="button" variant="secondary" onClick={fecharPrevia}>Fechar prévia</Button>
+          </div>
+          <iframe title="Prévia da licença" src={previaUrl} className="mt-3 h-[70vh] w-full rounded-sm border border-tinta-300 bg-white" />
+        </div>
+      )}
       <div className="mt-2"><ErrorNote error={erro} /></div>
     </section>
   );
