@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect, useMemo, useState, type FormEvent } from 're
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Badge, Button, Card, ErrorNote, Field, Spinner, Titulo, botaoLink, inputClass, linkTexto } from '../components/ui';
 import { SuspensaoECorrecoes } from '../components/SuspensaoECorrecoes';
+import { DocumentoLicenca } from '../components/DocumentoLicenca';
 import { QrCode } from '../components/QrCode';
 import { ExcluirLicenca } from '../components/ExclusaoLicenca';
 import { SituacaoBadge, dataBR } from '../components/Situacao';
@@ -167,6 +168,9 @@ export default function LicencaPage() {
       )}
       {/* Obra já concluída não precisa de placa nem de QR Code. */}
       {licenca?.situacao === 'deferida' && !licenca.excluida_em && !licenca.concluida_em && <Placa licenca={licenca} />}
+      {licenca?.situacao === 'deferida' && !licenca.excluida_em && (
+        <DocumentoLicenca licenca={licenca} empresas={empresas ?? []} orgaos={orgaos} tipos={tiposCatalogo} />
+      )}
       {licenca?.situacao === 'deferida' && !licenca.excluida_em && (
         <Validade licenca={licenca} hoje={hoje} onProrrogada={async () => setLicenca(await buscarLicenca(licenca.id))} />
       )}
