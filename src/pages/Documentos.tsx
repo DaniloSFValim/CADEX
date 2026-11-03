@@ -9,6 +9,7 @@ import {
   type TipoDocumento,
 } from '../lib/documentos';
 import { gerarPdfDocumento } from '../lib/documentosPdf';
+import { lerBrasao } from '../lib/brasao';
 
 /** Documentos oficiais de uma empresa: emissão (só gestor) e lista com o PDF de cada um. */
 export default function Documentos() {
@@ -188,7 +189,7 @@ function LinhaEmitido({ documento }: { documento: DocumentoOficial }) {
     setBusy(true);
     setErro(null);
     try {
-      const logo = await lerLogo();
+      const logo = await lerBrasao();
       const bytes = await gerarPdfDocumento(documento, logo);
       const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
       const a = document.createElement('a');
@@ -219,18 +220,3 @@ function LinhaEmitido({ documento }: { documento: DocumentoOficial }) {
 }
 
 /** Brasão para o cabeçalho do PDF, como data URL. Se falhar, o PDF sai sem ele. */
-async function lerLogo(): Promise<string | undefined> {
-  try {
-    const r = await fetch('/brasao-oficial.png');
-    if (!r.ok) return undefined;
-    const blob = await r.blob();
-    return await new Promise<string>((resolve, reject) => {
-      const leitor = new FileReader();
-      leitor.onload = () => resolve(String(leitor.result));
-      leitor.onerror = () => reject(leitor.error);
-      leitor.readAsDataURL(blob);
-    });
-  } catch {
-    return undefined;
-  }
-}
