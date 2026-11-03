@@ -47,7 +47,7 @@ test.describe('documentos oficiais', () => {
     await page.getByLabel('Infringência *').fill('Art. X');
     await page.getByLabel('Sanção *').fill('Anexo Único');
     await page.getByLabel('Valor da multa (R$) *').fill('0');
-    await page.getByLabel('Prazo para pagamento ou impugnação *').fill('30 dias');
+    await page.getByLabel('Prazo para pagamento *').fill('30 dias');
     await page.getByLabel('Recebimento *').selectOption('Testemunhas');
     await page.getByLabel('Fiscal autuante: nome *').fill('Fiscal Exemplo');
     await page.getByLabel('Fiscal autuante: matrícula *').fill('0000000-0');
