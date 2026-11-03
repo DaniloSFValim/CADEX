@@ -5,7 +5,7 @@ import type { Conta } from '../src/lib/contas';
 
 const conta = (n: number, nome: string | null, papel: Conta['papel'], ativo: boolean, admin = false): Conta => ({
   user_id: uuid(n), email: `${nome ? nome.toLowerCase().replace(/\s+/g, '.') : 'sem.acesso'}@teste`, nome, papel,
-  administrador: admin, ativo, criado_em: '2026-01-01T00:00:00Z', ultimo_acesso: '2026-10-10T12:00:00Z', mfa_ativa: false,
+  administrador: admin, ativo, criado_em: '2026-01-01T00:00:00Z', ultimo_acesso: '2026-10-10T12:00:00Z', mfa_ativa: false, matricula: null, cargo: null,
 });
 
 const contas = () => [

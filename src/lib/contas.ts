@@ -10,6 +10,8 @@ export interface Conta {
   administrador: boolean;
   /** Acesso ativo. Desativado, o servidor não entra nem lê nada, e o cadastro dele fica guardado. */
   ativo: boolean;
+  matricula: string | null;
+  cargo: string | null;
   criado_em: string;
   ultimo_acesso: string | null;
   /** Já cadastrou o aplicativo autenticador. */
@@ -34,6 +36,14 @@ export async function listarContas(): Promise<Conta[]> {
 export async function definirAcesso(userId: string, nome: string, papel: Papel, administrador: boolean) {
   const { error } = await supabase.rpc('admin_definir_acesso', {
     p_user_id: userId, p_nome: nome, p_papel: papel, p_administrador: administrador,
+  });
+  if (error) throw error;
+}
+
+/** Matrícula e cargo, que saem nos documentos emitidos. Exige que a conta já tenha acesso. */
+export async function definirDadosFuncionais(userId: string, matricula: string, cargo: string) {
+  const { error } = await supabase.rpc('admin_definir_dados_funcionais', {
+    p_user_id: userId, p_matricula: matricula, p_cargo: cargo,
   });
   if (error) throw error;
 }

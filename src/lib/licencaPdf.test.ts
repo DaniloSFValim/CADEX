@@ -16,7 +16,7 @@ const base: DadosLicencaPdf = {
   subcontratada: null,
   contratante: { nome: 'Operadora Exemplo S.A.', cnpj: '11.111.111/0001-11', codigo_cadex: null, contato: null, endereco: null },
   responsavel_tecnico: { nome: 'Beltrano', conselho: 'CREA', registro_numero: '1234', registro_uf: 'RJ', art_rrt_numero: 'ART 1' },
-  fiscal: { nome: 'Fiscal Teste', matricula: '000.001-0' },
+  fiscal: { nome: 'Fiscal Teste', cargo: 'Fiscal de Serviços Concedidos', matricula: '000.001-0' },
   secretaria: { nome: 'Secretária Teste' },
   codigo_publico: 'AB12CD34EF56',
 };

@@ -18,6 +18,9 @@ export interface Servidor {
   administrador: boolean;
   /** Acesso ativo. Desativado, a pessoa não é tratada como servidora. */
   ativo: boolean;
+  /** Dados funcionais: saem no documento emitido como responsável pela emissão. */
+  matricula: string | null;
+  cargo: string | null;
 }
 
 /** Verificação em duas etapas (aplicativo autenticador) da sessão atual. */
@@ -67,7 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Quem é servidor, e com que perfil, vem do banco sob RLS — nunca do
         // navegador. O banco aplica as mesmas regras em cada gravação.
         const { data } = await supabase
-          .from('servidores').select('nome, papel, administrador, ativo').eq('user_id', s.user.id).maybeSingle();
+          .from('servidores').select('nome, papel, administrador, ativo, matricula, cargo').eq('user_id', s.user.id).maybeSingle();
         const linha = (data as Servidor | null) ?? null;
         // Acesso desativado vale como sem acesso: o banco já recusa tudo, e a tela não finge o contrário.
         sv = linha?.ativo === false ? null : linha;

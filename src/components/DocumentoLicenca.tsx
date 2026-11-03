@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button, ErrorNote, Field, inputClass } from './ui';
 import { formatCnpj } from '../lib/cnpj';
 import { lerBrasao } from '../lib/brasao';
+import { useAuth } from '../lib/auth';
 import { listarDaEmpresa, type Empresa, type Registro } from '../lib/empresas';
 import { TIPO_OBRA_LABEL, type LicencaComTrechos } from '../lib/licencas';
 import { gerarPdfLicenca, problemasParaLicenca, type DadosLicencaPdf, type PartePdf, type ResponsavelPdf } from '../lib/licencaPdf';
@@ -16,8 +17,7 @@ import type { TipoIntervencao } from '../lib/tiposIntervencao';
 export function DocumentoLicenca({ licenca, empresas, orgaos, tipos }: {
   licenca: LicencaComTrechos; empresas: Empresa[]; orgaos: Orgao[]; tipos: TipoIntervencao[];
 }) {
-  const [fiscalNome, setFiscalNome] = useState('');
-  const [fiscalMatricula, setFiscalMatricula] = useState('');
+  const { servidor } = useAuth();
   const [secretariaNome, setSecretariaNome] = useState('');
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState<unknown>(null);
@@ -34,12 +34,12 @@ export function DocumentoLicenca({ licenca, empresas, orgaos, tipos }: {
   const opcoes = [...new Set(todosRotulos)];
   const escolhidos = licenca.tipos_obra.map(rotuloDo);
 
+  const fiscalCompleto = Boolean(servidor?.matricula && servidor.cargo);
   const pendencias = [
     ...(licenca.numero ? [] : ['Informe o número da licença no cadastro.']),
     ...(licenca.inicio_previsto ? [] : ['Informe a data de início da obra ou serviço.']),
     ...(licenca.licenca_trechos.length > 0 ? [] : ['A licença precisa de pelo menos um trecho.']),
-    ...(fiscalNome.trim() ? [] : ['Informe o nome do fiscal emissor.']),
-    ...(fiscalMatricula.trim() ? [] : ['Informe a matrícula do fiscal emissor.']),
+    ...(fiscalCompleto ? [] : ['Complete sua matrícula e seu cargo no cadastro. Peça a um administrador de contas.']),
     ...(secretariaNome.trim() ? [] : ['Informe o nome da Secretária.']),
   ];
 
@@ -94,7 +94,7 @@ export function DocumentoLicenca({ licenca, empresas, orgaos, tipos }: {
               ? { nome: licenca.contratante_razao_social, cnpj: licenca.contratante_cnpj, codigo_cadex: null, contato: null, endereco: null }
               : null,
         responsavel_tecnico: rt ? responsavelDe(rt) : null,
-        fiscal: { nome: fiscalNome.trim(), matricula: fiscalMatricula.trim() },
+        fiscal: { nome: servidor?.nome ?? '', cargo: servidor?.cargo ?? '', matricula: servidor?.matricula ?? '' },
         secretaria: { nome: secretariaNome.trim() },
         codigo_publico: licenca.codigo_publico,
       };
@@ -128,13 +128,12 @@ export function DocumentoLicenca({ licenca, empresas, orgaos, tipos }: {
       <p className="mt-2 text-sm text-tinta-700">
         O PDF sai com os dados desta licença. Depois, vai para o SEI, onde a Secretária assina digitalmente.
       </p>
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        <Field label="Fiscal emissor: nome">
-          <input type="text" className={inputClass} value={fiscalNome} onChange={(e) => setFiscalNome(e.target.value)} />
-        </Field>
-        <Field label="Fiscal emissor: matrícula">
-          <input type="text" className={inputClass} value={fiscalMatricula} onChange={(e) => setFiscalMatricula(e.target.value)} />
-        </Field>
+      <p className="mt-3 text-sm text-tinta-700">
+        Fiscal emissor: <strong>{servidor?.nome ?? '—'}</strong>
+        {servidor?.cargo && <> · {servidor.cargo}</>}
+        {servidor?.matricula && <> · Matrícula {servidor.matricula}</>}
+      </p>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <Field label="Secretária: nome">
           <input type="text" className={inputClass} value={secretariaNome} onChange={(e) => setSecretariaNome(e.target.value)} />
         </Field>

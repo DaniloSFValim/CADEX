@@ -55,7 +55,7 @@ export interface DadosLicencaPdf {
   subcontratada: PartePdf | null;
   contratante: PartePdf | null;
   responsavel_tecnico: ResponsavelPdf | null;
-  fiscal: { nome: string; matricula: string };
+  fiscal: { nome: string; cargo: string; matricula: string };
   secretaria: { nome: string };
   /** Código público do QR Code da placa (art. 14 da Resolução). */
   codigo_publico: string;
@@ -186,7 +186,7 @@ async function montarLicenca(
     endereco,
   });
   rodape(pdf, [
-    `Fiscal responsável pela emissão: ${dados.fiscal.nome} · Matrícula ${dados.fiscal.matricula}`,
+    `Fiscal responsável pela emissão: ${dados.fiscal.nome} · ${dados.fiscal.cargo} · Matrícula ${dados.fiscal.matricula}`,
     `Licença nº ${dados.numero} · Emitida em ${instanteExibicao(dados.emitida_em)} · Página 1 de 1`,
   ]);
 

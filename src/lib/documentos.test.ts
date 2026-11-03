@@ -75,7 +75,7 @@ describe('numeração e código', () => {
 
 describe('validação por tipo', () => {
   const base = { local_infracao: 'Rua Teste, 1', data: '2026-10-19', hora: '09:30', processo: '1/2026',
-    recebimento: 'Entregue ao autuado', fiscal_nome: 'Fiscal Teste', fiscal_matricula: '000.001-0',
+    recebimento: 'Entregue ao autuado', fiscal_nome: 'Fiscal Teste', fiscal_cargo: 'Fiscal de Serviços Concedidos', fiscal_matricula: '000.001-0',
     descricao: 'Fatos', elementos: '', fundamentacao: '', informacoes: '', licenca: '', termo_permissao: '',
     exigencia: 'Regularizar', prazo: '15 dias' };
 
@@ -99,9 +99,9 @@ describe('validação por tipo', () => {
     expect(erros.some((e) => e.startsWith('Recebimento'))).toBe(true);
   });
 
-  it('certidão só pede o fiscal: texto e dados vêm do cadastro', () => {
+  it('certidão só pede o fiscal (nome, cargo e matrícula): texto e dados vêm do cadastro', () => {
     const chaves = CAMPOS_DOCUMENTO.certidao_regularidade.map((c) => c.chave);
-    expect(chaves).toEqual(['fiscal_nome', 'fiscal_matricula']);
+    expect(chaves).toEqual(['fiscal_nome', 'fiscal_cargo', 'fiscal_matricula']);
   });
 });
 
