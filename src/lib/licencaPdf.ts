@@ -170,10 +170,7 @@ async function montarLicenca(
   f.bloco('Condições', CONDICOES_LICENCA.map((c, i) => `${i + 1}. ${c}`).join('\n'), 0.85);
 
   f.secao('Assinaturas');
-  f.assinaturas([
-    { nome: dados.fiscal.nome, descricao: `Fiscal emissor · Matrícula ${dados.fiscal.matricula}` },
-    { nome: dados.secretaria.nome, descricao: 'Secretária de Conservação e Serviços Públicos' },
-  ]);
+  f.assinaturas([{ nome: dados.secretaria.nome, descricao: 'Secretária de Conservação e Serviços Públicos' }]);
 
   const endereco = `${origem.replace(/^https?:\/\//, '')}/licenca/${dados.codigo_publico}`;
   const qr = await QRCode.toDataURL(`${origem}/licenca/${dados.codigo_publico}`, { margin: 0, errorCorrectionLevel: 'M', width: 240 });
@@ -188,7 +185,10 @@ async function montarLicenca(
     qr,
     endereco,
   });
-  rodape(pdf, `Licença nº ${dados.numero} · Emitida em ${instanteExibicao(dados.emitida_em)} · Página 1 de 1`);
+  rodape(pdf, [
+    `Fiscal responsável pela emissão: ${dados.fiscal.nome} · Matrícula ${dados.fiscal.matricula}`,
+    `Licença nº ${dados.numero} · Emitida em ${instanteExibicao(dados.emitida_em)} · Página 1 de 1`,
+  ]);
 
   if (pdf.getNumberOfPages() !== 1) throw new ErroNaoCabe();
   return pdf.output('arraybuffer');
