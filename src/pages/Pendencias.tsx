@@ -7,7 +7,7 @@ import { useAuth } from '../lib/auth';
 import { formatCnpj } from '../lib/cnpj';
 import { supabase } from '../lib/supabase';
 import { contarPedidosPorLicenca, diasAberto, listarPedidosAbertos, type PedidoCorrecao } from '../lib/suspensoes';
-import { hojeISO, listarEmpresas, type Empresa } from '../lib/empresas';
+import { hojeISO, listarEmpresas, type Empresa, type SituacaoEfetiva } from '../lib/empresas';
 import {
   listarLicencas, nomeExecutora, pendenciasLicencas, type LicencaComTrechos, type PendenciaLicenca,
 } from '../lib/licencas';
@@ -42,7 +42,7 @@ interface InscricaoVencimento {
   nome_fantasia: string | null;
   cnpj: string;
   tipo: string;
-  situacao_efetiva: string;
+  situacao_efetiva: SituacaoEfetiva;
   portaria_data: string;
   validade_ate: string;
   dias_restantes: number;
@@ -357,7 +357,7 @@ export default function Pendencias() {
                     </td>
                     <td className="px-3 py-2.5 tabular text-sm">{formatCnpj(i.cnpj)}</td>
                     <td className="px-3 py-2.5">
-                      <SituacaoBadge s={i.situacao_efetiva as any} />
+                      <SituacaoBadge s={i.situacao_efetiva} />
                     </td>
                     <td className="px-3 py-2.5 text-sm font-semibold">{dataBR(i.validade_ate)}</td>
                     <td className="px-3 py-2.5 text-right">
