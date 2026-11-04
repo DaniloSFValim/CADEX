@@ -169,7 +169,8 @@ export default function LicencaPage() {
       {/* Obra já concluída não precisa de placa nem de QR Code. */}
       {licenca?.situacao === 'deferida' && !licenca.excluida_em && !licenca.concluida_em && <Placa licenca={licenca} />}
       {licenca && !licenca.excluida_em && (
-        <DocumentoLicenca licenca={licenca} empresas={empresas ?? []} orgaos={orgaos} tipos={tiposCatalogo} />
+        <DocumentoLicenca licenca={licenca} empresas={empresas ?? []} orgaos={orgaos} tipos={tiposCatalogo}
+                          onMudou={async () => setLicenca(await buscarLicenca(licenca.id))} />
       )}
       {licenca?.situacao === 'deferida' && !licenca.excluida_em && (
         <Validade licenca={licenca} hoje={hoje} onProrrogada={async () => setLicenca(await buscarLicenca(licenca.id))} />
