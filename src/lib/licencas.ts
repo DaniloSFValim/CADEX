@@ -96,6 +96,8 @@ export interface Licenca {
   empresas_no_deferimento: Record<string, unknown> | null;
   /** Código aleatório do QR Code da placa (art. 14); não é o id interno. */
   codigo_publico: string;
+  /** Emitida fora do CADEX (sistema anterior): o CADEX não emite o documento oficial dela. */
+  emitida_em_sistema_anterior: boolean;
   criado_em: string;
   atualizado_em: string;
 }
@@ -319,6 +321,12 @@ export async function listarLicencas(empresaId?: string): Promise<LicencaComTrec
   return todas.map(ordenarTrechos);
 }
 
+/** Marca ou desmarca a licença como emitida no sistema anterior. O banco recusa quem não grava licenças. */
+export async function definirEmitidaEmSistemaAnterior(id: string, valor: boolean) {
+  const { error } = await supabase.rpc('definir_emitida_em_sistema_anterior', { p_licenca_id: id, p_valor: valor });
+  if (error) throw error;
+}
+
 export async function buscarLicenca(id: string): Promise<LicencaComTrechos> {
   const { data, error } = await supabase.from('licencas').select('*, licenca_trechos(*)').eq('id', id).single();
   if (error) throw error;
@@ -330,7 +338,7 @@ function ordenarTrechos(l: LicencaComTrechos): LicencaComTrechos {
 }
 
 export type LicencaInput = Omit<Licenca,
-  'id' | 'empresas_no_deferimento' | 'codigo_publico' | 'anterior_resolucao' | 'criado_em' | 'atualizado_em'
+  'id' | 'empresas_no_deferimento' | 'codigo_publico' | 'emitida_em_sistema_anterior' | 'anterior_resolucao' | 'criado_em' | 'atualizado_em'
   | 'excluida_em' | 'excluida_por' | 'excluida_motivo' | 'validade_ate' | 'prorrogacoes'> & { id?: string };
 
 /** Grava licença e trechos numa só transação (função salvar_licenca). */

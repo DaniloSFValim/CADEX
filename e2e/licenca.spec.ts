@@ -77,6 +77,15 @@ test.describe('registro de licença', () => {
     await expect(lista(page, 'Situação')).toHaveValue('indeferida');
   });
 
+  test('licença emitida no sistema anterior: avisa e não deixa gerar o PDF nem a prévia', async ({ page }) => {
+    const l = licenca({ emitida_em_sistema_anterior: true });
+    await instalarBackend(page, { licencas: [l] });
+    await page.goto(`/obras/${l.id}`);
+    await expect(page.getByText('Emitida no sistema anterior. O CADEX não emite o documento oficial desta licença.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Gerar PDF da licença' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Visualizar prévia' })).toBeDisabled();
+  });
+
   test('fim anterior ao início é barrado, antes de enviar', async ({ page }) => {
     const backend = await instalarBackend(page);
     await page.goto('/obras/nova');
