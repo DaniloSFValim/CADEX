@@ -173,8 +173,10 @@ describe('período da obra ou serviço', () => {
     expect(erroPeriodoObra({ ...base, inicio: '2026-10-01', concluidaEm: '2026-09-30' }))
       .toBe('A conclusão não pode ser anterior ao início da obra ou serviço.');
   });
-  it('não valida o período de licença que não está deferida', () => {
-    expect(erroPeriodoObra({ ...base, deferida: false, inicio: '2026-12-01' })).toBeNull();
+  it('em análise não exige início nem conclusão, mas barra fim anterior ao início', () => {
+    expect(erroPeriodoObra({ ...base, deferida: false, inicio: '', fim: '' })).toBeNull();
+    expect(erroPeriodoObra({ ...base, deferida: false, inicio: '2026-12-01', fim: '2026-11-30' }))
+      .toBe('O fim da obra ou serviço não pode ser anterior ao início.');
   });
 });
 

@@ -186,11 +186,10 @@ export function situacoesRegistraveis<T extends string>(todas: readonly T[], atu
 export function erroPeriodoObra(p: {
   deferida: boolean; inicio: string; fim: string; concluidaEm: string;
 }): string | null {
-  if (!p.deferida) return null;
-  if (!p.inicio) return 'Informe o início da obra ou serviço. A validade de 30 dias conta a partir dele.';
+  if (p.deferida && !p.inicio) return 'Informe o início da obra ou serviço. A validade de 30 dias conta a partir dele.';
   const inicio = p.inicio;
-  if (p.fim && p.fim < inicio) return 'O fim da obra ou serviço não pode ser anterior ao início.';
-  if (inicio && p.concluidaEm && p.concluidaEm < inicio) {
+  if (inicio && p.fim && p.fim < inicio) return 'O fim da obra ou serviço não pode ser anterior ao início.';
+  if (p.deferida && inicio && p.concluidaEm && p.concluidaEm < inicio) {
     return 'A conclusão não pode ser anterior ao início da obra ou serviço.';
   }
   return null;

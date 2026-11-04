@@ -54,8 +54,9 @@ const ORGAO_PREFIXO = 'orgao:';
 const orgaoNoSetor = (o: Orgao, s: Setor) => o.setores.length === 0 || o.setores.includes(s);
 
 /** Situação como o registro enxerga: o ciclo da obra. */
-type UiSituacao = 'em_execucao' | 'concluida' | 'indeferida' | 'cancelada';
+type UiSituacao = 'em_analise' | 'em_execucao' | 'concluida' | 'indeferida' | 'cancelada';
 const UI_SITUACAO_LABEL: Record<UiSituacao, string> = {
+  em_analise: 'Em análise',
   em_execucao: 'Em execução',
   concluida: 'Concluída',
   indeferida: 'Indeferida',
@@ -63,12 +64,13 @@ const UI_SITUACAO_LABEL: Record<UiSituacao, string> = {
 };
 /** Ciclo da obra → situação administrativa gravada no banco. */
 const SITUACAO_DE_UI: Record<UiSituacao, SituacaoLicenca> = {
-  em_execucao: 'deferida', concluida: 'deferida', indeferida: 'indeferida', cancelada: 'cancelada',
+  em_analise: 'em_analise', em_execucao: 'deferida', concluida: 'deferida', indeferida: 'indeferida', cancelada: 'cancelada',
 };
 /** Em execução e concluída são "deferida"; a conclusão distingue pela data. */
 function uiDaSituacao(situacao: SituacaoLicenca, concluidaEm: string): UiSituacao {
   if (situacao === 'cancelada') return 'cancelada';
   if (situacao === 'indeferida') return 'indeferida';
+  if (situacao === 'em_analise') return 'em_analise';
   return concluidaEm ? 'concluida' : 'em_execucao';
 }
 
@@ -82,7 +84,7 @@ const VAZIO: Form = {
   executora_id: '', contratante_id: '', subcontratada_id: '', responsavel_tecnico_id: '',
   executora_razao_social: '', executora_cnpj: '', contratante_razao_social: '', contratante_cnpj: '',
   imovel_endereco: '', processo_urbanismo: '',
-  art_numero: '', protocolo_data: '', situacao: 'deferida',
+  art_numero: '', protocolo_data: '', situacao: 'em_analise',
   inicio_previsto: '', fim_previsto: '', concluida_em: '', recomposicao_data: '', as_built_sei: '', as_built_data: '',
 };
 
@@ -217,6 +219,9 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [salvo, setSalvo] = useState(false);
+  // Prévia antes de criar: mostra o PDF com os dados digitados, sem gravar nada.
+  const [previa, setPrevia] = useState<LicencaComTrechos | null>(null);
+  const [erroPrevia, setErroPrevia] = useState<string | null>(null);
   // Licença já registrada abre só para leitura; "Editar" libera o formulário. Cadastro novo já abre editável.
   const [editando, setEditando] = useState(!licenca);
   const hoje = hojeISO();
@@ -458,6 +463,34 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
     };
   }
 
+  /** Monta a licença como ela ficaria salva, sem gravar, para a prévia. */
+  function gerarPrevia() {
+    const m = montar();
+    if (typeof m === 'string') {
+      setPrevia(null);
+      setErroPrevia(m);
+      return;
+    }
+    setErroPrevia(null);
+    const agora = new Date().toISOString();
+    setPrevia({
+      ...(m.licenca as LicencaComTrechos),
+      id: 'previa',
+      codigo_publico: 'PREVIA',
+      empresas_no_deferimento: null,
+      anterior_resolucao: false,
+      criado_em: agora,
+      atualizado_em: agora,
+      excluida_em: null,
+      excluida_por: null,
+      excluida_motivo: null,
+      emitida_em_sistema_anterior: false,
+      validade_ate: m.licenca.inicio_previsto ? prazoDeAcaoAte(m.licenca.inicio_previsto) : null,
+      prorrogacoes: 0,
+      licenca_trechos: m.trechos.map((t, i) => ({ ...t, id: t.id ?? `previa-${i}`, ordem: i + 1 })),
+    });
+  }
+
   async function submit(e: FormEvent) {
     e.preventDefault();
     setError(null);
@@ -587,28 +620,27 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
             <select className={inputClass} disabled={ro}
                     value={uiSituacao} onChange={(e) => setUiSituacao(e.target.value as UiSituacao)}>
               {/* "Indeferida" só aparece em licença já indeferida (histórico), para o campo mostrar o valor gravado. */}
+              {/* "Em análise" só para licença nova ou ainda em análise: não se volta a ela depois de deferida. */}
               {situacoesRegistraveis(Object.keys(UI_SITUACAO_LABEL) as UiSituacao[], licenca?.situacao ?? null)
+                .filter((s) => s !== 'em_analise' || !licenca || licenca.situacao === 'em_analise')
                 .map((s) => <option key={s} value={s}>{UI_SITUACAO_LABEL[s]}</option>)}
             </select>
           </Field>
-          {deferindo && (
-            <Field label="Nº da licença" required hint="Numeração própria da SECONSER.">
-              <input className={inputClass} required disabled={ro} value={f.numero} onChange={(e) => set('numero', e.target.value)} />
-            </Field>
-          )}
+          {/* Sempre visível: a prévia usa número e datas. Obrigatórios só quando deferida. */}
+          <Field label="Nº da licença" required={deferindo} hint="Numeração própria da SECONSER.">
+            <input className={inputClass} required={deferindo} disabled={ro} value={f.numero} onChange={(e) => set('numero', e.target.value)} />
+          </Field>
         </div>
-        {deferindo && (
-          <div className="mt-4 grid gap-4 sm:grid-cols-3">
-            <Field label="Início da obra ou serviço" required hint="A validade de 30 dias conta a partir do início.">
-              <input type="date" className={inputClass} required disabled={ro} value={f.inicio_previsto}
-                     onChange={(e) => set('inicio_previsto', e.target.value)} />
-            </Field>
-            <Field label="Fim da obra ou serviço" required hint="Previsão de término. A validade da licença é outra: veja o cartão de validade.">
-              <input type="date" className={inputClass} required disabled={ro} value={f.fim_previsto}
-                     min={f.inicio_previsto || undefined} onChange={(e) => set('fim_previsto', e.target.value)} />
-            </Field>
-          </div>
-        )}
+        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          <Field label="Início da obra ou serviço" required={deferindo} hint="A validade de 30 dias conta a partir do início.">
+            <input type="date" className={inputClass} required={deferindo} disabled={ro} value={f.inicio_previsto}
+                   onChange={(e) => set('inicio_previsto', e.target.value)} />
+          </Field>
+          <Field label="Fim da obra ou serviço" required={deferindo} hint="Previsão de término. A validade da licença é outra: veja o cartão de validade.">
+            <input type="date" className={inputClass} required={deferindo} disabled={ro} value={f.fim_previsto}
+                   min={f.inicio_previsto || undefined} onChange={(e) => set('fim_previsto', e.target.value)} />
+          </Field>
+        </div>
         {f.setor === 'telecom' && anterior && (
           <p className="mt-4 rounded-sm border-l-4 border-tinta-300 bg-tinta-50 px-3 py-2 text-sm text-tinta-700">
             Protocolo anterior a 09/09/2026: registro histórico, anterior à Resolução. Não exige empresa APTA nem ART,
@@ -898,6 +930,23 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
             : <Link to="/obras" className="text-sm font-semibold text-tinta-600 hover:underline">Cancelar</Link>}
           <Button type="submit" disabled={busy}>{busy ? 'Salvando…' : licenca ? 'Salvar alterações' : registroAnterior ? 'Registrar licença' : 'Criar licença'}</Button>
         </div>
+      )}
+      {!licenca && !registroAnterior && (
+        <section className="cartao p-5" aria-label="Prévia antes de criar">
+          <h2 className="font-display text-base font-bold text-tinta-900">Prévia antes de criar</h2>
+          <p className="mt-2 text-sm text-tinta-700">
+            Confira como a licença vai sair, com os dados digitados acima. A prévia não grava nada.
+          </p>
+          <div className="mt-3">
+            <Button type="button" variant="secondary" disabled={busy} onClick={() => gerarPrevia()}>Atualizar prévia</Button>
+          </div>
+          {erroPrevia && <p className="mt-2 text-sm text-tinta-600">{erroPrevia}</p>}
+          {previa && (
+            <div className="mt-4">
+              <DocumentoLicenca licenca={previa} empresas={empresas} orgaos={orgaos} tipos={tipos} salva={false} />
+            </div>
+          )}
+        </section>
       )}
       {ro && licenca && !somenteLeitura && (
         <div className="flex justify-end">
