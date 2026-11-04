@@ -1,7 +1,8 @@
 import { Suspense, lazy, useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Badge, Button, Card, ErrorNote, Field, Spinner, Titulo, botaoLink, inputClass, linkTexto } from '../components/ui';
 import { SuspensaoECorrecoes } from '../components/SuspensaoECorrecoes';
+import { RegistroAnterior } from '../components/RegistroAnterior';
 import { DocumentoLicenca } from '../components/DocumentoLicenca';
 import { QrCode } from '../components/QrCode';
 import { ExcluirLicenca } from '../components/ExclusaoLicenca';
@@ -15,7 +16,7 @@ import {
 } from '../lib/empresas';
 import {
   ESTADO_LICENCA_LABEL, ORIGENS, ORIGEM_LABEL, TIPOS_INTERVENCAO, TIPO_INTERVENCAO_LABEL, origemPublica, TOM_ESTADO_LICENCA, buscarConflitos, buscarLicenca, prorrogarLicenca, rotuloProrrogacao,
-  anteriorResolucao, coordenadaTexto, segueResolucao, estadoLicenca, lerCoordenada, linkMapa, salvarLicenca,
+  anteriorResolucao, coordenadaTexto, definirEmitidaEmSistemaAnterior, segueResolucao, estadoLicenca, lerCoordenada, linkMapa, salvarLicenca,
   erroPeriodoObra, mesmaEmpresaNosPapeis, situacoesRegistraveis,
   urlPublicaLicenca, dentroDoPrazoDeAcao, prazoDeAcaoAte,
   type Conflito, type LicencaComTrechos, type LicencaInput, type OrigemIntervencao, type SituacaoLicenca, type TipoIntervencao, type TipoObra, type Trecho,
@@ -118,6 +119,8 @@ const trechoParaForm = (t: Trecho & { id: string }): TrechoForm => ({
 
 export default function LicencaPage() {
   const { id } = useParams();
+  const [params] = useSearchParams();
+  const registroAnterior = !id && params.get('anterior') === '1';
   const navigate = useNavigate();
   const { podeLicenciar, servidor } = useAuth();
   const administrador = Boolean(servidor?.administrador);
@@ -149,7 +152,7 @@ export default function LicencaPage() {
           <ExcluirLicenca licenca={licenca} empresas={new Map(empresas.map((e) => [e.id, e]))} orgaos={orgaos} hoje={hoje}
                           onExcluida={(aviso) => navigate('/admin/licencas', { state: { aviso } })} />
         )}
-        titulo={licenca ? (licenca.numero ? `Licença ${licenca.numero}` : 'Pedido de licença') : 'Registrar licença'}
+        titulo={licenca ? (licenca.numero ? `Licença ${licenca.numero}` : 'Pedido de licença') : registroAnterior ? 'Registrar licença já emitida' : 'Criar licença nova'}
         descricao={licenca
           ? <span className="inline-flex flex-wrap items-center gap-2">
               <Badge tom={TOM_ESTADO_LICENCA[estado!]}>{ESTADO_LICENCA_LABEL[estado!]}</Badge>
@@ -167,10 +170,12 @@ export default function LicencaPage() {
         </p>
       )}
       {/* Obra já concluída não precisa de placa nem de QR Code. */}
-      {licenca?.situacao === 'deferida' && !licenca.excluida_em && !licenca.concluida_em && <Placa licenca={licenca} />}
+      {licenca?.situacao === 'deferida' && !licenca.excluida_em && !licenca.concluida_em && !licenca.emitida_em_sistema_anterior && <Placa licenca={licenca} />}
+      {licenca && !licenca.excluida_em && !licenca.emitida_em_sistema_anterior && (
+        <DocumentoLicenca licenca={licenca} empresas={empresas ?? []} orgaos={orgaos} tipos={tiposCatalogo} />
+      )}
       {licenca && !licenca.excluida_em && (
-        <DocumentoLicenca licenca={licenca} empresas={empresas ?? []} orgaos={orgaos} tipos={tiposCatalogo}
-                          onMudou={async () => setLicenca(await buscarLicenca(licenca.id))} />
+        <RegistroAnterior licenca={licenca} onMudou={async () => setLicenca(await buscarLicenca(licenca.id))} />
       )}
       {licenca?.situacao === 'deferida' && !licenca.excluida_em && (
         <Validade licenca={licenca} hoje={hoje} onProrrogada={async () => setLicenca(await buscarLicenca(licenca.id))} />
@@ -187,17 +192,22 @@ export default function LicencaPage() {
         vinculos={vinculos}
         orgaos={orgaos}
         somenteLeitura={!podeLicenciar || Boolean(licenca?.excluida_em)}
+        registroAnterior={registroAnterior}
         onSalvo={async (novoId) => {
-          if (!licenca) navigate(`/obras/${novoId}`, { replace: true });
-          else setLicenca(await buscarLicenca(novoId));
+          if (!licenca) {
+            // Registro de licença já emitida: já nasce marcada, sem PDF nem QR Code.
+            if (registroAnterior) await definirEmitidaEmSistemaAnterior(novoId, true);
+            navigate(`/obras/${novoId}`, { replace: true });
+          } else setLicenca(await buscarLicenca(novoId));
         }}
       />
     </>
   );
 }
 
-function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitura, onSalvo }: {
+function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitura, registroAnterior, onSalvo }: {
   licenca: LicencaComTrechos | null; empresas: Empresa[]; vinculos: Vinculo[]; orgaos: Orgao[]; tipos: TipoDeObra[]; somenteLeitura: boolean;
+  registroAnterior: boolean;
   onSalvo: (id: string) => Promise<void>;
 }) {
   const [f, setF] = useState<Form>(licenca ? paraForm(licenca) : { ...VAZIO, protocolo_data: hojeISO() });
@@ -886,7 +896,7 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
           {licenca
             ? <Button variant="secondary" type="button" onClick={cancelar}>Cancelar</Button>
             : <Link to="/obras" className="text-sm font-semibold text-tinta-600 hover:underline">Cancelar</Link>}
-          <Button type="submit" disabled={busy}>{busy ? 'Salvando…' : licenca ? 'Salvar alterações' : 'Registrar licença'}</Button>
+          <Button type="submit" disabled={busy}>{busy ? 'Salvando…' : licenca ? 'Salvar alterações' : registroAnterior ? 'Registrar licença' : 'Criar licença'}</Button>
         </div>
       )}
       {ro && licenca && !somenteLeitura && (

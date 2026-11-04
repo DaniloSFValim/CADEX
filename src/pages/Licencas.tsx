@@ -77,7 +77,8 @@ export default function Licencas() {
             Exportar (PDF ou planilha)
           </Button>
           {podeLicenciar && <Link to="/obras/sem-licenca" className={botaoLink.secondary}>Sem licença</Link>}
-          {podeLicenciar && <Link to="/obras/nova" className={botaoLink.primary}>Registrar licença</Link>}
+          {podeLicenciar && <Link to="/obras/nova?anterior=1" className={botaoLink.secondary}>Registrar licença já emitida</Link>}
+          {podeLicenciar && <Link to="/obras/nova" className={botaoLink.primary}>Criar licença nova</Link>}
         </>}
       />
 
@@ -129,7 +130,7 @@ export default function Licencas() {
         {licencas && filtradas.length === 0 && (
           <Empty>
             {licencas.length === 0
-              ? podeLicenciar ? 'Nenhuma licença registrada. Use Registrar licença para lançar a primeira.' : 'Nenhuma licença registrada.'
+              ? podeLicenciar ? 'Nenhuma licença registrada. Use Criar licença nova para lançar a primeira.' : 'Nenhuma licença registrada.'
               : 'Nenhuma licença corresponde à busca.'}
           </Empty>
         )}
