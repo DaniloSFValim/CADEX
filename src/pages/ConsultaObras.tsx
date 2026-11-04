@@ -28,6 +28,7 @@ export default function ConsultaObras() {
   const [modo, setModo] = useState<'pontos' | 'calor'>('pontos');
   const [mostrarEncerradas, setMostrarEncerradas] = useState(false);
   const [bairro, setBairro] = useState<string | null>(null);
+  const [situacaoLista, setSituacaoLista] = useState<ObraPublica['situacao'] | ''>('');
   const [baixando, setBaixando] = useState(false);
   const [filtro, setFiltro] = useState<FiltroPainel>({ situacao: null, executora: null });
   const mapaRef = useRef<HTMLDivElement>(null);
@@ -55,7 +56,9 @@ export default function ConsultaObras() {
   const ativas = useMemo(() => todas.filter(obraAtiva), [todas]);
   const porBairro = bairro ? (o: ObraPublica) => (o.trechos[0]?.bairro?.trim() || 'Sem bairro') === bairro : () => true;
   const obrasPainel = useMemo(() => filtrarPainel(obras ?? [], filtro), [obras, filtro]);
-  const listadas = (filtroAtivo ? obrasPainel : mostrarEncerradas ? todas : ativas).filter(porBairro);
+  // Escolher uma situação específica olha todas as obras (inclusive concluídas e prazos encerrados).
+  const base = filtroAtivo ? obrasPainel : mostrarEncerradas || situacaoLista ? todas : ativas;
+  const listadas = base.filter((o) => !situacaoLista || o.situacao === situacaoLista).filter(porBairro);
   const grupos = useMemo(() => agruparPorBairro(listadas), [listadas]);
   const executoras = useMemo(() => resumoExecutoras(todas), [todas]);
   const stats = useMemo(() => resumo(todas), [todas]);
@@ -149,6 +152,16 @@ export default function ConsultaObras() {
                     </button>
                   ))}
                 </div>
+                <label className="flex items-center gap-2 text-sm text-tinta-700">
+                  <span className="font-semibold">Situação</span>
+                  <select value={situacaoLista} onChange={(e) => setSituacaoLista(e.target.value as ObraPublica['situacao'] | '')}
+                          className="rounded-full border border-tinta-200 bg-white px-3 py-1.5 text-sm text-tinta-900">
+                    <option value="">Qualquer</option>
+                    {(Object.keys(SITUACAO_PUBLICA_LABEL) as ObraPublica['situacao'][]).map((s) => (
+                      <option key={s} value={s}>{SITUACAO_PUBLICA_LABEL[s]}</option>
+                    ))}
+                  </select>
+                </label>
                 {filtroAtivo && (
                   <div className="flex w-full flex-wrap items-center gap-2 text-sm" role="status">
                     <span className="text-tinta-600">Filtrando:</span>
@@ -213,9 +226,9 @@ export default function ConsultaObras() {
                               onFocus={() => setDestaque(o.codigo)}
                               onBlur={() => setDestaque(null)}>
                             <div className="min-w-0">
-                              <Link to={`/licenca/${o.codigo}`} className="font-medium text-tinta-900 hover:text-marca-700 hover:underline">
+                              <span className="font-medium text-tinta-900">
                                 {o.trechos[0]?.logradouro ?? 'Local não informado'}
-                              </Link>
+                              </span>
                               <span className="tabular ml-2 text-xs text-tinta-500">nº {o.numero}</span>
                               {o.trechos.length > 1 && <span className="ml-2 text-xs text-tinta-500">e mais {o.trechos.length - 1}</span>}
                               <div className="text-tinta-700">
