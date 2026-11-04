@@ -41,16 +41,16 @@ test.describe('registro de licença', () => {
     await campo(page, 'Setor').selectOption('viario');
     await preencherBasico(page);
     await page.locator('label:has-text("Outros (descrever)") input').check();
-    await page.getByRole('button', { name: 'Registrar licença' }).click();
+    await page.getByRole('button', { name: 'Criar licença' }).click();
     // Pelo navegador (campo obrigatório) e, sem ele, pela regra da aplicação.
     expect(await page.getByLabel(/Descreva o tipo/).evaluate((el: HTMLInputElement) => el.validity.valueMissing)).toBe(true);
     await page.locator('form').evaluate((f: HTMLFormElement) => { f.noValidate = true; });
-    await page.getByRole('button', { name: 'Registrar licença' }).click();
+    await page.getByRole('button', { name: 'Criar licença' }).click();
     await expect(page.getByRole('alert')).toContainText('Descreva o tipo "Outros"');
     expect(backend.de('rpc/salvar_licenca')).toHaveLength(0);
 
     await page.getByLabel(/Descreva o tipo/).fill('Poste de sinalização');
-    await page.getByRole('button', { name: 'Registrar licença' }).click();
+    await page.getByRole('button', { name: 'Criar licença' }).click();
     await expect.poll(() => backend.de('rpc/salvar_licenca').length).toBe(1);
     const { p_licenca } = backend.de('rpc/salvar_licenca')[0].corpo as { p_licenca: Record<string, unknown> };
     expect(p_licenca.tipos_obra).toEqual(['vala', 'outros']);
@@ -60,7 +60,7 @@ test.describe('registro de licença', () => {
   test('não oferece "Indeferida" e nomeia as datas do período', async ({ page }) => {
     await instalarBackend(page);
     await page.goto('/obras/nova');
-    await expect(page.getByRole('heading', { name: 'Registrar licença' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Criar licença nova' })).toBeVisible();
 
     await expect(lista(page, 'Situação').locator('option')).toHaveText(['Em execução', 'Concluída', 'Cancelada']);
     await expect(rotulo(page, 'Início da obra ou serviço')).toBeVisible();
@@ -77,13 +77,20 @@ test.describe('registro de licença', () => {
     await expect(lista(page, 'Situação')).toHaveValue('indeferida');
   });
 
-  test('licença emitida no sistema anterior: avisa e não deixa gerar o PDF nem a prévia', async ({ page }) => {
+  test('licença emitida no sistema anterior: só registro, sem PDF, prévia nem QR Code', async ({ page }) => {
     const l = licenca({ emitida_em_sistema_anterior: true });
     await instalarBackend(page, { licencas: [l] });
     await page.goto(`/obras/${l.id}`);
-    await expect(page.getByText('Emitida no sistema anterior. O CADEX não emite o documento oficial desta licença.')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Gerar PDF da licença' })).toBeDisabled();
-    await expect(page.getByRole('button', { name: 'Visualizar prévia' })).toBeDisabled();
+    await expect(page.getByText('Licença emitida no sistema anterior. Aqui ela é só o registro dos dados: não há PDF, prévia nem QR Code.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Gerar PDF da licença' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Visualizar prévia' })).toHaveCount(0);
+  });
+
+  test('registrar licença já emitida tem título próprio e não pede a criação', async ({ page }) => {
+    await instalarBackend(page);
+    await page.goto('/obras/nova?anterior=1');
+    await expect(page.getByRole('heading', { name: 'Registrar licença já emitida' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Registrar licença' })).toBeVisible();
   });
 
   test('fim anterior ao início é barrado, antes de enviar', async ({ page }) => {
@@ -100,7 +107,7 @@ test.describe('registro de licença', () => {
 
     // Pela regra da aplicação, mesmo sem a validação do navegador.
     await page.locator('form').evaluate((f: HTMLFormElement) => { f.noValidate = true; });
-    await page.getByRole('button', { name: 'Registrar licença' }).click();
+    await page.getByRole('button', { name: 'Criar licença' }).click();
     await expect(page.getByRole('alert')).toContainText('O fim da obra ou serviço não pode ser anterior ao início.');
     expect(backend.de('rpc/salvar_licenca')).toHaveLength(0);
   });
@@ -126,7 +133,7 @@ test.describe('registro de licença', () => {
 
     await lista(page, 'Contratante').selectOption('op1');
     await preencherBasico(page);
-    await page.getByRole('button', { name: 'Registrar licença' }).click();
+    await page.getByRole('button', { name: 'Criar licença' }).click();
 
     await expect.poll(() => backend.de('rpc/salvar_licenca').length).toBe(1);
     const { p_licenca } = backend.de('rpc/salvar_licenca')[0].corpo as { p_licenca: Record<string, unknown> };
@@ -185,17 +192,17 @@ test.describe('registro de licença', () => {
     await lista(page, 'Executora').selectOption('ter1');
     await preencherBasico(page);
     await lista(page, 'Tipo de intervenção').selectOption('');
-    await page.getByRole('button', { name: 'Registrar licença' }).click();
+    await page.getByRole('button', { name: 'Criar licença' }).click();
     // Pelo navegador (select obrigatório) e, sem ele, pela regra da aplicação.
     expect(await lista(page, 'Tipo de intervenção').evaluate((el: HTMLSelectElement) => el.validity.valueMissing)).toBe(true);
     await page.locator('form').evaluate((f: HTMLFormElement) => { f.noValidate = true; });
-    await page.getByRole('button', { name: 'Registrar licença' }).click();
+    await page.getByRole('button', { name: 'Criar licença' }).click();
     await expect(page.getByRole('alert')).toContainText('Escolha o tipo de intervenção: obra ou serviço.');
     expect(backend.de('rpc/salvar_licenca')).toHaveLength(0);
 
     await lista(page, 'Tipo de intervenção').selectOption('servico');
     await expect(rotulo(page, 'Escopo do serviço')).toBeVisible();
-    await page.getByRole('button', { name: 'Registrar licença' }).click();
+    await page.getByRole('button', { name: 'Criar licença' }).click();
     await expect.poll(() => backend.de('rpc/salvar_licenca').length).toBe(1);
     const { p_licenca } = backend.de('rpc/salvar_licenca')[0].corpo as { p_licenca: Record<string, unknown> };
     expect(p_licenca).toMatchObject({ tipo_intervencao: 'servico', origem_intervencao: 'concessionaria' });
@@ -225,7 +232,7 @@ test.describe('registro de licença', () => {
     await expect(page.getByRole('heading', { name: 'Contrato público' })).toBeVisible();
     await campo(page, 'Nº do contrato').fill('CT 12/2026');
     await preencherBasico(page);
-    await page.getByRole('button', { name: 'Registrar licença' }).click();
+    await page.getByRole('button', { name: 'Criar licença' }).click();
 
     await expect.poll(() => backend.de('rpc/salvar_licenca').length).toBe(1);
     const { p_licenca } = backend.de('rpc/salvar_licenca')[0].corpo as { p_licenca: Record<string, unknown> };

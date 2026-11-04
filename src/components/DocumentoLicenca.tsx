@@ -4,7 +4,7 @@ import { formatCnpj } from '../lib/cnpj';
 import { lerBrasao } from '../lib/brasao';
 import { useAuth } from '../lib/auth';
 import { listarDaEmpresa, type Empresa, type Registro } from '../lib/empresas';
-import { TIPO_OBRA_LABEL, definirEmitidaEmSistemaAnterior, type LicencaComTrechos } from '../lib/licencas';
+import { TIPO_OBRA_LABEL, type LicencaComTrechos } from '../lib/licencas';
 import { gerarPdfLicenca, problemasParaLicenca, type DadosLicencaPdf, type PartePdf, type ResponsavelPdf } from '../lib/licencaPdf';
 import { nomeOrgao, type Orgao } from '../lib/orgaos';
 import type { TipoIntervencao } from '../lib/tiposIntervencao';
@@ -14,12 +14,9 @@ import type { TipoIntervencao } from '../lib/tiposIntervencao';
  * Secretária assina digitalmente; por isso o fiscal emissor e a Secretária são
  * informados na emissão. Nada disso fica gravado: quem gera informa de novo.
  */
-export function DocumentoLicenca({ licenca, empresas, orgaos, tipos, onMudou }: {
+export function DocumentoLicenca({ licenca, empresas, orgaos, tipos }: {
   licenca: LicencaComTrechos; empresas: Empresa[]; orgaos: Orgao[]; tipos: TipoIntervencao[];
-  onMudou: () => Promise<void>;
 }) {
-  const { podeLicenciar } = useAuth();
-  const [confirmando, setConfirmando] = useState(false);
   const emitidaFora = licenca.emitida_em_sistema_anterior;
   // A prévia vale para qualquer licença; a versão oficial só sai depois do deferimento.
   const deferida = licenca.situacao === 'deferida';
@@ -54,20 +51,6 @@ export function DocumentoLicenca({ licenca, empresas, orgaos, tipos, onMudou }: 
       if (antiga) URL.revokeObjectURL(antiga);
       return null;
     });
-  };
-
-  const marcar = async (valor: boolean) => {
-    setBusy(true);
-    setErro(null);
-    try {
-      await definirEmitidaEmSistemaAnterior(licenca.id, valor);
-      setConfirmando(false);
-      await onMudou();
-    } catch (e) {
-      setErro(e);
-    } finally {
-      setBusy(false);
-    }
   };
 
   const gerar = async (previa: boolean) => {
@@ -153,30 +136,6 @@ export function DocumentoLicenca({ licenca, empresas, orgaos, tipos, onMudou }: 
       <p className="mt-2 text-sm text-tinta-700">
         O PDF sai com os dados desta licença. Depois, vai para o SEI, onde a Secretária assina digitalmente.
       </p>
-      {emitidaFora ? (
-        <div className="mt-3 flex flex-wrap items-center gap-3 rounded-sm border-l-4 border-atencao bg-atencao/6 px-3 py-2 text-sm text-tinta-800">
-          <span>Emitida no sistema anterior. O CADEX não emite o documento oficial desta licença.</span>
-          {podeLicenciar && (
-            <Button type="button" variant="secondary" disabled={busy} onClick={() => void marcar(false)}>
-              Desmarcar
-            </Button>
-          )}
-        </div>
-      ) : podeLicenciar && (
-        confirmando ? (
-          <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-tinta-800">
-            <span>O CADEX deixará de emitir o PDF oficial desta licença. Confirmar?</span>
-            <Button type="button" disabled={busy} onClick={() => void marcar(true)}>Confirmar</Button>
-            <Button type="button" variant="secondary" disabled={busy} onClick={() => setConfirmando(false)}>Cancelar</Button>
-          </div>
-        ) : (
-          <div className="mt-3">
-            <Button type="button" variant="secondary" disabled={busy} onClick={() => setConfirmando(true)}>
-              Marcar como emitida no sistema anterior
-            </Button>
-          </div>
-        )
-      )}
       <p className="mt-3 text-sm text-tinta-700">
         Fiscal emissor: <strong>{servidor?.nome ?? '—'}</strong>
         {servidor?.cargo && <> · {servidor.cargo}</>}
