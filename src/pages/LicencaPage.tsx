@@ -168,7 +168,7 @@ export default function LicencaPage() {
       )}
       {/* Obra já concluída não precisa de placa nem de QR Code. */}
       {licenca?.situacao === 'deferida' && !licenca.excluida_em && !licenca.concluida_em && <Placa licenca={licenca} />}
-      {licenca?.situacao === 'deferida' && !licenca.excluida_em && (
+      {licenca && !licenca.excluida_em && (
         <DocumentoLicenca licenca={licenca} empresas={empresas ?? []} orgaos={orgaos} tipos={tiposCatalogo} />
       )}
       {licenca?.situacao === 'deferida' && !licenca.excluida_em && (
