@@ -267,3 +267,12 @@ test.describe('administrador corrige licença de outro cadastro', () => {
     expect(p_licenca.escopo).toBe('Escopo corrigido pelo administrador');
   });
 });
+
+test('lista: "Nova licença ou obra" reúne os três caminhos', async ({ page }) => {
+  await instalarBackend(page);
+  await page.goto('/obras');
+  await page.getByText('Nova licença ou obra').click();
+  await expect(page.getByRole('link', { name: /Criar licença nova/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Registrar licença já emitida/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Registrar obra sem licença/ })).toBeVisible();
+});
