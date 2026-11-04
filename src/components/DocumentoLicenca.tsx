@@ -17,6 +17,8 @@ import type { TipoIntervencao } from '../lib/tiposIntervencao';
 export function DocumentoLicenca({ licenca, empresas, orgaos, tipos }: {
   licenca: LicencaComTrechos; empresas: Empresa[]; orgaos: Orgao[]; tipos: TipoIntervencao[];
 }) {
+  // A prévia vale para qualquer licença; a versão oficial só sai depois do deferimento.
+  const deferida = licenca.situacao === 'deferida';
   const { servidor } = useAuth();
   const [secretariaNome, setSecretariaNome] = useState('');
   const [busy, setBusy] = useState(false);
@@ -99,7 +101,8 @@ export function DocumentoLicenca({ licenca, empresas, orgaos, tipos }: {
         codigo_publico: licenca.codigo_publico,
       };
 
-      const problemas = problemasParaLicenca(dados);
+      // A prévia mostra o que houver; a versão oficial exige o cadastro completo.
+      const problemas = previa ? [] : problemasParaLicenca(dados);
       if (problemas.length > 0) throw new Error(problemas.join(' '));
 
       const logo = await lerBrasao();
@@ -124,7 +127,7 @@ export function DocumentoLicenca({ licenca, empresas, orgaos, tipos }: {
 
   return (
     <section className="cartao mb-10 p-5" aria-label="Documento da licença">
-      <h2 className="font-display text-base font-bold text-tinta-900">Licença em PDF</h2>
+      <h2 className="font-display text-base font-bold text-tinta-900">Documento da licença</h2>
       <p className="mt-2 text-sm text-tinta-700">
         O PDF sai com os dados desta licença. Depois, vai para o SEI, onde a Secretária assina digitalmente.
       </p>
@@ -144,12 +147,13 @@ export function DocumentoLicenca({ licenca, empresas, orgaos, tipos }: {
         </ul>
       )}
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <Button type="button" variant="secondary" disabled={busy || !licenca.numero} onClick={() => void gerar(true)}>
+        <Button type="button" variant="secondary" disabled={busy} onClick={() => void gerar(true)}>
           Visualizar prévia
         </Button>
-        <Button type="button" disabled={busy || !licenca.numero} onClick={() => void gerar(false)}>
+        <Button type="button" disabled={busy || !deferida || !licenca.numero} onClick={() => void gerar(false)}>
           {busy ? 'Gerando…' : 'Gerar PDF da licença'}
         </Button>
+        {!deferida && <p className="text-sm text-tinta-600">A versão oficial sai depois do deferimento.</p>}
         {aviso && <p className="text-sm text-tinta-600">{aviso}</p>}
       </div>
       {previaUrl && (
