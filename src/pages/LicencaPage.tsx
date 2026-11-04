@@ -145,6 +145,11 @@ export default function LicencaPage() {
 
   const hoje = hojeISO();
   const estado = licenca ? estadoLicenca(licenca, hoje) : null;
+  // Mesmas condições das seções abaixo: a barra só aponta para o que existe nesta licença.
+  const mostraPlaca = Boolean(licenca && licenca.situacao === 'deferida' && !licenca.excluida_em && !licenca.concluida_em && !licenca.emitida_em_sistema_anterior);
+  const mostraDocumento = Boolean(licenca && !licenca.excluida_em && !licenca.emitida_em_sistema_anterior);
+  const mostraValidade = Boolean(licenca && licenca.situacao === 'deferida' && !licenca.excluida_em);
+  const mostraSuspensao = Boolean(licenca && !licenca.excluida_em);
 
   return (
     <>
@@ -171,21 +176,40 @@ export default function LicencaPage() {
           <Link to="/admin/licencas" className="font-semibold underline">Ir para a lixeira</Link>
         </p>
       )}
+      {licenca && !licenca.excluida_em && (
+        <nav aria-label="Ações desta licença" className="-mt-2 mb-6 flex flex-wrap gap-2">
+          {mostraPlaca && <Link to={`/obras/${licenca.id}/placa`} className={botaoLink.primary}>Imprimir placa</Link>}
+          {mostraDocumento && <a href="#documento" className={botaoLink.secondary}>Prévia e PDF</a>}
+          {mostraValidade && <a href="#validade" className={botaoLink.secondary}>Prorrogar</a>}
+          {mostraSuspensao && <a href="#suspensao" className={botaoLink.secondary}>Suspender ou pedir correção</a>}
+          <a href="#conflitos" className={botaoLink.secondary}>Conflitos</a>
+        </nav>
+      )}
       {/* Obra já concluída não precisa de placa nem de QR Code. */}
-      {licenca?.situacao === 'deferida' && !licenca.excluida_em && !licenca.concluida_em && !licenca.emitida_em_sistema_anterior && <Placa licenca={licenca} />}
-      {licenca && !licenca.excluida_em && !licenca.emitida_em_sistema_anterior && (
-        <DocumentoLicenca licenca={licenca} empresas={empresas ?? []} orgaos={orgaos} tipos={tiposCatalogo} />
+      {mostraPlaca && <Placa licenca={licenca!} />}
+      {mostraDocumento && (
+        <div id="documento" className="scroll-mt-6">
+          <DocumentoLicenca licenca={licenca!} empresas={empresas ?? []} orgaos={orgaos} tipos={tiposCatalogo} />
+        </div>
       )}
       {licenca && !licenca.excluida_em && (
         <RegistroAnterior licenca={licenca} onMudou={async () => setLicenca(await buscarLicenca(licenca.id))} />
       )}
-      {licenca?.situacao === 'deferida' && !licenca.excluida_em && (
-        <Validade licenca={licenca} hoje={hoje} onProrrogada={async () => setLicenca(await buscarLicenca(licenca.id))} />
+      {mostraValidade && (
+        <div id="validade" className="scroll-mt-6">
+          <Validade licenca={licenca!} hoje={hoje} onProrrogada={async () => setLicenca(await buscarLicenca(licenca!.id))} />
+        </div>
       )}
-      {licenca && !licenca.excluida_em && (
-        <SuspensaoECorrecoes licenca={licenca} hoje={hoje} onMudou={async () => setLicenca(await buscarLicenca(licenca.id))} />
+      {mostraSuspensao && (
+        <div id="suspensao" className="scroll-mt-6">
+          <SuspensaoECorrecoes licenca={licenca!} hoje={hoje} onMudou={async () => setLicenca(await buscarLicenca(licenca!.id))} />
+        </div>
       )}
-      {licenca && <Conflitos key={licenca.atualizado_em} licencaId={licenca.id} />}
+      {licenca && (
+        <div id="conflitos" className="scroll-mt-6">
+          <Conflitos key={licenca.atualizado_em} licencaId={licenca.id} />
+        </div>
+      )}
       <LicencaForm
         key={licenca?.id ?? 'nova'}
         licenca={licenca}

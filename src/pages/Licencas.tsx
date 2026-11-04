@@ -76,9 +76,33 @@ export default function Licencas() {
           <Button variant="secondary" disabled={!licencas?.length} onClick={() => setExportando((x) => !x)}>
             Exportar (PDF ou planilha)
           </Button>
-          {podeLicenciar && <Link to="/obras/sem-licenca" className={botaoLink.secondary}>Sem licença</Link>}
-          {podeLicenciar && <Link to="/obras/nova?anterior=1" className={botaoLink.secondary}>Registrar licença já emitida</Link>}
-          {podeLicenciar && <Link to="/obras/nova" className={botaoLink.primary}>Criar licença nova</Link>}
+          {podeLicenciar && (
+            <details className="group relative">
+              <summary className={`${botaoLink.primary} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>
+                Nova licença ou obra
+              </summary>
+              <ul className="absolute right-0 z-10 mt-2 w-80 max-w-[calc(100vw-2rem)] space-y-1 rounded-sm bg-white p-1.5 shadow-lg ring-1 ring-tinta-300">
+                <li>
+                  <Link to="/obras/nova" className="block rounded-sm p-3 hover:bg-tinta-50">
+                    <span className="block text-sm font-semibold text-tinta-900">Criar licença nova</span>
+                    <span className="mt-0.5 block text-xs text-tinta-600">Licença emitida pelo CADEX: prévia, PDF e QR Code.</span>
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/obras/nova?anterior=1" className="block rounded-sm p-3 hover:bg-tinta-50">
+                    <span className="block text-sm font-semibold text-tinta-900">Registrar licença já emitida</span>
+                    <span className="mt-0.5 block text-xs text-tinta-600">Só os dados de uma licença emitida no sistema anterior. Sem PDF nem QR Code.</span>
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/obras/sem-licenca" className="block rounded-sm p-3 hover:bg-tinta-50">
+                    <span className="block text-sm font-semibold text-tinta-900">Registrar obra sem licença</span>
+                    <span className="mt-0.5 block text-xs text-tinta-600">Intervenção que não tem licença, para a fiscalização.</span>
+                  </Link>
+                </li>
+              </ul>
+            </details>
+          )}
         </>}
       />
 
