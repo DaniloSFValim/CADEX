@@ -10,6 +10,7 @@ import { Empty, ErrorNote, Kpi, Spinner, Titulo, linkTexto } from '../components
 import { dataBR } from '../components/Situacao';
 import { hojeISO } from '../lib/empresas';
 import { ORIGEM_LABEL, TIPO_INTERVENCAO_LABEL, origemPublica } from '../lib/licencas';
+import { carregarBairrosGeo, chaveBairro, type BairroGeo } from '../lib/bairros';
 import { listarTipos, mapaRotulosTipos, rotuloDoTipo } from '../lib/tiposIntervencao';
 import {
   COR_SITUACAO, SITUACAO_PUBLICA_LABEL, baixarObrasGeojson, buscarObrasPublicas, filtrarPainel, obrasProximas,
@@ -29,6 +30,9 @@ export default function ConsultaObras() {
   const [mostrarEncerradas, setMostrarEncerradas] = useState(false);
   const [bairro, setBairro] = useState<string | null>(null);
   const [situacaoLista, setSituacaoLista] = useState<ObraPublica['situacao'] | ''>('');
+  const [regiao, setRegiao] = useState('');
+  // Bairros oficiais por chave: nome canônico e região. Vazio até carregar.
+  const [bairrosGeo, setBairrosGeo] = useState<Map<string, BairroGeo>>(new Map());
   const [baixando, setBaixando] = useState(false);
   const [filtro, setFiltro] = useState<FiltroPainel>({ situacao: null, executora: null });
   const mapaRef = useRef<HTMLDivElement>(null);
@@ -36,6 +40,11 @@ export default function ConsultaObras() {
 
   const [rotulos, setRotulos] = useState<Record<string, string>>({});
   useEffect(() => { buscarObrasPublicas().then(setObras).catch(setError); }, []);
+  useEffect(() => {
+    carregarBairrosGeo()
+      .then((g) => setBairrosGeo(new Map((g.features as { properties: BairroGeo }[]).map((f) => [chaveBairro(f.properties.nome), f.properties]))))
+      .catch(() => setBairrosGeo(new Map()));
+  }, []);
   useEffect(() => { listarTipos().then((t) => setRotulos(mapaRotulosTipos(t))).catch(() => setRotulos({})); }, []);
 
   /** Seleciona a obra e leva a tela ao mapa, sem voltar ao cabeçalho: a ficha abre sobre o mapa. */
@@ -54,12 +63,15 @@ export default function ConsultaObras() {
 
   const todas = obras ?? [];
   const ativas = useMemo(() => todas.filter(obraAtiva), [todas]);
-  const porBairro = bairro ? (o: ObraPublica) => (o.trechos[0]?.bairro?.trim() || 'Sem bairro') === bairro : () => true;
+  const bairroDaObra = (o: ObraPublica) => o.trechos[0]?.bairro?.trim() || '';
+  const porBairro = bairro ? (o: ObraPublica) => chaveBairro(bairroDaObra(o) || 'Sem bairro') === chaveBairro(bairro) : () => true;
+  const porRegiao = regiao ? (o: ObraPublica) => bairrosGeo.get(chaveBairro(bairroDaObra(o)))?.regiao === regiao : () => true;
+  const regioes = useMemo(() => [...new Set([...bairrosGeo.values()].map((b) => b.regiao))].sort(), [bairrosGeo]);
   const obrasPainel = useMemo(() => filtrarPainel(obras ?? [], filtro), [obras, filtro]);
   // Escolher uma situação específica olha todas as obras (inclusive concluídas e prazos encerrados).
   const base = filtroAtivo ? obrasPainel : mostrarEncerradas || situacaoLista ? todas : ativas;
-  const listadas = base.filter((o) => !situacaoLista || o.situacao === situacaoLista).filter(porBairro);
-  const grupos = useMemo(() => agruparPorBairro(listadas), [listadas]);
+  const listadas = base.filter((o) => !situacaoLista || o.situacao === situacaoLista).filter(porRegiao).filter(porBairro);
+  const grupos = useMemo(() => agruparPorBairro(listadas, bairrosGeo), [listadas, bairrosGeo]);
   const executoras = useMemo(() => resumoExecutoras(todas), [todas]);
   const stats = useMemo(() => resumo(todas), [todas]);
   const selecionada = useMemo(() => (obras ?? []).find((o) => o.codigo === foco) ?? null, [obras, foco]);
@@ -152,6 +164,16 @@ export default function ConsultaObras() {
                     </button>
                   ))}
                 </div>
+                {regioes.length > 0 && (
+                  <label className="flex items-center gap-2 text-sm text-tinta-700">
+                    <span className="font-semibold">Região</span>
+                    <select value={regiao} onChange={(e) => setRegiao(e.target.value)}
+                            className="rounded-full border border-tinta-200 bg-white px-3 py-1.5 text-sm text-tinta-900">
+                      <option value="">Todas</option>
+                      {regioes.map((r) => <option key={r} value={r}>{r}</option>)}
+                    </select>
+                  </label>
+                )}
                 <label className="flex items-center gap-2 text-sm text-tinta-700">
                   <span className="font-semibold">Situação</span>
                   <select value={situacaoLista} onChange={(e) => setSituacaoLista(e.target.value as ObraPublica['situacao'] | '')}
@@ -280,15 +302,19 @@ function obraAtiva(o: ObraPublica) {
 }
 
 /** Agrupa por bairro do primeiro trecho. Ordem alfabética, com "Sem bairro" por último. */
-function agruparPorBairro(obras: ObraPublica[]): { bairro: string; obras: ObraPublica[] }[] {
-  const mapa = new Map<string, ObraPublica[]>();
+/** Agrupa por bairro do primeiro trecho. Grafias iguais (Pe/Pé, Ponta Dareia/D'Areia) viram um grupo, com o nome oficial. */
+function agruparPorBairro(obras: ObraPublica[], oficiais: Map<string, BairroGeo>): { bairro: string; obras: ObraPublica[] }[] {
+  const mapa = new Map<string, { nome: string; obras: ObraPublica[] }>();
   for (const o of obras) {
-    const bairro = o.trechos[0]?.bairro?.trim() || 'Sem bairro';
-    mapa.set(bairro, [...(mapa.get(bairro) ?? []), o]);
+    const bruto = o.trechos[0]?.bairro?.trim() || 'Sem bairro';
+    const chave = chaveBairro(bruto);
+    const grupo = mapa.get(chave) ?? { nome: oficiais.get(chave)?.nome ?? bruto, obras: [] };
+    grupo.obras.push(o);
+    mapa.set(chave, grupo);
   }
-  return [...mapa.entries()]
-    .sort(([a], [b]) => (a === 'Sem bairro' ? 1 : b === 'Sem bairro' ? -1 : a.localeCompare(b, 'pt-BR')))
-    .map(([bairro, lista]) => ({ bairro, obras: lista }));
+  return [...mapa.values()]
+    .sort((a, b) => (a.nome === 'Sem bairro' ? 1 : b.nome === 'Sem bairro' ? -1 : a.nome.localeCompare(b.nome, 'pt-BR')))
+    .map((g) => ({ bairro: g.nome, obras: g.obras }));
 }
 
 /** Executoras com obras, das que têm mais obras vigentes para as que têm menos. */

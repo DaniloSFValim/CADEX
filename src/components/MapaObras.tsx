@@ -11,6 +11,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { Protocol } from 'pmtiles';
 import { useEffect, useRef, useState } from 'react';
 import { COR_SITUACAO, anosDasObras, obrasParaGeoJSON, pontosDeCalor, type ObraPublica } from '../lib/obras';
+import { carregarBairrosGeo, chaveBairro } from '../lib/bairros';
 import type { SituacaoPublica } from '../lib/licencas';
 
 /** Niterói, com folga. */
@@ -103,6 +104,8 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
   const onSelecionarRef = useRef(onSelecionar);
   onSelecionarRef.current = onSelecionar;
   const onBairroRef = useRef(onBairro);
+  // Contornos dos bairros, carregados uma vez: o destaque e o enquadramento usam esta cópia.
+  const bairrosRef = useRef<GeoJSON.FeatureCollection | null>(null);
   onBairroRef.current = onBairro;
   const onDestacarRef = useRef(onDestacar);
   onDestacarRef.current = onDestacar;
@@ -126,11 +129,16 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
           brutas: { type: 'geojson', data: obrasParaGeoJSON([]) },
           // Pontos do calor: linhas viram pontos ao longo do traçado, e cada obra soma um peso pela situação.
           'calor-pontos': { type: 'geojson', data: pontosDeCalor([]) },
+          // Limites oficiais dos bairros (desenhados por baixo das obras).
+          bairros: { type: 'geojson', data: { type: 'FeatureCollection', features: [] } },
           // Anel que pulsa sobre a área de calor sob o cursor. Vazio quando o cursor não está no calor.
           'calor-foco': { type: 'geojson', data: { type: 'FeatureCollection', features: [] } },
         },
         layers: [
           ...base.layers,
+          { id: 'bairros-area', type: 'fill', source: 'bairros', paint: { 'fill-color': '#0f766e', 'fill-opacity': 0.035 } },
+          { id: 'bairros-linha', type: 'line', source: 'bairros', paint: { 'line-color': '#0f766e', 'line-width': 1, 'line-opacity': 0.5 } },
+          { id: 'bairros-escolhido', type: 'fill', source: 'bairros', filter: ['==', ['get', 'nome'], '__nenhum__'], paint: { 'fill-color': '#0f766e', 'fill-opacity': 0.2 } },
           {
             id: 'obras-linhas', type: 'line', source: 'obras', filter: ['==', ['geometry-type'], 'LineString'],
             layout: { 'line-cap': 'round' },
@@ -320,6 +328,20 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
         const b = String(e.features?.[0]?.properties?.bairro ?? '').trim();
         if (b) onBairroRef.current?.(b);
       });
+      m.on('click', 'bairros-area', (e: maplibregl.MapLayerMouseEvent) => {
+        const nome = String(e.features?.[0]?.properties?.nome ?? '').trim();
+        if (nome) onBairroRef.current?.(nome);
+      });
+      m.on('mouseenter', 'bairros-area', () => { m.getCanvas().style.cursor = 'pointer'; });
+      m.on('mouseleave', 'bairros-area', () => { m.getCanvas().style.cursor = ''; });
+      m.once('style.load', () => {
+        carregarBairrosGeo().then((g) => {
+          if (!vivo) return;
+          const fc = g as unknown as GeoJSON.FeatureCollection;
+          bairrosRef.current = fc;
+          (m.getSource('bairros') as maplibregl.GeoJSONSource | undefined)?.setData(fc);
+        }).catch(() => { /* sem os limites, o mapa segue só com as obras */ });
+      });
       const marcarPronto = () => { if (vivo && m.getSource('obras')) setPronto(true); };
       m.once('style.load', marcarPronto);
       m.once('idle', marcarPronto);
@@ -424,17 +446,32 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
     return () => cancelAnimationFrame(quadro);
   }, [modo, pronto]);
 
-  // Bairro escolhido (na lista ou no mapa): enquadra as obras dele.
+  // Bairro escolhido (na lista, no mapa ou pelo contorno): destaca o contorno e enquadra o bairro.
   useEffect(() => {
-    if (!pronto || !mapa.current || !bairro) return;
+    if (!pronto || !mapa.current) return;
+    const m = mapa.current;
+    const alvo = bairro ? chaveBairro(bairro) : null;
+    const contorno = alvo ? bairrosRef.current?.features.find((f) => chaveBairro(String(f.properties?.nome ?? '')) === alvo) : undefined;
+    m.setFilter('bairros-escolhido', ['==', ['get', 'nome'], contorno ? String(contorno.properties?.nome) : '__nenhum__']);
+    if (!bairro) return;
+    if (contorno) {
+      const b = new maplibregl.LngLatBounds();
+      const pontos = (c: unknown): void => {
+        if (Array.isArray(c) && typeof c[0] === 'number') b.extend(c as [number, number]);
+        else if (Array.isArray(c)) c.forEach(pontos);
+      };
+      pontos((contorno.geometry as GeoJSON.Polygon | GeoJSON.MultiPolygon).coordinates);
+      m.fitBounds(b, { padding: 60, maxZoom: 16, duration: 700 });
+      return;
+    }
     const pts: [number, number][] = [];
     for (const o of obras) {
-      if ((o.trechos[0]?.bairro?.trim() || 'Sem bairro') !== bairro) continue;
+      if (chaveBairro(o.trechos[0]?.bairro?.trim() || 'Sem bairro') !== alvo) continue;
       for (const t of o.trechos) pts.push(t.inicio, ...(t.fim ? [t.fim] : []));
     }
     if (pts.length === 0) return;
     const b = pts.reduce((acc, p) => acc.extend(p), new maplibregl.LngLatBounds(pts[0], pts[0]));
-    mapa.current.fitBounds(b, { padding: 70, maxZoom: 16, duration: 700 });
+    m.fitBounds(b, { padding: 70, maxZoom: 16, duration: 700 });
   }, [bairro, pronto]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Leva o mapa até a obra escolhida na lista.
