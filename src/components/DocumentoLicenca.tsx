@@ -14,8 +14,10 @@ import type { TipoIntervencao } from '../lib/tiposIntervencao';
  * Secretária assina digitalmente; por isso o fiscal emissor e a Secretária são
  * informados na emissão. Nada disso fica gravado: quem gera informa de novo.
  */
-export function DocumentoLicenca({ licenca, empresas, orgaos, tipos }: {
+export function DocumentoLicenca({ licenca, empresas, orgaos, tipos, salva = true }: {
   licenca: LicencaComTrechos; empresas: Empresa[]; orgaos: Orgao[]; tipos: TipoIntervencao[];
+  /** Licença ainda não gravada: só a prévia, sem PDF oficial. */
+  salva?: boolean;
 }) {
   const emitidaFora = licenca.emitida_em_sistema_anterior;
   // A prévia vale para qualquer licença; a versão oficial só sai depois do deferimento.
@@ -155,10 +157,13 @@ export function DocumentoLicenca({ licenca, empresas, orgaos, tipos }: {
         <Button type="button" variant="secondary" disabled={busy || emitidaFora} onClick={() => void gerar(true)}>
           Visualizar prévia
         </Button>
-        <Button type="button" disabled={busy || emitidaFora || !deferida || !licenca.numero} onClick={() => void gerar(false)}>
-          {busy ? 'Gerando…' : 'Gerar PDF da licença'}
-        </Button>
-        {!deferida && <p className="text-sm text-tinta-600">A versão oficial sai depois do deferimento.</p>}
+        {salva && (
+          <Button type="button" disabled={busy || emitidaFora || !deferida || !licenca.numero} onClick={() => void gerar(false)}>
+            {busy ? 'Gerando…' : 'Gerar PDF da licença'}
+          </Button>
+        )}
+        {!salva && <p className="text-sm text-tinta-600">Esta é a prévia com os dados digitados. Salve a licença para gerar o PDF oficial.</p>}
+        {salva && !deferida && <p className="text-sm text-tinta-600">A versão oficial sai depois do deferimento.</p>}
         {aviso && <p className="text-sm text-tinta-600">{aviso}</p>}
       </div>
       {previaUrl && (

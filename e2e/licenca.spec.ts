@@ -62,7 +62,7 @@ test.describe('registro de licença', () => {
     await page.goto('/obras/nova');
     await expect(page.getByRole('heading', { name: 'Criar licença nova' })).toBeVisible();
 
-    await expect(lista(page, 'Situação').locator('option')).toHaveText(['Em execução', 'Concluída', 'Cancelada']);
+    await expect(lista(page, 'Situação').locator('option')).toHaveText(['Em análise', 'Em execução', 'Concluída', 'Cancelada']);
     await expect(rotulo(page, 'Início da obra ou serviço')).toBeVisible();
     await expect(rotulo(page, 'Fim da obra ou serviço')).toBeVisible();
     await expect(page.getByText('Fim do cronograma')).toHaveCount(0);
@@ -133,6 +133,7 @@ test.describe('registro de licença', () => {
 
     await lista(page, 'Contratante').selectOption('op1');
     await preencherBasico(page);
+    await lista(page, 'Situação').selectOption({ label: 'Em execução' });
     await page.getByRole('button', { name: 'Criar licença' }).click();
 
     await expect.poll(() => backend.de('rpc/salvar_licenca').length).toBe(1);
