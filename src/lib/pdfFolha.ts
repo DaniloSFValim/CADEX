@@ -263,12 +263,15 @@ export function verificacao(f: Folha, opcoes: { tarja: string; qr: string; ender
   pdf.text('Ou aponte a câmera para o QR Code.', MARGEM + 22, BLOCO_Y + 17.5);
 }
 
-/** Linha de rodapé: código de verificação, data de emissão e página. */
-export function rodape(pdf: jsPDF, texto: string) {
+/** Linhas de rodapé, centralizadas: uma por item, de cima para baixo, acima da margem. */
+export function rodape(pdf: jsPDF, linhas: string | string[]) {
+  const lista = typeof linhas === 'string' ? [linhas] : linhas;
   pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(7.5);
+  pdf.setFontSize(7);
   pdf.setTextColor(...COR_CINZA);
-  pdf.text(texto, LARGURA / 2, RODAPE_Y, { align: 'center' });
+  lista.forEach((texto, i) => {
+    pdf.text(texto, LARGURA / 2, RODAPE_Y - 3.5 * (lista.length - 1 - i), { align: 'center' });
+  });
 }
 
 /**

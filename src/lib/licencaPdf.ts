@@ -65,7 +65,8 @@ export interface DadosLicencaPdf {
 export const CONDICOES_LICENCA: readonly string[] = [
   'Autoriza apenas os trechos e o período indicados. Outra execução depende de nova licença, por trecho (Resolução Conjunta SECONSER/SEOP nº 001/2026, art. 11).',
   'Sinalização conforme os padrões da SECONSER, com segurança de pedestres, ciclistas e veículos e mínima interferência no trânsito (Lei nº 3.988/2025, art. 6º, IV a VI).',
-  'Concluída a intervenção, a via é recomposta e os danos reparados, e o As Built é protocolado na SECONSER (Lei nº 3.988/2025, art. 6º, VII e IX; Resolução, art. 26).',
+  'Concluída a intervenção, a via é recomposta nas condições anteriores e os danos são reparados (Lei nº 3.988/2025, art. 6º, VII e IX). Antes de encerrar o processo, a empresa pede vistoria de encerramento e de reposição do pavimento, e protocola o As Built na SECONSER (Resolução, art. 26).',
+  'Obra que interfira na pista depende de permissão do órgão de trânsito (Código de Trânsito, art. 95) e de comunicação à NitTrans para apoio de trânsito (Decreto Municipal nº 14.218/2021). A interdição segue o plano de sinalização aprovado.',
   'O canteiro mantém a placa ou o QR Code desta licença, com a razão social da executora, o número, o escopo e o prazo (Resolução, art. 14).',
   'A comunidade afetada é informada antes do início sobre a duração e os impactos (Lei nº 3.988/2025, art. 6º, XIV).',
   'A intervenção se conclui no período desta licença. A prorrogação é pedida pela empresa, dentro dos 30 dias do início.',
@@ -97,19 +98,26 @@ export function problemasParaLicenca(dados: DadosLicencaPdf): string[] {
  * Gera a licença numa única folha A4. Tenta a escala normal e reduz até caber; se nem
  * na menor escala couber, falha. Quem chama deve checar `problemasParaLicenca` antes.
  */
+/**
+ * `previa` gera a versão de conferência, com marca d'água "PRÉVIA · NÃO EMITIDA". Nada é
+ * gravado; o PDF oficial sai sem a marca.
+ */
 export async function gerarPdfLicenca(
   dados: DadosLicencaPdf,
   logo?: string,
   origem: string = typeof window !== 'undefined' ? window.location.origin : '',
+  previa = false,
 ): Promise<ArrayBuffer> {
   return emFolhaUnica(
     ESCALAS_FOLHA,
-    (k) => montarLicenca(dados, logo, origem, k),
+    (k) => montarLicenca(dados, logo, origem, k, previa),
     'A licença não cabe em uma folha A4 mesmo na menor escala. Reduza o número de trechos ou avise o suporte.',
   );
 }
 
-async function montarLicenca(dados: DadosLicencaPdf, logo: string | undefined, origem: string, k: number): Promise<ArrayBuffer> {
+async function montarLicenca(
+  dados: DadosLicencaPdf, logo: string | undefined, origem: string, k: number, previa: boolean,
+): Promise<ArrayBuffer> {
   const { jsPDF } = await import('jspdf');
   const QRCode = (await import('qrcode')).default;
   const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
@@ -162,19 +170,25 @@ async function montarLicenca(dados: DadosLicencaPdf, logo: string | undefined, o
   f.bloco('Condições', CONDICOES_LICENCA.map((c, i) => `${i + 1}. ${c}`).join('\n'), 0.85);
 
   f.secao('Assinaturas');
-  f.assinaturas([
-    { nome: dados.fiscal.nome, descricao: `Fiscal emissor · Matrícula ${dados.fiscal.matricula}` },
-    { nome: dados.secretaria.nome, descricao: 'Secretária de Conservação e Serviços Públicos' },
-  ]);
+  f.assinaturas([{ nome: dados.secretaria.nome, descricao: 'Secretária de Conservação e Serviços Públicos' }]);
 
   const endereco = `${origem.replace(/^https?:\/\//, '')}/licenca/${dados.codigo_publico}`;
   const qr = await QRCode.toDataURL(`${origem}/licenca/${dados.codigo_publico}`, { margin: 0, errorCorrectionLevel: 'M', width: 240 });
+  if (previa) {
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(44);
+    pdf.setTextColor(220, 224, 227);
+    pdf.text('PRÉVIA · NÃO EMITIDA', 105, 175, { align: 'center', angle: 45 });
+  }
   verificacao(f, {
     tarja: `Licença válida até ${dataExibicao(dados.validade_ate)}. Confira a situação atual no QR Code.`,
     qr,
     endereco,
   });
-  rodape(pdf, `Licença nº ${dados.numero} · Emitida em ${instanteExibicao(dados.emitida_em)} · Página 1 de 1`);
+  rodape(pdf, [
+    `Fiscal responsável pela emissão: ${dados.fiscal.nome} · Matrícula ${dados.fiscal.matricula}`,
+    `Licença nº ${dados.numero} · Emitida em ${instanteExibicao(dados.emitida_em)} · Página 1 de 1`,
+  ]);
 
   if (pdf.getNumberOfPages() !== 1) throw new ErroNaoCabe();
   return pdf.output('arraybuffer');
