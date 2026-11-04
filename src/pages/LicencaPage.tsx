@@ -84,7 +84,7 @@ const VAZIO: Form = {
   executora_id: '', contratante_id: '', subcontratada_id: '', responsavel_tecnico_id: '',
   executora_razao_social: '', executora_cnpj: '', contratante_razao_social: '', contratante_cnpj: '',
   imovel_endereco: '', processo_urbanismo: '',
-  art_numero: '', protocolo_data: '', situacao: 'em_analise',
+  art_numero: '', protocolo_data: '', situacao: 'deferida',
   inicio_previsto: '', fim_previsto: '', concluida_em: '', recomposicao_data: '', as_built_sei: '', as_built_data: '',
 };
 
@@ -616,16 +616,19 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
 
       <Card title="Situação e período">
         <div className="grid gap-4 sm:grid-cols-3">
-          <Field label="Situação" required>
-            <select className={inputClass} disabled={ro}
-                    value={uiSituacao} onChange={(e) => setUiSituacao(e.target.value as UiSituacao)}>
-              {/* "Indeferida" só aparece em licença já indeferida (histórico), para o campo mostrar o valor gravado. */}
-              {/* "Em análise" só para licença nova ou ainda em análise: não se volta a ela depois de deferida. */}
-              {situacoesRegistraveis(Object.keys(UI_SITUACAO_LABEL) as UiSituacao[], licenca?.situacao ?? null)
-                .filter((s) => s !== 'em_analise' || !licenca || licenca.situacao === 'em_analise')
-                .map((s) => <option key={s} value={s}>{UI_SITUACAO_LABEL[s]}</option>)}
-            </select>
-          </Field>
+          {/* Criar ou registrar já é autorizar a execução: a situação só se altera numa licença existente. */}
+          {licenca && (
+            <Field label="Situação" required>
+              <select className={inputClass} disabled={ro}
+                      value={uiSituacao} onChange={(e) => setUiSituacao(e.target.value as UiSituacao)}>
+                {/* "Indeferida" só aparece em licença já indeferida (histórico), para o campo mostrar o valor gravado. */}
+                {/* "Em análise" só aparece em licença que já está nesse estado (nenhuma nova nasce assim). */}
+                {situacoesRegistraveis(Object.keys(UI_SITUACAO_LABEL) as UiSituacao[], licenca.situacao)
+                  .filter((s) => s !== 'em_analise' || licenca.situacao === 'em_analise')
+                  .map((s) => <option key={s} value={s}>{UI_SITUACAO_LABEL[s]}</option>)}
+              </select>
+            </Field>
+          )}
           {/* Sempre visível: a prévia usa número e datas. Obrigatórios só quando deferida. */}
           <Field label="Nº da licença" required={deferindo} hint="Numeração própria da SECONSER.">
             <input className={inputClass} required={deferindo} disabled={ro} value={f.numero} onChange={(e) => set('numero', e.target.value)} />
