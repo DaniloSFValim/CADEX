@@ -79,7 +79,12 @@ function sessao(email: string) {
 const contaVoce = (administrador: boolean, perfil: Perfil): Conta => ({
   user_id: ID_USUARIO, email: 'voce@teste', nome: 'Você', papel: perfil, administrador, ativo: true,
   criado_em: '2026-01-01T00:00:00Z', ultimo_acesso: '2026-10-12T10:00:00Z', mfa_ativa: true,
+  matricula: MATRICULA_VOCE, cargo: CARGO_VOCE,
 });
+
+/** Dados funcionais do servidor logado: saem nos documentos emitidos pelo mock. */
+const MATRICULA_VOCE = '000.100-0';
+const CARGO_VOCE = 'Fiscal de Serviços Concedidos';
 
 /** Filtros do PostgREST que as telas usam: coluna=eq.valor, as comparações de data, ilike e or de texto. */
 function filtrar<T extends Record<string, unknown>>(linhas: T[], q: URLSearchParams): T[] {
@@ -155,7 +160,10 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
 
     if (caminho === 'user') return responder(user);
     if (caminho === 'servidores') {
-      const linha = { nome: 'Você', papel: estado.perfil, administrador: estado.administrador, ativo: true };
+      const linha = {
+        nome: 'Você', papel: estado.perfil, administrador: estado.administrador, ativo: true,
+        matricula: MATRICULA_VOCE, cargo: CARGO_VOCE,
+      };
       return responder(unico ? linha : [linha]);
     }
     if (caminho === 'empresas') {
@@ -207,6 +215,12 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
       const { acao, user_id } = corpo as { acao: string; user_id: string };
       if (acao === 'excluir') estado.contas = estado.contas.filter((c) => c.user_id !== user_id);
       return responder({ ok: true });
+    }
+    if (caminho === 'rpc/admin_definir_dados_funcionais') {
+      const { p_user_id, p_matricula, p_cargo } = corpo as { p_user_id: string; p_matricula: string; p_cargo: string };
+      estado.contas = estado.contas.map((c) =>
+        (c.user_id === p_user_id ? { ...c, matricula: p_matricula.trim(), cargo: p_cargo.trim() } : c));
+      return vazio();
     }
     if (caminho === 'rpc/admin_definir_ativo') {
       const { p_user_id, p_ativo } = corpo as { p_user_id: string; p_ativo: boolean };

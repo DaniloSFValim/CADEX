@@ -6,7 +6,7 @@ import type { EventoAuditoria } from '../src/lib/auditoria';
 
 const conta = (n: number, nome: string | null, papel: Conta['papel'], ativo: boolean): Conta => ({
   user_id: uuid(n), email: `${nome ? nome.toLowerCase().replace(/\s+/g, '.') : 'sem.acesso'}@teste`, nome, papel,
-  administrador: false, ativo, criado_em: '2026-01-01T00:00:00Z', ultimo_acesso: null, mfa_ativa: false,
+  administrador: false, ativo, criado_em: '2026-01-01T00:00:00Z', ultimo_acesso: null, mfa_ativa: false, matricula: null, cargo: null,
 });
 
 const contas = () => [

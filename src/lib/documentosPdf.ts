@@ -68,6 +68,12 @@ function textoResponsavel(rt: ResponsavelDoCadastro): string {
   return `${rt.nome} · ${registro}${rt.art_rrt_numero ? ` · ART/RRT ${rt.art_rrt_numero}` : ''}`;
 }
 
+/** Linha do fiscal sob a assinatura: função, cargo e matrícula. Documentos antigos não têm cargo. */
+function descricaoFiscal(dados: Dados, funcao: string): string {
+  const cargo = typeof dados.fiscal_cargo === 'string' && dados.fiscal_cargo.trim() ? ` · ${dados.fiscal_cargo.trim()}` : '';
+  return `${funcao}${cargo} · Matrícula ${texto(dados.fiscal_matricula)}`;
+}
+
 /** Texto da tarja: o que vale o documento. Certidão e termo valem um ano da emissão. */
 function tarjaDoDocumento(doc: DocumentoOficial): string {
   if (doc.tipo === 'certidao_regularidade') {
@@ -144,10 +150,7 @@ async function montarPdf(doc: DocumentoOficial, logo: string | undefined, origem
       : rts.map((rt) => textoResponsavel(rt)).join('\n\n'));
     f.secao('Certidão');
     f.bloco('Certifica-se que', textoCertidaoRegularidade(reg, doc.emitido_em).join('\n\n'));
-    f.assinaturas([{
-      nome: texto(dados.fiscal_nome),
-      descricao: `Fiscal responsável pela emissão · Matrícula ${texto(dados.fiscal_matricula)}`,
-    }]);
+    f.assinaturas([{ nome: texto(dados.fiscal_nome), descricao: descricaoFiscal(dados, 'Fiscal responsável pela emissão') }]);
   };
 
   /** Autos (notificação, infração, embargo, apreensão): identificação, fato, conteúdo, defesa e recebimento. */
@@ -193,9 +196,7 @@ async function montarPdf(doc: DocumentoOficial, logo: string | undefined, origem
     f.secao('Recebimento');
     f.marcaveis('Forma de recebimento', RECEBIMENTO, [texto(dados.recebimento)], 1);
 
-    f.assinaturas([
-      { nome: texto(dados.fiscal_nome), descricao: `Fiscal autuante · Matrícula ${texto(dados.fiscal_matricula)}` },
-    ]);
+    f.assinaturas([{ nome: texto(dados.fiscal_nome), descricao: descricaoFiscal(dados, 'Fiscal autuante') }]);
   };
 
   cabecalhoOficial(f, logo);

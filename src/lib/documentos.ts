@@ -50,6 +50,7 @@ const CAMPO_INFORMACOES: CampoDocumento = { chave: 'informacoes', rotulo: 'Infor
 const CAMPO_RECEBIMENTO: CampoDocumento = { chave: 'recebimento', rotulo: 'Recebimento', tipo: 'selecao', obrigatorio: true, opcoes: RECEBIMENTO };
 const CAMPO_FISCAL: CampoDocumento[] = [
   { chave: 'fiscal_nome', rotulo: 'Fiscal autuante: nome', tipo: 'texto', obrigatorio: true },
+  { chave: 'fiscal_cargo', rotulo: 'Fiscal autuante: cargo', tipo: 'texto', obrigatorio: true },
   { chave: 'fiscal_matricula', rotulo: 'Fiscal autuante: matrícula', tipo: 'texto', obrigatorio: true },
 ];
 
@@ -107,6 +108,7 @@ export const CAMPOS_DOCUMENTO: Record<TipoDocumento, CampoDocumento[]> = {
   // Só a identificação do fiscal: o texto e os dados vêm do cadastro, para que a certidão não seja redigida à mão.
   certidao_regularidade: [
     { chave: 'fiscal_nome', rotulo: 'Fiscal responsável pela emissão: nome', tipo: 'texto', obrigatorio: true },
+    { chave: 'fiscal_cargo', rotulo: 'Fiscal responsável pela emissão: cargo', tipo: 'texto', obrigatorio: true },
     { chave: 'fiscal_matricula', rotulo: 'Fiscal responsável pela emissão: matrícula', tipo: 'texto', obrigatorio: true },
   ],
   termo_compromisso: [

@@ -58,8 +58,16 @@ export default function Documentos() {
 }
 
 function Emissao({ empresa, onEmitido }: { empresa: Empresa; onEmitido: () => Promise<void> }) {
+  const { servidor } = useAuth();
   const [tipo, setTipo] = useState<TipoDocumento>('notificacao');
   const [campos, setCampos] = useState<Record<string, string>>({});
+  // Fiscal responsável: vem do cadastro de quem emite; pode ser corrigido no campo.
+  const fiscalDoCadastro: Record<string, string> = {
+    fiscal_nome: servidor?.nome ?? '',
+    fiscal_matricula: servidor?.matricula ?? '',
+    fiscal_cargo: servidor?.cargo ?? '',
+  };
+  const valorDe = (chave: string) => campos[chave] ?? fiscalDoCadastro[chave] ?? '';
   const [confirmado, setConfirmado] = useState(false);
   const [erros, setErros] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -75,7 +83,12 @@ function Emissao({ empresa, onEmitido }: { empresa: Empresa; onEmitido: () => Pr
   };
 
   const emitir = async () => {
-    const problemas = validarDados(tipo, campos);
+    const todos = Object.fromEntries(CAMPOS_DOCUMENTO[tipo].map((c) => [c.chave, valorDe(c.chave)]));
+    const problemas = validarDados(tipo, todos);
+    const temFiscal = CAMPOS_DOCUMENTO[tipo].some((c) => c.chave === 'fiscal_cargo');
+    if (temFiscal && (!servidor?.matricula || !servidor.cargo)) {
+      problemas.unshift('Complete sua matrícula e seu cargo no cadastro. Peça a um administrador de contas.');
+    }
     if (tipo === 'termo_compromisso' && !empresa.representante?.trim()) {
       setErros(['Cadastre o representante legal da empresa antes de emitir o termo.']);
       return;
@@ -96,7 +109,7 @@ function Emissao({ empresa, onEmitido }: { empresa: Empresa; onEmitido: () => Pr
       const copia = completo
         ? { ...registroDoCadastro(empresa), responsaveis: await buscarResponsaveisAtivos(empresa.id) }
         : autuadoDoCadastro(empresa, empresa.situacao);
-      const dados = montarDados(tipo, campos, copia);
+      const dados = montarDados(tipo, todos, copia);
       const r = await emitirDocumento(tipo, empresa.id, dados);
       setResultado(`${TITULO_DOCUMENTO[tipo]} emitido: documento nº ${numeroDocumento(r.numero, tipo, r.emitido_em)}. Código de verificação ${codigoLegivel(r.codigo_verificacao)}.`);
       setCampos({});
@@ -123,7 +136,7 @@ function Emissao({ empresa, onEmitido }: { empresa: Empresa; onEmitido: () => Pr
 
       <form className="mt-6 grid gap-4 sm:grid-cols-2" onSubmit={(e) => { e.preventDefault(); void emitir(); }}>
         {CAMPOS_DOCUMENTO[tipo].map((c) => (
-          <CampoForm key={c.chave} campo={c} valor={campos[c.chave] ?? ''}
+          <CampoForm key={c.chave} campo={c} valor={valorDe(c.chave)}
                      onChange={(v) => setCampos((s) => ({ ...s, [c.chave]: v }))} />
         ))}
 

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Badge, Button, Card, Empty, ErrorNote, Field, Spinner, inputClass, tabela } from '../components/ui';
 import { useAuth, type Papel } from '../lib/auth';
 import {
-  PERFIS, SENHA_MINIMA, criarConta, definirAcesso, definirAtivo, excluirConta, gerarSenhaProvisoria, listarContas, redefinirSenha,
+  PERFIS, SENHA_MINIMA, criarConta, definirAcesso, definirAtivo, definirDadosFuncionais, excluirConta, gerarSenhaProvisoria, listarContas, redefinirSenha,
   vinculosDaConta, zerarMfa, type Conta, type VinculosDaConta,
 } from '../lib/contas';
 
@@ -124,6 +124,8 @@ function NovaConta({ onCriada }: { onCriada: (msg: string) => void }) {
   const [papel, setPapel] = useState<Papel>('gestor');
   const [administrador, setAdministrador] = useState(false);
   const [senha, setSenha] = useState(gerarSenhaProvisoria);
+  const [matricula, setMatricula] = useState('');
+  const [cargo, setCargo] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
@@ -135,9 +137,11 @@ function NovaConta({ onCriada }: { onCriada: (msg: string) => void }) {
           e.preventDefault();
           setBusy(true); setError(null);
           try {
-            await criarConta({ nome: nome.trim(), email: email.trim(), papel, administrador, senha });
+            const conta = await criarConta({ nome: nome.trim(), email: email.trim(), papel, administrador, senha });
             onCriada(`Conta criada para ${nome.trim()}. Passe ao servidor o e-mail ${email.trim()} e a senha provisória ${senha}, e peça para trocá-la em "Minha conta" no primeiro acesso.`);
+            if (conta.user_id) await definirDadosFuncionais(conta.user_id, matricula.trim(), cargo.trim());
             setNome(''); setEmail(''); setPapel('gestor'); setAdministrador(false); setSenha(gerarSenhaProvisoria());
+            setMatricula(''); setCargo('');
           } catch (err) { setError(err); } finally { setBusy(false); }
         }}
       >
@@ -150,6 +154,12 @@ function NovaConta({ onCriada }: { onCriada: (msg: string) => void }) {
         </Field>
         <Field label="Perfil" required>
           <SeletorPerfil valor={papel} onChange={(p) => { setPapel(p); if (p !== 'gestor') setAdministrador(false); }} completo />
+        </Field>
+        <Field label="Matrícula" hint="Sai nos documentos que o servidor emite." required>
+          <input className={inputClass} required value={matricula} onChange={(e) => setMatricula(e.target.value)} />
+        </Field>
+        <Field label="Cargo" hint="Ex.: Fiscal de Serviços Concedidos." required>
+          <input className={inputClass} required value={cargo} onChange={(e) => setCargo(e.target.value)} />
         </Field>
         <Field label="Senha provisória" hint={`Pelo menos ${SENHA_MINIMA} caracteres. O servidor troca no primeiro acesso.`} required>
           <div className="flex gap-2">
@@ -183,12 +193,15 @@ function LinhaConta({ conta, ehVoce, onMudou }: { conta: Conta; ehVoce: boolean;
   const [nome, setNome] = useState(conta.nome ?? '');
   const [papel, setPapel] = useState<Papel>(conta.papel ?? 'gestor');
   const [administrador, setAdministrador] = useState(conta.administrador);
+  const [matricula, setMatricula] = useState(conta.matricula ?? '');
+  const [cargo, setCargo] = useState(conta.cargo ?? '');
   const [modo, setModo] = useState<'normal' | 'desativar' | 'senha' | 'zerar' | 'excluir'>('normal');
   const [senha, setSenha] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
-  const alterado = nome.trim() !== conta.nome || papel !== conta.papel || administrador !== conta.administrador;
+  const alterado = nome.trim() !== conta.nome || papel !== conta.papel || administrador !== conta.administrador
+    || matricula.trim() !== (conta.matricula ?? '') || cargo.trim() !== (conta.cargo ?? '');
 
   const agir = async (fn: () => Promise<unknown>, msg: string) => {
     setBusy(true); setError(null);
@@ -199,6 +212,10 @@ function LinhaConta({ conta, ehVoce, onMudou }: { conta: Conta; ehVoce: boolean;
     <tr className={tabela.linha}>
       <td className={tabela.td}>
         <input className={`${inputClass} py-1.5!`} value={nome} onChange={(e) => setNome(e.target.value)} aria-label="Nome" />
+        <div className="mt-1 grid grid-cols-2 gap-1">
+          <input className={`${inputClass} py-1.5!`} value={matricula} onChange={(e) => setMatricula(e.target.value)} aria-label="Matrícula" placeholder="Matrícula" />
+          <input className={`${inputClass} py-1.5!`} value={cargo} onChange={(e) => setCargo(e.target.value)} aria-label="Cargo" placeholder="Cargo" />
+        </div>
         <div className="mt-1 text-xs text-tinta-500">
           {conta.email}{ehVoce && <span className="ml-2"><Badge>você</Badge></span>}
         </div>
@@ -226,8 +243,10 @@ function LinhaConta({ conta, ehVoce, onMudou }: { conta: Conta; ehVoce: boolean;
         {modo === 'normal' && (
           <div className="flex flex-wrap justify-end gap-2">
             <Button className="px-3! py-1.5!" disabled={!alterado || busy}
-                    onClick={() => agir(() => definirAcesso(conta.user_id, nome.trim(), papel, administrador),
-                      `Acesso de ${nome.trim()} atualizado.`)}>
+                    onClick={() => agir(async () => {
+                      await definirAcesso(conta.user_id, nome.trim(), papel, administrador);
+                      await definirDadosFuncionais(conta.user_id, matricula.trim(), cargo.trim());
+                    }, `Acesso de ${nome.trim()} atualizado.`)}>
               Salvar
             </Button>
             <Button variant="secondary" className="px-3! py-1.5!"
