@@ -9,7 +9,7 @@ import { listarOrgaos, type Orgao } from '../lib/orgaos';
 import { listarTipos, mapaRotulosTipos, rotuloDoTipo } from '../lib/tiposIntervencao';
 import { SETORES, SETOR_LABEL, hojeISO, listarEmpresas, nomeEmpresa, type Empresa } from '../lib/empresas';
 import {
-  ESTADO_LICENCA_LABEL, ORIGENS, ORIGEM_LABEL, TIPOS_INTERVENCAO, TIPO_INTERVENCAO_LABEL, origemPublica, TOM_ESTADO_LICENCA, desempenhoExecutora, estadoLicenca, listarLicencas, mesmaEmpresaNosPapeis, nomeExecutora, pendenciasLicencas,
+  ESTADO_LICENCA_LABEL, ORIGENS, ORIGEM_LABEL, TIPOS_INTERVENCAO, TIPO_INTERVENCAO_LABEL, origemPublica, TOM_ESTADO_LICENCA, desempenhoExecutora, estadoLicenca, listarLicencas, mesmaEmpresaNosPapeis, nomeExecutora,
   type Desempenho, type EstadoLicenca, type LicencaComTrechos, type NivelDesempenho,
 } from '../lib/licencas';
 
@@ -267,7 +267,6 @@ export function LicencasDaEmpresa({ licencas, error, todas }: {
 export function PanoramaEmpresa({ empresa, licencas }: { empresa: Empresa; licencas: LicencaComTrechos[] }) {
   const hoje = hojeISO();
   const d = useMemo(() => desempenhoExecutora(licencas, empresa.id, hoje), [licencas, empresa.id, hoje]);
-  const pend = useMemo(() => pendenciasLicencas(licencas, hoje), [licencas, hoje]);
   const bairros = useMemo(() => contaBairros(licencas), [licencas]);
   const proximo = useMemo(() => proximoVencimento(licencas, hoje), [licencas, hoje]);
   if (d.obras === 0) return null;
@@ -275,7 +274,6 @@ export function PanoramaEmpresa({ empresa, licencas }: { empresa: Empresa; licen
     <>
       <DesempenhoCard d={d} />
       <div className="mb-6 grid gap-6 lg:grid-cols-2">
-        <AtencaoCard pend={pend} />
         <OndeAtuaCard bairros={bairros} proximo={proximo} />
       </div>
     </>
@@ -302,29 +300,6 @@ function proximoVencimento(licencas: LicencaComTrechos[], hoje: string): Licenca
       return (e === 'em_execucao' || e === 'aguardando_inicio') && Boolean(l.fim_previsto);
     })
     .sort((a, b) => (a.fim_previsto! < b.fim_previsto! ? -1 : 1))[0] ?? null;
-}
-
-function AtencaoCard({ pend }: { pend: ReturnType<typeof pendenciasLicencas> }) {
-  const itens: { rot: string; n: number; tom: 'ruim' | 'alerta' }[] = [
-    { rot: 'Fim da obra ou serviço vencido', n: pend.prazoEncerrado.length, tom: 'ruim' },
-    { rot: 'Concluída sem As Built (art. 26)', n: pend.semAsBuilt.length, tom: 'alerta' },
-    { rot: 'Pavimento sem recomposição', n: pend.semRecomposicao.length, tom: 'ruim' },
-  ];
-  const total = itens.reduce((s, i) => s + i.n, 0);
-  return (
-    <Card title="Precisa de atenção"
-          action={<Badge tom={total ? 'ruim' : 'bom'}>{total ? `${total} ${total === 1 ? 'item' : 'itens'}` : 'Tudo em dia'}</Badge>}
-          semPadding>
-      <ul className="divide-y divide-tinta-100">
-        {itens.map((i) => (
-          <li key={i.rot} className="flex items-center justify-between gap-3 px-5 py-3">
-            <span className={`text-sm ${i.n ? 'text-tinta-800' : 'text-tinta-400'}`}>{i.rot}</span>
-            <Badge tom={i.n ? i.tom : 'neutro'}>{i.n}</Badge>
-          </li>
-        ))}
-      </ul>
-    </Card>
-  );
 }
 
 function OndeAtuaCard({ bairros, proximo }: { bairros: [string, number][]; proximo: LicencaComTrechos | null }) {

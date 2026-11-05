@@ -9,7 +9,6 @@ import {
   ESTADO_LICENCA_LABEL, ORIGENS, ORIGEM_LABEL, SITUACAO_LICENCA_LABEL, TIPOS_INTERVENCAO, TIPO_INTERVENCAO_LABEL, TIPO_OBRA_LABEL,
   estadoLicenca, listarLicencas, nomeExecutora,
   type LicencaComTrechos, type OrigemIntervencao, type SituacaoLicenca, type TipoIntervencao, type TipoObra,
-  cadastroRetroativo,
 } from '../lib/licencas';
 import { listarOrgaos, type Orgao } from '../lib/orgaos';
 import {
@@ -227,20 +226,14 @@ export default function Painel() {
       ) : (<>
         {/* Indicadores */}
         <section className="mt-6" aria-label="Indicadores">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <Indicador rotulo="Licenças registradas" valor={ind.total} detalhe="no filtro atual" onClick={() => set('status', '')} ativo={filtros.status === ''} />
-            <Indicador rotulo="Aguardando início" valor={ind.programadas} detalhe="programadas: início previsto por vir" cor="border-tinta-400"
-                       onClick={() => alternarStatus('estado:aguardando_inicio')} ativo={filtros.status === 'estado:aguardando_inicio'} />
-            <Indicador rotulo="Em execução" valor={ind.emAndamento} detalhe="em andamento: período previsto em curso" cor="border-marca-600"
-                       onClick={() => alternarStatus('estado:em_execucao')} ativo={filtros.status === 'estado:em_execucao'} />
-            <Indicador rotulo="Concluídas" valor={ind.concluidas} detalhe={`conclusão registrada${filtradas.filter(cadastroRetroativo).length ? `; ${filtradas.filter(cadastroRetroativo).length} cadastradas depois da conclusão` : ''}`} cor="border-alta"
-                       onClick={() => alternarStatus('grupo:concluidas')} ativo={filtros.status === 'grupo:concluidas'} />
             <Indicador rotulo="Prazo encerrado" valor={ind.prazoVencido} detalhe="fim previsto vencido, sem conclusão" cor="border-baixa"
                        onClick={() => alternarStatus('estado:prazo_encerrado')} ativo={filtros.status === 'estado:prazo_encerrado'} />
-          </div>
-          <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
             <Indicador rotulo={`Começam em até ${janela} dias`} valor={ind.iniciamNaJanela} detalhe="início previsto, obra aberta" />
             <Indicador rotulo={`Terminam em até ${janela} dias`} valor={ind.terminamNaJanela} detalhe="fim previsto, obra aberta" />
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-3">
             <Indicador rotulo="Contratantes" valor={ind.contratantes.total} detalhe={detalheParte(ind.contratantes)} />
             <Indicador rotulo="Executoras" valor={ind.executoras.total} detalhe={detalheParte(ind.executoras)} />
           </div>
