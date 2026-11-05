@@ -273,3 +273,34 @@ export function pontosDeCalor(obras: ObraPublica[], ano?: string): FeatureCollec
   }
   return { type: 'FeatureCollection', features };
 }
+
+// ---------------------------------------------------------------------
+// Concessionárias, órgãos e executoras: resumo e páginas próprias.
+// ---------------------------------------------------------------------
+
+/** Nome para exibir: espaços repetidos viram um só ("ALGAR  TELECOM" → "ALGAR TELECOM"). */
+export function nomeLimpo(s: string): string {
+  return s.replace(/\s+/g, ' ').trim();
+}
+
+/** Chave para comparar e para a URL: sem acento, sem maiúscula, espaços normalizados. */
+export function chaveNome(s: string): string {
+  return nomeLimpo(s).normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase();
+}
+
+export interface ResumoNome { nome: string; chave: string; vigentes: number; total: number }
+
+/** Quantas obras (vigentes e no total) há por nome, do que tem mais vigentes para o que tem menos. */
+export function resumoPor(obras: ObraPublica[], campo: (o: ObraPublica) => string | null | undefined): ResumoNome[] {
+  const mapa = new Map<string, ResumoNome>();
+  for (const o of obras) {
+    const bruto = campo(o);
+    if (!bruto || !nomeLimpo(bruto)) continue;
+    const chave = chaveNome(bruto);
+    const atual = mapa.get(chave) ?? { nome: nomeLimpo(bruto), chave, vigentes: 0, total: 0 };
+    atual.total += 1;
+    if (o.situacao === 'vigente' || o.situacao === 'aguardando_inicio') atual.vigentes += 1;
+    mapa.set(chave, atual);
+  }
+  return [...mapa.values()].sort((a, b) => b.vigentes - a.vigentes || b.total - a.total || a.nome.localeCompare(b.nome, 'pt-BR'));
+}
