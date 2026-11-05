@@ -14,7 +14,7 @@ import { carregarBairrosGeo, chaveBairro, type BairroGeo } from '../lib/bairros'
 import { listarTipos, mapaRotulosTipos, rotuloDoTipo } from '../lib/tiposIntervencao';
 import {
   COR_SITUACAO, SITUACAO_PUBLICA_LABEL, baixarObrasGeojson, buscarObrasPublicas, filtrarPainel, nomeLimpo, obrasProximas,
-  resumoPor, temLocalizacao, textoDistancia, type FiltroPainel, type ObraPublica, type ResumoNome,
+  obraNoMes, resumoPor, temLocalizacao, textoDistancia, type FiltroPainel, type ObraPublica, type ResumoNome,
 } from '../lib/obras';
 
 // O mapa (MapLibre) é pesado: só carrega nesta página.
@@ -31,6 +31,9 @@ export default function ConsultaObras() {
   const [bairro, setBairro] = useState<string | null>(null);
   const [situacaoLista, setSituacaoLista] = useState<ObraPublica['situacao'] | ''>('');
   const [regiao, setRegiao] = useState('');
+  // Linha do tempo: mês escolhido no ano atual (null = sem filtro de data).
+  const anoAtual = new Date().getFullYear();
+  const [mesTempo, setMesTempo] = useState<number | null>(null);
   // Bairros oficiais por chave: nome canônico e região. Vazio até carregar.
   const [bairrosGeo, setBairrosGeo] = useState<Map<string, BairroGeo>>(new Map());
   const [baixando, setBaixando] = useState(false);
@@ -116,6 +119,34 @@ export default function ConsultaObras() {
             {/* Mapa em largura total; a ficha da obra selecionada fica sobre ele. */}
             <div>
               <Suspense fallback={<div className="h-[60vh] min-h-[360px] rounded-xl border border-tinta-200 bg-tinta-50" />}>
+                <details className="group mb-2 rounded-xl border border-tinta-200 bg-white px-4 py-2 text-sm">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 font-semibold text-tinta-900 [&::-webkit-details-marker]:hidden">
+                    Linha do tempo
+                    <span className="text-xs font-normal text-tinta-600">
+                      {mesTempo === null ? 'Todas as datas' : `${NOMES_MESES[mesTempo]} de ${anoAtual}`}
+                    </span>
+                  </summary>
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <label className="flex min-w-0 flex-1 items-center gap-3 text-tinta-700">
+                      <span className="sr-only">Mês do mapa</span>
+                      <input type="range" min={0} max={11} step={1} value={mesTempo ?? 0}
+                             onChange={(e) => setMesTempo(Number(e.target.value))}
+                             className="w-full min-w-[12rem] accent-marca-700" aria-valuetext={NOMES_MESES[mesTempo ?? 0]} />
+                    </label>
+                    <span className="tabular text-xs text-tinta-600">
+                      {mesTempo === null
+                        ? 'Mostra todas as obras'
+                        : `${obrasPainel.filter((o) => obraNoMes(o, anoAtual, mesTempo)).length} obras ativas em ${NOMES_MESES[mesTempo]}`}
+                    </span>
+                    <button type="button" onClick={() => setMesTempo(mesTempo === null ? new Date().getMonth() : null)}
+                            className={linkTexto}>
+                      {mesTempo === null ? 'Filtrar por mês' : 'Mostrar todas as datas'}
+                    </button>
+                  </div>
+                  <p className="mt-2 text-xs text-tinta-500">
+                    O mapa mostra só as obras cujo período previsto toca o mês. A lista ao lado não muda.
+                  </p>
+                </details>
                 <div className="mb-2 flex justify-end">
                   <div role="group" aria-label="Visualização do mapa" className="inline-flex rounded-full border border-tinta-200 bg-white p-0.5 text-xs font-semibold">
                     {(['pontos', 'calor'] as const).map((m) => (
@@ -127,7 +158,8 @@ export default function ConsultaObras() {
                   </div>
                 </div>
                 <div ref={mapaRef} className="relative scroll-mt-4 overflow-hidden rounded-xl border border-tinta-200 shadow-xs">
-                  <MapaObras obras={obrasPainel} foco={foco} destaque={destaque} modo={modo} bairro={bairro}
+                  <MapaObras obras={mesTempo === null ? obrasPainel : obrasPainel.filter((o) => obraNoMes(o, anoAtual, mesTempo))}
+                             foco={foco} destaque={destaque} modo={modo} bairro={bairro}
                              onSelecionar={setFoco} onBairro={setBairro} onDestacar={setDestaque} />
                   {selecionada && <FichaObra obra={selecionada} onFechar={() => setFoco(null)} />}
                 </div>
@@ -349,6 +381,8 @@ function SeloSituacao({ situacao }: { situacao: ObraPublica['situacao'] }) {
 function rotuloTipos(tipos: string[], rotulos: Record<string, string>) {
   return tipos.map((t) => rotuloDoTipo(t, rotulos).toLowerCase()).join(', ');
 }
+
+const NOMES_MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 
 /** Concessionárias e órgãos contratantes: cada um leva à sua página de obras. */
 function ResumoContratantes({ contratantes }: { contratantes: ResumoNome[] }) {
