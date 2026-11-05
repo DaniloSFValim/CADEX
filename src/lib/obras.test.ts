@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { anosDasObras, barraNoAno, filtrarObras, filtrarPainel, fracaoDoAno, obrasNoMes, obrasParaGeoJSON, pontosDeCalor, temLocalizacao, type ObraPublica } from './obras';
+import { anosDasObras, barraNoAno, filtrarObras, filtrarPainel, fracaoDoAno, obraNoMes, obrasNoMes, obrasParaGeoJSON, pontosDeCalor, temLocalizacao, type ObraPublica } from './obras';
 
 const obra = (o: Partial<ObraPublica>): ObraPublica => ({
   codigo: 'c1', setor: 'telecom', numero: '001/2026', tipos_obra: ['vala'], tipo_intervencao: 'obra', origem: 'concessionaria', escopo: 'Rede', inicio_previsto: '2026-10-01',
@@ -202,5 +202,21 @@ describe('mapa de calor', () => {
     const lista = [obra({ inicio_previsto: '2025-03-01' }), obra({ codigo: 'x', inicio_previsto: '2026-01-10' })];
     expect(pontosDeCalor(lista, '2026').features).toHaveLength(1);
     expect(pontosDeCalor(lista).features).toHaveLength(2);
+  });
+});
+
+describe('linha do tempo: obra ativa no mês', () => {
+  const base = { inicio_previsto: '2026-10-10', fim_previsto: '2026-11-20' };
+  it('entra nos meses em que o período toca', () => {
+    expect(obraNoMes(base, 2026, 9)).toBe(true);   // outubro
+    expect(obraNoMes(base, 2026, 10)).toBe(true);  // novembro
+    expect(obraNoMes(base, 2026, 8)).toBe(false);  // setembro
+    expect(obraNoMes(base, 2026, 11)).toBe(false); // dezembro
+  });
+  it('obra que começa no último dia do mês entra nesse mês', () => {
+    expect(obraNoMes({ inicio_previsto: '2026-10-31', fim_previsto: '2026-12-01' }, 2026, 9)).toBe(true);
+  });
+  it('sem período informado não entra no filtro', () => {
+    expect(obraNoMes({ inicio_previsto: null, fim_previsto: '2026-11-20' }, 2026, 10)).toBe(false);
   });
 });

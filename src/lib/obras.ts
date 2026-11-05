@@ -304,3 +304,15 @@ export function resumoPor(obras: ObraPublica[], campo: (o: ObraPublica) => strin
   }
   return [...mapa.values()].sort((a, b) => b.vigentes - a.vigentes || b.total - a.total || a.nome.localeCompare(b.nome, 'pt-BR'));
 }
+
+/**
+ * A obra está ativa em algum dia do mês (ano, mes 0 a 11)? Usa o período previsto (início e fim).
+ * Obra sem período informado não entra no filtro de tempo.
+ */
+export function obraNoMes(o: Pick<ObraPublica, 'inicio_previsto' | 'fim_previsto'>, ano: number, mes: number): boolean {
+  if (!o.inicio_previsto || !o.fim_previsto) return false;
+  const primeiro = `${ano}-${String(mes + 1).padStart(2, '0')}-01`;
+  const ultimo = new Date(ano, mes + 1, 0);
+  const fimDoMes = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(ultimo.getDate()).padStart(2, '0')}`;
+  return o.inicio_previsto <= fimDoMes && o.fim_previsto >= primeiro;
+}
