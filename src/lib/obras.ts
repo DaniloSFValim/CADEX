@@ -52,7 +52,7 @@ export const SITUACAO_PUBLICA_LABEL: Record<SituacaoPublica, string> = {
   vigente: 'Vigente',
   aguardando_inicio: 'Aguardando início',
   prazo_encerrado: 'Prazo encerrado',
-  concluida: 'Concluída',
+  concluida: 'Encerrada',
   cancelada: 'Cancelada',
   suspensa: 'Suspensa a pedido',
 };

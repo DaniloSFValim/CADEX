@@ -33,8 +33,8 @@ const VEREDITO: Record<SituacaoPublica, { titulo: string; cor: string; frase: (d
     frase: (d) => `O período da obra ou serviço terminou em ${dataBR(d.fim_previsto)}. A obra não está mais autorizada.`,
   },
   concluida: {
-    titulo: 'Obra concluída', cor: 'border-tinta-400 bg-tinta-50 text-tinta-700',
-    frase: () => 'A obra ou serviço desta licença foi concluída.',
+    titulo: 'Obra encerrada', cor: 'border-tinta-400 bg-tinta-50 text-tinta-700',
+    frase: () => 'A obra ou serviço desta licença foi encerrada.',
   },
   cancelada: {
     titulo: 'Licença cancelada', cor: 'border-baixa bg-baixa/6 text-baixa',
