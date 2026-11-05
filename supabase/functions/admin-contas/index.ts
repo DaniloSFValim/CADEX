@@ -33,7 +33,7 @@ function resposta(status: number, corpo: Record<string, unknown>, cabecalhos: Re
 
 Deno.serve(async (req) => {
   const cors = cabecalhosCors(req.headers.get('Origin') ?? '');
-  const r = (status: number, corpo: Record<string, unknown>) => r(status, corpo, cors);
+  const r = (status: number, corpo: Record<string, unknown>) => resposta(status, corpo, cors);
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (req.method !== 'POST') return r(405, { erro: 'Método não permitido.' });
 
@@ -66,8 +66,8 @@ Deno.serve(async (req) => {
     const { data, error } = await admin.auth.admin.mfa.listFactors({ userId });
     if (error) return r(400, { erro: `Não foi possível ler a verificação: ${error.message}` });
     for (const f of data?.factors ?? []) {
-      const r = await admin.auth.admin.mfa.deleteFactor({ id: f.id, userId });
-      if (r.error) return r(400, { erro: `Não foi possível zerar a verificação: ${r.error.message}` });
+      const removido = await admin.auth.admin.mfa.deleteFactor({ id: f.id, userId });
+      if (removido.error) return r(400, { erro: `Não foi possível zerar a verificação: ${removido.error.message}` });
     }
     return r(200, { ok: true });
   }
@@ -78,8 +78,8 @@ Deno.serve(async (req) => {
     // 1ª metade, com o token de quem chamou (a auditoria registra o administrador): confere as
     // proteções (só administrador, nunca a si mesmo, nunca o último administrador ativo), guarda a
     // identificação e REMOVE O ACESSO ao CADEX.
-    const r = await comoQuemChamou.rpc('admin_excluir_conta', { p_user_id: userId });
-    if (r.error) return r(400, { erro: r.error.message });
+    const rpc = await comoQuemChamou.rpc('admin_excluir_conta', { p_user_id: userId });
+    if (rpc.error) return r(400, { erro: rpc.error.message });
     // 2ª metade, com a chave de serviço: apaga a conta de login (credenciais e sessões). Se falhar, a
     // conta já está sem acesso; o administrador pode repetir a exclusão.
     const apagado = await admin.auth.admin.deleteUser(userId);
