@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { erroCorrecao } from './correcaoLicencas';
+import { erroCorrecao, erroMotivo } from './correcaoLicencas';
 
 describe('erroCorrecao', () => {
   it('aceita número e processo no padrão', () => {
@@ -15,5 +15,12 @@ describe('erroCorrecao', () => {
   });
   it('exige ao menos um campo', () => {
     expect(erroCorrecao({ numero: '  ', processo_sei: '' })).toBe('Informe o número ou o processo SEI.');
+  });
+});
+
+describe('erroMotivo', () => {
+  it('exige ao menos 10 caracteres, sem contar espaços das pontas', () => {
+    expect(erroMotivo('   curto   ')).toBe('Informe o motivo (ao menos 10 caracteres).');
+    expect(erroMotivo('digitado errado no SEI')).toBeNull();
   });
 });
