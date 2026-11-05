@@ -13,8 +13,8 @@ import { ORIGEM_LABEL, TIPO_INTERVENCAO_LABEL, origemPublica } from '../lib/lice
 import { carregarBairrosGeo, chaveBairro, type BairroGeo } from '../lib/bairros';
 import { listarTipos, mapaRotulosTipos, rotuloDoTipo } from '../lib/tiposIntervencao';
 import {
-  COR_SITUACAO, SITUACAO_PUBLICA_LABEL, baixarObrasGeojson, buscarObrasPublicas, filtrarPainel, obrasProximas,
-  temLocalizacao, textoDistancia, type FiltroPainel, type ObraPublica,
+  COR_SITUACAO, SITUACAO_PUBLICA_LABEL, baixarObrasGeojson, buscarObrasPublicas, filtrarPainel, nomeLimpo, obrasProximas,
+  resumoPor, temLocalizacao, textoDistancia, type FiltroPainel, type ObraPublica, type ResumoNome,
 } from '../lib/obras';
 
 // O mapa (MapLibre) é pesado: só carrega nesta página.
@@ -61,7 +61,7 @@ export default function ConsultaObras() {
     finally { setBaixando(false); }
   }
 
-  const todas = obras ?? [];
+  const todas = useMemo(() => obras ?? [], [obras]);
   const ativas = useMemo(() => todas.filter(obraAtiva), [todas]);
   const bairroDaObra = (o: ObraPublica) => o.trechos[0]?.bairro?.trim() || '';
   const porBairro = bairro ? (o: ObraPublica) => chaveBairro(bairroDaObra(o) || 'Sem bairro') === chaveBairro(bairro) : () => true;
@@ -72,7 +72,8 @@ export default function ConsultaObras() {
   const base = filtroAtivo ? obrasPainel : mostrarEncerradas || situacaoLista ? todas : ativas;
   const listadas = base.filter((o) => !situacaoLista || o.situacao === situacaoLista).filter(porRegiao).filter(porBairro);
   const grupos = useMemo(() => agruparPorBairro(listadas, bairrosGeo), [listadas, bairrosGeo]);
-  const executoras = useMemo(() => resumoExecutoras(todas), [todas]);
+  const executoras = useMemo(() => resumoPor(todas, (o) => o.executora), [todas]);
+  const contratantes = useMemo(() => resumoPor(todas, (o) => o.contratante), [todas]);
   const stats = useMemo(() => resumo(todas), [todas]);
   const selecionada = useMemo(() => (obras ?? []).find((o) => o.codigo === foco) ?? null, [obras, foco]);
 
@@ -148,6 +149,7 @@ export default function ConsultaObras() {
             <HistoricoAcervo obras={todas} rotulos={rotulos} />
 
             <ObrasPerto obras={todas} onSelecionar={verNoMapa} />
+            <ResumoContratantes contratantes={contratantes} />
             <ResumoExecutoras executoras={executoras}
                               selecionada={filtro.executora}
                               onEscolher={(nome) => setFiltro((f) => ({ ...f, executora: f.executora === nome ? null : nome }))} />
@@ -255,7 +257,7 @@ export default function ConsultaObras() {
                               {o.trechos.length > 1 && <span className="ml-2 text-xs text-tinta-500">e mais {o.trechos.length - 1}</span>}
                               <div className="text-tinta-700">
                                 {o.executora}
-                                {o.contratante && <span className="text-tinta-500"> · para {o.contratante}</span>}
+                                {o.contratante && <span className="text-tinta-500"> · para {nomeLimpo(o.contratante)}</span>}
                               </div>
                               <div className="text-xs text-tinta-500">
                                 {rotuloTipos(o.tipos_obra, rotulos)}
@@ -317,20 +319,6 @@ function agruparPorBairro(obras: ObraPublica[], oficiais: Map<string, BairroGeo>
     .map((g) => ({ bairro: g.nome, obras: g.obras }));
 }
 
-/** Executoras com obras, das que têm mais obras vigentes para as que têm menos. */
-function resumoExecutoras(obras: ObraPublica[]) {
-  const mapa = new Map<string, { nome: string; vigentes: number; total: number }>();
-  for (const o of obras) {
-    const nome = o.executora?.trim();
-    if (!nome) continue;
-    const chave = nome.toLowerCase();
-    const atual = mapa.get(chave) ?? { nome, vigentes: 0, total: 0 };
-    atual.total += 1;
-    if (obraAtiva(o)) atual.vigentes += 1;
-    mapa.set(chave, atual);
-  }
-  return [...mapa.values()].sort((a, b) => b.vigentes - a.vigentes || b.total - a.total || a.nome.localeCompare(b.nome, 'pt-BR'));
-}
 
 /** Resumo para a faixa de números do herói, a partir das obras carregadas. */
 function resumo(obras: ObraPublica[]) {
@@ -362,8 +350,32 @@ function rotuloTipos(tipos: string[], rotulos: Record<string, string>) {
   return tipos.map((t) => rotuloDoTipo(t, rotulos).toLowerCase()).join(', ');
 }
 
+/** Concessionárias e órgãos contratantes: cada um leva à sua página de obras. */
+function ResumoContratantes({ contratantes }: { contratantes: ResumoNome[] }) {
+  if (contratantes.length === 0) return null;
+  return (
+    <section className="mt-4 rounded-xl border border-tinta-200 bg-white p-4" aria-labelledby="contr-titulo">
+      <h2 id="contr-titulo" className="text-sm font-semibold text-tinta-900">Concessionárias e órgãos</h2>
+      <p className="mt-1 text-xs text-tinta-500">Quem contrata cada obra. Clique para ver as obras de cada um.</p>
+      <ul className="mt-3 grid gap-x-8 gap-y-1 text-sm sm:grid-cols-2">
+        {contratantes.map((c) => (
+          <li key={c.chave}>
+            <Link to={`/consulta/obras/concessionaria/${encodeURIComponent(c.chave)}`}
+                  className="flex w-full items-baseline justify-between gap-3 border-b border-tinta-100 py-1.5 hover:bg-tinta-50">
+              <span className="min-w-0 truncate font-medium text-tinta-800 hover:text-marca-700">{c.nome}</span>
+              <span className="tabular shrink-0 text-tinta-600">
+                <strong className="font-semibold text-alta">{c.vigentes}</strong> vigentes · {c.total} no total
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function ResumoExecutoras({ executoras, selecionada, onEscolher }: {
-  executoras: { nome: string; vigentes: number; total: number }[]; selecionada: string | null; onEscolher: (nome: string) => void;
+  executoras: ResumoNome[]; selecionada: string | null; onEscolher: (nome: string) => void;
 }) {
   if (executoras.length === 0) return null;
   return (
@@ -372,16 +384,20 @@ function ResumoExecutoras({ executoras, selecionada, onEscolher }: {
       <p className="mt-1 text-xs text-tinta-500">Obras vigentes e total de licenças de cada executora. Clique para ver só as dela.</p>
       <ul className="mt-3 grid gap-x-8 gap-y-1 text-sm sm:grid-cols-2">
         {executoras.map((e) => (
-          <li key={e.nome}>
+          <li key={e.chave} className="flex items-stretch gap-2 border-b border-tinta-100">
             <button type="button" aria-pressed={selecionada?.toLowerCase() === e.nome.toLowerCase()}
                     onClick={() => onEscolher(e.nome)}
-                    className={`flex w-full items-baseline justify-between gap-3 border-b border-tinta-100 py-1.5 text-left hover:bg-tinta-50 ${
+                    className={`flex min-w-0 flex-1 items-baseline justify-between gap-3 py-1.5 text-left hover:bg-tinta-50 ${
                       selecionada?.toLowerCase() === e.nome.toLowerCase() ? 'font-semibold' : ''}`}>
               <span className="min-w-0 truncate text-tinta-800">{e.nome}</span>
               <span className="tabular shrink-0 text-tinta-600">
                 <strong className="font-semibold text-alta">{e.vigentes}</strong> vigentes · {e.total} no total
               </span>
             </button>
+            <Link to={`/consulta/obras/executora/${encodeURIComponent(e.chave)}`}
+                  className="shrink-0 self-center text-xs font-semibold text-marca-700 hover:underline">
+              Ver obras
+            </Link>
           </li>
         ))}
       </ul>

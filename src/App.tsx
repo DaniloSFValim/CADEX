@@ -10,6 +10,7 @@ import { lerMotivo } from './lib/sessao';
 /* Cada tela entra só quando é aberta: o público (consulta e mapa) não baixa o código da área restrita. */
 const Consulta = lazy(() => import('./pages/Consulta'));
 const ConsultaObras = lazy(() => import('./pages/ConsultaObras'));
+const ObrasDe = lazy(() => import('./pages/ObrasDe'));
 const Login = lazy(() => import('./pages/Login'));
 const Painel = lazy(() => import('./pages/Painel'));
 const Pendencias = lazy(() => import('./pages/Pendencias'));
@@ -47,6 +48,8 @@ export function App() {
       {/* Consulta pública: aberta, com ou sem login (art. 7º, § 2º). */}
       <Route path="consulta" element={<Consulta />} />
       <Route path="consulta/obras" element={<ConsultaObras />} />
+      <Route path="consulta/obras/concessionaria/:nome" element={<ObrasDe tipo="concessionaria" />} />
+      <Route path="consulta/obras/executora/:nome" element={<ObrasDe tipo="executora" />} />
       {/* Página da placa do canteiro (art. 14): aberta pelo QR Code, sem login. */}
       <Route path="licenca/:codigo" element={<LicencaPublica />} />
       <Route path="documento/:codigo" element={<VerificarDocumento />} />
