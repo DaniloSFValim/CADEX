@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Empresa } from './empresas';
 import type { LicencaComTrechos } from './licencas';
-import { duplicidades, inconsistencias, normalizarNome, participacoes } from './admin';
+import { contagensLicencas, duplicidades, inconsistencias, normalizarNome, participacoes } from './admin';
 
 const HOJE = '2026-10-13';
 
@@ -168,5 +168,25 @@ describe('processo SEI repetido', () => {
     const a = lic({ processo_sei: 'NIT-1/910/2026' });
     const cancelada = lic({ processo_sei: 'NIT-1/910/2026', situacao: 'cancelada' });
     expect(inconsistencias([a, cancelada], HOJE, empresas).some((x) => x.problemas.some((p) => p.includes('SEI repetido')))).toBe(false);
+  });
+});
+
+describe('contagensLicencas', () => {
+  it('separa cadastradas no CADEX de já emitidas antes do CADEX e conta por situação', () => {
+    const a = lic({ id: 'a', numero: '001/2026', situacao: 'deferida' });
+    const b = lic({ id: 'b', numero: '002/2026', situacao: 'cancelada' });
+    const c = lic({ id: 'c', numero: '003/2026', situacao: 'deferida', anterior_resolucao: true, emitida_em_sistema_anterior: true });
+    const r = contagensLicencas([a, b, c], HOJE, new Map());
+    expect(r.total).toBe(3);
+    expect(r.porOrigem).toEqual({ novo: 2, anterior: 1 });
+    expect(r.porEstado.cancelada).toBe(1);
+  });
+  it('conta avisos de revisão por tipo', () => {
+    const x = lic({ id: 'x', numero: '1/2026', processo_sei: '111/2026' });
+    const y = lic({ id: 'y', numero: '002/2026', processo_sei: '111/2026' });
+    const r = contagensLicencas([x, y], HOJE, new Map());
+    expect(r.revisar).toBe(2);
+    expect(r.avisos.processo_repetido).toBe(2);
+    expect(r.avisos.numero_fora_padrao).toBe(1);
   });
 });

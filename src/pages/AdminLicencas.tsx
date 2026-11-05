@@ -4,7 +4,8 @@ import { Badge, Button, Card, Empty, ErrorNote, Spinner, inputClass, tabela } fr
 import { ExcluirLicenca, ResumoLicenca } from '../components/ExclusaoLicenca';
 import { ExportarLicencas } from '../components/ExportarLicencas';
 import { dataBR } from '../components/Situacao';
-import { inconsistencias } from '../lib/admin';
+import { contagensLicencas, inconsistencias, type CategoriaProblema } from '../lib/admin';
+import CorrecaoEmLote from '../components/CorrecaoEmLote';
 import { hojeISO, listarEmpresas, type Empresa } from '../lib/empresas';
 import {
   ESTADO_LICENCA_LABEL, buscarLicencasPagina, estadoLicenca, excluirLicencaDefinitivamente, listarLicencas, listarLicencasExcluidas,
@@ -66,6 +67,11 @@ export default function AdminLicencas() {
   const hoje = hojeISO();
   const porId = useMemo(() => new Map(empresas.map((e) => [e.id, e])), [empresas]);
   const revisar = useMemo(() => (licencas ? inconsistencias(licencas, hoje, porId) : []), [licencas, hoje, porId]);
+  const contagens = useMemo(() => (licencas ? contagensLicencas(licencas, hoje, porId) : null), [licencas, hoje, porId]);
+  const rotuloAviso: Record<CategoriaProblema, string> = {
+    processo_repetido: 'Processo SEI repetido', numero_fora_padrao: 'Número fora do padrão', prazo_longo: 'Prazo de mais de um ano',
+    prazo_vencido: 'Fim vencido, sem conclusão', outros: 'Outros',
+  };
   const q = busca.trim().toLowerCase();
   // Tudo o que a busca encontra; a tela mostra só o começo, mas a exportação sai com a lista inteira.
   const filtradas = useMemo(() => {
@@ -80,6 +86,38 @@ export default function AdminLicencas() {
   return (
     <div className="flex flex-col gap-10">
       {aviso && <p role="status" className="rounded-sm border-l-4 border-alta bg-alta/6 px-3 py-2 text-sm text-tinta-800">{aviso}</p>}
+      {contagens && (
+        <Card title="Contagem de licenças">
+          <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+            <div><dt className="text-tinta-500">Total no CADEX</dt><dd className="tabular text-lg font-semibold">{contagens.total}</dd></div>
+            <div><dt className="text-tinta-500">Cadastradas no CADEX</dt><dd className="tabular text-lg font-semibold">{contagens.porOrigem.novo}</dd></div>
+            <div><dt className="text-tinta-500">Já emitidas antes do CADEX</dt><dd className="tabular text-lg font-semibold">{contagens.porOrigem.anterior}</dd></div>
+            <div><dt className="text-tinta-500">Com aviso de revisão</dt><dd className="tabular text-lg font-semibold">{contagens.revisar}</dd></div>
+          </dl>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-tinta-500">Por situação</h3>
+              <ul className="mt-2 space-y-1 text-sm">
+                {(Object.keys(ESTADO_LICENCA_LABEL) as (keyof typeof ESTADO_LICENCA_LABEL)[])
+                  .filter((e) => (contagens.porEstado[e] ?? 0) > 0)
+                  .map((e) => (
+                    <li key={e} className="flex justify-between"><span>{ESTADO_LICENCA_LABEL[e]}</span><span className="tabular">{contagens.porEstado[e]}</span></li>
+                  ))}
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-tinta-500">Avisos de revisão, por tipo</h3>
+              <ul className="mt-2 space-y-1 text-sm">
+                {(Object.keys(rotuloAviso) as CategoriaProblema[])
+                  .filter((c) => contagens.avisos[c] > 0)
+                  .map((c) => (
+                    <li key={c} className="flex justify-between"><span>{rotuloAviso[c]}</span><span className="tabular">{contagens.avisos[c]}</span></li>
+                  ))}
+              </ul>
+            </div>
+          </div>
+        </Card>
+      )}
       <Card title="Licenças no CADEX">
         <input className={inputClass} value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar licença"
                placeholder="Nº da licença, processo SEI ou parte do escopo" />
@@ -158,6 +196,8 @@ export default function AdminLicencas() {
           </div>
         )}
       </Card>
+
+      <CorrecaoEmLote licencas={licencas} revisar={revisar.map((r) => r.licenca)} onAplicado={mudou} />
 
       <Card title={`Lixeira (${lixeira.length})`} semPadding>
         <p className="border-b border-tinta-100 px-4 py-3 text-sm text-tinta-500">

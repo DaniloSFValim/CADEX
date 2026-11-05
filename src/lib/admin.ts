@@ -1,5 +1,5 @@
 import { podeAtuar, situacaoEfetiva, type Empresa } from './empresas';
-import { estadoLicenca, type LicencaComTrechos } from './licencas';
+import { estadoLicenca, type EstadoLicenca, type LicencaComTrechos } from './licencas';
 
 // ---------------------------------------------------------------------
 // Regras do painel administrativo: o que ele aponta vem dos dados reais, e
@@ -152,4 +152,52 @@ export function inconsistencias(
     if (p.length > 0) r.push({ licenca: l, problemas: p });
   }
   return r.sort((a, b) => b.problemas.length - a.problemas.length || a.licenca.processo_sei.localeCompare(b.licenca.processo_sei));
+}
+
+/** Categoria de cada aviso de revisão, para contar por tipo de problema. */
+export type CategoriaProblema = 'processo_repetido' | 'numero_fora_padrao' | 'prazo_longo' | 'prazo_vencido' | 'outros';
+
+export function categoriaProblema(texto: string): CategoriaProblema {
+  if (texto.startsWith('Processo SEI repetido')) return 'processo_repetido';
+  if (texto.startsWith('Número fora do padrão')) return 'numero_fora_padrao';
+  if (texto.startsWith('Mais de um ano')) return 'prazo_longo';
+  if (texto.startsWith('Fim da obra ou serviço vencido')) return 'prazo_vencido';
+  return 'outros';
+}
+
+export interface Contagens {
+  total: number;
+  porEstado: Partial<Record<EstadoLicenca, number>>;
+  /** Cadastradas agora (cadastro novo) x registros de licença já emitida (anteriores ao CADEX). */
+  porOrigem: { novo: number; anterior: number };
+  /** Licenças com pelo menos um aviso de revisão, e quantos avisos há de cada tipo. */
+  revisar: number;
+  avisos: Record<CategoriaProblema, number>;
+}
+
+/** Números para a Administração. Usa as mesmas regras da consulta pública e da revisão. */
+export function contagensLicencas(
+  ls: LicencaComTrechos[], hoje: string, empresas: Map<string, Empresa>,
+): Contagens {
+  const porEstado: Partial<Record<EstadoLicenca, number>> = {};
+  let anterior = 0;
+  for (const l of ls) {
+    const e = estadoLicenca(l, hoje);
+    porEstado[e] = (porEstado[e] ?? 0) + 1;
+    if (l.anterior_resolucao || l.emitida_em_sistema_anterior) anterior += 1;
+  }
+  const avisos: Record<CategoriaProblema, number> = {
+    processo_repetido: 0, numero_fora_padrao: 0, prazo_longo: 0, prazo_vencido: 0, outros: 0,
+  };
+  const revisar = inconsistencias(ls, hoje, empresas);
+  for (const { problemas } of revisar) {
+    for (const p of problemas) avisos[categoriaProblema(p)] += 1;
+  }
+  return {
+    total: ls.length,
+    porEstado,
+    porOrigem: { novo: ls.length - anterior, anterior },
+    revisar: revisar.length,
+    avisos,
+  };
 }
