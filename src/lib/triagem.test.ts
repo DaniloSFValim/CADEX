@@ -14,7 +14,7 @@ const emp = (id: string, over: Partial<Empresa> = {}): Empresa => ({
 });
 
 const vazio: SinaisTriagem = {
-  inscricoesVencendo: [], saneamentos: [], analises: [], prazoEncerrado: [], semAsBuilt: [],
+  inscricoesVencendo: [], saneamentos: [], prazoEncerrado: [], semAsBuilt: [],
 };
 
 describe('triagemRisco', () => {
@@ -39,25 +39,29 @@ describe('triagemRisco', () => {
     const sinais: SinaisTriagem = {
       ...vazio,
       prazoEncerrado: [{ executora_id: 'a', numero: 'LIC-1', dias: 5 }],
-      analises: [{ id: 'a', dias_pendentes: 40 }],
+      semAsBuilt: [{ executora_id: 'a', numero: 'LIC-2', dias: 9 }],
     };
     const r = triagemRisco(empresas, sinais, HOJE);
     expect(r).toHaveLength(1);
+    // Inscrição vencida e prazo encerrado (críticos) e As Built pendente (atenção).
     expect(r[0].motivos).toHaveLength(3);
-    // Crítico vem antes de acompanhar.
-    expect(r[0].motivos.map((m) => m.nivel)).toEqual(['critico', 'critico', 'acompanhar']);
+    expect(r[0].motivos.map((m) => m.nivel)).toEqual(['critico', 'critico', 'atencao']);
     expect(r[0].nivel).toBe('critico');
   });
 
-  it('ordena crítico acima de atenção acima de acompanhar', () => {
-    const empresas = [emp('aten'), emp('crit'), emp('acomp')];
+  it('ordena crítico acima de atenção', () => {
+    const empresas = [emp('aten'), emp('crit')];
     const sinais: SinaisTriagem = {
       ...vazio,
       inscricoesVencendo: [{ id: 'aten', dias_restantes: 10 }],
       saneamentos: [{ id: 'crit', dias_restantes: 3 }],
-      analises: [{ id: 'acomp', dias_pendentes: 20 }],
     };
-    expect(triagemRisco(empresas, sinais, HOJE).map((r) => r.id)).toEqual(['crit', 'aten', 'acomp']);
+    expect(triagemRisco(empresas, sinais, HOJE).map((r) => r.id)).toEqual(['crit', 'aten']);
+  });
+
+  it('análise parada não vira motivo de empresa', () => {
+    const sinais: SinaisTriagem = { ...vazio };
+    expect(triagemRisco([emp('a')], sinais, HOJE)).toEqual([]);
   });
 
   it('dentro da faixa, mais motivos vêm antes', () => {
