@@ -34,6 +34,19 @@ export default function ConsultaObras() {
   // Linha do tempo: mês escolhido no ano atual (null = sem filtro de data).
   const anoAtual = new Date().getFullYear();
   const [mesTempo, setMesTempo] = useState<number | null>(null);
+  const [reproduzindo, setReproduzindo] = useState(false);
+  // Reprodução: avança um mês por vez e para em dezembro. Começa em janeiro se nenhum mês estiver escolhido.
+  useEffect(() => {
+    if (!reproduzindo) return;
+    const t = window.setInterval(() => {
+      setMesTempo((atual) => {
+        const proximo = atual === null ? 0 : atual + 1;
+        if (proximo > 11) { setReproduzindo(false); return atual; }
+        return proximo;
+      });
+    }, 1100);
+    return () => window.clearInterval(t);
+  }, [reproduzindo]);
   // Bairros oficiais por chave: nome canônico e região. Vazio até carregar.
   const [bairrosGeo, setBairrosGeo] = useState<Map<string, BairroGeo>>(new Map());
   const [baixando, setBaixando] = useState(false);
@@ -138,7 +151,12 @@ export default function ConsultaObras() {
                         ? 'Mostra todas as obras'
                         : `${obrasPainel.filter((o) => obraNoMes(o, anoAtual, mesTempo)).length} obras ativas em ${NOMES_MESES[mesTempo]}`}
                     </span>
-                    <button type="button" onClick={() => setMesTempo(mesTempo === null ? new Date().getMonth() : null)}
+                    <button type="button" onClick={() => { setReproduzindo((r) => !r); if (mesTempo === 11) setMesTempo(0); }}
+                            aria-pressed={reproduzindo}
+                            className="rounded-full border border-tinta-200 bg-white px-3 py-1 text-xs font-semibold text-tinta-800 hover:bg-tinta-50">
+                      {reproduzindo ? 'Pausar' : 'Reproduzir'}
+                    </button>
+                    <button type="button" onClick={() => { setReproduzindo(false); setMesTempo(mesTempo === null ? new Date().getMonth() : null); }}
                             className={linkTexto}>
                       {mesTempo === null ? 'Filtrar por mês' : 'Mostrar todas as datas'}
                     </button>

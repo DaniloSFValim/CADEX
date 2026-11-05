@@ -351,11 +351,27 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
   }, []);
 
   // Atualiza as obras sem recriar o mapa. Cada mudança de obras faz os agrupamentos crescerem de novo.
+  // A troca é suave: o mapa esmaece, recebe os novos dados e reaparece. Com movimento reduzido, troca direto.
+  const primeiraCarga = useRef(true);
   useEffect(() => {
     if (!pronto || !mapa.current) return;
-    (mapa.current.getSource('obras') as maplibregl.GeoJSONSource).setData(obrasParaGeoJSON(obras));
-    (mapa.current.getSource('brutas') as maplibregl.GeoJSONSource).setData(obrasParaGeoJSON(obras));
-    if (obras.length > 0) crescerAgrupamentos(mapa.current);
+    const m = mapa.current;
+    const aplica = () => {
+      (m.getSource('obras') as maplibregl.GeoJSONSource).setData(obrasParaGeoJSON(obras));
+      (m.getSource('brutas') as maplibregl.GeoJSONSource).setData(obrasParaGeoJSON(obras));
+      if (obras.length > 0) crescerAgrupamentos(m);
+    };
+    const reduzir = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (primeiraCarga.current || reduzir) {
+      primeiraCarga.current = false;
+      aplica();
+      return;
+    }
+    const tela = m.getCanvasContainer();
+    tela.style.transition = 'opacity 220ms ease';
+    tela.style.opacity = '0.2';
+    const t = window.setTimeout(() => { aplica(); tela.style.opacity = '1'; }, 230);
+    return () => window.clearTimeout(t);
   }, [obras, pronto]);
 
   // Mapa de calor: refaz os pontos quando muda a lista ou o ano escolhido.
@@ -480,8 +496,13 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
     const o = obras.find((x) => x.codigo === foco);
     if (!o || o.trechos.length === 0) return;
     const pts = o.trechos.flatMap((t) => (t.fim ? [t.inicio, t.fim] : [t.inicio]));
+    // Uma obra só: voo até ela, com a câmera subindo e descendo. Trecho longo: enquadra o trecho todo.
+    if (pts.length === 1) {
+      mapa.current.flyTo({ center: pts[0], zoom: 16.5, speed: 0.9, curve: 1.6, essential: false });
+      return;
+    }
     const b = pts.reduce((acc, p) => acc.extend(p), new maplibregl.LngLatBounds(pts[0], pts[0]));
-    mapa.current.fitBounds(b, { padding: 80, maxZoom: 17, duration: 600 });
+    mapa.current.fitBounds(b, { padding: 80, maxZoom: 17, duration: 1000 });
   }, [foco, obras, pronto]);
 
   // Quantos trechos o mapa recebeu. Também serve de ponto de verificação para os testes de tela.
