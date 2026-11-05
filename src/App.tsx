@@ -24,6 +24,7 @@ const AdminAuditoria = lazy(() => import('./pages/AdminAuditoria'));
 const AdminConfiguracoes = lazy(() => import('./pages/AdminConfiguracoes'));
 const AdminEmpresas = lazy(() => import('./pages/AdminEmpresas'));
 const AdminLicencas = lazy(() => import('./pages/AdminLicencas'));
+const AdminManutencao = lazy(() => import('./pages/AdminManutencao'));
 const AdminTipos = lazy(() => import('./pages/AdminTipos'));
 const Contas = lazy(() => import('./pages/Contas'));
 const Orgaos = lazy(() => import('./pages/Orgaos'));
@@ -142,6 +143,7 @@ function AreaRestrita() {
           <Route index element={<Contas />} />
           <Route path="empresas" element={<AdminEmpresas />} />
           <Route path="licencas" element={<AdminLicencas />} />
+          <Route path="manutencao" element={<AdminManutencao />} />
           <Route path="tipos" element={<AdminTipos />} />
           <Route path="orgaos" element={<Orgaos />} />
           <Route path="configuracoes" element={<AdminConfiguracoes />} />

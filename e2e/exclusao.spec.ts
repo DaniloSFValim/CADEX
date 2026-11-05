@@ -56,6 +56,7 @@ test.describe('exclusão de licenças', () => {
     await expect.poll(() => backend.de('rpc/admin_excluir_licenca').length).toBe(1);
     expect(backend.de('rpc/admin_excluir_licenca')[0].corpo).toEqual({ p_id: uuid(501), p_motivo: 'Processo errado' });
     await expect(page.getByRole('status').filter({ hasText: 'Licença 501/2026 enviada para a lixeira.' })).toBeVisible();
+    await page.getByRole('link', { name: 'Manutenção' }).click();
     await expect(page.getByRole('heading', { name: 'Lixeira (1)' })).toBeVisible();
 
     // Fora da lista de obras, do painel e do mapa de consulta.
@@ -80,19 +81,23 @@ test.describe('exclusão de licenças', () => {
     await page.locator('li', { hasText: '501/2026' }).locator('details').evaluate((d) => { (d as HTMLDetailsElement).open = true; });
     await page.getByRole('button', { name: 'Excluir' }).click();
     await page.getByRole('button', { name: 'Confirmar exclusão' }).click();
+    await page.getByRole('link', { name: 'Manutenção' }).click();
     await expect(page.getByRole('heading', { name: 'Lixeira (1)' })).toBeVisible();
 
     const item = page.locator('li', { hasText: 'Excluída' });
     await item.getByRole('button', { name: 'Restaurar' }).click();
+    await page.getByRole('link', { name: 'Manutenção' }).click();
     await expect(page.getByRole('heading', { name: 'Lixeira (0)' })).toBeVisible();
     expect(backend.de('rpc/admin_restaurar_licenca')[0].corpo).toEqual({ p_id: uuid(501) });
     await expect(page.getByText('Licença 501/2026 restaurada.')).toBeVisible();
 
     // De novo para a lixeira, e apagar de vez.
+    await page.getByRole('link', { name: 'Licenças', exact: true }).click();
     await page.getByLabel('Buscar licença').fill('501/2026');
     await page.locator('li', { hasText: '501/2026' }).locator('details').evaluate((d) => { (d as HTMLDetailsElement).open = true; });
     await page.getByRole('button', { name: 'Excluir' }).click();
     await page.getByRole('button', { name: 'Confirmar exclusão' }).click();
+    await page.getByRole('link', { name: 'Manutenção' }).click();
     await expect(page.getByRole('heading', { name: 'Lixeira (1)' })).toBeVisible();
     await page.locator('li', { hasText: 'Excluída' }).getByRole('button', { name: 'Apagar de vez' }).click();
     const conf = page.getByRole('group', { name: 'Confirmar exclusão definitiva' });
@@ -101,6 +106,7 @@ test.describe('exclusão de licenças', () => {
     expect(backend.de('rpc/admin_excluir_licenca_definitivamente')).toHaveLength(0);
     await conf.getByRole('button', { name: 'Apagar definitivamente' }).click();
     await expect.poll(() => backend.de('rpc/admin_excluir_licenca_definitivamente').length).toBe(1);
+    await page.getByRole('link', { name: 'Manutenção' }).click();
     await expect(page.getByRole('heading', { name: 'Lixeira (0)' })).toBeVisible();
     await expect(page.getByText('apagada definitivamente (1 trecho)')).toBeVisible();
     // As empresas continuam no cadastro.

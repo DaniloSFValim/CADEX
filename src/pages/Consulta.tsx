@@ -60,21 +60,12 @@ export default function Consulta() {
         <Titulo
           trilha="Consulta pública"
           titulo="Consultar empresa executora"
-          descricao="Antes de uma obra ou serviço na via pública, no subsolo ou na rede aérea, confira se a empresa responsável está com a inscrição APTA."
+          descricao="Antes de uma obra na via pública, confira se a empresa está apta a atuar."
         />
 
         {linhas && (
-          <div className="mt-8 grid grid-cols-2 gap-x-8 gap-y-6 md:grid-cols-4">
+          <div className="mt-8">
             <Kpi rotulo="Cadastradas" valor={linhas.length} detalhe="empresas no cadastro" />
-            <Kpi rotulo="Habilitadas" tom="alta"
-                 valor={linhas.filter((l) => ['deferida', 'apta', 'em_saneamento'].includes(l.situacao)).length}
-                 detalhe="podem atuar" />
-            <Kpi rotulo="Em análise" tom="atencao"
-                 valor={linhas.filter((l) => l.situacao === 'em_analise').length}
-                 detalhe="aguardando decisão" />
-            <Kpi rotulo="Impedidas" tom="baixa"
-                 valor={linhas.filter((l) => l.situacao === 'inapta' || l.situacao === 'vencida').length}
-                 detalhe="inaptas ou vencidas" />
           </div>
         )}
 

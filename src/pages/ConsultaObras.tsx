@@ -52,7 +52,7 @@ export default function ConsultaObras() {
   const [baixando, setBaixando] = useState(false);
   const [filtro, setFiltro] = useState<FiltroPainel>({ situacao: null, executora: null });
   const mapaRef = useRef<HTMLDivElement>(null);
-  const filtroAtivo = filtro.situacao !== null || filtro.executora !== null;
+  const filtroAtivo = filtro.executora !== null;
 
   const [rotulos, setRotulos] = useState<Record<string, string>>({});
   useEffect(() => { buscarObrasPublicas().then(setObras).catch(setError); }, []);
@@ -101,19 +101,14 @@ export default function ConsultaObras() {
         <Titulo
           trilha="Consulta pública"
           titulo="Obras licenciadas em Niterói"
-          descricao="Consulte no mapa cada obra de infraestrutura licenciada nas vias públicas da cidade: quem executa, em que trecho e até quando o prazo é válido."
+          descricao="Veja no mapa as obras licenciadas nas vias da cidade: quem executa, onde e até quando."
         />
 
         {obras && (
-          <div className="mt-8 grid grid-cols-2 gap-x-8 gap-y-6 md:grid-cols-4">
-            <button type="button" aria-pressed={filtro.situacao === 'vigentes'}
-                    onClick={() => setFiltro((f) => ({ ...f, situacao: f.situacao ? null : 'vigentes' }))}
-                    className="rounded-xl text-left transition-colors hover:bg-tinta-100/60 focus-visible:outline-2 focus-visible:outline-marca-700">
-              <Kpi rotulo="Vigentes agora" valor={stats.vigentes} detalhe="obras autorizadas · clique para filtrar" tom="alta" />
-            </button>
+          <div className="mt-8 grid grid-cols-3 gap-x-8 gap-y-6">
+            <Kpi rotulo="Vigentes agora" valor={stats.vigentes} detalhe="obras autorizadas" tom="alta" />
             <Kpi rotulo={stats.bairros === 1 ? 'Bairro' : 'Bairros'} valor={stats.bairros} detalhe="com obra licenciada" />
             <Kpi rotulo={stats.execs === 1 ? 'Executora' : 'Executoras'} valor={stats.execs} detalhe="com obra licenciada" />
-            <Kpi rotulo="No cadastro" valor={stats.total} detalhe="licenças registradas" />
           </div>
         )}
 
@@ -165,16 +160,27 @@ export default function ConsultaObras() {
                     O mapa mostra só as obras cujo período previsto toca o mês. A lista ao lado não muda.
                   </p>
                 </details>
-                <div className="mb-2 flex justify-end">
-                  <div role="group" aria-label="Visualização do mapa" className="inline-flex rounded-full border border-tinta-200 bg-white p-0.5 text-xs font-semibold">
-                    {(['pontos', 'calor'] as const).map((m) => (
-                      <button key={m} type="button" aria-pressed={modo === m} onClick={() => setModo(m)}
-                              className={`rounded-full px-3 py-1 ${modo === m ? 'bg-marca-700 text-white' : 'text-tinta-600 hover:text-tinta-900'}`}>
-                        {m === 'pontos' ? 'Obras' : 'Mapa de calor'}
+                <details className="group mb-2 flex justify-end text-xs text-tinta-600">
+                  <summary className="cursor-pointer list-none rounded-full px-3 py-1 font-semibold text-tinta-700 hover:text-tinta-900 [&::-webkit-details-marker]:hidden">
+                    Opções do mapa
+                  </summary>
+                  <div className="mt-2 flex flex-col items-end gap-2">
+                    <div role="group" aria-label="Visualização do mapa" className="inline-flex rounded-full border border-tinta-200 bg-white p-0.5 text-xs font-semibold">
+                      {(['pontos', 'calor'] as const).map((m) => (
+                        <button key={m} type="button" aria-pressed={modo === m} onClick={() => setModo(m)}
+                                className={`rounded-full px-3 py-1 ${modo === m ? 'bg-marca-700 text-white' : 'text-tinta-600 hover:text-tinta-900'}`}>
+                          {m === 'pontos' ? 'Obras' : 'Mapa de calor'}
+                        </button>
+                      ))}
+                    </div>
+                    <p>
+                      <button type="button" className={linkTexto} disabled={baixando} onClick={() => void baixarGeojson()}>
+                        {baixando ? 'Preparando…' : 'Dados abertos: baixar GeoJSON'}
                       </button>
-                    ))}
+                      <span className="text-tinta-400">. Todas as obras licenciadas, para uso livre.</span>
+                    </p>
                   </div>
-                </div>
+                </details>
                 <div ref={mapaRef} className="relative scroll-mt-4 overflow-hidden rounded-xl border border-tinta-200 shadow-xs">
                   <MapaObras obras={mesTempo === null ? obrasPainel : obrasPainel.filter((o) => obraNoMes(o, anoAtual, mesTempo))}
                              foco={foco} destaque={destaque} modo={modo} bairro={bairro}
@@ -187,18 +193,11 @@ export default function ConsultaObras() {
                 Cada trecho aparece como uma linha reta entre o início e o fim informados na licença, sem seguir o
                 traçado da rua. Para o percurso exato, abra a licença.
               </p>
-              <p className="mt-2 text-xs text-tinta-500">
-                <button type="button" className={linkTexto} disabled={baixando} onClick={() => void baixarGeojson()}>
-                  {baixando ? 'Preparando…' : 'Dados abertos: baixar GeoJSON'}
-                </button>
-                <span className="text-tinta-400">. Todas as obras licenciadas, para uso livre.</span>
-              </p>
             </div>
 
             <ObrasPorMes obras={todas} ano={new Date().getFullYear()} hoje={hojeISO()} foco={foco} onSelecionar={setFoco} />
             <HistoricoAcervo obras={todas} rotulos={rotulos} />
 
-            <ObrasPerto obras={todas} onSelecionar={verNoMapa} />
             <ResumoContratantes contratantes={contratantes} />
             <ResumoExecutoras executoras={executoras}
                               selecionada={filtro.executora}
@@ -239,13 +238,6 @@ export default function ConsultaObras() {
                 {filtroAtivo && (
                   <div className="flex w-full flex-wrap items-center gap-2 text-sm" role="status">
                     <span className="text-tinta-600">Filtrando:</span>
-                    {filtro.situacao && (
-                      <button type="button" onClick={() => setFiltro((f) => ({ ...f, situacao: null }))}
-                              className="inline-flex items-center gap-2 rounded-full border border-marca-700 bg-marca-50 px-3 py-1 font-semibold text-marca-700">
-                        Vigentes e a começar <span aria-hidden>✕</span>
-                        <span className="sr-only">Remover o filtro de situação</span>
-                      </button>
-                    )}
                     {filtro.executora && (
                       <button type="button" onClick={() => setFiltro((f) => ({ ...f, executora: null }))}
                               className="inline-flex items-center gap-2 rounded-full border border-marca-700 bg-marca-50 px-3 py-1 font-semibold text-marca-700">
@@ -338,6 +330,8 @@ export default function ConsultaObras() {
                 </div>
               )}
             </section>
+
+            <ObrasPerto obras={todas} onSelecionar={verNoMapa} />
           </div>
         )}
       </main>

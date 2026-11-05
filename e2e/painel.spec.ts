@@ -32,9 +32,6 @@ test.describe('painel gerencial', () => {
     await page.goto('/dashboard');
 
     await expect(indicador(page, 'Licenças registradas')).toHaveText(/Licenças registradas\s*8/);
-    await expect(indicador(page, 'Aguardando início')).toHaveText(/Aguardando início\s*3/);
-    await expect(indicador(page, 'Em execução')).toHaveText(/Em execução\s*2/);
-    await expect(indicador(page, 'Concluídas')).toHaveText(/Concluídas\s*1/);
     await expect(indicador(page, 'Prazo encerrado')).toHaveText(/Prazo encerrado\s*1/);
     await expect(indicador(page, 'Começam em até 15 dias')).toHaveText(/Começam em até 15 dias\s*2/);
     await expect(indicador(page, 'Terminam em até 15 dias')).toHaveText(/Terminam em até 15 dias\s*1/);
@@ -47,7 +44,7 @@ test.describe('painel gerencial', () => {
     await instalarBackend(page, cenario());
     await page.goto('/dashboard');
 
-    await indicador(page, 'Aguardando início').click();
+    await page.locator('select:has(option[value="estado:aguardando_inicio"])').selectOption('estado:aguardando_inicio');
     await expect(resumo(page)).toContainText('3 de 8 licenças com estes filtros');
     await expect(page.locator('section[aria-label="Registros"] tbody tr')).toHaveCount(3);
     await expect(indicador(page, 'Licenças registradas')).toHaveText(/Licenças registradas\s*3/);
@@ -63,7 +60,7 @@ test.describe('painel gerencial', () => {
     await bloco(page, 'Por contratante').getByRole('button', { name: /OpUm/ }).click();
     await expect(resumo(page)).toContainText('6 de 8 licenças com estes filtros');
 
-    await indicador(page, 'Em execução').click();
+    await page.locator('select:has(option[value="estado:em_execucao"])').selectOption('estado:em_execucao');
     await expect(resumo(page)).toContainText('1 de 8 licenças com estes filtros');
   });
 

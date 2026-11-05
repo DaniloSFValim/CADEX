@@ -23,12 +23,12 @@ test.describe('administração: acesso', () => {
     await expect(page.locator('header nav').getByRole('link', { name: 'Administração' })).toHaveCount(0);
   });
 
-  test('o administrador vê o menu e as sete áreas', async ({ page }) => {
+  test('o administrador vê o menu e as oito áreas', async ({ page }) => {
     await instalarBackend(page, { administrador: true, contas: contas() });
     await page.goto('/admin');
     await expect(page.locator('header nav').getByRole('link', { name: 'Administração' })).toBeVisible();
     await expect(page.locator('nav[aria-label="Administração"] a')).toHaveText(
-      ['Contas e acessos', 'Empresas', 'Licenças', 'Tipos de obra', 'Órgãos', 'Configurações', 'Auditoria']);
+      ['Contas e acessos', 'Empresas', 'Licenças', 'Manutenção', 'Tipos de obra', 'Órgãos', 'Configurações', 'Auditoria']);
   });
 
   test('/contas leva à administração', async ({ page }) => {
