@@ -131,6 +131,8 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
           'calor-pontos': { type: 'geojson', data: pontosDeCalor([]) },
           // Limites oficiais dos bairros (desenhados por baixo das obras).
           bairros: { type: 'geojson', data: { type: 'FeatureCollection', features: [] } },
+          // Anel sobre a obra escolhida (o ponto de destaque ao voar até ela). Vazio sem obra escolhida.
+          'foco-obra': { type: 'geojson', data: { type: 'FeatureCollection', features: [] } },
           // Anel que pulsa sobre a área de calor sob o cursor. Vazio quando o cursor não está no calor.
           'calor-foco': { type: 'geojson', data: { type: 'FeatureCollection', features: [] } },
         },
@@ -489,6 +491,22 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
     const b = pts.reduce((acc, p) => acc.extend(p), new maplibregl.LngLatBounds(pts[0], pts[0]));
     m.fitBounds(b, { padding: 70, maxZoom: 16, duration: 700 });
   }, [bairro, pronto]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Destaque da obra escolhida: um anel no ponto dela, que some quando a ficha fecha.
+  useEffect(() => {
+    if (!pronto || !mapa.current) return;
+    const m = mapa.current;
+    if (!m.getLayer('foco-obra-anel')) {
+      m.addLayer({
+        id: 'foco-obra-anel', type: 'circle', source: 'foco-obra',
+        paint: { 'circle-radius': 13, 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-width': 3, 'circle-stroke-color': '#0f766e', 'circle-stroke-opacity': 0.95 },
+      });
+    }
+    const o = foco ? obras.find((x) => x.codigo === foco) : undefined;
+    const t = o?.trechos.find((tr) => tr.inicio);
+    const features = t ? [{ type: 'Feature' as const, properties: {}, geometry: { type: 'Point' as const, coordinates: t.inicio } }] : [];
+    (m.getSource('foco-obra') as maplibregl.GeoJSONSource).setData({ type: 'FeatureCollection', features });
+  }, [foco, obras, pronto]);
 
   // Leva o mapa até a obra escolhida na lista.
   useEffect(() => {
