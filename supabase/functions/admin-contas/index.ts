@@ -8,25 +8,34 @@
 // registra o administrador, não a chave de serviço.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+// Origens que podem chamar esta função: a variável ORIGENS_PERMITIDAS, separada por vírgula
+// (ex.: https://cadex.exemplo.gov.br). Sem a variável, nenhuma origem recebe cabeçalho CORS.
+const ORIGENS = (Deno.env.get('ORIGENS_PERMITIDAS') ?? '').split(',').map((o) => o.trim()).filter(Boolean);
+
+function cabecalhosCors(origem: string): Record<string, string> {
+  const base: Record<string, string> = {
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Vary': 'Origin',
+  };
+  return ORIGENS.includes(origem) ? { ...base, 'Access-Control-Allow-Origin': origem } : base;
+}
 
 const SENHA_MINIMA = 10;
 const PAPEIS = ['gestor', 'cisp', 'licenciador'];
 
-function resposta(status: number, corpo: Record<string, unknown>) {
+function resposta(status: number, corpo: Record<string, unknown>, cabecalhos: Record<string, string>) {
   return new Response(JSON.stringify(corpo), {
     status,
-    headers: { ...CORS, 'Content-Type': 'application/json' },
+    headers: { ...cabecalhos, 'Content-Type': 'application/json' },
   });
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
-  if (req.method !== 'POST') return resposta(405, { erro: 'Método não permitido.' });
+  const cors = cabecalhosCors(req.headers.get('Origin') ?? '');
+  const r = (status: number, corpo: Record<string, unknown>) => r(status, corpo, cors);
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
+  if (req.method !== 'POST') return r(405, { erro: 'Método não permitido.' });
 
   const url = Deno.env.get('SUPABASE_URL')!;
   const anon = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -39,66 +48,66 @@ Deno.serve(async (req) => {
   });
   const { data: ehAdmin, error: erroAdmin } = await comoQuemChamou.rpc('is_administrador');
   if (erroAdmin || ehAdmin !== true) {
-    return resposta(403, { erro: 'Só administrador gerencia contas.' });
+    return r(403, { erro: 'Só administrador gerencia contas.' });
   }
 
   let corpo: Record<string, unknown>;
   try {
     corpo = await req.json();
   } catch {
-    return resposta(400, { erro: 'Pedido inválido.' });
+    return r(400, { erro: 'Pedido inválido.' });
   }
 
   const admin = createClient(url, servico, { auth: { persistSession: false } });
 
   if (corpo.acao === 'zerar_mfa') {
     const userId = typeof corpo.user_id === 'string' ? corpo.user_id : '';
-    if (!userId) return resposta(400, { erro: 'Conta não informada.' });
+    if (!userId) return r(400, { erro: 'Conta não informada.' });
     const { data, error } = await admin.auth.admin.mfa.listFactors({ userId });
-    if (error) return resposta(400, { erro: `Não foi possível ler a verificação: ${error.message}` });
+    if (error) return r(400, { erro: `Não foi possível ler a verificação: ${error.message}` });
     for (const f of data?.factors ?? []) {
       const r = await admin.auth.admin.mfa.deleteFactor({ id: f.id, userId });
-      if (r.error) return resposta(400, { erro: `Não foi possível zerar a verificação: ${r.error.message}` });
+      if (r.error) return r(400, { erro: `Não foi possível zerar a verificação: ${r.error.message}` });
     }
-    return resposta(200, { ok: true });
+    return r(200, { ok: true });
   }
 
   if (corpo.acao === 'excluir') {
     const userId = typeof corpo.user_id === 'string' ? corpo.user_id : '';
-    if (!userId) return resposta(400, { erro: 'Conta não informada.' });
+    if (!userId) return r(400, { erro: 'Conta não informada.' });
     // 1ª metade, com o token de quem chamou (a auditoria registra o administrador): confere as
     // proteções (só administrador, nunca a si mesmo, nunca o último administrador ativo), guarda a
     // identificação e REMOVE O ACESSO ao CADEX.
     const r = await comoQuemChamou.rpc('admin_excluir_conta', { p_user_id: userId });
-    if (r.error) return resposta(400, { erro: r.error.message });
+    if (r.error) return r(400, { erro: r.error.message });
     // 2ª metade, com a chave de serviço: apaga a conta de login (credenciais e sessões). Se falhar, a
     // conta já está sem acesso; o administrador pode repetir a exclusão.
     const apagado = await admin.auth.admin.deleteUser(userId);
     if (apagado.error && !/not.?found/i.test(apagado.error.message)) {
-      return resposta(502, {
+      return r(502, {
         erro: `O acesso ao CADEX foi removido, mas a conta de login não pôde ser apagada (${apagado.error.message}). Tente excluir de novo.`,
       });
     }
-    return resposta(200, { ok: true });
+    return r(200, { ok: true });
   }
 
   const senha = typeof corpo.senha === 'string' ? corpo.senha : '';
   if (senha.length < SENHA_MINIMA) {
-    return resposta(400, { erro: `A senha precisa de pelo menos ${SENHA_MINIMA} caracteres.` });
+    return r(400, { erro: `A senha precisa de pelo menos ${SENHA_MINIMA} caracteres.` });
   }
 
   if (corpo.acao === 'criar') {
     const email = typeof corpo.email === 'string' ? corpo.email.trim().toLowerCase() : '';
     const nome = typeof corpo.nome === 'string' ? corpo.nome.trim() : '';
     const papel = typeof corpo.papel === 'string' ? corpo.papel : '';
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return resposta(400, { erro: 'E-mail inválido.' });
-    if (!nome) return resposta(400, { erro: 'Informe o nome do servidor.' });
-    if (!PAPEIS.includes(papel)) return resposta(400, { erro: 'Perfil inválido.' });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return r(400, { erro: 'E-mail inválido.' });
+    if (!nome) return r(400, { erro: 'Informe o nome do servidor.' });
+    if (!PAPEIS.includes(papel)) return r(400, { erro: 'Perfil inválido.' });
 
     const criado = await admin.auth.admin.createUser({ email, password: senha, email_confirm: true });
     if (criado.error || !criado.data.user) {
       const jaExiste = /already|registered|exists/i.test(criado.error?.message ?? '');
-      return resposta(400, {
+      return r(400, {
         erro: jaExiste
           ? 'Já existe uma conta com este e-mail. Dê acesso a ela pela lista de contas.'
           : `Não foi possível criar a conta: ${criado.error?.message ?? 'erro desconhecido'}`,
@@ -114,18 +123,18 @@ Deno.serve(async (req) => {
     if (acesso.error) {
       // Sem o acesso gravado, a conta de login não serve para nada: desfaz.
       await admin.auth.admin.deleteUser(criado.data.user.id);
-      return resposta(400, { erro: acesso.error.message });
+      return r(400, { erro: acesso.error.message });
     }
-    return resposta(200, { ok: true, user_id: criado.data.user.id });
+    return r(200, { ok: true, user_id: criado.data.user.id });
   }
 
   if (corpo.acao === 'redefinir_senha') {
     const userId = typeof corpo.user_id === 'string' ? corpo.user_id : '';
-    if (!userId) return resposta(400, { erro: 'Conta não informada.' });
+    if (!userId) return r(400, { erro: 'Conta não informada.' });
     const { error } = await admin.auth.admin.updateUserById(userId, { password: senha });
-    if (error) return resposta(400, { erro: `Não foi possível redefinir a senha: ${error.message}` });
-    return resposta(200, { ok: true });
+    if (error) return r(400, { erro: `Não foi possível redefinir a senha: ${error.message}` });
+    return r(200, { ok: true });
   }
 
-  return resposta(400, { erro: 'Ação desconhecida.' });
+  return r(400, { erro: 'Ação desconhecida.' });
 });
