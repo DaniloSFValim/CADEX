@@ -17,14 +17,20 @@ export function erroCorrecao(c: { numero?: string; processo_sei?: string }): str
   return null;
 }
 
+/** Motivo obrigatório: é o que fica no histórico junto com cada alteração. */
+export const MIN_MOTIVO = 10;
+export function erroMotivo(motivo: string): string | null {
+  return motivo.trim().length >= MIN_MOTIVO ? null : `Informe o motivo (ao menos ${MIN_MOTIVO} caracteres).`;
+}
+
 /** Aplica o lote no banco. Ou grava tudo, ou nada (a função é atômica). Devolve quantas linhas mudaram. */
-export async function corrigirLicencasEmLote(correcoes: CorrecaoLicenca[]): Promise<number> {
+export async function corrigirLicencasEmLote(correcoes: CorrecaoLicenca[], motivo: string): Promise<number> {
   const payload = correcoes.map((c) => ({
     id: c.id,
     ...(c.numero?.trim() ? { numero: c.numero.trim() } : {}),
     ...(c.processo_sei?.trim() ? { processo_sei: c.processo_sei.trim() } : {}),
   }));
-  const { data, error } = await supabase.rpc('admin_corrigir_licencas', { p_correcoes: payload });
+  const { data, error } = await supabase.rpc('admin_corrigir_licencas', { p_correcoes: payload, p_motivo: motivo.trim() });
   if (error) throw error;
   return Number(data ?? 0);
 }

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Button, Card, ErrorNote, inputClass, tabela } from './ui';
-import { corrigirLicencasEmLote, erroCorrecao } from '../lib/correcaoLicencas';
+import { corrigirLicencasEmLote, erroCorrecao, erroMotivo } from '../lib/correcaoLicencas';
 import type { LicencaComTrechos } from '../lib/licencas';
 
 interface Linha {
@@ -28,6 +28,7 @@ export default function CorrecaoEmLote({ licencas, revisar, onAplicado }: Props)
   const [linhas, setLinhas] = useState<Linha[]>([]);
   const [busca, setBusca] = useState('');
   const [confirmado, setConfirmado] = useState(false);
+  const [motivo, setMotivo] = useState('');
   const [aplicando, setAplicando] = useState(false);
   const [erro, setErro] = useState<unknown>(null);
 
@@ -74,7 +75,8 @@ export default function CorrecaoEmLote({ licencas, revisar, onAplicado }: Props)
   });
   const alteracoes = mudancas.filter((m) => m.muda);
   const temErro = mudancas.some((m) => m.erro && m.muda);
-  const podeAplicar = alteracoes.length > 0 && !temErro && confirmado && !aplicando;
+  const errosMotivo = erroMotivo(motivo);
+  const podeAplicar = alteracoes.length > 0 && !temErro && confirmado && !errosMotivo && !aplicando;
 
   const aplicar = async () => {
     setAplicando(true);
@@ -84,9 +86,10 @@ export default function CorrecaoEmLote({ licencas, revisar, onAplicado }: Props)
         id: m.linha.licenca.id,
         ...(m.mudaNumero ? { numero: m.linha.numero } : {}),
         ...(m.mudaSei ? { processo_sei: m.linha.processo_sei } : {}),
-      })));
+      })), motivo);
       setLinhas([]);
       setConfirmado(false);
+      setMotivo('');
       onAplicado(`${feitas} licença${feitas === 1 ? '' : 's'} corrigida${feitas === 1 ? '' : 's'} em lote. Cada alteração ficou no histórico.`);
     } catch (e) {
       setErro(e);
@@ -100,7 +103,7 @@ export default function CorrecaoEmLote({ licencas, revisar, onAplicado }: Props)
       <div className="flex flex-col gap-4 p-4 text-sm">
         <p className="text-tinta-600">
           Para erro de digitação no número, no ano ou no processo SEI. Escolha cada licença, digite o valor certo e confira a prévia.
-          Tudo é gravado de uma vez: se uma linha estiver errada, nada é alterado. Cada alteração fica no histórico com o seu nome.
+          Tudo é gravado de uma vez: se uma linha estiver errada, nada é alterado. Cada alteração fica no histórico com o seu nome e o motivo.
         </p>
 
         <div className="flex flex-wrap gap-2">
@@ -170,6 +173,12 @@ export default function CorrecaoEmLote({ licencas, revisar, onAplicado }: Props)
               Prévia: {alteracoes.length} licença{alteracoes.length === 1 ? '' : 's'} com alteração
               {alteracoes.length === 0 ? ' (preencha um valor diferente do atual).' : '.'}
             </p>
+            <div>
+              <label className="block text-xs font-medium text-tinta-600" htmlFor="motivo-lote">Motivo da correção</label>
+              <textarea id="motivo-lote" className={inputClass} rows={2} value={motivo} onChange={(e) => setMotivo(e.target.value)}
+                        placeholder="Ex.: processo digitado com um dígito a mais, conferido no SEI" />
+              {motivo.length > 0 && errosMotivo && <p className="mt-1 text-xs text-tinta-600">{errosMotivo}</p>}
+            </div>
             <label className="flex items-center gap-2 text-tinta-700">
               <input type="checkbox" checked={confirmado} onChange={(e) => setConfirmado(e.target.checked)} disabled={alteracoes.length === 0} />
               Confirmo as {alteracoes.length} alterações acima.
