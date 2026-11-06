@@ -138,7 +138,6 @@ function AreaRestrita() {
         <Route path="obras/sem-licenca/:id" element={<FormSemLicencaPage />} />
         <Route path="obras/nova" element={<LicencaPage />} />
         <Route path="obras/:id" element={<LicencaPage />} />
-        <Route path="orgaos" element={<Navigate to="/admin/orgaos" replace />} />
         <Route path="admin" element={<Administracao />}>
           <Route index element={<Contas />} />
           <Route path="empresas" element={<AdminEmpresas />} />
