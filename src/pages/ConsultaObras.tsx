@@ -36,6 +36,8 @@ export default function ConsultaObras() {
   const [periodoIni, setPeriodoIni] = useState('');
   const [periodoFim, setPeriodoFim] = useState('');
   const listaRef = useRef<HTMLDivElement>(null);
+  // No celular, os filtros ficam recolhidos para o mapa aparecer primeiro.
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false);
   // Linha do tempo: mês escolhido no ano atual (null = sem filtro de data).
   const anoAtual = new Date().getFullYear();
   const [mesTempo, setMesTempo] = useState<number | null>(null);
@@ -237,7 +239,12 @@ export default function ConsultaObras() {
               <div ref={listaRef} className="min-w-0 lg:sticky lg:top-4 lg:max-h-[85vh] lg:overflow-y-auto lg:pr-1">
             {/* Lista das obras, agrupada por bairro. Por padrão, só as vigentes ou aguardando início. */}
             <section aria-live="polite" aria-label="Lista das obras e serviços licenciados">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <button type="button" aria-expanded={filtrosAbertos} onClick={() => setFiltrosAbertos((v) => !v)}
+                      className="mb-3 flex w-full items-center justify-between rounded-xl border border-tinta-200 bg-white px-4 py-2.5 text-sm font-semibold text-tinta-900 lg:hidden">
+                Filtros e ordenação
+                <span aria-hidden>{filtrosAbertos ? 'Fechar' : 'Abrir'}</span>
+              </button>
+              <div className={`mb-3 ${filtrosAbertos ? 'flex' : 'hidden'} flex-wrap items-center justify-between gap-3 lg:flex`}>
                 <div role="group" aria-label="Quais obras mostrar" className="inline-flex rounded-full border border-tinta-200 bg-white p-0.5 text-sm font-semibold">
                   {([false, true] as const).map((todasAsObras) => (
                     <button key={String(todasAsObras)} type="button" aria-pressed={mostrarEncerradas === todasAsObras}

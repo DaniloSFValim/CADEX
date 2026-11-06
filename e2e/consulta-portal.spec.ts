@@ -51,3 +51,20 @@ test('ordenar por empresa muda a lista para um grupo só, sem o botão por bairr
   await expect(page.getByRole('button', { name: /^Ver .+ no mapa$/ })).toHaveCount(0);
   await expect(page.locator('li[id^="obra-"]')).toHaveCount(2);
 });
+
+test.describe('celular', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test('no celular, os filtros ficam recolhidos e abrem ao toque; a página não rola para os lados', async ({ page }) => {
+    await instalarBackend(page, { licencas: [licenca({ numero: '841/2026' })] });
+    await page.goto('/consulta/obras');
+    const botao = page.getByRole('button', { name: 'Filtros e ordenação' });
+    await expect(botao).toBeVisible();
+    await expect(botao).toHaveAttribute('aria-expanded', 'false');
+    await expect(page.getByLabel('Ordenar')).toBeHidden();
+    await botao.click();
+    await expect(page.getByLabel('Ordenar')).toBeVisible();
+    const larguraPagina = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(larguraPagina).toBeLessThanOrEqual(390);
+  });
+});
