@@ -317,6 +317,12 @@ export function obraNoMes(o: Pick<ObraPublica, 'inicio_previsto' | 'fim_previsto
   return o.inicio_previsto <= fimDoMes && o.fim_previsto >= primeiro;
 }
 
+/** A obra tem período previsto que toca algum dia do ano. Sem as duas datas, não entra. */
+export function obraNoAno(o: Pick<ObraPublica, 'inicio_previsto' | 'fim_previsto'>, ano: number): boolean {
+  if (!o.inicio_previsto || !o.fim_previsto) return false;
+  return o.inicio_previsto <= `${ano}-12-31` && o.fim_previsto >= `${ano}-01-01`;
+}
+
 /** O que uma executora já fez: obras licenciadas (vigentes e no total) e os tipos de obra mais frequentes. */
 export interface AtuacaoExecutora { total: number; vigentes: number; tipos: { codigo: string; n: number }[] }
 

@@ -7,6 +7,7 @@ import { dataBR } from './Situacao';
 export default function FichaObra({ obra, onFechar }: { obra: ObraPublica; onFechar: () => void }) {
   const cor = COR_SITUACAO[obra.situacao];
   const t = obra.trechos[0];
+  const extras = obra.trechos.length - 1;
   return (
     <article
       aria-label="Ficha da obra selecionada"
@@ -22,20 +23,20 @@ export default function FichaObra({ obra, onFechar }: { obra: ObraPublica; onFec
         </button>
       </div>
       <h3 className="mt-2 font-display text-lg font-bold leading-snug text-tinta-900">
-        {t?.logradouro}{t?.bairro && <span className="font-normal text-tinta-500">, {t.bairro}</span>}
+        {t?.logradouro ?? 'Local não informado'}
       </h3>
+      {extras > 0 && <p className="text-xs text-tinta-500">e mais {extras} {extras === 1 ? 'trecho' : 'trechos'}</p>}
       <p className="mt-1 text-sm text-tinta-700">{obra.escopo}</p>
       <dl className="mt-3 grid gap-1.5 text-sm">
+        <div className="flex gap-2"><dt className="w-28 flex-none text-tinta-500">Bairro</dt><dd>{t?.bairro?.trim() || 'Não informado'}</dd></div>
         <div className="flex gap-2"><dt className="w-28 flex-none text-tinta-500">Tipo</dt>
           <dd>{TIPO_INTERVENCAO_LABEL[obra.tipo_intervencao]}{origemPublica(obra.origem) && `, pública · ${ORIGEM_LABEL[obra.origem].toLowerCase()}`}</dd></div>
         <div className="flex gap-2"><dt className="w-28 flex-none text-tinta-500">Executora</dt><dd>{obra.executora}</dd></div>
         {obra.contratante && <div className="flex gap-2"><dt className="w-28 flex-none text-tinta-500">Contratante</dt><dd>{obra.contratante}</dd></div>}
-        <div className="flex gap-2"><dt className="w-28 flex-none text-tinta-500">Período</dt>
-          <dd className="tabular">
-            {obra.inicio_previsto || obra.fim_previsto
-              ? `${obra.inicio_previsto ? dataBR(obra.inicio_previsto) : '—'} a ${obra.fim_previsto ? dataBR(obra.fim_previsto) : '—'}`
-              : 'Sem período informado'}
-          </dd></div>
+        <div className="flex gap-2"><dt className="w-28 flex-none text-tinta-500">Início previsto</dt>
+          <dd className="tabular">{obra.inicio_previsto ? dataBR(obra.inicio_previsto) : 'Não informado'}</dd></div>
+        <div className="flex gap-2"><dt className="w-28 flex-none text-tinta-500">Término previsto</dt>
+          <dd className="tabular">{obra.fim_previsto ? dataBR(obra.fim_previsto) : 'Não informado'}</dd></div>
       </dl>
       <Link to={`/licenca/${obra.codigo}`} className="mt-3 inline-block text-sm font-semibold text-marca-600 hover:underline">
         Ver licença <span className="font-normal text-tinta-500">nº {obra.numero}</span>

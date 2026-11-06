@@ -13,8 +13,8 @@ import { ORIGEM_LABEL, TIPO_INTERVENCAO_LABEL, origemPublica } from '../lib/lice
 import { carregarBairrosGeo, chaveBairro, type BairroGeo } from '../lib/bairros';
 import { listarTipos, mapaRotulosTipos, rotuloDoTipo } from '../lib/tiposIntervencao';
 import {
-  COR_SITUACAO, SITUACAO_PUBLICA_LABEL, baixarObrasGeojson, buscarObrasPublicas, filtrarPainel, nomeLimpo, obrasProximas,
-  obraNoMes, resumoPor, temLocalizacao, textoDistancia, type FiltroPainel, type ObraPublica, type ResumoNome,
+  COR_SITUACAO, SITUACAO_PUBLICA_LABEL, anosDasObras, baixarObrasGeojson, buscarObrasPublicas, filtrarPainel, nomeLimpo, obrasProximas,
+  obraNoAno, obraNoMes, resumoPor, temLocalizacao, textoDistancia, type FiltroPainel, type ObraPublica, type ResumoNome,
 } from '../lib/obras';
 
 // O mapa (MapLibre) é pesado: só carrega nesta página.
@@ -38,22 +38,35 @@ export default function ConsultaObras() {
   const listaRef = useRef<HTMLDivElement>(null);
   // No celular, os filtros ficam recolhidos para o mapa aparecer primeiro.
   const [filtrosAbertos, setFiltrosAbertos] = useState(false);
-  // Linha do tempo: mês escolhido no ano atual (null = sem filtro de data).
+  // Linha do tempo: null = todas as datas; senão, o ano escolhido e, opcionalmente, o mês.
   const anoAtual = new Date().getFullYear();
-  const [mesTempo, setMesTempo] = useState<number | null>(null);
+  const [tempo, setTempo] = useState<{ ano: number; mes: number | null } | null>(null);
+  const mesTempo = tempo?.mes ?? null;
+  const anoTempo = tempo?.ano ?? anoAtual;
   const [reproduzindo, setReproduzindo] = useState(false);
-  // Reprodução: avança um mês por vez e para em dezembro. Começa em janeiro se nenhum mês estiver escolhido.
+  // A navegação vai do primeiro ao último ano com obras (e sempre inclui o ano atual).
+  const anosComObras = useMemo(() => anosDasObras(obras ?? []).map(Number), [obras]);
+  const anoMin = Math.min(anoAtual, ...anosComObras);
+  const anoMax = Math.max(anoAtual, ...anosComObras);
+  // Reprodução: avança mês a mês e, ao fim do ano, passa para janeiro do ano seguinte, até o último ano com obras.
   useEffect(() => {
     if (!reproduzindo) return;
     const t = window.setInterval(() => {
-      setMesTempo((atual) => {
-        const proximo = atual === null ? 0 : atual + 1;
-        if (proximo > 11) { setReproduzindo(false); return atual; }
-        return proximo;
+      setTempo((atual) => {
+        const ano = atual?.ano ?? anoAtual;
+        const mes = atual?.mes ?? null;
+        if (mes === null) return { ano, mes: 0 };
+        if (mes < 11) return { ano, mes: mes + 1 };
+        if (ano < anoMax) return { ano: ano + 1, mes: 0 };
+        return atual;
       });
     }, 1100);
     return () => window.clearInterval(t);
-  }, [reproduzindo]);
+  }, [reproduzindo, anoAtual, anoMax]);
+  // Para ao chegar ao último mês com obras.
+  useEffect(() => {
+    if (reproduzindo && tempo?.mes === 11 && tempo.ano >= anoMax) setReproduzindo(false);
+  }, [reproduzindo, tempo, anoMax]);
   // Bairros oficiais por chave: nome canônico e região. Vazio até carregar.
   const [bairrosGeo, setBairrosGeo] = useState<Map<string, BairroGeo>>(new Map());
   const [baixando, setBaixando] = useState(false);
@@ -92,7 +105,8 @@ export default function ConsultaObras() {
   const regioes = useMemo(() => [...new Set([...bairrosGeo.values()].map((b) => b.regiao))].sort(), [bairrosGeo]);
   const obrasPainel = useMemo(() => filtrarPainel(obras ?? [], filtro), [obras, filtro]);
   // Escolher uma situação específica olha todas as obras (inclusive concluídas e prazos encerrados).
-  const base = filtroAtivo ? obrasPainel : mostrarEncerradas || situacaoLista ? todas : ativas;
+  // Com período escolhido, as obras encerradas também entram: o histórico precisa aparecer na consulta por data.
+  const base = filtroAtivo ? obrasPainel : mostrarEncerradas || situacaoLista || tempo ? todas : ativas;
   const termo = busca.trim().toLowerCase();
   const porBusca = (o: ObraPublica) => !termo || [o.numero, o.executora, o.contratante ?? '', o.escopo,
     ...o.trechos.flatMap((t) => [t.logradouro, t.bairro ?? ''])].some((s) => s.toLowerCase().includes(termo));
@@ -104,13 +118,13 @@ export default function ConsultaObras() {
     const fim = o.fim_previsto ?? o.inicio_previsto ?? '';
     return (!periodoIni || fim >= periodoIni) && (!periodoFim || ini <= periodoFim);
   };
+  // Linha do tempo: com ano ou mês escolhido, mapa e lista mostram só as obras desse período.
+  const porTempo = (o: ObraPublica) => !tempo || (tempo.mes === null ? obraNoAno(o, tempo.ano) : obraNoMes(o, tempo.ano, tempo.mes));
   const listadas = base.filter((o) => !situacaoLista || o.situacao === situacaoLista)
-    .filter(porRegiao).filter(porBairro).filter(porBusca).filter(porPeriodo);
+    .filter(porRegiao).filter(porBairro).filter(porBusca).filter(porPeriodo).filter(porTempo);
   const grupos = useMemo(() => (ordem === 'bairro'
     ? agruparPorBairro(listadas, bairrosGeo)
     : [{ bairro: ROTULO_ORDEM[ordem], obras: ordenarObras(listadas, ordem) }]), [listadas, bairrosGeo, ordem]);
-  // Mapa e lista mostram o mesmo conjunto: filtros, busca, período e mês da linha do tempo.
-  const noMapa = mesTempo === null ? listadas : listadas.filter((o) => obraNoMes(o, anoAtual, mesTempo));
   const executoras = useMemo(() => resumoPor(todas, (o) => o.executora), [todas]);
   const contratantes = useMemo(() => resumoPor(todas, (o) => o.contratante), [todas]);
   const stats = useMemo(() => resumo(todas), [todas]);
@@ -171,33 +185,47 @@ export default function ConsultaObras() {
                   <summary className="flex cursor-pointer list-none items-center justify-between gap-3 font-semibold text-tinta-900 [&::-webkit-details-marker]:hidden">
                     Linha do tempo
                     <span className="text-xs font-normal text-tinta-600">
-                      {mesTempo === null ? 'Todas as datas' : `${NOMES_MESES[mesTempo]} de ${anoAtual}`}
+                      {tempo === null ? 'Todas as datas' : mesTempo === null ? `Obras de ${anoTempo}` : `${NOMES_MESES[mesTempo]} de ${anoTempo}`}
                     </span>
                   </summary>
-                  <div className="mt-3 flex flex-wrap items-center gap-3">
-                    <label className="flex min-w-0 flex-1 items-center gap-3 text-tinta-700">
-                      <span className="sr-only">Mês do mapa</span>
-                      <input type="range" min={0} max={11} step={1} value={mesTempo ?? 0}
-                             onChange={(e) => setMesTempo(Number(e.target.value))}
-                             className="w-full min-w-[12rem] accent-marca-700" aria-valuetext={NOMES_MESES[mesTempo ?? 0]} />
-                    </label>
-                    <span className="tabular text-xs text-tinta-600">
-                      {mesTempo === null
-                        ? 'Mostra todas as obras'
-                        : `${obrasPainel.filter((o) => obraNoMes(o, anoAtual, mesTempo)).length} obras ativas em ${NOMES_MESES[mesTempo]}`}
-                    </span>
-                    <button type="button" onClick={() => { setReproduzindo((r) => !r); if (mesTempo === 11) setMesTempo(0); }}
-                            aria-pressed={reproduzindo}
-                            className="rounded-full border border-tinta-200 bg-white px-3 py-1 text-xs font-semibold text-tinta-800 hover:bg-tinta-50">
-                      {reproduzindo ? 'Pausar' : 'Reproduzir'}
-                    </button>
-                    <button type="button" onClick={() => { setReproduzindo(false); setMesTempo(mesTempo === null ? new Date().getMonth() : null); }}
-                            className={linkTexto}>
-                      {mesTempo === null ? 'Filtrar por mês' : 'Mostrar todas as datas'}
-                    </button>
+                  <div className="mt-3 flex flex-col gap-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-semibold text-tinta-700">Ano</span>
+                      <button type="button" disabled={anoTempo <= anoMin} aria-label="Ano anterior"
+                              onClick={() => { setReproduzindo(false); setTempo((t) => ({ ano: Math.max(anoMin, (t?.ano ?? anoAtual) - 1), mes: t?.mes ?? null })); }}
+                              className="rounded-full border border-tinta-200 bg-white px-3 py-1.5 text-xs font-semibold text-tinta-800 hover:bg-tinta-50 disabled:cursor-not-allowed disabled:opacity-40">‹ Ano anterior</button>
+                      <span className="tabular min-w-[4rem] text-center text-base font-semibold text-tinta-900">{anoTempo}</span>
+                      <button type="button" disabled={anoTempo >= anoMax} aria-label="Próximo ano"
+                              onClick={() => { setReproduzindo(false); setTempo((t) => ({ ano: Math.min(anoMax, (t?.ano ?? anoAtual) + 1), mes: t?.mes ?? null })); }}
+                              className="rounded-full border border-tinta-200 bg-white px-3 py-1.5 text-xs font-semibold text-tinta-800 hover:bg-tinta-50 disabled:cursor-not-allowed disabled:opacity-40">Próximo ano ›</button>
+                      <button type="button" disabled={tempo === null}
+                              onClick={() => { setReproduzindo(false); setTempo(null); }}
+                              className="rounded-full border border-tinta-200 bg-white px-3 py-1.5 text-xs font-semibold text-tinta-800 hover:bg-tinta-50 disabled:cursor-not-allowed disabled:opacity-40">Ver todas as datas</button>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <label className="flex min-w-0 flex-1 items-center gap-3 text-tinta-700">
+                        <span className="text-xs font-semibold text-tinta-700">Mês</span>
+                        <input type="range" min={0} max={11} step={1} value={mesTempo ?? 0} aria-label="Mês do mapa"
+                               onChange={(e) => setTempo({ ano: anoTempo, mes: Number(e.target.value) })}
+                               className="w-full min-w-[12rem] accent-marca-700" aria-valuetext={NOMES_MESES[mesTempo ?? 0]} />
+                      </label>
+                      <span className="tabular text-xs text-tinta-600">
+                        {tempo === null
+                          ? 'Sem filtro de data'
+                          : `${listadas.length} obra${listadas.length === 1 ? '' : 's'} com período em ${mesTempo === null ? '' : NOMES_MESES[mesTempo] + ' de '}${anoTempo}`}
+                      </span>
+                      <button type="button" aria-pressed={reproduzindo}
+                              onClick={() => {
+                                if (!reproduzindo && (tempo === null || (tempo.mes === 11 && tempo.ano >= anoMax))) setTempo({ ano: anoTempo, mes: 0 });
+                                setReproduzindo((r) => !r);
+                              }}
+                              className="rounded-full border border-tinta-200 bg-white px-3 py-1.5 text-xs font-semibold text-tinta-800 hover:bg-tinta-50 disabled:cursor-not-allowed disabled:opacity-40">
+                        {reproduzindo ? 'Pausar' : 'Reproduzir'}
+                      </button>
+                    </div>
                   </div>
                   <p className="mt-2 text-xs text-tinta-500">
-                    O mapa mostra só as obras cujo período previsto toca o mês. A lista ao lado não muda.
+                    Mapa e lista mostram as mesmas obras: as que têm período previsto no ano ou mês escolhido.
                   </p>
                 </details>
                 <details className="group mb-2 flex justify-end text-xs text-tinta-600">
@@ -222,7 +250,7 @@ export default function ConsultaObras() {
                   </div>
                 </details>
                 <div ref={mapaRef} className="relative scroll-mt-4 overflow-hidden rounded-xl border border-tinta-200 shadow-xs">
-                  <MapaObras obras={noMapa}
+                  <MapaObras obras={listadas}
                              foco={foco} destaque={destaque} modo={modo} bairro={bairro}
                              onSelecionar={setFoco} onBairro={setBairro} onDestacar={setDestaque} />
                   {selecionada && <FichaObra obra={selecionada} onFechar={() => setFoco(null)} />}
@@ -408,7 +436,7 @@ export default function ConsultaObras() {
 
               </div>
             </div>
-            <ObrasPorMes obras={todas} ano={new Date().getFullYear()} hoje={hojeISO()} foco={foco} onSelecionar={setFoco} />
+            <ObrasPorMes obras={todas} ano={anoTempo} hoje={hojeISO()} foco={foco} onSelecionar={setFoco} />
             <HistoricoAcervo obras={todas} rotulos={rotulos} />
 
             <ResumoContratantes contratantes={contratantes} />

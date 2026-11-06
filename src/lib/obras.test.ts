@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { anosDasObras, atuacaoPorExecutora, contratacaoPorContratante, chaveNome, nomeNoMapa, barraNoAno, filtrarObras, filtrarPainel, fracaoDoAno, obraNoMes, obrasNoMes, obrasParaGeoJSON, pontosDeCalor, temLocalizacao, type ObraPublica } from './obras';
+import { anosDasObras, atuacaoPorExecutora, contratacaoPorContratante, chaveNome, nomeNoMapa, barraNoAno, filtrarObras, filtrarPainel, fracaoDoAno, obraNoAno, obraNoMes, obrasNoMes, obrasParaGeoJSON, pontosDeCalor, temLocalizacao, type ObraPublica } from './obras';
 
 const obra = (o: Partial<ObraPublica>): ObraPublica => ({
   codigo: 'c1', setor: 'telecom', numero: '001/2026', tipos_obra: ['vala'], tipo_intervencao: 'obra', origem: 'concessionaria', escopo: 'Rede', inicio_previsto: '2026-10-01',
@@ -202,6 +202,19 @@ describe('mapa de calor', () => {
     const lista = [obra({ inicio_previsto: '2025-03-01' }), obra({ codigo: 'x', inicio_previsto: '2026-01-10' })];
     expect(pontosDeCalor(lista, '2026').features).toHaveLength(1);
     expect(pontosDeCalor(lista).features).toHaveLength(2);
+  });
+});
+
+describe('linha do tempo: obra no ano', () => {
+  it('entra no ano quando o período toca qualquer dia dele', () => {
+    const cruza = { inicio_previsto: '2025-12-20', fim_previsto: '2026-01-15' };
+    expect(obraNoAno(cruza, 2025)).toBe(true);
+    expect(obraNoAno(cruza, 2026)).toBe(true);
+    expect(obraNoAno(cruza, 2024)).toBe(false);
+    expect(obraNoAno(cruza, 2027)).toBe(false);
+  });
+  it('obra sem as duas datas não entra em nenhum ano', () => {
+    expect(obraNoAno({ inicio_previsto: null, fim_previsto: '2026-05-01' }, 2026)).toBe(false);
   });
 });
 
