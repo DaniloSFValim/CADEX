@@ -27,7 +27,8 @@ export default function ConsultaObras() {
   const [foco, setFoco] = useState<string | null>(null);
   const [destaque, setDestaque] = useState<string | null>(null);
   const [modo, setModo] = useState<'pontos' | 'calor'>('pontos');
-  const [mostrarEncerradas, setMostrarEncerradas] = useState(false);
+  // Por padrão, a consulta mostra todas as obras licenciadas, inclusive as encerradas.
+  const [mostrarEncerradas, setMostrarEncerradas] = useState(true);
   const [bairro, setBairro] = useState<string | null>(null);
   const [situacaoLista, setSituacaoLista] = useState<ObraPublica['situacao'] | ''>('');
   const [regiao, setRegiao] = useState('');
