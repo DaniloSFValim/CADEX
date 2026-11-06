@@ -35,8 +35,9 @@ test('busca por número de licença filtra a lista (e o mapa acompanha)', async 
 test('o indicador "Vigentes agora" é clicável e marca o estado', async ({ page }) => {
   await instalarBackend(page, { licencas: [licenca({ numero: '821/2026' })] });
   await page.goto('/consulta/obras');
+  // Por padrão a consulta mostra todas as obras; o indicador só marca quando o filtro de vigentes é escolhido.
   const vigentes = page.getByRole('button', { name: /Vigentes agora/ });
-  await expect(vigentes).toHaveAttribute('aria-pressed', 'true');
+  await expect(vigentes).toHaveAttribute('aria-pressed', 'false');
   await vigentes.click();
   await expect(vigentes).toHaveAttribute('aria-pressed', 'true');
 });
