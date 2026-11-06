@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { anosDasObras, atuacaoPorExecutora, chaveNome, nomeNoMapa, barraNoAno, filtrarObras, filtrarPainel, fracaoDoAno, obraNoMes, obrasNoMes, obrasParaGeoJSON, pontosDeCalor, temLocalizacao, type ObraPublica } from './obras';
+import { anosDasObras, atuacaoPorExecutora, contratacaoPorContratante, chaveNome, nomeNoMapa, barraNoAno, filtrarObras, filtrarPainel, fracaoDoAno, obraNoMes, obrasNoMes, obrasParaGeoJSON, pontosDeCalor, temLocalizacao, type ObraPublica } from './obras';
 
 const obra = (o: Partial<ObraPublica>): ObraPublica => ({
   codigo: 'c1', setor: 'telecom', numero: '001/2026', tipos_obra: ['vala'], tipo_intervencao: 'obra', origem: 'concessionaria', escopo: 'Rede', inicio_previsto: '2026-10-01',
@@ -236,5 +236,18 @@ describe('atuacaoPorExecutora', () => {
   it('usa o nome fantasia e, sem ele, a razão social, como no mapa', () => {
     expect(nomeNoMapa({ nome_fantasia: '  ', razao_social: 'X LTDA' })).toBe('X LTDA');
     expect(nomeNoMapa({ nome_fantasia: 'Fantasia', razao_social: 'X LTDA' })).toBe('Fantasia');
+  });
+});
+
+describe('contratacaoPorContratante', () => {
+  it('conta as obras pela contratante e ignora obra sem contratante', () => {
+    const lista = [
+      obra({ codigo: 'y1', contratante: 'OpUm', situacao: 'vigente' }),
+      obra({ codigo: 'y2', contratante: 'opum', situacao: 'concluida' }),
+      obra({ codigo: 'y3', contratante: null }),
+    ];
+    const m = contratacaoPorContratante(lista);
+    expect(m.get(chaveNome('OpUm'))).toMatchObject({ total: 2, vigentes: 1 });
+    expect(m.size).toBe(1);
   });
 });

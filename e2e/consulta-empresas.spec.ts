@@ -21,6 +21,12 @@ test('a lista de empresas diz o que cada uma faz e o que já executou', async ({
     .toContainText('Operadora de serviços de telecomunicações, com regularidade junto à Anatel declarada na inscrição.');
   await expect(page.getByText('Nenhuma obra licenciada no CADEX como executora')).toHaveCount(0);
 
+  // Contratante: a OpUm contratou a obra do cenário.
+  const opum = page.locator('li', { hasText: 'Operadora Um S.A.' });
+  await expect(opum).toContainText('Contratou: 1 obra licenciada');
+  await expect(opum.getByRole('link', { name: 'Ver obras contratadas' }))
+    .toHaveAttribute('href', '/consulta/obras/concessionaria/opum');
+
   await terceirizada.getByRole('link', { name: 'Ver obras' }).click();
   await expect(page).toHaveURL(/\/consulta\/obras\/executora\/terceirizada/);
 });

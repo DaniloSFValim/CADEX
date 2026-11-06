@@ -4,7 +4,7 @@ import { Rodape } from '../components/Rodape';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Empty, ErrorNote, Kpi, Spinner, Titulo, inputClass, linkTexto } from '../components/ui';
-import { atuacaoPorExecutora, buscarObrasPublicas, chaveNome, nomeNoMapa, type AtuacaoExecutora } from '../lib/obras';
+import { atuacaoPorExecutora, buscarObrasPublicas, chaveNome, contratacaoPorContratante, nomeNoMapa, type AtuacaoExecutora } from '../lib/obras';
 import { listarTipos, mapaRotulosTipos } from '../lib/tiposIntervencao';
 import { TIPO_OBRA_LABEL, type TipoObra } from '../lib/licencas';
 import { BARRA, dataBR } from '../components/Situacao';
@@ -43,9 +43,12 @@ export default function Consulta() {
   useEffect(() => { consultaPublica().then(setLinhas).catch(setError); }, []);
   // O que cada executora já fez, a partir das obras do mapa. Se falhar, a lista de empresas continua.
   const [atuacao, setAtuacao] = useState<Map<string, AtuacaoExecutora>>(new Map());
+  const [contratacao, setContratacao] = useState<Map<string, AtuacaoExecutora>>(new Map());
   const [rotulos, setRotulos] = useState<Record<string, string>>({});
   useEffect(() => {
-    buscarObrasPublicas().then((o) => setAtuacao(atuacaoPorExecutora(o))).catch(() => setAtuacao(new Map()));
+    buscarObrasPublicas()
+      .then((o) => { setAtuacao(atuacaoPorExecutora(o)); setContratacao(contratacaoPorContratante(o)); })
+      .catch(() => { setAtuacao(new Map()); setContratacao(new Map()); });
     listarTipos().then((t) => setRotulos(mapaRotulosTipos(t))).catch(() => setRotulos({}));
   }, []);
 
@@ -142,7 +145,8 @@ export default function Consulta() {
                       <div className="mt-0.5 text-sm text-tinta-500">
                         {TIPO_LABEL[l.tipo]}
                       </div>
-                      <OQueFaz linha={l} atuacao={atuacao.get(chaveNome(nomeNoMapa(l)))} rotulos={rotulos} />
+                      <OQueFaz linha={l} atuacao={atuacao.get(chaveNome(nomeNoMapa(l)))}
+                               contratou={contratacao.get(chaveNome(nomeNoMapa(l)))} rotulos={rotulos} />
                     </div>
                   </div>
 
@@ -170,11 +174,14 @@ export default function Consulta() {
 }
 
 /** O que a empresa faz (pela inscrição) e o que já executou (obras licenciadas no mapa). */
-function OQueFaz({ linha: l, atuacao, rotulos }: {
-  linha: LinhaPublica; atuacao: AtuacaoExecutora | undefined; rotulos: Record<string, string>;
+function OQueFaz({ linha: l, atuacao, contratou, rotulos }: {
+  linha: LinhaPublica; atuacao: AtuacaoExecutora | undefined; contratou: AtuacaoExecutora | undefined; rotulos: Record<string, string>;
 }) {
-  const tipos = (atuacao?.tipos ?? []).slice(0, 3)
+  const rotulosDe = (a: AtuacaoExecutora | undefined) => (a?.tipos ?? []).slice(0, 3)
     .map((t) => rotulos[t.codigo] ?? TIPO_OBRA_LABEL[t.codigo as TipoObra] ?? t.codigo);
+  const tipos = rotulosDe(atuacao);
+  const tiposContratados = rotulosDe(contratou);
+  const chave = encodeURIComponent(chaveNome(nomeNoMapa(l)));
   const impedida = !SITUACOES_HABILITADAS.includes(l.situacao);
   return (
     <div className="mt-1.5 space-y-0.5 text-sm text-tinta-700">
@@ -185,7 +192,16 @@ function OQueFaz({ linha: l, atuacao, rotulos }: {
           {atuacao.total} obra{atuacao.total === 1 ? '' : 's'} licenciada{atuacao.total === 1 ? '' : 's'}
           {atuacao.vigentes > 0 && `, ${atuacao.vigentes} em curso`}
           {tipos.length > 0 && `. Mais comuns: ${tipos.join(', ')}`}.{' '}
-          <Link to={`/consulta/obras/executora/${encodeURIComponent(chaveNome(nomeNoMapa(l)))}`} className={linkTexto}>Ver obras</Link>
+          <Link to={`/consulta/obras/executora/${chave}`} className={linkTexto}>Ver obras</Link>
+        </p>
+      )}
+      {contratou && contratou.total > 0 && (
+        <p>
+          <span className="font-semibold">Contratou:</span>{' '}
+          {contratou.total} obra{contratou.total === 1 ? '' : 's'} licenciada{contratou.total === 1 ? '' : 's'}
+          {contratou.vigentes > 0 && `, ${contratou.vigentes} em curso`}
+          {tiposContratados.length > 0 && `. Mais comuns: ${tiposContratados.join(', ')}`}.{' '}
+          <Link to={`/consulta/obras/concessionaria/${chave}`} className={linkTexto}>Ver obras contratadas</Link>
         </p>
       )}
     </div>

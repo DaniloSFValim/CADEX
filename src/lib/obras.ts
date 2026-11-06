@@ -325,10 +325,20 @@ export interface AtuacaoExecutora { total: number; vigentes: number; tipos: { co
  * Tipos de obra do mais frequente para o menos; empate pela ordem do código.
  */
 export function atuacaoPorExecutora(obras: ObraPublica[]): Map<string, AtuacaoExecutora> {
+  return atuacaoPor(obras, (o) => o.executora);
+}
+
+/** O que uma concessionária, operadora ou órgão contratou: obras licenciadas em que é a contratante. */
+export function contratacaoPorContratante(obras: ObraPublica[]): Map<string, AtuacaoExecutora> {
+  return atuacaoPor(obras, (o) => o.contratante);
+}
+
+function atuacaoPor(obras: ObraPublica[], campo: (o: ObraPublica) => string | null | undefined): Map<string, AtuacaoExecutora> {
   const bruto = new Map<string, { total: number; vigentes: number; tipos: Map<string, number> }>();
   for (const o of obras) {
-    if (!o.executora || !nomeLimpo(o.executora)) continue;
-    const chave = chaveNome(o.executora);
+    const nome = campo(o);
+    if (!nome || !nomeLimpo(nome)) continue;
+    const chave = chaveNome(nome);
     const a = bruto.get(chave) ?? { total: 0, vigentes: 0, tipos: new Map<string, number>() };
     a.total += 1;
     if (o.situacao === 'vigente' || o.situacao === 'aguardando_inicio') a.vigentes += 1;
