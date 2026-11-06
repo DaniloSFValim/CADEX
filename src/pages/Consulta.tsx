@@ -21,7 +21,7 @@ const SELO_CARTAO: Record<SituacaoEfetiva, string> = {
 };
 import { formatCnpj, onlyDigits } from '../lib/cnpj';
 import {
-  FILTRO_SITUACAO, SETORES, SETOR_LABEL, TIPO_LABEL, atuaNoSetor, consultaPublica, situacoesDoFiltro, urlLogo,
+  FILTRO_SITUACAO, SETORES, SETOR_LABEL, SITUACOES_HABILITADAS, TIPO_LABEL, atuaNoSetor, consultaPublica, oQueAEmpresaFaz, situacoesDoFiltro, urlLogo,
   type LinhaPublica, type Setor,
 } from '../lib/empresas';
 
@@ -141,7 +141,6 @@ export default function Consulta() {
                       {l.nome_fantasia && <div className="text-sm text-tinta-600">{l.nome_fantasia}</div>}
                       <div className="mt-0.5 text-sm text-tinta-500">
                         {TIPO_LABEL[l.tipo]}
-                        {l.contratantes.length > 0 && `, contratada por ${l.contratantes.join(', ')}`}
                       </div>
                       <OQueFaz linha={l} atuacao={atuacao.get(chaveNome(nomeNoMapa(l)))} rotulos={rotulos} />
                     </div>
@@ -170,25 +169,17 @@ export default function Consulta() {
   );
 }
 
-const HABILITADA: SituacaoEfetiva[] = ['deferida', 'apta', 'em_saneamento'];
-
-/** O que a empresa pode executar (setores da inscrição) e o que já executou (obras licenciadas no mapa). */
+/** O que a empresa faz (pela inscrição) e o que já executou (obras licenciadas no mapa). */
 function OQueFaz({ linha: l, atuacao, rotulos }: {
   linha: LinhaPublica; atuacao: AtuacaoExecutora | undefined; rotulos: Record<string, string>;
 }) {
-  const setores = l.setores.map((s) => SETOR_LABEL[s]).join(', ');
-  const pode = HABILITADA.includes(l.situacao);
   const tipos = (atuacao?.tipos ?? []).slice(0, 3)
     .map((t) => rotulos[t.codigo] ?? TIPO_OBRA_LABEL[t.codigo as TipoObra] ?? t.codigo);
+  const impedida = !SITUACOES_HABILITADAS.includes(l.situacao);
   return (
     <div className="mt-1.5 space-y-0.5 text-sm text-tinta-700">
-      {setores && (
-        <p>
-          <span className="font-semibold">{pode ? 'Pode executar:' : 'Inscrita para:'}</span> {setores}
-          {!pode && <span className="text-baixa">. Não pode atuar agora.</span>}
-        </p>
-      )}
-      {atuacao && atuacao.total > 0 ? (
+      <p className={impedida ? 'text-baixa' : undefined}>{oQueAEmpresaFaz(l)}</p>
+      {atuacao && atuacao.total > 0 && (
         <p>
           <span className="font-semibold">Já executou:</span>{' '}
           {atuacao.total} obra{atuacao.total === 1 ? '' : 's'} licenciada{atuacao.total === 1 ? '' : 's'}
@@ -196,8 +187,6 @@ function OQueFaz({ linha: l, atuacao, rotulos }: {
           {tipos.length > 0 && `. Mais comuns: ${tipos.join(', ')}`}.{' '}
           <Link to={`/consulta/obras/executora/${encodeURIComponent(chaveNome(nomeNoMapa(l)))}`} className={linkTexto}>Ver obras</Link>
         </p>
-      ) : (
-        <p className="text-tinta-500">Nenhuma obra licenciada no CADEX como executora.</p>
       )}
     </div>
   );

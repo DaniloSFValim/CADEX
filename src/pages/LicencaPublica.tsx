@@ -4,7 +4,7 @@ import { Cabecalho } from '../components/Cabecalho';
 import { Rodape } from '../components/Rodape';
 import { ErrorNote, Spinner, linkTexto } from '../components/ui';
 import { dataBR } from '../components/Situacao';
-import { SETOR_LABEL, consultaPublica, type LinhaPublica } from '../lib/empresas';
+import { SETOR_LABEL, consultaPublica, oQueAEmpresaFaz, type LinhaPublica } from '../lib/empresas';
 import { chaveNome, nomeNoMapa } from '../lib/obras';
 import { listarTipos, mapaRotulosTipos, rotuloDoTipo } from '../lib/tiposIntervencao';
 import {
@@ -172,11 +172,10 @@ function PodeExecutar({ codigo }: { codigo: string }) {
   useEffect(() => {
     consultaPublica().then((ls) => setLinha(ls.find((l) => l.codigo_cadex === codigo) ?? null)).catch(() => setLinha(null));
   }, [codigo]);
-  if (!linha || linha.setores.length === 0) return null;
+  if (!linha) return null;
   return (
     <span className="mt-1 block text-sm text-tinta-700">
-      <span className="font-semibold">{['deferida', 'apta', 'em_saneamento'].includes(linha.situacao) ? 'Pode executar:' : 'Inscrita para:'}</span>{' '}
-      {linha.setores.map((s) => SETOR_LABEL[s]).join(', ')}.{' '}
+      {oQueAEmpresaFaz(linha)}{' '}
       <Link to={`/consulta/obras/executora/${encodeURIComponent(chaveNome(nomeNoMapa(linha)))}`} className={linkTexto}>Outras obras desta executora</Link>
     </span>
   );
