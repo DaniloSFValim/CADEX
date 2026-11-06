@@ -297,6 +297,14 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
       return vazio();
     }
     if (caminho === 'rpc/obras_publicas') return responder(obrasPublicas(estado));
+    // Consulta pública de empresas: só dados da inscrição (sem contato), como consulta_publica() no banco.
+    if (caminho === 'rpc/consulta_publica') {
+      return responder(estado.empresas.filter((e) => e.ativa !== false).map((e) => ({
+        codigo_cadex: e.codigo_cadex, razao_social: e.razao_social, nome_fantasia: e.nome_fantasia, cnpj: e.cnpj,
+        tipo: e.tipo, setores: e.setores, situacao: e.situacao, validade_ate: e.validade_ate,
+        portaria_numero: e.portaria_numero, portaria_data: e.portaria_data, contratantes: [], logo_arquivo: null,
+      })));
+    }
     // Licença pública pelo código do QR. Sem executora vinculada, a resposta vem sem o campo.
     if (caminho === 'rpc/licenca_publica') {
       const achada = obrasPublicas(estado).find((o) => o.codigo === (corpo as { p_codigo?: string } | null)?.p_codigo);
