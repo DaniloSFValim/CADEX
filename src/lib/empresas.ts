@@ -612,3 +612,30 @@ export async function consultaPublica(): Promise<LinhaPublica[]> {
   if (error) throw error;
   return data as LinhaPublica[];
 }
+
+/** Situações em que a empresa pode atuar hoje (mesma regra da consulta pública). */
+export const SITUACOES_HABILITADAS: SituacaoEfetiva[] = ['deferida', 'apta', 'em_saneamento'];
+
+const listaComE = (xs: string[]) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} e ${xs[xs.length - 1]}`);
+
+/**
+ * O que a empresa faz, em uma frase para o público. Diz só o que a inscrição comprova:
+ * para operadora, a regularidade na Anatel é declarada na inscrição (art. 6º, III), não verificada na Anatel.
+ */
+export function oQueAEmpresaFaz(l: Pick<LinhaPublica, 'tipo' | 'setores' | 'situacao' | 'contratantes'>): string {
+  const setores = l.setores.map((s) => SETOR_LABEL[s]);
+  if (!SITUACOES_HABILITADAS.includes(l.situacao)) {
+    return `Inscrita para: ${setores.join(', ') || 'setor não informado'}. Não pode atuar agora.`;
+  }
+  const infra = listaComE(setores.map((s) => s.toLowerCase())) || 'obras e serviços';
+  switch (l.tipo) {
+    case 'operadora':
+      return 'Operadora de serviços de telecomunicações, com regularidade junto à Anatel declarada na inscrição.';
+    case 'terceirizada':
+      return l.contratantes.length > 0
+        ? `Contratada por ${listaComE(l.contratantes)} para mão de obra de construção e manutenção de infraestrutura de ${infra}.`
+        : `Terceirizada para mão de obra de construção e manutenção de infraestrutura de ${infra}.`;
+    default:
+      return `Pode executar: ${setores.join(', ')}.`;
+  }
+}

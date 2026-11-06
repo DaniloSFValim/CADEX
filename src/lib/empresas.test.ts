@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  oQueAEmpresaFaz, type Setor,
   estadoDocumento, podeAtuar, resumoDocumentos, situacaoEfetiva, situacoesDoFiltro, somaDias, ultimoPorTipo,
   type Documento, type TipoDocumento,
 } from './empresas';
@@ -95,5 +96,27 @@ describe('situacoesDoFiltro', () => {
   });
   it('valor desconhecido não abrange nada', () => {
     expect(situacoesDoFiltro('inapta')).toEqual([]);
+  });
+});
+
+describe('oQueAEmpresaFaz', () => {
+  const base = { tipo: 'terceirizada' as const, setores: ['telecom'] as Setor[], situacao: 'deferida' as const, contratantes: [] as string[] };
+  it('operadora: regularidade na Anatel declarada na inscrição', () => {
+    expect(oQueAEmpresaFaz({ ...base, tipo: 'operadora' }))
+      .toBe('Operadora de serviços de telecomunicações, com regularidade junto à Anatel declarada na inscrição.');
+  });
+  it('terceirizada com contratantes diz quem contrata e para quê', () => {
+    expect(oQueAEmpresaFaz({ ...base, contratantes: ['OpUm', 'OpDois', 'OpTres'] }))
+      .toBe('Contratada por OpUm, OpDois e OpTres para mão de obra de construção e manutenção de infraestrutura de telecomunicações.');
+  });
+  it('terceirizada sem contratante vinculado', () => {
+    expect(oQueAEmpresaFaz({ ...base, setores: ['gas', 'drenagem'] }))
+      .toBe('Terceirizada para mão de obra de construção e manutenção de infraestrutura de gás e drenagem.');
+  });
+  it('empresa que não pode atuar agora não ganha a frase de habilitação', () => {
+    expect(oQueAEmpresaFaz({ ...base, tipo: 'operadora', situacao: 'inapta' })).toBe('Inscrita para: Telecomunicações. Não pode atuar agora.');
+  });
+  it('concessionária mantém os setores', () => {
+    expect(oQueAEmpresaFaz({ ...base, tipo: 'concessionaria', setores: ['gas'] })).toBe('Pode executar: Gás.');
   });
 });
