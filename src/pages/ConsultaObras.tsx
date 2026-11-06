@@ -29,7 +29,11 @@ export default function ConsultaObras() {
   const [modo, setModo] = useState<'pontos' | 'calor'>('pontos');
   // Por padrão, a consulta mostra todas as obras licenciadas, inclusive as encerradas.
   const [mostrarEncerradas, setMostrarEncerradas] = useState(true);
+  // Bairro escolhido: destaca o contorno e enquadra no mapa, sem esconder as outras obras.
   const [bairro, setBairro] = useState<string | null>(null);
+  // Obras de um agrupamento clicado no mapa: destacadas na lista, sem esconder as demais.
+  const [grupo, setGrupo] = useState<string[]>([]);
+  const grupoSet = useMemo(() => new Set(grupo), [grupo]);
   const [situacaoLista, setSituacaoLista] = useState<ObraPublica['situacao'] | ''>('');
   const [regiao, setRegiao] = useState('');
   const [busca, setBusca] = useState('');
@@ -101,7 +105,6 @@ export default function ConsultaObras() {
   const todas = useMemo(() => obras ?? [], [obras]);
   const ativas = useMemo(() => todas.filter(obraAtiva), [todas]);
   const bairroDaObra = (o: ObraPublica) => o.trechos[0]?.bairro?.trim() || '';
-  const porBairro = bairro ? (o: ObraPublica) => chaveBairro(bairroDaObra(o) || 'Sem bairro') === chaveBairro(bairro) : () => true;
   const porRegiao = regiao ? (o: ObraPublica) => bairrosGeo.get(chaveBairro(bairroDaObra(o)))?.regiao === regiao : () => true;
   const regioes = useMemo(() => [...new Set([...bairrosGeo.values()].map((b) => b.regiao))].sort(), [bairrosGeo]);
   const obrasPainel = useMemo(() => filtrarPainel(obras ?? [], filtro), [obras, filtro]);
@@ -122,7 +125,7 @@ export default function ConsultaObras() {
   // Linha do tempo: com ano ou mês escolhido, mapa e lista mostram só as obras desse período.
   const porTempo = (o: ObraPublica) => !tempo || (tempo.mes === null ? obraNoAno(o, tempo.ano) : obraNoMes(o, tempo.ano, tempo.mes));
   const listadas = base.filter((o) => !situacaoLista || o.situacao === situacaoLista)
-    .filter(porRegiao).filter(porBairro).filter(porBusca).filter(porPeriodo).filter(porTempo);
+    .filter(porRegiao).filter(porBusca).filter(porPeriodo).filter(porTempo);
   const grupos = useMemo(() => (ordem === 'bairro'
     ? agruparPorBairro(listadas, bairrosGeo)
     : [{ bairro: ROTULO_ORDEM[ordem], obras: ordenarObras(listadas, ordem) }]), [listadas, bairrosGeo, ordem]);
@@ -253,7 +256,7 @@ export default function ConsultaObras() {
                 <div ref={mapaRef} className="relative scroll-mt-4 overflow-hidden rounded-xl border border-tinta-200 shadow-xs">
                   <MapaObras obras={listadas}
                              foco={foco} destaque={destaque} modo={modo} bairro={bairro}
-                             onSelecionar={setFoco} onBairro={setBairro} onDestacar={setDestaque} />
+                             onSelecionar={setFoco} onBairro={setBairro} onDestacar={setDestaque} onGrupo={setGrupo} />
                   {selecionada && <FichaObra obra={selecionada} onFechar={() => setFoco(null)} />}
                 </div>
               </Suspense>
@@ -355,8 +358,15 @@ export default function ConsultaObras() {
                 {bairro && (
                   <button type="button" onClick={() => setBairro(null)}
                           className="inline-flex items-center gap-2 rounded-full border border-marca-700 bg-marca-50 px-3 py-1 text-sm font-semibold text-marca-700">
-                    Bairro: {bairro} <span aria-hidden>✕</span>
-                    <span className="sr-only">Mostrar todos os bairros</span>
+                    Bairro destacado: {bairro} <span aria-hidden>✕</span>
+                    <span className="sr-only">Tirar o destaque do bairro</span>
+                  </button>
+                )}
+                {grupo.length > 0 && (
+                  <button type="button" onClick={() => setGrupo([])}
+                          className="inline-flex items-center gap-2 rounded-full border border-marca-700 bg-marca-50 px-3 py-1 text-sm font-semibold text-marca-700">
+                    {grupo.length} {grupo.length === 1 ? 'obra destacada' : 'obras destacadas'} no mapa <span aria-hidden>✕</span>
+                    <span className="sr-only">Tirar o destaque das obras do mapa</span>
                   </button>
                 )}
               </div>
@@ -389,7 +399,7 @@ export default function ConsultaObras() {
                       <ul className="divide-y divide-tinta-100">
                         {g.obras.map((o) => (
                           <li key={o.codigo} id={`obra-${o.codigo}`}
-                              className="grid gap-x-4 gap-y-1 px-4 py-3 text-sm sm:grid-cols-[1fr_auto]"
+                              className={`grid gap-x-4 gap-y-1 px-4 py-3 text-sm sm:grid-cols-[1fr_auto] ${grupoSet.has(o.codigo) ? 'bg-marca-50' : ''}`}
                               style={{ boxShadow: `inset 3px 0 0 ${COR_SITUACAO[o.situacao]}` }}
                               onMouseEnter={() => setDestaque(o.codigo)}
                               onMouseLeave={() => setDestaque(null)}
