@@ -73,7 +73,7 @@ export default function Consulta() {
       <main id="conteudo" tabIndex={-1} className="mx-auto w-full max-w-7xl flex-1 px-4 py-12">
         <Titulo
           trilha="Consulta pública"
-          titulo="Consultar empresa executora"
+          titulo="Empresas registradas no CADEX"
           descricao="Antes de uma obra na via pública, confira se a empresa está apta a atuar."
         />
 
