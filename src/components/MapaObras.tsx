@@ -124,7 +124,7 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
         // Pontos próximos viram um agrupamento com a contagem; só as linhas não agrupam.
         sources: {
           ...base.sources,
-          obras: { type: 'geojson', data: obrasParaGeoJSON([]), cluster: true, clusterRadius: 40, clusterMaxZoom: 14 },
+          obras: { type: 'geojson', data: obrasParaGeoJSON([]), cluster: true, clusterRadius: 28, clusterMaxZoom: 16 },
           // Calor e área de toque usam cada obra, sem agrupar: a densidade precisa contar obra por obra.
           brutas: { type: 'geojson', data: obrasParaGeoJSON([]) },
           // Pontos do calor: linhas viram pontos ao longo do traçado, e cada obra soma um peso pela situação.
