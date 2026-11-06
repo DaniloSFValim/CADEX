@@ -58,8 +58,6 @@ export interface SinaisTriagem {
   inscricoesVencendo: { id: string; dias_restantes: number }[];
   /** Saneamentos a vencer em até 7 dias (dashboard_saneamentos_vencimento). */
   saneamentos: { id: string; dias_restantes: number }[];
-  /** Análises paradas há mais de 15 dias (dashboard_analises_pendentes). */
-  analises: { id: string; dias_pendentes: number }[];
   /** Licenças com prazo de cronograma encerrado (pendenciasLicencas). */
   prazoEncerrado: { executora_id: string | null; numero: string | null; dias: number }[];
   /** Obras concluídas sem As Built (pendenciasLicencas). */
@@ -129,13 +127,7 @@ export function triagemRisco(empresas: Empresa[], sinais: SinaisTriagem, hoje: s
       texto: `Licença ${l.numero ?? 'sem número'} sem As Built há ${l.dias} ${dia(l.dias)}`,
     });
   }
-  // Acompanhar: análise parada (atraso da SECONSER, não falta da empresa).
-  for (const a of sinais.analises) {
-    registrar(a.id, {
-      nivel: 'acompanhar', urgencia: a.dias_pendentes,
-      texto: `Análise parada há ${a.dias_pendentes} ${dia(a.dias_pendentes)}`,
-    });
-  }
+  // Análise parada não entra aqui: o atraso é da SECONSER, não da empresa. Fica na lista própria de análises.
 
   const maxUrgencia = (r: EmpresaEmRisco) =>
     Math.max(...r.motivos.filter((m) => m.nivel === r.nivel).map((m) => m.urgencia));

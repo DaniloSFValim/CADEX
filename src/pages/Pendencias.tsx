@@ -114,10 +114,9 @@ export default function Pendencias() {
   const triagem = useMemo(() => triagemRisco(empresas, {
     inscricoesVencendo: inscricoes.map((i) => ({ id: i.id, dias_restantes: i.dias_restantes })),
     saneamentos: saneamentos.map((s) => ({ id: s.id, dias_restantes: s.dias_restantes })),
-    analises: analises.map((a) => ({ id: a.id, dias_pendentes: a.dias_pendentes })),
     prazoEncerrado: obras.prazoEncerrado.map(({ licenca: l, dias }) => ({ executora_id: l.executora_id, numero: l.numero, dias })),
     semAsBuilt: obras.semAsBuilt.map(({ licenca: l, dias }) => ({ executora_id: l.executora_id, numero: l.numero, dias })),
-  }, hojeISO()), [empresas, inscricoes, saneamentos, analises, obras]);
+  }, hojeISO()), [empresas, inscricoes, saneamentos, obras]);
 
   if (!podeEditar) {
     return <Empty>Acesso negado: apenas o gestor tem acesso ao dashboard.</Empty>;
