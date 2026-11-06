@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { anosDasObras, barraNoAno, filtrarObras, filtrarPainel, fracaoDoAno, obraNoMes, obrasNoMes, obrasParaGeoJSON, pontosDeCalor, temLocalizacao, type ObraPublica } from './obras';
+import { anosDasObras, atuacaoPorExecutora, chaveNome, nomeNoMapa, barraNoAno, filtrarObras, filtrarPainel, fracaoDoAno, obraNoMes, obrasNoMes, obrasParaGeoJSON, pontosDeCalor, temLocalizacao, type ObraPublica } from './obras';
 
 const obra = (o: Partial<ObraPublica>): ObraPublica => ({
   codigo: 'c1', setor: 'telecom', numero: '001/2026', tipos_obra: ['vala'], tipo_intervencao: 'obra', origem: 'concessionaria', escopo: 'Rede', inicio_previsto: '2026-10-01',
@@ -218,5 +218,23 @@ describe('linha do tempo: obra ativa no mês', () => {
   });
   it('sem período informado não entra no filtro', () => {
     expect(obraNoMes({ inicio_previsto: null, fim_previsto: '2026-11-20' }, 2026, 10)).toBe(false);
+  });
+});
+
+describe('atuacaoPorExecutora', () => {
+  it('soma obras e vigentes pela chave do nome e ordena os tipos pelo mais frequente', () => {
+    const lista = [
+      obra({ codigo: 'x1', executora: 'Braços', situacao: 'vigente', tipos_obra: ['rede', 'ramal'] as ObraPublica['tipos_obra'] }),
+      obra({ codigo: 'x2', executora: 'BRACOS ', situacao: 'concluida', tipos_obra: ['rede'] as ObraPublica['tipos_obra'] }),
+      obra({ codigo: 'x3', executora: 'Outra', situacao: 'aguardando_inicio', tipos_obra: [] }),
+    ];
+    const m = atuacaoPorExecutora(lista);
+    expect(m.get(chaveNome('Braços'))).toEqual({ total: 2, vigentes: 1, tipos: [{ codigo: 'rede', n: 2 }, { codigo: 'ramal', n: 1 }] });
+    expect(m.get(chaveNome('Outra'))).toEqual({ total: 1, vigentes: 1, tipos: [] });
+  });
+
+  it('usa o nome fantasia e, sem ele, a razão social, como no mapa', () => {
+    expect(nomeNoMapa({ nome_fantasia: '  ', razao_social: 'X LTDA' })).toBe('X LTDA');
+    expect(nomeNoMapa({ nome_fantasia: 'Fantasia', razao_social: 'X LTDA' })).toBe('Fantasia');
   });
 });

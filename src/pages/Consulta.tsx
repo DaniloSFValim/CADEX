@@ -2,7 +2,11 @@ import { AbasConsulta } from '../components/AbasConsulta';
 import { Cabecalho } from '../components/Cabecalho';
 import { Rodape } from '../components/Rodape';
 import { useEffect, useMemo, useState } from 'react';
-import { Empty, ErrorNote, Kpi, Spinner, Titulo, inputClass } from '../components/ui';
+import { Link } from 'react-router-dom';
+import { Empty, ErrorNote, Kpi, Spinner, Titulo, inputClass, linkTexto } from '../components/ui';
+import { atuacaoPorExecutora, buscarObrasPublicas, chaveNome, nomeNoMapa, type AtuacaoExecutora } from '../lib/obras';
+import { listarTipos, mapaRotulosTipos } from '../lib/tiposIntervencao';
+import { TIPO_OBRA_LABEL, type TipoObra } from '../lib/licencas';
 import { BARRA, dataBR } from '../components/Situacao';
 import { SITUACAO_LABEL, type SituacaoEfetiva } from '../lib/empresas';
 
@@ -17,7 +21,7 @@ const SELO_CARTAO: Record<SituacaoEfetiva, string> = {
 };
 import { formatCnpj, onlyDigits } from '../lib/cnpj';
 import {
-  FILTRO_SITUACAO, SETORES, SETOR_LABEL, atuaNoSetor, consultaPublica, descricaoEmpresa, situacoesDoFiltro, urlLogo,
+  FILTRO_SITUACAO, SETORES, SETOR_LABEL, TIPO_LABEL, atuaNoSetor, consultaPublica, situacoesDoFiltro, urlLogo,
   type LinhaPublica, type Setor,
 } from '../lib/empresas';
 
@@ -37,6 +41,13 @@ export default function Consulta() {
   const [setor, setSetor] = useState('');
 
   useEffect(() => { consultaPublica().then(setLinhas).catch(setError); }, []);
+  // O que cada executora já fez, a partir das obras do mapa. Se falhar, a lista de empresas continua.
+  const [atuacao, setAtuacao] = useState<Map<string, AtuacaoExecutora>>(new Map());
+  const [rotulos, setRotulos] = useState<Record<string, string>>({});
+  useEffect(() => {
+    buscarObrasPublicas().then((o) => setAtuacao(atuacaoPorExecutora(o))).catch(() => setAtuacao(new Map()));
+    listarTipos().then((t) => setRotulos(mapaRotulosTipos(t))).catch(() => setRotulos({}));
+  }, []);
 
   const filtradas = useMemo(() => {
     const q = busca.trim().toLowerCase();
@@ -129,9 +140,10 @@ export default function Consulta() {
                       <div className="font-semibold text-tinta-900">{l.razao_social}</div>
                       {l.nome_fantasia && <div className="text-sm text-tinta-600">{l.nome_fantasia}</div>}
                       <div className="mt-0.5 text-sm text-tinta-500">
-                        {descricaoEmpresa(l)}
+                        {TIPO_LABEL[l.tipo]}
                         {l.contratantes.length > 0 && `, contratada por ${l.contratantes.join(', ')}`}
                       </div>
+                      <OQueFaz linha={l} atuacao={atuacao.get(chaveNome(nomeNoMapa(l)))} rotulos={rotulos} />
                     </div>
                   </div>
 
@@ -154,6 +166,39 @@ export default function Consulta() {
         </section>
       </main>
       <Rodape />
+    </div>
+  );
+}
+
+const HABILITADA: SituacaoEfetiva[] = ['deferida', 'apta', 'em_saneamento'];
+
+/** O que a empresa pode executar (setores da inscrição) e o que já executou (obras licenciadas no mapa). */
+function OQueFaz({ linha: l, atuacao, rotulos }: {
+  linha: LinhaPublica; atuacao: AtuacaoExecutora | undefined; rotulos: Record<string, string>;
+}) {
+  const setores = l.setores.map((s) => SETOR_LABEL[s]).join(', ');
+  const pode = HABILITADA.includes(l.situacao);
+  const tipos = (atuacao?.tipos ?? []).slice(0, 3)
+    .map((t) => rotulos[t.codigo] ?? TIPO_OBRA_LABEL[t.codigo as TipoObra] ?? t.codigo);
+  return (
+    <div className="mt-1.5 space-y-0.5 text-sm text-tinta-700">
+      {setores && (
+        <p>
+          <span className="font-semibold">{pode ? 'Pode executar:' : 'Inscrita para:'}</span> {setores}
+          {!pode && <span className="text-baixa">. Não pode atuar agora.</span>}
+        </p>
+      )}
+      {atuacao && atuacao.total > 0 ? (
+        <p>
+          <span className="font-semibold">Já executou:</span>{' '}
+          {atuacao.total} obra{atuacao.total === 1 ? '' : 's'} licenciada{atuacao.total === 1 ? '' : 's'}
+          {atuacao.vigentes > 0 && `, ${atuacao.vigentes} em curso`}
+          {tipos.length > 0 && `. Mais comuns: ${tipos.join(', ')}`}.{' '}
+          <Link to={`/consulta/obras/executora/${encodeURIComponent(chaveNome(nomeNoMapa(l)))}`} className={linkTexto}>Ver obras</Link>
+        </p>
+      ) : (
+        <p className="text-tinta-500">Nenhuma obra licenciada no CADEX como executora.</p>
+      )}
     </div>
   );
 }

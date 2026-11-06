@@ -4,7 +4,8 @@ import { Cabecalho } from '../components/Cabecalho';
 import { Rodape } from '../components/Rodape';
 import { ErrorNote, Spinner, linkTexto } from '../components/ui';
 import { dataBR } from '../components/Situacao';
-import { SETOR_LABEL } from '../lib/empresas';
+import { SETOR_LABEL, consultaPublica, type LinhaPublica } from '../lib/empresas';
+import { chaveNome, nomeNoMapa } from '../lib/obras';
 import { listarTipos, mapaRotulosTipos, rotuloDoTipo } from '../lib/tiposIntervencao';
 import {
   ORIGEM_LABEL, TIPO_INTERVENCAO_LABEL, buscarLicencaPublica, linkMapa,
@@ -117,6 +118,7 @@ function Conteudo({ d }: { d: Dados }) {
           <span className="block text-sm text-tinta-500">
             {executora.codigo_cadex ?? 'Sem inscrição no CADEX: licença emitida antes do cadastro.'}
           </span>
+          {executora.codigo_cadex && <PodeExecutar codigo={executora.codigo_cadex} />}
         </Item>
         {d.contratante && (
           <Item rotulo={d.setor === 'telecom' ? 'Concessionária contratante' : 'Contratante'} largo>
@@ -161,5 +163,21 @@ function Item({ rotulo, largo, children }: { rotulo: string; largo?: boolean; ch
       <dt className="text-sm font-medium text-tinta-500">{rotulo}</dt>
       <dd className="mt-0.5 text-base text-tinta-900">{children}</dd>
     </div>
+  );
+}
+
+/** O que a executora pode executar, pela inscrição no CADEX, e o caminho para as obras dela. */
+function PodeExecutar({ codigo }: { codigo: string }) {
+  const [linha, setLinha] = useState<LinhaPublica | null>(null);
+  useEffect(() => {
+    consultaPublica().then((ls) => setLinha(ls.find((l) => l.codigo_cadex === codigo) ?? null)).catch(() => setLinha(null));
+  }, [codigo]);
+  if (!linha || linha.setores.length === 0) return null;
+  return (
+    <span className="mt-1 block text-sm text-tinta-700">
+      <span className="font-semibold">{['deferida', 'apta', 'em_saneamento'].includes(linha.situacao) ? 'Pode executar:' : 'Inscrita para:'}</span>{' '}
+      {linha.setores.map((s) => SETOR_LABEL[s]).join(', ')}.{' '}
+      <Link to={`/consulta/obras/executora/${encodeURIComponent(chaveNome(nomeNoMapa(linha)))}`} className={linkTexto}>Outras obras desta executora</Link>
+    </span>
   );
 }

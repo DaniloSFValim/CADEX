@@ -316,3 +316,36 @@ export function obraNoMes(o: Pick<ObraPublica, 'inicio_previsto' | 'fim_previsto
   const fimDoMes = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(ultimo.getDate()).padStart(2, '0')}`;
   return o.inicio_previsto <= fimDoMes && o.fim_previsto >= primeiro;
 }
+
+/** O que uma executora já fez: obras licenciadas (vigentes e no total) e os tipos de obra mais frequentes. */
+export interface AtuacaoExecutora { total: number; vigentes: number; tipos: { codigo: string; n: number }[] }
+
+/**
+ * Atuação por executora, pela mesma chave de nome do mapa (nome fantasia ou, na falta, razão social).
+ * Tipos de obra do mais frequente para o menos; empate pela ordem do código.
+ */
+export function atuacaoPorExecutora(obras: ObraPublica[]): Map<string, AtuacaoExecutora> {
+  const bruto = new Map<string, { total: number; vigentes: number; tipos: Map<string, number> }>();
+  for (const o of obras) {
+    if (!o.executora || !nomeLimpo(o.executora)) continue;
+    const chave = chaveNome(o.executora);
+    const a = bruto.get(chave) ?? { total: 0, vigentes: 0, tipos: new Map<string, number>() };
+    a.total += 1;
+    if (o.situacao === 'vigente' || o.situacao === 'aguardando_inicio') a.vigentes += 1;
+    for (const t of o.tipos_obra ?? []) a.tipos.set(t, (a.tipos.get(t) ?? 0) + 1);
+    bruto.set(chave, a);
+  }
+  const r = new Map<string, AtuacaoExecutora>();
+  for (const [chave, a] of bruto) {
+    r.set(chave, {
+      total: a.total,
+      vigentes: a.vigentes,
+      tipos: [...a.tipos].map(([codigo, n]) => ({ codigo, n })).sort((x, y) => y.n - x.n || x.codigo.localeCompare(y.codigo)),
+    });
+  }
+  return r;
+}
+
+/** Nome pelo qual a empresa aparece como executora no mapa (mesma regra de obras_publicas). */
+export const nomeNoMapa = (e: { nome_fantasia: string | null; razao_social: string }) =>
+  e.nome_fantasia?.trim() || e.razao_social;
