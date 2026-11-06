@@ -38,7 +38,7 @@ export default function FichaObra({ obra, onFechar }: { obra: ObraPublica; onFec
           </dd></div>
       </dl>
       <Link to={`/licenca/${obra.codigo}`} className="mt-3 inline-block text-sm font-semibold text-marca-600 hover:underline">
-        Licença nº {obra.numero}, ver detalhes
+        Ver licença <span className="font-normal text-tinta-500">nº {obra.numero}</span>
       </Link>
     </article>
   );
