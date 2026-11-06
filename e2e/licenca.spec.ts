@@ -73,9 +73,10 @@ test.describe('registro de licença', () => {
     const l = licenca({ situacao: 'indeferida', concluida_em: null });
     await instalarBackend(page, { licencas: [l] });
     await page.goto(`/obras/${l.id}`);
-    await expect(page.getByRole('heading', { name: /Licença|Pedido de licença/ })).toBeVisible();
-    await expect(lista(page, 'Situação').locator('option')).toContainText(['Indeferida']);
-    await expect(lista(page, 'Situação')).toHaveValue('indeferida');
+    // A ficha é só leitura: mostra a situação gravada, sem lista de situações nem formulário.
+    await expect(page.getByRole('heading', { name: new RegExp(`^Licença ${l.numero}`) })).toBeVisible();
+    await expect(page.locator('#ficha-impressa').getByText('Indeferida', { exact: true })).toBeVisible();
+    await expect(lista(page, 'Situação')).toHaveCount(0);
   });
 
   test('licença emitida no sistema anterior: só registro, sem PDF, prévia nem QR Code', async ({ page }) => {

@@ -1,11 +1,10 @@
 import { Suspense, lazy, useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Badge, Button, Card, ErrorNote, Field, Spinner, Titulo, botaoLink, inputClass, linkTexto } from '../components/ui';
 import { SuspensaoECorrecoes } from '../components/SuspensaoECorrecoes';
 import { RegistroAnterior } from '../components/RegistroAnterior';
 import { DocumentoLicenca } from '../components/DocumentoLicenca';
 import { QrCode } from '../components/QrCode';
-import { ExcluirLicenca } from '../components/ExclusaoLicenca';
 import { SituacaoBadge, dataBR } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { formatCnpj, formatCpf, isValidCnpj, isValidCpf, onlyDigits } from '../lib/cnpj';
@@ -124,8 +123,9 @@ export default function LicencaPage() {
   const [params] = useSearchParams();
   const registroAnterior = !id && params.get('anterior') === '1';
   const navigate = useNavigate();
-  const { podeLicenciar, servidor } = useAuth();
-  const administrador = Boolean(servidor?.administrador);
+  const { podeLicenciar } = useAuth();
+  // /obras/:id/editar abre o formulário; a ficha (/obras/:id) é só consulta.
+  const modoEdicao = useLocation().pathname.endsWith('/editar');
   const [licenca, setLicenca] = useState<LicencaComTrechos | null>(null);
   const [empresas, setEmpresas] = useState<Empresa[] | null>(null);
   const [vinculos, setVinculos] = useState<Vinculo[]>([]);
@@ -142,6 +142,8 @@ export default function LicencaPage() {
 
   if (error && !empresas) return <ErrorNote error={error} />;
   if (!empresas || (id && !licenca)) return <Spinner />;
+  // Quem não pode licenciar não tem a tela de edição: vai para a ficha.
+  if (id && modoEdicao && !podeLicenciar) return <Navigate to={`/obras/${id}`} replace />;
 
   const hoje = hojeISO();
   const estado = licenca ? estadoLicenca(licenca, hoje) : null;
@@ -155,10 +157,6 @@ export default function LicencaPage() {
     <>
       <Titulo
         trilha={<><Link to="/obras" className="hover:underline">Obras</Link> / {licenca ? licenca.processo_sei : 'nova'}</>}
-        acoes={licenca && administrador && !licenca.excluida_em && (
-          <ExcluirLicenca licenca={licenca} empresas={new Map(empresas.map((e) => [e.id, e]))} orgaos={orgaos} hoje={hoje}
-                          onExcluida={(aviso) => navigate('/admin/licencas', { state: { aviso } })} />
-        )}
         titulo={licenca ? (licenca.numero ? `Licença ${licenca.numero}` : 'Pedido de licença') : registroAnterior ? 'Registrar licença já emitida' : 'Criar licença nova'}
         descricao={licenca
           ? <span className="inline-flex flex-wrap items-center gap-2">
@@ -218,21 +216,22 @@ export default function LicencaPage() {
         vinculos={vinculos}
         orgaos={orgaos}
         somenteLeitura={!podeLicenciar || Boolean(licenca?.excluida_em)}
+        abrirEditando={modoEdicao || !licenca}
         registroAnterior={registroAnterior}
         onSalvo={async (novoId) => {
           if (!licenca) {
             // Registro de licença já emitida: já nasce marcada, sem PDF nem QR Code.
             if (registroAnterior) await definirEmitidaEmSistemaAnterior(novoId, true);
             navigate(`/obras/${novoId}`, { replace: true });
-          } else setLicenca(await buscarLicenca(novoId));
+          } else navigate(`/obras/${novoId}`);
         }}
       />
     </>
   );
 }
 
-function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitura, registroAnterior, onSalvo }: {
-  licenca: LicencaComTrechos | null; empresas: Empresa[]; vinculos: Vinculo[]; orgaos: Orgao[]; tipos: TipoDeObra[]; somenteLeitura: boolean;
+function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitura, abrirEditando, registroAnterior, onSalvo }: {
+  licenca: LicencaComTrechos | null; empresas: Empresa[]; vinculos: Vinculo[]; orgaos: Orgao[]; tipos: TipoDeObra[]; somenteLeitura: boolean; abrirEditando: boolean;
   registroAnterior: boolean;
   onSalvo: (id: string) => Promise<void>;
 }) {
@@ -247,7 +246,7 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
   const [previa, setPrevia] = useState<LicencaComTrechos | null>(null);
   const [erroPrevia, setErroPrevia] = useState<string | null>(null);
   // Licença já registrada abre só para leitura; "Editar" libera o formulário. Cadastro novo já abre editável.
-  const [editando, setEditando] = useState(!licenca);
+  const [editando, setEditando] = useState(!licenca || abrirEditando);
   const hoje = hojeISO();
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => { setF((x) => ({ ...x, [k]: v })); setSalvo(false); };

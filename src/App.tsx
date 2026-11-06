@@ -31,6 +31,7 @@ const Orgaos = lazy(() => import('./pages/Orgaos'));
 const MinhaConta = lazy(() => import('./pages/MinhaConta'));
 const Licencas = lazy(() => import('./pages/Licencas'));
 const LicencaPage = lazy(() => import('./pages/LicencaPage'));
+const LicencaFicha = lazy(() => import('./pages/LicencaFicha'));
 const LicencaPublica = lazy(() => import('./pages/LicencaPublica'));
 const VerificarDocumento = lazy(() => import('./pages/VerificarDocumento'));
 const PlacaLicenca = lazy(() => import('./pages/PlacaLicenca'));
@@ -109,7 +110,8 @@ function AreaRestrita() {
           <Route path="obras/sem-licenca/nova" element={<FormSemLicencaPage />} />
           <Route path="obras/sem-licenca/:id" element={<FormSemLicencaPage />} />
           <Route path="obras/nova" element={<LicencaPage />} />
-          <Route path="obras/:id" element={<LicencaPage />} />
+          <Route path="obras/:id/editar" element={<LicencaPage />} />
+          <Route path="obras/:id" element={<LicencaFicha />} />
           <Route path="minha-conta" element={<MinhaConta />} />
           <Route path="*" element={<Navigate to="/obras" replace />} />
         </Route>
@@ -137,7 +139,8 @@ function AreaRestrita() {
         <Route path="obras/sem-licenca/nova" element={<FormSemLicencaPage />} />
         <Route path="obras/sem-licenca/:id" element={<FormSemLicencaPage />} />
         <Route path="obras/nova" element={<LicencaPage />} />
-        <Route path="obras/:id" element={<LicencaPage />} />
+        <Route path="obras/:id/editar" element={<LicencaPage />} />
+        <Route path="obras/:id" element={<LicencaFicha />} />
         <Route path="admin" element={<Administracao />}>
           <Route index element={<Contas />} />
           <Route path="empresas" element={<AdminEmpresas />} />
