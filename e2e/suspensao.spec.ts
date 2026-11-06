@@ -3,14 +3,15 @@ import { instalarBackend } from './apoio/backend';
 import { dia, licenca, uuid } from './apoio/dados';
 
 test.describe('suspensão a pedido e pedidos de correção', () => {
-  test('o gestor suspende, retoma e registra um pedido de correção pela ficha', async ({ page }) => {
+  test('o gestor suspende, retoma e registra um pedido de correção pela edição', async ({ page }) => {
     await instalarBackend(page, {
       administrador: false,
       perfil: 'gestor',
       licencas: [licenca({ id: uuid(561), numero: '561/2026', codigo_publico: 'suspens0001', processo_sei: 'NIT-1/561/2026',
         escopo: 'Suspensão', inicio_previsto: dia(-10), fim_previsto: dia(20) })],
     });
-    await page.goto(`/obras/${uuid(561)}`);
+    // Suspender e pedir correção são ações de gestão: ficam na tela de edição, não na ficha.
+    await page.goto(`/obras/${uuid(561)}/editar`);
     const secao = page.getByRole('region', { name: 'Suspensão e pedidos de correção' });
     await expect(secao).toBeVisible();
 
