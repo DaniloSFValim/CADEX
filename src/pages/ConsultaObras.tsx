@@ -31,6 +31,11 @@ export default function ConsultaObras() {
   const [bairro, setBairro] = useState<string | null>(null);
   const [situacaoLista, setSituacaoLista] = useState<ObraPublica['situacao'] | ''>('');
   const [regiao, setRegiao] = useState('');
+  const [busca, setBusca] = useState('');
+  const [ordem, setOrdem] = useState<'bairro' | 'inicio' | 'empresa' | 'situacao'>('bairro');
+  const [periodoIni, setPeriodoIni] = useState('');
+  const [periodoFim, setPeriodoFim] = useState('');
+  const listaRef = useRef<HTMLDivElement>(null);
   // Linha do tempo: mês escolhido no ano atual (null = sem filtro de data).
   const anoAtual = new Date().getFullYear();
   const [mesTempo, setMesTempo] = useState<number | null>(null);
@@ -86,12 +91,32 @@ export default function ConsultaObras() {
   const obrasPainel = useMemo(() => filtrarPainel(obras ?? [], filtro), [obras, filtro]);
   // Escolher uma situação específica olha todas as obras (inclusive concluídas e prazos encerrados).
   const base = filtroAtivo ? obrasPainel : mostrarEncerradas || situacaoLista ? todas : ativas;
-  const listadas = base.filter((o) => !situacaoLista || o.situacao === situacaoLista).filter(porRegiao).filter(porBairro);
-  const grupos = useMemo(() => agruparPorBairro(listadas, bairrosGeo), [listadas, bairrosGeo]);
+  const termo = busca.trim().toLowerCase();
+  const porBusca = (o: ObraPublica) => !termo || [o.numero, o.executora, o.contratante ?? '', o.escopo,
+    ...o.trechos.flatMap((t) => [t.logradouro, t.bairro ?? ''])].some((s) => s.toLowerCase().includes(termo));
+  // Período: a obra entra se o seu intervalo previsto toca o intervalo escolhido. Sem datas, não entra.
+  const porPeriodo = (o: ObraPublica) => {
+    if (!periodoIni && !periodoFim) return true;
+    if (!o.inicio_previsto && !o.fim_previsto) return false;
+    const ini = o.inicio_previsto ?? o.fim_previsto ?? '';
+    const fim = o.fim_previsto ?? o.inicio_previsto ?? '';
+    return (!periodoIni || fim >= periodoIni) && (!periodoFim || ini <= periodoFim);
+  };
+  const listadas = base.filter((o) => !situacaoLista || o.situacao === situacaoLista)
+    .filter(porRegiao).filter(porBairro).filter(porBusca).filter(porPeriodo);
+  const grupos = useMemo(() => (ordem === 'bairro'
+    ? agruparPorBairro(listadas, bairrosGeo)
+    : [{ bairro: ROTULO_ORDEM[ordem], obras: ordenarObras(listadas, ordem) }]), [listadas, bairrosGeo, ordem]);
+  // Mapa e lista mostram o mesmo conjunto: filtros, busca, período e mês da linha do tempo.
+  const noMapa = mesTempo === null ? listadas : listadas.filter((o) => obraNoMes(o, anoAtual, mesTempo));
   const executoras = useMemo(() => resumoPor(todas, (o) => o.executora), [todas]);
   const contratantes = useMemo(() => resumoPor(todas, (o) => o.contratante), [todas]);
   const stats = useMemo(() => resumo(todas), [todas]);
   const selecionada = useMemo(() => (obras ?? []).find((o) => o.codigo === foco) ?? null, [obras, foco]);
+  // Mapa → lista: a obra escolhida no mapa aparece na lista.
+  useEffect(() => {
+    if (foco) document.getElementById(`obra-${foco}`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [foco]);
 
   return (
     <div className="flex min-h-screen flex-col bg-tinta-50">
@@ -106,9 +131,20 @@ export default function ConsultaObras() {
 
         {obras && (
           <div className="mt-8 grid grid-cols-3 gap-x-8 gap-y-6">
-            <Kpi rotulo="Vigentes agora" valor={stats.vigentes} detalhe="obras autorizadas" tom="alta" />
-            <Kpi rotulo={stats.bairros === 1 ? 'Bairro' : 'Bairros'} valor={stats.bairros} detalhe="com obra licenciada" />
-            <Kpi rotulo={stats.execs === 1 ? 'Executora' : 'Executoras'} valor={stats.execs} detalhe="com obra licenciada" />
+            {/* Indicadores clicáveis: Vigentes aplica o filtro; Bairros e Executoras levam à seção correspondente. */}
+            <button type="button" aria-pressed={!mostrarEncerradas && !situacaoLista}
+                    onClick={() => { setMostrarEncerradas(false); setSituacaoLista(''); listaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
+                    className="rounded-xl text-left transition-colors hover:bg-tinta-100/60 focus-visible:outline-2 focus-visible:outline-marca-700">
+              <Kpi rotulo="Vigentes agora" valor={stats.vigentes} detalhe="clique para ver só as vigentes" tom="alta" />
+            </button>
+            <button type="button" onClick={() => listaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                    className="rounded-xl text-left transition-colors hover:bg-tinta-100/60 focus-visible:outline-2 focus-visible:outline-marca-700">
+              <Kpi rotulo={stats.bairros === 1 ? 'Bairro' : 'Bairros'} valor={stats.bairros} detalhe="clique para ver a lista" />
+            </button>
+            <button type="button" onClick={() => document.getElementById('exec-titulo')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                    className="rounded-xl text-left transition-colors hover:bg-tinta-100/60 focus-visible:outline-2 focus-visible:outline-marca-700">
+              <Kpi rotulo={stats.execs === 1 ? 'Executora' : 'Executoras'} valor={stats.execs} detalhe="clique para ver as executoras" />
+            </button>
           </div>
         )}
 
@@ -124,6 +160,8 @@ export default function ConsultaObras() {
 
         {obras && (
           <div className="mt-6 flex flex-col gap-6">
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,65fr)_minmax(0,35fr)] lg:items-start">
+              <div className="min-w-0">
             {/* Mapa em largura total; a ficha da obra selecionada fica sobre ele. */}
             <div>
               <Suspense fallback={<div className="h-[60vh] min-h-[360px] rounded-xl border border-tinta-200 bg-tinta-50" />}>
@@ -182,7 +220,7 @@ export default function ConsultaObras() {
                   </div>
                 </details>
                 <div ref={mapaRef} className="relative scroll-mt-4 overflow-hidden rounded-xl border border-tinta-200 shadow-xs">
-                  <MapaObras obras={mesTempo === null ? obrasPainel : obrasPainel.filter((o) => obraNoMes(o, anoAtual, mesTempo))}
+                  <MapaObras obras={noMapa}
                              foco={foco} destaque={destaque} modo={modo} bairro={bairro}
                              onSelecionar={setFoco} onBairro={setBairro} onDestacar={setDestaque} />
                   {selecionada && <FichaObra obra={selecionada} onFechar={() => setFoco(null)} />}
@@ -195,14 +233,8 @@ export default function ConsultaObras() {
               </p>
             </div>
 
-            <ObrasPorMes obras={todas} ano={new Date().getFullYear()} hoje={hojeISO()} foco={foco} onSelecionar={setFoco} />
-            <HistoricoAcervo obras={todas} rotulos={rotulos} />
-
-            <ResumoContratantes contratantes={contratantes} />
-            <ResumoExecutoras executoras={executoras}
-                              selecionada={filtro.executora}
-                              onEscolher={(nome) => setFiltro((f) => ({ ...f, executora: f.executora === nome ? null : nome }))} />
-
+              </div>
+              <div ref={listaRef} className="min-w-0 lg:sticky lg:top-4 lg:max-h-[85vh] lg:overflow-y-auto lg:pr-1">
             {/* Lista das obras, agrupada por bairro. Por padrão, só as vigentes ou aguardando início. */}
             <section aria-live="polite" aria-label="Lista das obras e serviços licenciados">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -235,6 +267,40 @@ export default function ConsultaObras() {
                     ))}
                   </select>
                 </label>
+                <label className="flex w-full min-w-0 items-center gap-2 text-sm text-tinta-700">
+                  <span className="sr-only">Buscar por endereço, rua, número, empresa ou bairro</span>
+                  <input type="search" value={busca} onChange={(e) => setBusca(e.target.value)}
+                         placeholder="Rua, bairro, nº da licença ou empresa"
+                         className="w-full min-w-0 rounded-full border border-tinta-200 bg-white px-4 py-1.5 text-sm text-tinta-900" />
+                </label>
+                <label className="flex items-center gap-2 text-sm text-tinta-700">
+                  <span className="font-semibold">Ordenar</span>
+                  <select value={ordem} onChange={(e) => setOrdem(e.target.value as typeof ordem)}
+                          className="rounded-full border border-tinta-200 bg-white px-3 py-1.5 text-sm text-tinta-900">
+                    <option value="bairro">Por bairro</option>
+                    <option value="inicio">Por início</option>
+                    <option value="empresa">Por empresa</option>
+                    <option value="situacao">Por situação</option>
+                  </select>
+                </label>
+                <div className="flex flex-wrap items-center gap-2 text-sm text-tinta-700">
+                  <label className="flex items-center gap-1.5">
+                    <span className="font-semibold">De</span>
+                    <input type="date" value={periodoIni} onChange={(e) => setPeriodoIni(e.target.value)}
+                           className="rounded-full border border-tinta-200 bg-white px-3 py-1 text-sm text-tinta-900" />
+                  </label>
+                  <label className="flex items-center gap-1.5">
+                    <span className="font-semibold">até</span>
+                    <input type="date" value={periodoFim} onChange={(e) => setPeriodoFim(e.target.value)}
+                           className="rounded-full border border-tinta-200 bg-white px-3 py-1 text-sm text-tinta-900" />
+                  </label>
+                  {(busca || periodoIni || periodoFim) && (
+                    <button type="button" className={linkTexto}
+                            onClick={() => { setBusca(''); setPeriodoIni(''); setPeriodoFim(''); }}>
+                      Limpar busca e período
+                    </button>
+                  )}
+                </div>
                 {filtroAtivo && (
                   <div className="flex w-full flex-wrap items-center gap-2 text-sm" role="status">
                     <span className="text-tinta-600">Filtrando:</span>
@@ -276,15 +342,17 @@ export default function ConsultaObras() {
                           {g.obras.length} {g.obras.length === 1 ? 'obra' : 'obras'}
                         </span>
                       </summary>
-                      <div className="border-t border-tinta-100 px-4 py-2 text-right">
-                        <button type="button" className={linkTexto}
-                                onClick={() => { setBairro(g.bairro); mapaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>
-                          Ver {g.bairro} no mapa
-                        </button>
-                      </div>
+                      {ordem === 'bairro' && (
+                        <div className="border-t border-tinta-100 px-4 py-2 text-right">
+                          <button type="button" className={linkTexto}
+                                  onClick={() => { setBairro(g.bairro); mapaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>
+                            Ver {g.bairro} no mapa
+                          </button>
+                        </div>
+                      )}
                       <ul className="divide-y divide-tinta-100">
                         {g.obras.map((o) => (
-                          <li key={o.codigo}
+                          <li key={o.codigo} id={`obra-${o.codigo}`}
                               className="grid gap-x-4 gap-y-1 px-4 py-3 text-sm sm:grid-cols-[1fr_auto]"
                               style={{ boxShadow: `inset 3px 0 0 ${COR_SITUACAO[o.situacao]}` }}
                               onMouseEnter={() => setDestaque(o.codigo)}
@@ -331,6 +399,16 @@ export default function ConsultaObras() {
               )}
             </section>
 
+              </div>
+            </div>
+            <ObrasPorMes obras={todas} ano={new Date().getFullYear()} hoje={hojeISO()} foco={foco} onSelecionar={setFoco} />
+            <HistoricoAcervo obras={todas} rotulos={rotulos} />
+
+            <ResumoContratantes contratantes={contratantes} />
+            <ResumoExecutoras executoras={executoras}
+                              selecionada={filtro.executora}
+                              onEscolher={(nome) => setFiltro((f) => ({ ...f, executora: f.executora === nome ? null : nome }))} />
+
             <ObrasPerto obras={todas} onSelecionar={verNoMapa} />
           </div>
         )}
@@ -349,6 +427,19 @@ function obraAtiva(o: ObraPublica) {
 
 /** Agrupa por bairro do primeiro trecho. Ordem alfabética, com "Sem bairro" por último. */
 /** Agrupa por bairro do primeiro trecho. Grafias iguais (Pe/Pé, Ponta Dareia/D'Areia) viram um grupo, com o nome oficial. */
+const ROTULO_ORDEM: Record<'inicio' | 'empresa' | 'situacao', string> = {
+  inicio: 'Por início do período, mais recente primeiro', empresa: 'Por empresa executora', situacao: 'Por situação',
+};
+const ORDEM_SITUACAO: Record<ObraPublica['situacao'], number> = {
+  vigente: 0, aguardando_inicio: 1, prazo_encerrado: 2, suspensa: 3, concluida: 4, cancelada: 5,
+};
+function ordenarObras(obras: ObraPublica[], ordem: 'inicio' | 'empresa' | 'situacao'): ObraPublica[] {
+  const r = [...obras];
+  if (ordem === 'inicio') return r.sort((a, b) => (b.inicio_previsto ?? '').localeCompare(a.inicio_previsto ?? ''));
+  if (ordem === 'empresa') return r.sort((a, b) => a.executora.localeCompare(b.executora, 'pt-BR'));
+  return r.sort((a, b) => ORDEM_SITUACAO[a.situacao] - ORDEM_SITUACAO[b.situacao]);
+}
+
 function agruparPorBairro(obras: ObraPublica[], oficiais: Map<string, BairroGeo>): { bairro: string; obras: ObraPublica[] }[] {
   const mapa = new Map<string, { nome: string; obras: ObraPublica[] }>();
   for (const o of obras) {
