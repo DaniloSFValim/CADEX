@@ -108,3 +108,36 @@ export function gerarSenhaProvisoria(tamanho = 12): string {
   const bytes = crypto.getRandomValues(new Uint32Array(tamanho));
   return Array.from(bytes, (b) => letras[b % letras.length]).join('');
 }
+
+/** Representante (ou operador) de uma empresa, com o nome da empresa para a lista. */
+export interface Representante {
+  user_id: string;
+  empresa_id: string;
+  papel: 'representante' | 'operador';
+  ativo: boolean;
+  nome: string;
+  email: string;
+  criado_em: string;
+  desativado_em: string | null;
+  empresas: { razao_social: string; codigo_cadex: string } | null;
+}
+
+export async function listarRepresentantes(): Promise<Representante[]> {
+  const { data, error } = await supabase.from('empresa_usuarios')
+    .select('user_id, empresa_id, papel, ativo, nome, email, criado_em, desativado_em, empresas(razao_social, codigo_cadex)')
+    .order('criado_em', { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as unknown as Representante[];
+}
+
+export function criarRepresentante(p: { empresa_id: string; nome: string; email: string; papel: Representante['papel']; senha: string }) {
+  return chamarAdmin({ acao: 'criar_representante', ...p });
+}
+
+/** Desativa ou reativa um acesso de empresa. A regra do banco só deixa o gestor fazer isso. */
+export async function definirRepresentanteAtivo(userId: string, ativo: boolean): Promise<void> {
+  const { error } = await supabase.from('empresa_usuarios')
+    .update({ ativo, desativado_em: ativo ? null : new Date().toISOString() })
+    .eq('user_id', userId);
+  if (error) throw error;
+}

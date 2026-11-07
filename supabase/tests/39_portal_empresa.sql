@@ -64,11 +64,11 @@ alter table licencas enable trigger user;
 alter table empresas enable trigger user;
 
 -- Vínculos, como dono: dois representantes e um inativo.
-insert into empresa_usuarios (user_id, empresa_id, papel, ativo) values
-  ('00000000-0000-4000-8000-000000000102', '00000000-0000-4000-8000-00000000a001', 'representante', true),
-  ('00000000-0000-4000-8000-000000000103', '00000000-0000-4000-8000-00000000b001', 'operador', true);
-insert into empresa_usuarios (user_id, empresa_id, papel, ativo, desativado_em) values
-  ('00000000-0000-4000-8000-000000000104', '00000000-0000-4000-8000-00000000a001', 'representante', false, now());
+insert into empresa_usuarios (user_id, empresa_id, papel, ativo, nome, email) values
+  ('00000000-0000-4000-8000-000000000102', '00000000-0000-4000-8000-00000000a001', 'representante', true, 'Rep A', 'rep.a@empresa.test'),
+  ('00000000-0000-4000-8000-000000000103', '00000000-0000-4000-8000-00000000b001', 'operador', true, 'Op B', 'rep.b@empresa.test');
+insert into empresa_usuarios (user_id, empresa_id, papel, ativo, desativado_em, nome, email) values
+  ('00000000-0000-4000-8000-000000000104', '00000000-0000-4000-8000-00000000a001', 'representante', false, now(), 'Inativo A', 'inativo.a@empresa.test');
 
 -- 1. Representante A (com verificação em duas etapas) vê só a própria empresa.
 do $$
@@ -188,8 +188,8 @@ end $$;
 -- 10. Exclusividade: servidor não vira representante, e representante não vira servidor.
 do $$
 begin
-  perform pg_temp.recusa(format('insert into empresa_usuarios (user_id, empresa_id, papel) values (%L, %L, %L)',
-    '00000000-0000-4000-8000-000000000101', '00000000-0000-4000-8000-00000000a001', 'operador'), 'é servidor');
+  perform pg_temp.recusa(format('insert into empresa_usuarios (user_id, empresa_id, papel, nome, email) values (%L, %L, %L, %L, %L)',
+    '00000000-0000-4000-8000-000000000101', '00000000-0000-4000-8000-00000000a001', 'operador', 'X', 'x@x.test'), 'é servidor');
   perform pg_temp.recusa(format('insert into servidores (user_id, nome, papel) values (%L, %L, %L)',
     '00000000-0000-4000-8000-000000000102', 'Não pode', 'gestor'), 'acesso de empresa');
 end $$;
