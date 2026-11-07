@@ -417,31 +417,36 @@ export default function ConsultaObras() {
                               </span>
                               <span className="tabular ml-2 text-xs text-tinta-500">nº {o.numero}</span>
                               {o.trechos.length > 1 && <span className="ml-2 text-xs text-tinta-500">e mais {o.trechos.length - 1}</span>}
-                              <div className="text-tinta-700">
-                                {o.executora}
-                                {o.contratante && <span className="text-tinta-500"> · para {nomeLimpo(o.contratante)}</span>}
-                              </div>
-                              <div className="text-xs text-tinta-500">
-                                {rotuloTipos(o.tipos_obra, rotulos)}
-                                {` · ${TIPO_INTERVENCAO_LABEL[o.tipo_intervencao]}`}
-                                {origemPublica(o.origem) && ` pública · ${ORIGEM_LABEL[o.origem].toLowerCase()}`}
-                              </div>
+                              <div className="text-tinta-700">{o.executora}</div>
                             </div>
                             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 sm:flex-col sm:items-end">
                               <SeloSituacao situacao={o.situacao} />
-                              <span className="tabular text-xs text-tinta-600">
-                                {o.inicio_previsto || o.fim_previsto
-                                  ? `${o.inicio_previsto ? dataBR(o.inicio_previsto) : '—'} a ${o.fim_previsto ? dataBR(o.fim_previsto) : '—'}`
-                                  : 'Sem período informado'}
-                              </span>
-                              <span className="flex gap-3 text-xs">
-                                <Link to={`/licenca/${o.codigo}`} className="font-semibold text-marca-700 hover:underline">Ver licença</Link>
-                                {temLocalizacao(o)
-                                  ? <button type="button" className="font-semibold text-marca-700 hover:underline"
-                                            onClick={() => verNoMapa(o.codigo)}>Ver no mapa</button>
-                                  : <span className="text-tinta-500">Sem localização</span>}
-                              </span>
                             </div>
+                            <details className="col-span-full">
+                              <summary className="inline-block cursor-pointer list-none text-xs font-semibold text-marca-700 hover:underline">
+                                Detalhes
+                              </summary>
+                              <div className="mt-2 space-y-1 border-l-2 border-tinta-100 pl-3 text-xs text-tinta-600">
+                                {o.contratante && <div>Contratante: {nomeLimpo(o.contratante)}</div>}
+                                <div className="text-tinta-500">
+                                  {rotuloTipos(o.tipos_obra, rotulos)}
+                                  {` · ${TIPO_INTERVENCAO_LABEL[o.tipo_intervencao]}`}
+                                  {origemPublica(o.origem) && ` pública · ${ORIGEM_LABEL[o.origem].toLowerCase()}`}
+                                </div>
+                                <div className="tabular">
+                                  {o.inicio_previsto || o.fim_previsto
+                                    ? `${o.inicio_previsto ? dataBR(o.inicio_previsto) : '—'} a ${o.fim_previsto ? dataBR(o.fim_previsto) : '—'}`
+                                    : 'Sem período informado'}
+                                </div>
+                                <div className="flex gap-3 pt-1">
+                                  <Link to={`/licenca/${o.codigo}`} className="font-semibold text-marca-700 hover:underline">Ver licença</Link>
+                                  {temLocalizacao(o)
+                                    ? <button type="button" className="font-semibold text-marca-700 hover:underline"
+                                              onClick={() => verNoMapa(o.codigo)}>Ver no mapa</button>
+                                    : <span className="text-tinta-500">Sem localização</span>}
+                                </div>
+                              </div>
+                            </details>
                           </li>
                         ))}
                       </ul>

@@ -31,7 +31,7 @@ test.describe('mapa de consulta', () => {
     await expect(lista(page).filter({ hasText: 'Serviço' })).toHaveCount(1);
     await expect(lista(page).filter({ hasText: 'pública · prefeitura ou órgão municipal' })).toHaveCount(1);
     // Contratante público aparece pelo nome do órgão, não vazio.
-    await expect(lista(page).filter({ hasText: 'para SECR' })).toHaveCount(1);
+    await expect(lista(page).filter({ hasText: 'Contratante: SECR' })).toHaveCount(1);
   });
 
   test('mostra todas as licenças, sem filtro, e o mapa recebe todas', async ({ page }) => {
@@ -59,6 +59,8 @@ test.describe('mapa de consulta', () => {
     await page.goto('/consulta/obras');
     await mostrarEncerradas(page);
     await expect(lista(page)).toHaveCount(2);
+    // O período fica em "Detalhes", recolhido por padrão.
+    await page.getByText('Detalhes', { exact: true }).nth(1).click();
     await expect(page.getByText('Sem período informado')).toBeVisible();
     expect(erros).toEqual([]);
   });
