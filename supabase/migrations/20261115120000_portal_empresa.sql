@@ -129,3 +129,8 @@ where l.excluida_em is null
 
 revoke all on public.empresa_licencas from anon, authenticated;
 grant select on public.empresa_licencas to authenticated;
+
+-- A checagem de empresa ativa do gatilho de comunicação roda como dono da
+-- função. Assim não depende do RLS de quem registra: o representante não vê
+-- outras empresas, e a recusa precisa ser pela regra, não por "não existe".
+alter function public.csp_antes_de_gravar() security definer set search_path = public;
