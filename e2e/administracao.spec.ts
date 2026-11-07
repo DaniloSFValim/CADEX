@@ -187,3 +187,18 @@ test.describe('administração: exclusão de empresa', () => {
     expect(p_id).toBe('em1');
   });
 });
+
+test('manutenção: o histórico de correções em lote aparece, mesmo vazio', async ({ page }) => {
+  await instalarBackend(page, { administrador: true, licencas: [licenca({ numero: '861/2026' })] });
+  await page.goto('/admin/manutencao');
+  await expect(page.getByRole('heading', { name: /Histórico de correções \(0\)/ })).toBeVisible();
+  await expect(page.getByText('Nenhuma correção em lote registrada.')).toBeVisible();
+});
+
+test('painel: os indicadores de próximos dias e de empresas são clicáveis', async ({ page }) => {
+  await instalarBackend(page, { administrador: true, licencas: [licenca({ numero: '862/2026' })] });
+  await page.goto('/dashboard');
+  for (const nome of [/Começam em até/, /Terminam em até/, /^Contratantes/, /^Executoras/]) {
+    await expect(page.getByRole('button', { name: nome })).toBeVisible();
+  }
+});

@@ -204,7 +204,7 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
     }
     if (caminho === 'orgaos_publicos') return lista(estado.orgaos as unknown as Record<string, unknown>[]);
     if (caminho === 'auditoria') return lista(estado.auditoria as unknown as Record<string, unknown>[]);
-    if (['vinculos', 'responsaveis_tecnicos', 'documentos', 'tipos_documento', 'funcionarios', 'veiculos'].includes(caminho)) return responder([]);
+    if (['vinculos', 'responsaveis_tecnicos', 'documentos', 'tipos_documento', 'funcionarios', 'veiculos', 'licencas_correcoes'].includes(caminho)) return responder([]);
 
     if (caminho === 'rpc/admin_listar_contas') return responder([contaVoce(estado.administrador, estado.perfil), ...estado.contas]);
     if (caminho === 'rpc/admin_vinculos_da_conta') {

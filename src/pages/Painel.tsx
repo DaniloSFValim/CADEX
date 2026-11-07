@@ -230,12 +230,16 @@ export default function Painel() {
             <Indicador rotulo="Licenças registradas" valor={ind.total} detalhe="no filtro atual" onClick={() => set('status', '')} ativo={filtros.status === ''} />
             <Indicador rotulo="Prazo encerrado" valor={ind.prazoVencido} detalhe="fim previsto vencido, sem conclusão" cor="border-baixa"
                        onClick={() => alternarStatus('estado:prazo_encerrado')} ativo={filtros.status === 'estado:prazo_encerrado'} />
-            <Indicador rotulo={`Começam em até ${janela} dias`} valor={ind.iniciamNaJanela} detalhe="início previsto, obra aberta" />
-            <Indicador rotulo={`Terminam em até ${janela} dias`} valor={ind.terminamNaJanela} detalhe="fim previsto, obra aberta" />
+            <Indicador rotulo={`Começam em até ${janela} dias`} valor={ind.iniciamNaJanela} detalhe="início previsto, obra aberta"
+                       onClick={() => rolarPara('bloco-comecam')} />
+            <Indicador rotulo={`Terminam em até ${janela} dias`} valor={ind.terminamNaJanela} detalhe="fim previsto, obra aberta"
+                       onClick={() => rolarPara('bloco-terminam')} />
           </div>
           <div className="mt-3 grid grid-cols-2 gap-3">
-            <Indicador rotulo="Contratantes" valor={ind.contratantes.total} detalhe={detalheParte(ind.contratantes)} />
-            <Indicador rotulo="Executoras" valor={ind.executoras.total} detalhe={detalheParte(ind.executoras)} />
+            <Indicador rotulo="Contratantes" valor={ind.contratantes.total} detalhe={detalheParte(ind.contratantes)}
+                       onClick={() => rolarPara('bloco-contratantes')} />
+            <Indicador rotulo="Executoras" valor={ind.executoras.total} detalhe={detalheParte(ind.executoras)}
+                       onClick={() => rolarPara('bloco-executoras')} />
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-tinta-600" role="group" aria-label="Janela dos próximos dias">
             Janela dos indicadores de prazo:
@@ -264,14 +268,14 @@ export default function Painel() {
               : <ColunasMensais meses={mensal.meses} />}
             {mensal.semData > 0 && <p className="mt-2 text-xs text-tinta-500">{mensal.semData} licença{mensal.semData === 1 ? '' : 's'} sem esta data, fora do gráfico.</p>}
           </Bloco>
-          <Bloco titulo="Por contratante" nota="Clique para filtrar.">
+          <Bloco id="bloco-contratantes" titulo="Por contratante" nota="Clique para filtrar.">
             {porContratante.barras.length === 0 ? <Empty>Nenhuma contratante informada.</Empty> : (
               <BarrasHorizontais itens={porContratante.barras} total={ind.total} selecionada={filtros.contratante}
                                  onSelecionar={(c) => alternar('contratante', c)} />
             )}
             <RodapeBarras demais={porContratante.demais} semInformacao={porContratante.semInformacao} sem="sem contratante informada" />
           </Bloco>
-          <Bloco titulo="Por executora" nota="Clique para filtrar.">
+          <Bloco id="bloco-executoras" titulo="Por executora" nota="Clique para filtrar.">
             {porExecutora.barras.length === 0 ? <Empty>Nenhuma executora informada.</Empty> : (
               <BarrasHorizontais itens={porExecutora.barras} total={ind.total} selecionada={filtros.executora}
                                  onSelecionar={(c) => alternar('executora', c)} />
@@ -297,10 +301,10 @@ export default function Painel() {
 
         {/* Listas */}
         <div className="mt-6 grid gap-6 lg:grid-cols-3">
-          <Bloco titulo={`Começam em até ${janela} dias`}>
+          <Bloco id="bloco-comecam" titulo={`Começam em até ${janela} dias`}>
             <ListaLicencas itens={iniciam.slice(0, 6)} data={(l) => dataBR(l.inicio_previsto)} nomeExec={nomeExec} hoje={hoje} vazio="Nenhuma obra aberta com início previsto nesta janela." total={iniciam.length} />
           </Bloco>
-          <Bloco titulo={`Terminam em até ${janela} dias`}>
+          <Bloco id="bloco-terminam" titulo={`Terminam em até ${janela} dias`}>
             <ListaLicencas itens={terminam.slice(0, 6)} data={(l) => dataBR(l.fim_previsto)} nomeExec={nomeExec} hoje={hoje} vazio="Nenhuma obra aberta com fim previsto nesta janela." total={terminam.length} />
           </Bloco>
           <Bloco titulo="Registradas mais recentemente">
@@ -359,9 +363,9 @@ function Indicador({ rotulo, valor, detalhe, cor = 'border-tinta-900', onClick, 
   ) : <div className={base}>{conteudo}</div>;
 }
 
-function Bloco({ titulo, nota, acao, children }: { titulo: string; nota?: string; acao?: ReactNode; children: ReactNode }) {
+function Bloco({ id, titulo, nota, acao, children }: { id?: string; titulo: string; nota?: string; acao?: ReactNode; children: ReactNode }) {
   return (
-    <section className="cartao p-5">
+    <section id={id} className="cartao scroll-mt-4 p-5">
       <header className="mb-3 flex flex-wrap items-start justify-between gap-2">
         <div>
           <h2 className="font-display text-lg font-bold tracking-[-0.01em] text-tinta-900">{titulo}</h2>
@@ -407,4 +411,9 @@ function ListaLicencas({ itens, data, nomeExec, hoje, vazio, total }: {
       {total != null && total > itens.length && <p className="mt-2 text-xs text-tinta-500">E mais {total - itens.length}. Veja nos registros abaixo.</p>}
     </>
   );
+}
+
+/** Indicador que leva à lista que o detalha, na própria página. */
+function rolarPara(id: string) {
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }

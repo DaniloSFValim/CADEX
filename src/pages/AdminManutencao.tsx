@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Badge, Button, Card, Empty, ErrorNote, Spinner } from '../components/ui';
+import { Link } from 'react-router-dom';
+import { Badge, Button, Card, Empty, ErrorNote, Spinner, tabela } from '../components/ui';
 import CorrecaoEmLote from '../components/CorrecaoEmLote';
+import { listarCorrecoes, resumoCorrecao, type RegistroCorrecao } from '../lib/correcaoLicencas';
 import { ResumoLicenca } from '../components/ExclusaoLicenca';
 import { dataBR } from '../components/Situacao';
 import { inconsistencias } from '../lib/admin';
@@ -21,11 +23,12 @@ export default function AdminManutencao() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [orgaos, setOrgaos] = useState<Orgao[]>([]);
   const [contas, setContas] = useState<Conta[]>([]);
+  const [correcoes, setCorrecoes] = useState<RegistroCorrecao[]>([]);
   const [erro, setErro] = useState<unknown>(null);
   const [aviso, setAviso] = useState('');
 
-  const carregar = () => Promise.all([listarLicencas(), listarLicencasExcluidas(), listarEmpresas(), listarOrgaos(), listarContas()])
-    .then(([l, x, e, o, c]) => { setLicencas(l); setLixeira(x); setEmpresas(e); setOrgaos(o); setContas(c); })
+  const carregar = () => Promise.all([listarLicencas(), listarLicencasExcluidas(), listarEmpresas(), listarOrgaos(), listarContas(), listarCorrecoes()])
+    .then(([l, x, e, o, c, h]) => { setLicencas(l); setLixeira(x); setEmpresas(e); setOrgaos(o); setContas(c); setCorrecoes(h); })
     .catch(setErro);
   useEffect(() => { void carregar(); }, []);
   const mudou = (mensagem: string) => { setAviso(mensagem); void carregar(); };
@@ -41,6 +44,8 @@ export default function AdminManutencao() {
     <div className="flex flex-col gap-10">
       {aviso && <p role="status" className="rounded-sm border-l-4 border-alta bg-alta/6 px-3 py-2 text-sm text-tinta-800">{aviso}</p>}
       <CorrecaoEmLote licencas={licencas} revisar={revisar.map((r) => r.licenca)} onAplicado={mudou} />
+
+      <HistoricoCorrecoes correcoes={correcoes} contas={contas} />
 
       <Card title={`Lixeira (${lixeira.length})`} semPadding>
         <p className="border-b border-tinta-100 px-4 py-3 text-sm text-tinta-500">
@@ -117,5 +122,44 @@ function LinhaLixeira({ licenca: l, porId, orgaos, contas, hoje, onMudou }: {
       )}
       <ErrorNote error={erro} />
     </li>
+  );
+}
+
+/** As últimas correções em lote, com o motivo: quem corrigiu, quando, o que mudou e por quê. */
+function HistoricoCorrecoes({ correcoes, contas }: { correcoes: RegistroCorrecao[]; contas: Conta[] }) {
+  const nomePorId = useMemo(() => new Map(contas.map((c) => [c.user_id, c.nome ?? c.email])), [contas]);
+  return (
+    <Card title={`Histórico de correções (${correcoes.length})`} semPadding>
+      <p className="border-b border-tinta-100 px-4 py-3 text-sm text-tinta-500">
+        As últimas 50 correções em lote, com o motivo informado. A auditoria guarda o mesmo registro linha a linha.
+      </p>
+      {correcoes.length === 0 ? <Empty>Nenhuma correção em lote registrada.</Empty> : (
+        <div className={tabela.moldura}>
+          <table className={tabela.tabela}>
+            <thead className={tabela.cabeca}>
+              <tr>
+                <th className={tabela.th}>Quando</th>
+                <th className={tabela.th}>Quem</th>
+                <th className={tabela.th}>O que mudou</th>
+                <th className={tabela.th}>Motivo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {correcoes.map((r) => (
+                <tr key={r.id} className={tabela.linha}>
+                  <td className={`${tabela.td} tabular whitespace-nowrap`}>{new Date(r.em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</td>
+                  <td className={tabela.td}>{nomePorId.get(r.por) ?? 'Conta removida'}</td>
+                  <td className={tabela.td}>
+                    {resumoCorrecao(r).map((t) => <div key={t} className="tabular">{t}</div>)}
+                    {r.licenca_id && <Link to={`/obras/${r.licenca_id}`} className="text-xs font-semibold text-marca-700 hover:underline">Ver licença</Link>}
+                  </td>
+                  <td className={`${tabela.td} text-tinta-700`}>{r.motivo}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
   );
 }

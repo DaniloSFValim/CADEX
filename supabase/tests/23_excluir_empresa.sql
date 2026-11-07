@@ -87,6 +87,20 @@ begin
     'gestor apagou a empresa');
 end $$;
 
+-- 1b. Gestor também não apaga empresa direto pela API (DELETE), que pularia as regras da função e a cascata.
+do $$
+begin
+  set local role cadex_test_app;
+  perform set_config('cadex.test_user_id', '00000000-0000-4000-8000-000000000001', true);
+  perform pg_temp.recusa(format('delete from empresas where id = %L', (select id from ids where nome = 'habilitada')),
+    'permission denied', 'gestor apagou empresa por delete direto');
+  reset role;
+  perform pg_temp.assert(exists (select 1 from empresas where id = (select id from ids where nome = 'habilitada')),
+    'delete direto apagou a empresa');
+  perform pg_temp.assert(not has_table_privilege('authenticated', 'public.empresas', 'delete'),
+    'authenticated não deve ter delete em empresas');
+end $$;
+
 -- 2. Administrador: empresa habilitada e ativa não é excluída (desative antes).
 do $$
 begin
