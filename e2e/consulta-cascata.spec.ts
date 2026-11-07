@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { instalarBackend } from './apoio/backend';
 import { licenca } from './apoio/dados';
+import { abrirLista } from './apoio/lista';
 
 test('concessionária: o bloco leva a uma página só com as obras dela', async ({ page }) => {
   await instalarBackend(page, {
@@ -11,6 +12,7 @@ test('concessionária: o bloco leva a uma página só com as obras dela', async 
     ],
   });
   await page.goto('/consulta/obras');
+  await abrirLista(page);
   await page.getByRole('link', { name: /OpUm/ }).first().click();
   await expect(page).toHaveURL(/\/consulta\/obras\/concessionaria\/opum/);
   await expect(page.getByRole('heading', { name: 'OpUm' })).toBeVisible();
@@ -22,6 +24,7 @@ test('concessionária: o bloco leva a uma página só com as obras dela', async 
 test('executora: o link "Ver obras" leva à página dela', async ({ page }) => {
   await instalarBackend(page, { licencas: [licenca({ contratante_id: 'op1' })] });
   await page.goto('/consulta/obras');
+  await abrirLista(page);
   await page.getByRole('link', { name: 'Ver obras' }).first().click();
   await expect(page).toHaveURL(/\/consulta\/obras\/executora\/terceirizada/);
   await expect(page.getByRole('region', { name: /Obras de Terceirizada/ }).locator('li')).toHaveCount(1);

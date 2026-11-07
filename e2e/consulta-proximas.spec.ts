@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { instalarBackend } from './apoio/backend';
 import { licenca } from './apoio/dados';
+import { abrirLista } from './apoio/lista';
 
 /** Trecho de licença com início no ponto dado (lng, lat). */
 const trecho = (logradouro: string, lng: number, lat: number) => ({
@@ -19,6 +20,7 @@ test.describe('consulta pública: obras perto de você', () => {
   test('com a localização permitida, lista as obras mais próximas, da mais perto para a mais longe', async ({ page }) => {
     await instalarBackend(page, { licencas: [longe, perto, medio] });
     await page.goto('/consulta/obras');
+    await abrirLista(page);
     await expect(page.getByRole('heading', { name: 'Obras perto de você' })).toBeVisible();
 
     await page.getByRole('button', { name: 'Usar minha localização' }).click();
@@ -38,6 +40,7 @@ test.describe('consulta pública: obras perto de você', () => {
     const page = await contexto.newPage();
     await instalarBackend(page, { licencas: [perto] });
     await page.goto('/consulta/obras');
+    await abrirLista(page);
     await page.getByRole('button', { name: 'Usar minha localização' }).click();
     await expect(page.getByText(/Não foi possível obter a localização/)).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Obras perto de você' })).toBeVisible();
@@ -52,6 +55,7 @@ test.describe('consulta pública: agrupamento no mapa', () => {
       licenca({ licenca_trechos: [trecho(`Rua ${i}`, -43.1 + i * 0.00002, -22.9 + i * 0.00002)] }));
     await instalarBackend(page, { licencas: muitas });
     await page.goto('/consulta/obras');
+    await abrirLista(page);
     await expect(page.locator('canvas').first()).toBeVisible();
     await page.waitForTimeout(1500);
     await page.screenshot({ path: 'test-results/consulta-agrupamento.png', fullPage: false });

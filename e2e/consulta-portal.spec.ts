@@ -1,12 +1,14 @@
 import { expect, test } from '@playwright/test';
 import { instalarBackend } from './apoio/backend';
 import { licenca } from './apoio/dados';
+import { abrirLista } from './apoio/lista';
 
 test.use({ viewport: { width: 1280, height: 900 } });
 
 test('no computador, o mapa ocupa cerca de 65% e a lista 35%, lado a lado', async ({ page }) => {
   await instalarBackend(page, { licencas: [licenca({ numero: '801/2026' })] });
   await page.goto('/consulta/obras');
+  await abrirLista(page);
   const mapa = page.locator('#conteudo .grid > div').first();
   const lista = page.locator('section[aria-label="Lista das obras e serviços licenciados"]');
   await expect(lista).toBeVisible();
@@ -24,6 +26,7 @@ test('busca por número de licença filtra a lista (e o mapa acompanha)', async 
     licencas: [licenca({ numero: '811/2026', executora_id: 'ter1' }), licenca({ numero: '812/2026', executora_id: 'op1' })],
   });
   await page.goto('/consulta/obras');
+  await abrirLista(page);
   await expect(page.locator('li[id^="obra-"]')).toHaveCount(2);
   await page.getByPlaceholder('Rua, bairro, nº da licença ou empresa').fill('812');
   await expect(page.locator('li[id^="obra-"]')).toHaveCount(1);
@@ -35,6 +38,7 @@ test('busca por número de licença filtra a lista (e o mapa acompanha)', async 
 test('o indicador "Vigentes agora" é clicável e marca o estado', async ({ page }) => {
   await instalarBackend(page, { licencas: [licenca({ numero: '821/2026' })] });
   await page.goto('/consulta/obras');
+  await abrirLista(page);
   // Por padrão a consulta mostra todas as obras; o indicador só marca quando o filtro de vigentes é escolhido.
   const vigentes = page.getByRole('button', { name: /Vigentes agora/ });
   await expect(vigentes).toHaveAttribute('aria-pressed', 'false');
@@ -47,6 +51,7 @@ test('ordenar por empresa muda a lista para um grupo só, sem o botão por bairr
     licencas: [licenca({ numero: '831/2026', executora_id: 'ter1' }), licenca({ numero: '832/2026', executora_id: 'op1' })],
   });
   await page.goto('/consulta/obras');
+  await abrirLista(page);
   await page.getByLabel('Ordenar').selectOption('empresa');
   await expect(page.getByText('Por empresa executora')).toBeVisible();
   await expect(page.getByRole('button', { name: /^Ver .+ no mapa$/ })).toHaveCount(0);
@@ -59,6 +64,7 @@ test.describe('celular', () => {
   test('no celular, os filtros ficam recolhidos e abrem ao toque; a página não rola para os lados', async ({ page }) => {
     await instalarBackend(page, { licencas: [licenca({ numero: '841/2026' })] });
     await page.goto('/consulta/obras');
+    await abrirLista(page);
     const botao = page.getByRole('button', { name: 'Filtros e ordenação' });
     await expect(botao).toBeVisible();
     await expect(botao).toHaveAttribute('aria-expanded', 'false');
@@ -80,9 +86,22 @@ test('destacar um bairro no mapa não esconde as obras dos outros bairros', asyn
     ],
   });
   await page.goto('/consulta/obras');
+  await abrirLista(page);
   await expect(page.locator('li[id^="obra-"]')).toHaveCount(2);
   await page.getByRole('button', { name: 'Ver Icaraí no mapa' }).click();
   await expect(page.getByText('Bairro destacado: Icaraí')).toBeVisible();
   // As duas continuam na lista: o destaque não filtra.
   await expect(page.locator('li[id^="obra-"]')).toHaveCount(2);
+});
+
+test('a lista de obras começa recolhida, com o total; abre pelo cabeçalho', async ({ page }) => {
+  await instalarBackend(page, { licencas: [licenca({}), licenca({ numero: '2/2026' })] });
+  await page.goto('/consulta/obras');
+  const bloco = page.locator('details', { has: page.locator('summary', { hasText: 'Lista de obras e serviços' }) }).first();
+  await expect(bloco.locator(':scope > summary')).toContainText('Lista de obras e serviços');
+  await expect(bloco.locator(':scope > summary')).toContainText('2 itens');
+  await expect(bloco).not.toHaveAttribute('open', '');
+  await bloco.locator(':scope > summary').click();
+  await expect(bloco).toHaveAttribute('open', '');
+  await expect(page.locator('section[aria-label="Lista das obras e serviços licenciados"] details li')).toHaveCount(2);
 });
