@@ -21,7 +21,7 @@ begin
   values ('33000167000101', 'Comunica CSP Ltda.', 'operadora', 'c@csp.test', '{telecom}', true, 'deferida', true, 'CADEX-CSP-0001')
   returning id into ativa_id;
   insert into empresas (cnpj, razao_social, tipo, email, setores, executa_obras, situacao, ativa, codigo_cadex)
-  values ('44000167000101', 'Desativada CSP Ltda.', 'operadora', 'd@csp.test', '{telecom}', true, 'deferida', false, 'CADEX-CSP-0002')
+  values ('24144040000175', 'Desativada CSP Ltda.', 'operadora', 'd@csp.test', '{telecom}', true, 'deferida', false, 'CADEX-CSP-0002')
   returning id into inativa_id;
 
   -- Válido: placas em minúsculas e com hífen viram o padrão.
