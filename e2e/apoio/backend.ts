@@ -32,6 +32,8 @@ export interface Cenario {
   auditoria: EventoAuditoria[];
   /** Documentos oficiais emitidos (tabela documentos_oficiais). */
   documentos: Record<string, unknown>[];
+  /** Comunicações prévias de serviço programado (tabela comunicacoes_servico). */
+  comunicacoes?: Record<string, unknown>[];
   /** Obras e serviços sem licença (tabela intervencoes_sem_licenca). */
   semLicenca?: Record<string, unknown>[];
   /** Catálogo de tipos (tabela tipos_intervencao). Sem ele, vale o catálogo padrão de viário. */
@@ -188,6 +190,15 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
       const linhas = (caminho === 'licenca_suspensoes' ? estado.suspensoes : estado.pedidos) ?? [];
       const lid = (url.searchParams.get('licenca_id') ?? '').replace('eq.', '');
       return lista(linhas.filter((x) => x.licenca_id === lid));
+    }
+    if (caminho === 'comunicacoes_servico') {
+      if (req.method() === 'POST') {
+        const nova = { id: uuid(9600 + (estado.comunicacoes?.length ?? 0) + 1), comunicado_em: new Date().toISOString(), ...(corpo as object) };
+        estado.comunicacoes = [...(estado.comunicacoes ?? []), nova];
+        return vazio();
+      }
+      const emp = (url.searchParams.get('empresa_id') ?? '').replace('eq.', '');
+      return lista((estado.comunicacoes ?? []).filter((x) => x.empresa_id === emp));
     }
     if (caminho === 'intervencoes_sem_licenca') {
       if (req.method() === 'POST') {
