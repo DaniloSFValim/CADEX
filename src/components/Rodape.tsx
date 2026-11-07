@@ -20,6 +20,7 @@ export function Rodape() {
         </p>
         <ul className="space-y-2">
           {!session && <li><Link to="/consulta" className={link}>Consulta pública</Link></li>}
+          {!session && <li><Link to="/empresa/entrar" className={link}>Acesso para empresas</Link></li>}
         </ul>
       </div>
       <div className="border-t border-tinta-100">

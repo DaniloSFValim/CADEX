@@ -34,6 +34,8 @@ export interface Cenario {
   documentos: Record<string, unknown>[];
   /** Comunicações prévias de serviço programado (tabela comunicacoes_servico). */
   comunicacoes?: Record<string, unknown>[];
+  /** Acessos de empresa ao portal (tabela empresa_usuarios). */
+  representantes?: Record<string, unknown>[];
   /** Obras e serviços sem licença (tabela intervencoes_sem_licenca). */
   semLicenca?: Record<string, unknown>[];
   /** Catálogo de tipos (tabela tipos_intervencao). Sem ele, vale o catálogo padrão de viário. */
@@ -200,6 +202,18 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
       const emp = (url.searchParams.get('empresa_id') ?? '').replace('eq.', '');
       return lista((estado.comunicacoes ?? []).filter((x) => x.empresa_id === emp));
     }
+    if (caminho === 'empresa_usuarios') {
+      if (req.method() === 'PATCH') {
+        const uid = (url.searchParams.get('user_id') ?? '').replace('eq.', '');
+        estado.representantes = (estado.representantes ?? []).map((x) => (x.user_id === uid ? { ...x, ...(corpo as object) } : x));
+        return vazio();
+      }
+      const comEmpresa = (estado.representantes ?? []).map((x) => ({
+        ...x,
+        empresas: estado.empresas.find((e) => e.id === x.empresa_id) ? { razao_social: estado.empresas.find((e) => e.id === x.empresa_id)!.razao_social, codigo_cadex: estado.empresas.find((e) => e.id === x.empresa_id)!.codigo_cadex } : null,
+      }));
+      return lista(comEmpresa);
+    }
     if (caminho === 'intervencoes_sem_licenca') {
       if (req.method() === 'POST') {
         const nova = { id: uuid(9000 + (estado.semLicenca?.length ?? 0) + 1), ...(corpo as object), atualizado_em: new Date().toISOString() };
@@ -225,6 +239,11 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
       if (erroFuncao) return route.fulfill({ status: 400, headers: CORS, contentType: 'application/json', body: JSON.stringify({ erro: erroFuncao }) });
       const { acao, user_id } = corpo as { acao: string; user_id: string };
       if (acao === 'excluir') estado.contas = estado.contas.filter((c) => c.user_id !== user_id);
+      if (acao === 'criar_representante') {
+        const p = corpo as { empresa_id: string; nome: string; email: string; papel: string };
+        const novo = { user_id: uuid(7000 + (estado.representantes?.length ?? 0) + 1), empresa_id: p.empresa_id, papel: p.papel, ativo: true, nome: p.nome, email: p.email, criado_em: new Date().toISOString(), desativado_em: null };
+        estado.representantes = [...(estado.representantes ?? []), novo];
+      }
       return responder({ ok: true });
     }
     if (caminho === 'rpc/admin_definir_dados_funcionais') {

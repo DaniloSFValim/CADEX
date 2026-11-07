@@ -12,6 +12,7 @@ const Consulta = lazy(() => import('./pages/Consulta'));
 const ConsultaObras = lazy(() => import('./pages/ConsultaObras'));
 const ObrasDe = lazy(() => import('./pages/ObrasDe'));
 const Login = lazy(() => import('./pages/Login'));
+const PortalEmpresa = lazy(() => import('./pages/PortalEmpresa'));
 const Painel = lazy(() => import('./pages/Painel'));
 const Pendencias = lazy(() => import('./pages/Pendencias'));
 const CruzamentoAnatel = lazy(() => import('./pages/CruzamentoAnatel'));
@@ -57,6 +58,8 @@ export function App() {
       <Route path="documento/:codigo" element={<VerificarDocumento />} />
       {/* Entrada dos servidores (área restrita). O público cai no mapa. */}
       <Route path="entrar" element={<Login />} />
+      {/* Entrada do portal das empresas: mesma autenticação, com verificação em duas etapas. */}
+      <Route path="empresa/entrar" element={<Login paraEmpresa />} />
       <Route path="*" element={<AreaRestrita />} />
     </Routes>
     </Suspense>
@@ -65,7 +68,7 @@ export function App() {
 }
 
 function AreaRestrita() {
-  const { session, servidor, mfa, loading, signOut } = useAuth();
+  const { session, servidor, empresa, mfa, loading, signOut } = useAuth();
 
   if (!isConfigured) {
     return (
@@ -81,7 +84,7 @@ function AreaRestrita() {
   // explicar a saída e deixar entrar de novo.
   if (!session) return <Navigate to={lerMotivo() ? '/entrar' : '/consulta/obras'} replace />;
 
-  if (!servidor) {
+  if (!servidor && !empresa) {
     return (
       <div className="mx-auto max-w-md p-8 text-center">
         <p className="text-sm text-tinta-700">
@@ -97,6 +100,9 @@ function AreaRestrita() {
   if (mfa?.exigida && !mfa.confirmada) {
     return mfa.cadastrada ? <ConfirmarMfa /> : <CadastrarMfa />;
   }
+
+  // Representante de empresa: só o portal das empresas.
+  if (!servidor) return <PortalEmpresa />;
 
   // Licenciador: única prerrogativa é registrar licenças de obra.
   if (servidor.papel === 'licenciador') {

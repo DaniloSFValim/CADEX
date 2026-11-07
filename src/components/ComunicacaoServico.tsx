@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Button, Empty, ErrorNote, Field, Spinner, inputClass } from './ui';
 import { dataBR } from './Situacao';
-import type { Empresa } from '../lib/empresas';
 import { hojeISO } from '../lib/empresas';
+
+/** Dados da empresa que a comunicação usa: o número de cadastro e o identificador. */
+type EmpresaComunicacao = { id: string; codigo_cadex: string };
 import {
   criarComunicacao, listarComunicacoes, normalizarPlacas, validarComunicacao, type ComunicacaoServico as Comunicacao,
 } from '../lib/comunicacoes';
@@ -11,7 +13,7 @@ import {
  * Comunicação prévia de serviço programado ao CISP. O aviso fica em destaque: é a regra que a
  * empresa precisa cumprir antes de começar, e só vale para quem está cadastrado no CADEX.
  */
-export default function ComunicacaoServico({ empresa, podeEditar }: { empresa: Empresa; podeEditar: boolean }) {
+export default function ComunicacaoServico({ empresa, podeEditar }: { empresa: EmpresaComunicacao; podeEditar: boolean }) {
   const [lista, setLista] = useState<Comunicacao[] | null>(null);
   const [erro, setErro] = useState<unknown>(null);
   const [aberto, setAberto] = useState(false);

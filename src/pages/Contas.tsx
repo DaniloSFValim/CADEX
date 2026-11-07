@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Badge, Button, Card, Empty, ErrorNote, Field, Spinner, inputClass, tabela } from '../components/ui';
 import { useAuth, type Papel } from '../lib/auth';
+import { RepresentantesEmpresa } from '../components/RepresentantesEmpresa';
 import {
   PERFIS, SENHA_MINIMA, criarConta, definirAcesso, definirAtivo, definirDadosFuncionais, excluirConta, gerarSenhaProvisoria, listarContas, redefinirSenha,
   vinculosDaConta, zerarMfa, type Conta, type VinculosDaConta,
@@ -34,6 +35,8 @@ export default function Contas() {
     <>
       <div className="flex flex-col gap-10">
         <NovaConta onCriada={(msg) => { setAviso(msg); carregar(); }} />
+
+        <RepresentantesEmpresa />
 
         {aviso && (
           <div role="status" className="rounded-sm border-l-4 border-alta bg-alta/10 px-4 py-3 text-sm text-tinta-800">
