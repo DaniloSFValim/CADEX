@@ -34,3 +34,33 @@ export async function corrigirLicencasEmLote(correcoes: CorrecaoLicenca[], motiv
   if (error) throw error;
   return Number(data ?? 0);
 }
+
+/** Uma linha do histórico de correções em lote: antes, depois, motivo, quem e quando. */
+export interface RegistroCorrecao {
+  id: number;
+  em: string;
+  por: string;
+  licenca_id: string | null;
+  motivo: string;
+  antes: { numero: string | null; processo_sei: string };
+  depois: { numero: string | null; processo_sei: string };
+}
+
+/** Últimas correções em lote. Só o administrador lê (a política do banco confere). */
+export async function listarCorrecoes(limite = 50): Promise<RegistroCorrecao[]> {
+  const { data, error } = await supabase
+    .from('licencas_correcoes')
+    .select('id, em, por, licenca_id, motivo, antes, depois')
+    .order('em', { ascending: false })
+    .limit(limite);
+  if (error) throw error;
+  return (data ?? []) as RegistroCorrecao[];
+}
+
+/** O que mudou numa correção, em texto curto: só os campos que de fato mudaram. */
+export function resumoCorrecao(r: Pick<RegistroCorrecao, 'antes' | 'depois'>): string[] {
+  const partes: string[] = [];
+  if ((r.antes.numero ?? '') !== (r.depois.numero ?? '')) partes.push(`Número: ${r.antes.numero ?? 'vazio'} → ${r.depois.numero ?? 'vazio'}`);
+  if (r.antes.processo_sei !== r.depois.processo_sei) partes.push(`SEI: ${r.antes.processo_sei} → ${r.depois.processo_sei}`);
+  return partes;
+}
