@@ -1,11 +1,14 @@
+import { Fragment } from 'react';
 import { Link } from 'react-router-dom';
 import { COR_SITUACAO, SITUACAO_PUBLICA_LABEL, type ObraPublica } from '../lib/obras';
 
+export type DetalheObra = { rotulo: string; valor: string };
+
 /**
- * Resumo da obra selecionada, sobre o mapa. Não repete o que a lista ao lado mostra
- * (executora, período, bairro, número): quem quiser os detalhes usa "Ver na lista" ou "Ver licença".
+ * Ficha da obra selecionada, sobre o mapa: é aqui que ficam os detalhes (executora, contratante,
+ * período, tipo, localização). A lista ao lado mostra só endereço, número e situação.
  */
-export default function FichaObra({ obra, onFechar }: { obra: ObraPublica; onFechar: () => void }) {
+export default function FichaObra({ obra, onFechar, detalhes }: { obra: ObraPublica; onFechar: () => void; detalhes: DetalheObra[] }) {
   const cor = COR_SITUACAO[obra.situacao];
   const t = obra.trechos[0];
   const extras = obra.trechos.length - 1;
@@ -29,6 +32,14 @@ export default function FichaObra({ obra, onFechar }: { obra: ObraPublica; onFec
       </h3>
       {extras > 0 && <p className="text-xs text-tinta-500">e mais {extras} {extras === 1 ? 'trecho' : 'trechos'}</p>}
       <p className="mt-1 line-clamp-2 text-sm text-tinta-700">{obra.escopo}</p>
+      <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+        {detalhes.map((d) => (
+          <Fragment key={d.rotulo}>
+            <dt className="text-tinta-500">{d.rotulo}</dt>
+            <dd className="min-w-0 text-tinta-800">{d.valor}</dd>
+          </Fragment>
+        ))}
+      </dl>
       <div className="mt-3 flex flex-wrap items-center gap-4 text-sm font-semibold">
         <Link to={`/licenca/${obra.codigo}`} className="text-marca-600 hover:underline">
           Ver licença <span className="font-normal text-tinta-500">nº {obra.numero}</span>
