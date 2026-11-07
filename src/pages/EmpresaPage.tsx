@@ -4,6 +4,7 @@ import { Badge, Button, Card, ErrorNote, Field, Spinner, Titulo, inputClass, typ
 import { SituacaoBadge } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { formatCnpj, isValidCnpj, onlyDigits } from '../lib/cnpj';
+import { buscarCep, cepValido, formatCep } from '../lib/cep';
 import {
   ESTADO_LABEL, SETORES, SETOR_LABEL, TIPO_LABEL, buscarEmpresa, descricaoEmpresa, ehContratante, tiposDaEmpresa, criarEmpresa, criarVinculo, criarVinculoOrgao, definirFimVinculo,
   enviarLogo, estadoDocumento, registrarDocumentos, removerLogo, urlLogo, MAX_LOGO_BYTES, TIPOS_LOGO, hojeISO, listarDocumentos, listarEmpresas,
@@ -227,6 +228,21 @@ function EmpresaForm({
     onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => set(k, e.target.value as never),
   });
 
+  // CEP preenche logradouro, bairro, cidade e UF; número e complemento continuam à mão.
+  const preencherPeloCep = async (cep: string) => {
+    if (!cepValido(cep)) return;
+    try {
+      const end = await buscarCep(cep);
+      if (!end) { setError('CEP não encontrado. Preencha o endereço à mão.'); return; }
+      setSalvo(false);
+      setV((s) => ({
+        ...s,
+        logradouro: end.logradouro || s.logradouro, bairro: end.bairro || s.bairro,
+        cidade: end.cidade || s.cidade, uf: end.uf || s.uf,
+      }));
+    } catch { /* Sem rede, o endereço é preenchido à mão. */ }
+  };
+
   const cnpjCompleto = onlyDigits(v.cnpj).length === 14;
   const cnpjRuim = cnpjCompleto && !isValidCnpj(v.cnpj);
 
@@ -373,8 +389,10 @@ function EmpresaForm({
         <input id="telefone" className={inputClass} {...text('telefone')} />
       </Field>
 
-      <Field label="CEP" className="sm:col-span-2">
-        <input id="cep" className={inputClass} inputMode="numeric" {...text('cep')} />
+      <Field label="CEP" className="sm:col-span-2" hint="Preenche o endereço.">
+        <input id="cep" className={inputClass} inputMode="numeric" placeholder="00000-000" value={v.cep ?? ''}
+               onChange={(e) => set('cep', formatCep(e.target.value))}
+               onBlur={(e) => void preencherPeloCep(e.target.value)} />
       </Field>
       <Field label="Logradouro" className="sm:col-span-3">
         <input id="logradouro" className={inputClass} {...text('logradouro')} />
@@ -392,7 +410,8 @@ function EmpresaForm({
         <input id="cidade" className={inputClass} {...text('cidade')} />
       </Field>
       <Field label="UF" className="sm:col-span-1">
-        <input id="uf" className={inputClass} maxLength={2} {...text('uf')} />
+        <input id="uf" className={inputClass} maxLength={2} value={v.uf ?? ''}
+               onChange={(e) => set('uf', e.target.value.toUpperCase())} />
       </Field>
 
       <Field label="Representante legal" className="sm:col-span-6"

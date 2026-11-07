@@ -85,6 +85,7 @@ test.describe('mapa de consulta', () => {
       await page.locator('label:has(> span:text-matches("^Nº da licença[*]?$")) input').fill(`90${tipo === 'obra' ? 1 : 2}/2026`);
       await page.locator('label:has(> span:text-matches("^Fim da obra ou serviço[*]?$")) input').fill(dia(30));
       await page.locator('label:has(> span:text-matches("^Logradouro[*]?$")) input').fill('Rua Mem de Sá');
+      await page.locator('label:has(> span:text-matches("^Bairro[*]?$")) input').fill('Icaraí');
       await page.getByPlaceholder('-22.895000, -43.123000').first().fill('-22.905, -43.110');
       await page.getByRole('button', { name: 'Criar licença' }).click();
       await expect.poll(() => backend.de('rpc/salvar_licenca').length).toBe(tipo === 'obra' ? 1 : 2);

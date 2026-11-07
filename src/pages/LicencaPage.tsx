@@ -23,6 +23,8 @@ import {
 import { listarOrgaos, nomeOrgao, orgaoServeOrigem, type Orgao } from '../lib/orgaos';
 import { listarTipos, type TipoIntervencao as TipoDeObra } from '../lib/tiposIntervencao';
 import { areaParaGeoJson, lerAreaWkb, problemaArea, type Anel } from '../lib/areaTrecho';
+import { carregarBairrosGeo, nomeOficialBairro } from '../lib/bairros';
+import { PADRAO_NUMERO_CORRECAO } from '../lib/correcaoLicencas';
 
 const DesenhoArea = lazy(() => import('../components/DesenhoArea'));
 
@@ -384,6 +386,13 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
   };
   // Qual trecho está com o mapa de desenho aberto (um por vez, para o mapa não pesar).
   const [areaAberta, setAreaAberta] = useState<number | null>(null);
+  // Bairros oficiais: sugestões no campo e grafia padronizada ao salvar. Sem o arquivo, o campo continua livre.
+  const [bairrosOficiais, setBairrosOficiais] = useState<string[]>([]);
+  useEffect(() => {
+    carregarBairrosGeo()
+      .then((g) => setBairrosOficiais(g.features.map((x) => x.properties.nome).sort((a, b) => a.localeCompare(b, 'pt-BR'))))
+      .catch(() => setBairrosOficiais([]));
+  }, []);
   // CEP preenche logradouro e bairro; as coordenadas continuam à mão.
   const buscarCepTrecho = async (i: number, cep: string) => {
     if (!cepValido(cep)) return;
@@ -399,6 +408,7 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
 
   function montar(): { licenca: LicencaInput; trechos: Trecho[] } | string {
     if (!f.processo_sei.trim()) return 'Informe o número do processo.';
+    if (f.numero.trim() && !PADRAO_NUMERO_CORRECAO.test(f.numero.trim())) return 'Nº da licença no padrão 000/AAAA (por exemplo, 084/2026).';
     if (!f.tipo_intervencao) return 'Escolha o tipo de intervenção: obra ou serviço.';
     if (publica && !contratanteOrgaoId) return 'Obra ou serviço público: escolha o órgão ou a autarquia contratante.';
     if (executoraSemCadastro && !anterior) {
@@ -431,6 +441,8 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
     for (const [i, t] of trechos.entries()) {
       const n = trechos.length > 1 ? ` ${i + 1}` : '';
       if (!t.logradouro.trim()) return `Trecho${n}: informe o logradouro.`;
+      // Trecho novo nasce com bairro: é por ele que a consulta pública agrupa e filtra. Trecho antigo sem bairro não trava a edição.
+      if (!t.id && !t.bairro.trim()) return `Trecho${n}: informe o bairro.`;
       const area = t.tipo === 'area' && t.area && t.area.length > 0 ? t.area : null;
       if (t.tipo === 'area') {
         const erroArea = area ? problemaArea(area) : 'marque pelo menos 3 pontos da área no mapa.';
@@ -443,7 +455,7 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
       const fim = t.tipo === 'segmento' && t.fim.trim() ? lerCoordenada(t.fim) : null;
       if (t.tipo === 'segmento' && t.fim.trim() && !fim) return `Trecho${n}: coordenada de fim não reconhecida ou fora de Niterói.`;
       lista.push({
-        ...(t.id ? { id: t.id } : {}), logradouro: t.logradouro.trim(), bairro: t.bairro.trim() || null,
+        ...(t.id ? { id: t.id } : {}), logradouro: t.logradouro.trim(), bairro: nomeOficialBairro(t.bairro, bairrosOficiais) || null,
         referencia: t.referencia.trim() || null, inicio_lat: ini.lat, inicio_lng: ini.lng,
         fim_lat: fim?.lat ?? null, fim_lng: fim?.lng ?? null,
         area: area ? areaParaGeoJson(area) : null,
@@ -453,7 +465,7 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
     return {
       licenca: {
         ...(licenca ? { id: licenca.id } : {}),
-        setor: f.setor, processo_sei: f.processo_sei, numero: n(f.numero), tipos_obra: f.tipos_obra,
+        setor: f.setor, processo_sei: f.processo_sei.trim(), numero: n(f.numero), tipos_obra: f.tipos_obra,
         outros_descricao: f.tipos_obra.includes('outros') ? n(f.outros_descricao) : null,
         escopo: f.escopo.trim(),
         observacoes: n(f.observacoes),
@@ -568,7 +580,7 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
               {SETORES.map((st) => <option key={st} value={st}>{SETOR_LABEL[st]}</option>)}
             </select>
           </Field>
-          <Field label="Nº do processo" required hint="SEI (NIT-050120/000000/2026) ou a numeração anterior.">
+          <Field label="Nº do processo" required hint="Como está no SEI, por exemplo 9900000000/2026, ou a numeração anterior.">
             <input className={`${inputClass} tabular`} required disabled={ro} value={f.processo_sei}
                    onChange={(e) => set('processo_sei', e.target.value)} />
           </Field>
@@ -653,7 +665,7 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
             </Field>
           )}
           {/* Sempre visível: a prévia usa número e datas. Obrigatórios só quando deferida. */}
-          <Field label="Nº da licença" required={deferindo} hint="Numeração própria da SECONSER.">
+          <Field label="Nº da licença" required={deferindo} hint="Numeração própria da SECONSER, no padrão 000/AAAA.">
             <input className={inputClass} required={deferindo} disabled={ro} value={f.numero} onChange={(e) => set('numero', e.target.value)} />
           </Field>
         </div>
@@ -835,6 +847,9 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
           Cole as coordenadas do Google Maps (clique com o botão direito no ponto e copie) ou o link do local.
           Sem fim, o trecho é pontual, como a implantação de um poste.
         </p>
+        <datalist id="bairros-oficiais">
+          {bairrosOficiais.map((b) => <option key={b} value={b} />)}
+        </datalist>
         <ol className="divide-y divide-tinta-100">
           {trechos.map((t, i) => {
             const ini = lerCoordenada(t.inicio);
@@ -851,8 +866,10 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
                   <input className={inputClass} disabled={ro} value={t.logradouro}
                          onChange={(e) => setTrecho(i, 'logradouro', e.target.value)} />
                 </Field>
-                <Field label="Bairro" className="sm:col-span-2">
-                  <input className={inputClass} disabled={ro} value={t.bairro} onChange={(e) => setTrecho(i, 'bairro', e.target.value)} />
+                <Field label="Bairro" required={!t.id} className="sm:col-span-2"
+                       hint={bairrosOficiais.length ? 'Escolha da lista oficial; a grafia é padronizada ao salvar.' : undefined}>
+                  <input className={inputClass} disabled={ro} value={t.bairro} list="bairros-oficiais"
+                         onChange={(e) => setTrecho(i, 'bairro', e.target.value)} />
                 </Field>
                 <div className="flex items-end sm:col-span-1">
                   {!ro && trechos.length > 1 && (

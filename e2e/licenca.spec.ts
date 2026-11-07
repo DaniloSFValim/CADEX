@@ -22,6 +22,7 @@ async function preencherBasico(page: Page) {
   await campo(page, 'Nº da licença').fill('900/2026');
   await campo(page, 'Fim da obra ou serviço').fill(dia(30));
   await campo(page, 'Logradouro').fill('Rua Mem de Sá');
+  await campo(page, 'Bairro').fill('Icaraí');
   await page.getByPlaceholder('-22.895000, -43.123000').first().fill('-22.905, -43.110');
 }
 
@@ -112,6 +113,36 @@ test.describe('registro de licença', () => {
     await page.getByRole('button', { name: 'Criar licença' }).click();
     await expect(page.getByRole('alert')).toContainText('O fim da obra ou serviço não pode ser anterior ao início.');
     expect(backend.de('rpc/salvar_licenca')).toHaveLength(0);
+  });
+
+  test('número fora do padrão 000/AAAA é barrado, antes de enviar', async ({ page }) => {
+    const backend = await instalarBackend(page);
+    await page.goto('/obras/nova');
+    await lista(page, 'Contratante').selectOption('op1');
+    await lista(page, 'Executora').selectOption('ter1');
+    await preencherBasico(page);
+    await campo(page, 'Nº da licença').fill('84/2026');
+    await page.getByRole('button', { name: 'Criar licença' }).click();
+    await expect(page.getByRole('alert')).toContainText('Nº da licença no padrão 000/AAAA');
+    expect(backend.de('rpc/salvar_licenca')).toHaveLength(0);
+  });
+
+  test('trecho novo sem bairro é barrado; bairro digitado sem acento vai com a grafia oficial', async ({ page }) => {
+    const backend = await instalarBackend(page);
+    await page.goto('/obras/nova');
+    await lista(page, 'Contratante').selectOption('op1');
+    await lista(page, 'Executora').selectOption('ter1');
+    await preencherBasico(page);
+    await page.locator('form').evaluate((f: HTMLFormElement) => { f.noValidate = true; });
+    await campo(page, 'Bairro').fill('');
+    await page.getByRole('button', { name: 'Criar licença' }).click();
+    await expect(page.getByRole('alert')).toContainText('Trecho: informe o bairro.');
+    expect(backend.de('rpc/salvar_licenca')).toHaveLength(0);
+
+    await campo(page, 'Bairro').fill('icarai');
+    await page.getByRole('button', { name: 'Criar licença' }).click();
+    await expect.poll(() => backend.de('rpc/salvar_licenca').length).toBe(1);
+    expect(JSON.stringify(backend.de('rpc/salvar_licenca')[0].corpo)).toContain('"bairro":"Icaraí"');
   });
 
   test('a própria contratante executa: a executora acompanha, trava, e o envio leva a mesma empresa', async ({ page }) => {

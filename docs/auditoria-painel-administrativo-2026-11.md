@@ -121,3 +121,37 @@ Verificações sem mudança:
 
 - Em toda tabela com exclusão sensível, proteger com gatilho ou retirar o `DELETE` do papel `authenticated`, como já é feito nas licenças. A exclusão passa a ser só pelas funções do administrador.
 - Criar uma checagem periódica, só leitura, de integridade de datas: validade antes do fim previsto, ano do início diferente do ano do número da licença. O resultado iria para "Licenças para revisar" na Administração.
+
+## 11. Revisão dos formulários de licença e de empresa (segunda rodada)
+
+Os campos foram conferidos contra os dados reais de produção (somente leitura): 190 licenças e 39 empresas.
+
+### Corrigido
+
+| Formulário | Problema | Evidência | Correção |
+|---|---|---|---|
+| Licença | A dica do processo mostrava o formato `NIT-050120/000000/2026`, que nenhuma licença usa. | 129 licenças com 10 dígitos/AAAA, 56 com 9 dígitos/AAAA, 5 em formatos antigos e nenhuma com `NIT-`. | A dica agora traz o formato real (`9900000000/2026`). |
+| Licença | O processo era gravado sem retirar os espaços das pontas. | `processo_sei: f.processo_sei` sem `trim`. | O processo é gravado com `trim`. |
+| Licença | O número da licença não tinha validação de formato, embora a correção em lote exija `000/AAAA`. | As 190 licenças seguem `000/AAAA`, então a regra não barra nenhum registro existente. | Validação no envio, com mensagem e exemplo. |
+| Licença | O bairro do trecho era opcional e de texto livre. | 2 trechos sem bairro, e grafias divergentes (Pé/Pe, D'Areia/Dareia) que o portal precisava unificar. | Lista com os bairros oficiais e grafia padronizada ao salvar. Trecho novo exige bairro; trecho antigo sem bairro não trava a edição. |
+| Empresa | O CEP não preenchia o endereço, ao contrário dos trechos da licença. | — | O CEP agora preenche logradouro, bairro, cidade e UF. |
+| Empresa | O CEP era gravado em formatos misturados. | 33 empresas com `24.030-340`, 4 com `24030-340` e 2 com `24030340`. | Máscara `00000-000` nos cadastros novos e nas edições do campo. |
+| Empresa | A UF aparecia em minúsculas enquanto era digitada. | A gravação já convertia para maiúsculas. | A tela mostra em maiúsculas desde a digitação. |
+
+### Conferido e mantido
+
+- **Licença, empresas:** a distinção entre contratante, executora e subcontratada está correta. A opção "a própria contratante executa" exige empresa habilitada, com execução própria marcada no cadastro. Órgão público só aparece como contratante em obra pública. Empresa sem cadastro só é aceita em protocolo anterior a 09/09/2026 ou em drenagem.
+- **Licença, demais regras:** os campos de drenagem são exigidos só fora do registro histórico. O contrato público é opcional e não aparece na consulta pública. A conclusão, a recomposição e o As Built só aparecem em obra concluída, e número e data do As Built são exigidos juntos.
+- **Licença, logradouro:** o rótulo marca o campo como obrigatório, mas o `input` não tem `required`. A regra é conferida no envio, então o efeito é só visual.
+- **Empresa:** o CNPJ é validado pelo dígito verificador. Tipo e CNPJ não mudam depois do cadastro, porque compõem o código CADEX. Terceirizada exige setor e, em telecomunicações, a empresa contratante.
+
+### Pendente
+
+- **Padronizar os 39 CEPs já gravados** no formato `00000-000`. É correção de dados e depende de autorização.
+- **Telefone sem máscara.** É baixo impacto; fica como recomendação.
+
+### Testes desta rodada
+
+- Vitest: 260 testes, sendo 2 novos (grafia oficial do bairro).
+- Playwright: 132 testes, sendo 2 novos (número fora do padrão barrado; bairro exigido e gravado com a grafia oficial).
+- `tsc` e lint: sem erros.
