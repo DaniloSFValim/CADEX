@@ -46,3 +46,12 @@ test('na lista de obras, o registro abre a ficha, e "Voltar à consulta" retorna
   await page.getByRole('button', { name: 'Voltar à consulta' }).click();
   await expect(page).toHaveURL(/\/obras$/);
 });
+
+test('"Localizar no mapa" na ficha abre o mapa já com a obra selecionada', async ({ page }) => {
+  const l = licenca({ numero: '778/2026', contratante_id: 'op1', escopo: 'Rede no Ingá' });
+  await instalarBackend(page, { licencas: [l] });
+  await page.goto(`/obras/${l.id}`);
+  await page.getByRole('button', { name: 'Localizar no mapa' }).click();
+  await expect(page).toHaveURL(new RegExp(`/consulta/obras\\?obra=${l.codigo_publico}$`));
+  await expect(page.locator('article[aria-label="Ficha da obra selecionada"]')).toContainText('778/2026');
+});

@@ -25,13 +25,15 @@ function Opcao({ rotulo, marcado, onChange }: { rotulo: string; marcado: boolean
 
 /** Relação de empresas em PDF ou planilha, com filtros, colunas e agrupamento à escolha. */
 export function ExportarRelacao({
-  empresas, contexto, podeVerDocumentos, tipoInicial, situacaoInicial, onFechar,
+  empresas, contexto, podeVerDocumentos, tipoInicial, situacaoInicial, filtrosDaTela = [], onFechar,
 }: {
   empresas: Empresa[];
   contexto: Contexto;
   podeVerDocumentos: boolean;
   tipoInicial: string;
   situacaoInicial: string;
+  /** Filtros da tela que já recortaram a lista (setor, busca), para constar no relatório. */
+  filtrosDaTela?: string[];
   onFechar: () => void;
 }) {
   const [tipos, setTipos] = useState<Tipo[]>(tipoInicial ? [tipoInicial as Tipo] : TIPOS);
@@ -101,6 +103,7 @@ export function ExportarRelacao({
       <BotoesExportar relatorio={relacaoEmpresas(selecionadas, colunas, contexto, agrupar, [
         `Tipos: ${tipos.length === TIPOS.length ? 'todos' : tipos.map((t) => TIPO_LABEL[t].toLowerCase()).join(', ')}.`,
         `Situações: ${situacoes.length === SITUACOES.length ? 'todas' : situacoes.map((x) => SITUACAO_LABEL[x].toLowerCase()).join(', ')}.`,
+        ...filtrosDaTela,
       ])} />
     </div>
   );

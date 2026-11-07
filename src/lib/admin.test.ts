@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Empresa } from './empresas';
 import type { LicencaComTrechos } from './licencas';
-import { contagensLicencas, duplicidades, inconsistencias, normalizarNome, participacoes } from './admin';
+import { categoriaProblema, contagensLicencas, duplicidades, inconsistencias, normalizarNome, participacoes } from './admin';
 
 const HOJE = '2026-10-13';
 
@@ -24,7 +24,7 @@ const lic = (o: Partial<LicencaComTrechos> = {}): LicencaComTrechos => {
     situacao: 'deferida', inicio_previsto: '2026-10-01', fim_previsto: '2026-10-30', concluida_em: null,
     recomposicao_data: null, as_built_sei: null, as_built_data: null, observacoes: null, empresas_no_deferimento: null,
     codigo_publico: `c${seq}`, criado_em: '2026-09-16T10:00:00Z', atualizado_em: '2026-09-16T10:00:00Z',
-    licenca_trechos: [{ id: 't', ordem: 1, logradouro: 'Rua A', bairro: null, referencia: null, inicio_lat: -22.9, inicio_lng: -43.1, fim_lat: null, fim_lng: null }],
+    licenca_trechos: [{ id: 't', ordem: 1, logradouro: 'Rua A', bairro: 'Centro', referencia: null, inicio_lat: -22.9, inicio_lng: -43.1, fim_lat: null, fim_lng: null }],
     ...o,
   } as LicencaComTrechos;
 };
@@ -99,6 +99,22 @@ describe('inconsistências', () => {
     const empresasMarcada = new Map([['op1', emp('op1', { executa_obras: true })]]);
     const com = inconsistencias([lic({ contratante_id: 'op1', executora_id: 'op1' })], HOJE, empresasMarcada)[0]?.problemas ?? [];
     expect(com.some((t) => t.includes('não marca que ela executa obras'))).toBe(false);
+  });
+  it('início depois da validade (ano trocado) e concluída com fim além da validade', () => {
+    const anoTrocado = acha(lic({ inicio_previsto: '2026-09-15', fim_previsto: '2026-10-14', validade_ate: '2025-09-03' }));
+    expect(anoTrocado.some((t) => t.startsWith('Início da obra ou serviço depois da validade'))).toBe(true);
+    expect(categoriaProblema(anoTrocado.find((t) => t.startsWith('Início'))!)).toBe('datas_incoerentes');
+    const concluida = acha(lic({ inicio_previsto: '2025-09-15', fim_previsto: '2025-10-14', validade_ate: '2025-09-30', concluida_em: '2025-10-14' }));
+    expect(concluida.some((t) => t.startsWith('Fim da obra ou serviço depois da validade'))).toBe(true);
+  });
+  it('obra aberta com fim além da validade não é aviso: a validade se prorroga', () => {
+    const aberta = acha(lic({ inicio_previsto: HOJE, fim_previsto: '2099-12-31', validade_ate: '2099-01-30', concluida_em: null }));
+    expect(aberta.some((t) => t.includes('depois da validade'))).toBe(false);
+  });
+  it('trecho sem bairro', () => {
+    const base = lic();
+    const semBairro = acha({ ...base, licenca_trechos: base.licenca_trechos.map((t) => ({ ...t, bairro: ' ' })) });
+    expect(semBairro.some((t) => t.startsWith('Trecho sem bairro'))).toBe(true);
   });
   it('fim vencido sem conclusão', () => {
     expect(acha(lic({ inicio_previsto: '2026-08-01', fim_previsto: '2026-09-01', validade_ate: '2026-09-01' }))).toContain('Fim da obra ou serviço vencido, sem conclusão registrada.');

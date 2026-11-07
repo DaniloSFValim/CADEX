@@ -66,7 +66,7 @@ export default function AdminLicencas() {
   const contagens = useMemo(() => (licencas ? contagensLicencas(licencas, hoje, porId) : null), [licencas, hoje, porId]);
   const rotuloAviso: Record<CategoriaProblema, string> = {
     processo_repetido: 'Processo SEI repetido', numero_fora_padrao: 'Número fora do padrão', prazo_longo: 'Prazo de mais de um ano',
-    prazo_vencido: 'Fim vencido, sem conclusão', outros: 'Outros',
+    prazo_vencido: 'Fim vencido, sem conclusão', datas_incoerentes: 'Datas incoerentes com a validade', outros: 'Outros',
   };
   const q = busca.trim().toLowerCase();
   // Tudo o que a busca encontra; a tela mostra só o começo, mas a exportação sai com a lista inteira.
@@ -121,7 +121,7 @@ export default function AdminLicencas() {
       <Card title={`Registros a revisar (${revisar.length})`} semPadding>
         <p className="border-b border-tinta-100 px-4 py-3 text-sm text-tinta-500">
           Dado faltando, prazo vencido, prazo de mais de um ano, número fora do padrão 000/AAAA ou empresa que deixou de poder atuar. É um aviso: a correção é feita no próprio registro, ou em lote na aba Manutenção.
-          {contagens && (contagens.avisos.processo_repetido + contagens.avisos.numero_fora_padrao + contagens.avisos.prazo_longo + contagens.avisos.prazo_vencido + contagens.avisos.outros) > 0 && (
+          {contagens && Object.values(contagens.avisos).some((n) => n > 0) && (
             <> Avisos por tipo: {(Object.keys(rotuloAviso) as CategoriaProblema[]).filter((c) => contagens.avisos[c] > 0).map((c) => `${rotuloAviso[c].toLowerCase()} (${contagens.avisos[c]})`).join(', ')}.</>
           )}
         </p>

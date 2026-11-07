@@ -155,3 +155,70 @@ Os campos foram conferidos contra os dados reais de produção (somente leitura)
 - Vitest: 260 testes, sendo 2 novos (grafia oficial do bairro).
 - Playwright: 132 testes, sendo 2 novos (número fora do padrão barrado; bairro exigido e gravado com a grafia oficial).
 - `tsc` e lint: sem erros.
+
+## 12. Terceira rodada: controle operacional, exportação, mapa, responsividade, rastreabilidade e desempenho
+
+### Dados corrigidos em produção (com autorização)
+
+- **CEP das empresas padronizado** para `00000-000`: 35 de 39 cadastros. Os outros 4 já estavam no formato. As 35 alterações ficaram na auditoria. Os gatilhos de `empresas` foram conferidos antes: a mudança não altera situação, validade nem o campo "ativa".
+
+### Controle operacional (item 8)
+
+"Licenças para revisar" ganhou três verificações, sem bloquear nada:
+
+| Verificação | Em produção |
+|---|---|
+| Início da obra depois da validade da licença, quase sempre ano digitado errado | 9 licenças |
+| Licença concluída com fim depois da validade | 5 licenças |
+| Trecho sem bairro | 2 licenças |
+
+Uma licença em andamento com fim depois da validade **não** é apontada, porque é normal: a validade de 30 dias se prorroga. O contador de avisos ganhou a categoria "Datas incoerentes com a validade".
+
+### Exportação (item 9)
+
+- **Obras:** a lista exportada já era a filtrada, mas a descrição dos filtros no relatório omitia o tipo de intervenção e a origem. Agora os dois constam.
+- **Empresas:** a exportação ignorava o setor e a busca da tela e saía com empresas de todos os setores. Agora parte da lista recortada pela tela, e os dois filtros constam no relatório. O teste de tela novo falha sem a correção.
+- O PDF traz "Emitido em … por …". O CSV leva a data no nome do arquivo.
+
+### Integração com o mapa (itens 4.2 e 7)
+
+- A ficha da licença ganhou "Localizar no mapa", que abre o mapa já com a obra selecionada (`/consulta/obras?obra=CÓDIGO`). Licença na lixeira não mostra o botão.
+
+### Celular e tablet (item 11)
+
+- O teste de rolagem horizontal passou de 8 para 16 telas, em 820 px e em 390 px: Pendências, os formulários de licença e de empresa, a ficha da empresa, a ficha da licença, Manutenção, Tipos de obra e Órgãos. Todas passam.
+- Problemas vistos nas capturas e corrigidos:
+  - o cabeçalho ocupava quase um terço da tela do celular: título menor em tela estreita;
+  - a aba ativa ficava cortada nas faixas que rolam: agora é centralizada, sem rolar a página;
+  - no Painel, os filtros ocupavam a primeira tela inteira: ficam recolhidos no celular, como no portal público;
+  - concordância de "Adicionar as 1" e "1 licenças".
+
+### Rastreabilidade (item 12)
+
+- 14 tabelas já são auditadas, incluindo `servidores` (perfis e acessos).
+- **Órgãos públicos** eram a única tabela editada pela tela sem auditoria, embora a tela de auditoria já tivesse o rótulo para ela. Nova migração `20261113120000_auditoria_orgaos_publicos.sql` (só cria o gatilho, reversível) e teste de banco 37, que falha sem a migração. **Falta aplicar em produção.**
+
+### Desempenho (item 13)
+
+Consultas mais pesadas em produção, segundo `pg_stat_statements`:
+
+| Consulta | Média | Chamadas |
+|---|---|---|
+| `obras_publicas()`, do mapa público | 144 ms | 1.042 |
+| Gravação da licença | 188 ms | 390 |
+
+Na escala atual, com 190 licenças, nada justifica mudança. As demais entradas da lista são introspecção do Supabase.
+
+### Achados de dados para decisão
+
+- **Há uma empresa de teste em produção:** "EMPRESA TESTE NÃO OFICIAL LTDA". Não foi apagada.
+- **Razões sociais com espaços duplicados** em vários cadastros, por exemplo "MUNDIVOX  COMUNICAÇÕES  LTDA.". A busca funciona, mas os documentos impressos saem com os espaços.
+
+### Testes desta rodada
+
+| Suíte | Resultado |
+|---|---|
+| Regras do banco | 37 arquivos passaram |
+| Vitest | 263 passaram |
+| Playwright | 151 passaram, com novos casos de exportação, responsividade e localização no mapa |
+| `tsc` e lint | Sem erros |

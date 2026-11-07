@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 import { Link, NavLink } from 'react-router-dom';
+import { useAbaAtivaVisivel } from './useAbaAtivaVisivel';
 
 export interface ItemMenu { rotulo: string; para: string; fim?: boolean }
 
@@ -10,6 +11,8 @@ export interface ItemMenu { rotulo: string; para: string; fim?: boolean }
  * rola na horizontal.
  */
 export function FaixaMarca({ itens, direita }: { itens: ItemMenu[]; direita?: ReactNode }) {
+  const menu = useRef<HTMLElement>(null);
+  useAbaAtivaVisivel(menu);
   return (
     <>
     <a href="#conteudo" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-sm focus:bg-white focus:px-4 focus:py-2 focus:font-semibold focus:text-marca-800 focus:shadow-md">
@@ -19,18 +22,18 @@ export function FaixaMarca({ itens, direita }: { itens: ItemMenu[]; direita?: Re
       <div aria-hidden className="pointer-events-none absolute -right-20 -top-28 h-72 w-72 rounded-full bg-obra-500/20" />
       <div className="relative mx-auto flex max-w-7xl flex-wrap items-center gap-x-5 gap-y-3 px-4 pt-4">
         <Link to="/consulta/obras" className="flex items-center gap-3" title="CADEX, Cadastro de Executores">
-          <img src="/brasao-niteroi.png" alt="Brasão de Niterói" width={260} height={322} className="h-14 w-auto flex-none" />
+          <img src="/brasao-niteroi.png" alt="Brasão de Niterói" width={260} height={322} className="h-12 w-auto flex-none sm:h-14" />
           <span className="leading-tight">
             <span className="block text-xs text-white/85">Prefeitura Municipal de Niterói</span>
             <span className="block text-xs text-white/75">Secretaria de Conservação e Serviços Públicos</span>
             <span className="block text-xs text-white/75">Fiscalização de Serviços Concedidos</span>
-            <span className="block font-display text-xl font-extrabold tracking-wide">CADEX · Cadastro de Executores de Obras e Serviços em Vias Públicas</span>
+            <span className="block font-display text-base font-extrabold leading-snug tracking-wide sm:text-xl">CADEX · Cadastro de Executores de Obras e Serviços em Vias Públicas</span>
           </span>
         </Link>
 
         {direita && <div className="ml-auto flex items-center gap-3 text-sm">{direita}</div>}
 
-        {itens.length > 0 && <nav className="-mx-4 w-[calc(100%+2rem)] overflow-x-auto pb-4" aria-label="Menu principal">
+        {itens.length > 0 && <nav ref={menu} className="-mx-4 w-[calc(100%+2rem)] overflow-x-auto pb-4" aria-label="Menu principal">
           <ul className="flex w-max gap-2 px-4">
             {itens.map((i) => (
               <li key={i.para}>

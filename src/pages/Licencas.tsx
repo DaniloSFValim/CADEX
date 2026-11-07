@@ -122,6 +122,8 @@ export default function Licencas() {
           filtros={[
             `Setor: ${setor ? SETOR_LABEL[setor as keyof typeof SETOR_LABEL].toLowerCase() : 'todos'}.`,
             `Situação: ${FILTROS.find((f) => f.valor === filtro)?.rotulo.toLowerCase() ?? 'todas'}.`,
+            `Tipo de intervenção: ${intervencao ? `${TIPO_INTERVENCAO_LABEL[intervencao as keyof typeof TIPO_INTERVENCAO_LABEL].toLowerCase()}s` : 'obras e serviços'}.`,
+            `Origem: ${origem ? ORIGEM_LABEL[origem as keyof typeof ORIGEM_LABEL].toLowerCase() : 'todas'}.`,
             ...(busca.trim() ? [`Busca: "${busca.trim()}".`] : []),
           ]}
           onFechar={() => setExportando(false)}
