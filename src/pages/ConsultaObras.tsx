@@ -19,6 +19,8 @@ import {
 
 // O mapa (MapLibre) é pesado: só carrega nesta página.
 const MapaObras = lazy(() => import('../components/MapaObras'));
+/** Obras por lote na lista aberta da consulta pública. */
+const LOTE_LISTA = 60;
 
 /** Consulta pública: obras licenciadas pela SECONSER, no mapa e em lista. */
 export default function ConsultaObras() {
@@ -78,6 +80,8 @@ export default function ConsultaObras() {
   const [filtro, setFiltro] = useState<FiltroPainel>({ situacao: null, executora: null });
   // A lista fica recolhida por padrão, para os gráficos e o restante da página aparecerem logo abaixo do mapa.
   const [listaAberta, setListaAberta] = useState(false);
+  // A lista aberta mostra um lote por vez; "Mostrar mais" traz o próximo.
+  const [limiteLista, setLimiteLista] = useState(LOTE_LISTA);
   const mapaRef = useRef<HTMLDivElement>(null);
   const filtroAtivo = filtro.executora !== null;
 
@@ -137,6 +141,17 @@ export default function ConsultaObras() {
   const grupos = useMemo(() => (ordem === 'bairro'
     ? agruparPorBairro(listadas, bairrosGeo)
     : [{ bairro: ROTULO_ORDEM[ordem], obras: ordenarObras(listadas, ordem) }]), [listadas, bairrosGeo, ordem]);
+  const totalLista = useMemo(() => grupos.reduce((n, g) => n + g.obras.length, 0), [grupos]);
+  const gruposVisiveis = useMemo(() => {
+    let restante = limiteLista;
+    const saida: { bairro: string; obras: ObraPublica[] }[] = [];
+    for (const g of grupos) {
+      if (restante <= 0) break;
+      saida.push({ bairro: g.bairro, obras: g.obras.slice(0, restante) });
+      restante -= g.obras.length;
+    }
+    return saida;
+  }, [grupos, limiteLista]);
   const executoras = useMemo(() => resumoPor(todas, (o) => o.executora), [todas]);
   const contratantes = useMemo(() => resumoPor(todas, (o) => o.contratante), [todas]);
   const stats = useMemo(() => resumo(todas), [todas]);
@@ -145,6 +160,12 @@ export default function ConsultaObras() {
   useEffect(() => {
     if (foco) document.getElementById(`obra-${foco}`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }, [foco]);
+  // Obra escolhida (no mapa ou na ficha): o lote cresce até incluí-la.
+  useEffect(() => {
+    if (!foco) return;
+    const pos = posicaoNaLista(grupos, foco);
+    if (pos >= 0) setLimiteLista((l) => (pos >= l ? Math.ceil((pos + 1) / LOTE_LISTA) * LOTE_LISTA : l));
+  }, [foco, grupos]);
 
   return (
     <div className="flex min-h-screen flex-col bg-tinta-50">
@@ -405,7 +426,7 @@ export default function ConsultaObras() {
                 </div>
               ) : (
                 <div className="flex flex-col gap-3">
-                  {grupos.map((g) => (
+                  {gruposVisiveis.map((g) => (
                     <details key={g.bairro} open className="group rounded-xl border border-tinta-200 bg-white">
                       <summary className="flex cursor-pointer list-none items-baseline justify-between gap-3 px-4 py-3">
                         <span className="font-semibold text-tinta-900">{g.bairro}</span>
@@ -448,6 +469,14 @@ export default function ConsultaObras() {
                   ))}
                 </div>
               )}
+              {totalLista > limiteLista && (
+                <div className="mt-3 text-center">
+                  <button type="button" onClick={() => setLimiteLista((l) => l + LOTE_LISTA)}
+                          className="rounded-full border border-tinta-200 bg-white px-5 py-2 text-sm font-semibold text-marca-700 hover:bg-tinta-50">
+                    Mostrar mais ({totalLista - limiteLista} restantes)
+                  </button>
+                </div>
+              )}
             </section>
               </div>
             </details>
@@ -474,6 +503,17 @@ export default function ConsultaObras() {
 /** Obras vigentes (ou aguardando início) por setor, só os setores com alguma obra. */
 
 /** Vigente ou aguardando início: as obras que a lista mostra por padrão. */
+/** Posição da obra na lista inteira (bairros na ordem mostrada), ou -1 se não estiver nela. */
+function posicaoNaLista(grupos: { obras: ObraPublica[] }[], codigo: string): number {
+  let posicao = 0;
+  for (const g of grupos) {
+    const i = g.obras.findIndex((o) => o.codigo === codigo);
+    if (i >= 0) return posicao + i;
+    posicao += g.obras.length;
+  }
+  return -1;
+}
+
 function obraAtiva(o: ObraPublica) {
   return o.situacao === 'vigente' || o.situacao === 'aguardando_inicio';
 }

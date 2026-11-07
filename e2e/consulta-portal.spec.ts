@@ -105,3 +105,28 @@ test('a lista de obras começa recolhida, com o total; abre pelo cabeçalho', as
   await expect(bloco).toHaveAttribute('open', '');
   await expect(page.locator('section[aria-label="Lista das obras e serviços licenciados"] details li')).toHaveCount(2);
 });
+
+test('a lista aberta mostra um lote de 60 obras e "Mostrar mais" traz o resto', async ({ page }) => {
+  const base = licenca().licenca_trechos[0];
+  const muitas = Array.from({ length: 70 }, (_, i) =>
+    licenca({ numero: `${i + 1}/2026`, licenca_trechos: [{ ...base, bairro: 'Centro', logradouro: `Rua Teste ${i + 1}` }] }));
+  await instalarBackend(page, { licencas: muitas });
+  await page.goto('/consulta/obras');
+  await abrirLista(page);
+  const itens = page.locator('section[aria-label="Lista das obras e serviços licenciados"] details li');
+  await expect(itens).toHaveCount(60);
+  await page.getByRole('button', { name: 'Mostrar mais (10 restantes)' }).click();
+  await expect(itens).toHaveCount(70);
+  await expect(page.getByRole('button', { name: /Mostrar mais/ })).toHaveCount(0);
+});
+
+test('obra escolhida depois do primeiro lote aparece na lista aberta', async ({ page }) => {
+  const base = licenca().licenca_trechos[0];
+  const muitas = Array.from({ length: 70 }, (_, i) =>
+    licenca({ numero: `${i + 1}/2026`, licenca_trechos: [{ ...base, bairro: 'Centro', logradouro: `Rua Teste ${i + 1}` }] }));
+  await instalarBackend(page, { licencas: muitas });
+  const alvo = muitas[64];
+  await page.goto(`/consulta/obras?obra=${alvo.codigo_publico}`);
+  await abrirLista(page);
+  await expect(page.locator(`li#obra-${alvo.codigo_publico}`)).toHaveCount(1);
+});

@@ -33,3 +33,12 @@ test.describe('cadastro da empresa: executa obras por conta própria', () => {
     await expect(caixa).toHaveCount(0);
   });
 });
+
+test('telefone da empresa é formatado enquanto se digita', async ({ page }) => {
+  await instalarBackend(page);
+  await page.goto('/empresas/op3');
+  await page.getByRole('button', { name: 'Editar dados' }).click();
+  const campo = page.locator('#telefone');
+  await campo.fill('21999998888');
+  await expect(campo).toHaveValue('(21) 99999-8888');
+});
