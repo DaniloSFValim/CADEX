@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button, Card, Empty, ErrorNote, Spinner, inputClass, tabela } from '../components/ui';
 import { ExcluirLicenca } from '../components/ExclusaoLicenca';
-import { ExportarLicencas } from '../components/ExportarLicencas';
 import { dataBR } from '../components/Situacao';
 import { contagensLicencas, inconsistencias, type CategoriaProblema } from '../lib/admin';
 import { hojeISO, listarEmpresas, type Empresa } from '../lib/empresas';
@@ -24,7 +23,6 @@ export default function AdminLicencas() {
   // Vindo da exclusão feita na página da licença, já traz a mensagem.
   const [aviso, setAviso] = useState((useLocation().state as { aviso?: string } | null)?.aviso ?? '');
   const [busca, setBusca] = useState('');
-  const [exportando, setExportando] = useState(false);
   // A lista da tela vem do servidor, uma página por vez. A revisão e a exportação usam o conjunto completo.
   const [lista, setLista] = useState<PaginaLicencas | null>(null);
   const [carregandoLista, setCarregandoLista] = useState(false);
@@ -69,12 +67,6 @@ export default function AdminLicencas() {
     prazo_vencido: 'Fim vencido, sem conclusão', datas_incoerentes: 'Datas incoerentes com a validade', outros: 'Outros',
   };
   const q = busca.trim().toLowerCase();
-  // Tudo o que a busca encontra; a tela mostra só o começo, mas a exportação sai com a lista inteira.
-  const filtradas = useMemo(() => {
-    if (!licencas) return [];
-    if (!q) return licencas;
-    return licencas.filter((l) => [l.numero ?? '', l.processo_sei, l.escopo].some((s) => s.toLowerCase().includes(q)));
-  }, [licencas, q]);
 
   if (!licencas && !erro) return <Spinner />;
   if (!licencas) return <ErrorNote error={erro} />;
@@ -85,16 +77,6 @@ export default function AdminLicencas() {
       <Card title="Licenças no CADEX">
         <input className={inputClass} value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar licença"
                placeholder="Nº da licença, processo SEI ou parte do escopo" />
-        {exportando && (
-          <div className="mt-4">
-            <ExportarLicencas
-              licencas={filtradas}
-              contexto={{ hoje, porId }}
-              filtros={q ? [`Busca: "${busca.trim()}".`] : ['Todas as licenças.']}
-              onFechar={() => setExportando(false)}
-            />
-          </div>
-        )}
         {erroLista ? <ErrorNote error={erroLista} /> : null}
         {!lista ? <Spinner /> : lista.itens.length === 0
           ? <p className="mt-3 text-sm text-tinta-500">Nenhuma licença encontrada.</p>
@@ -113,7 +95,7 @@ export default function AdminLicencas() {
         <p className="mt-3 text-xs text-tinta-500">
           {licencas.length} licença{licencas.length === 1 ? '' : 's'} no CADEX{contagens ? `: ${contagens.porOrigem.novo} cadastrada${contagens.porOrigem.novo === 1 ? '' : 's'} aqui e ${contagens.porOrigem.anterior} já emitida${contagens.porOrigem.anterior === 1 ? '' : 's'} antes do CADEX` : ''}.
           {lista && (q ? ` ${lista.total} encontrada${lista.total === 1 ? '' : 's'} na busca.` : '')}
-          {' '}<button type="button" className="text-marca-700 hover:underline" onClick={() => setExportando(true)}>Exportar a lista</button>.
+          {' '}
           {' '}Lançada por engano? Use Excluir: ela vai para a lixeira, abaixo. O histórico mostra quem alterou o quê e quando, direto da auditoria.
         </p>
       </Card>

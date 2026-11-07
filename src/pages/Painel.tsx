@@ -24,7 +24,8 @@ const JANELAS = [7, 15, 30] as const;
 const PASSO_REGISTROS = 25;
 
 /** Visão geral do painel: o que está licenciado, em que ponto está e com quem, direto do banco. */
-export default function Painel() {
+/** Painel: a visão geral, ou só os registros quando a aba "Registros" está aberta. Os filtros valem para as duas. */
+export default function Painel({ aba = 'visao' }: { aba?: 'visao' | 'registros' }) {
   const [dados, setDados] = useState<Dados | null>(null);
   const [erro, setErro] = useState<unknown>(null);
   const [atualizando, setAtualizando] = useState(false);
@@ -234,6 +235,7 @@ export default function Painel() {
           <Empty>Nenhuma licença com estes filtros.</Empty>
         </div>
       ) : (<>
+        {aba === 'visao' && (<>
         {/* Indicadores: uma faixa só, com os seis números lado a lado; a descrição de cada um fica no tooltip. */}
         <section className="mt-6" aria-label="Indicadores">
           <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-tinta-200 bg-tinta-200 sm:grid-cols-3 lg:grid-cols-6">
@@ -328,7 +330,10 @@ export default function Painel() {
           </Bloco>
         </div>
 
-        {/* Registros correspondentes */}
+        </>)}
+
+        {/* Registros correspondentes: aba própria. */}
+        {aba === 'registros' && (
         <section className="mt-8" aria-label="Registros">
           <h2 className="mb-3 font-display text-xl font-bold tracking-[-0.01em] text-tinta-900">Registros ({filtradas.length})</h2>
           <div className="cartao">
@@ -342,6 +347,7 @@ export default function Painel() {
             </div>
           )}
         </section>
+        )}
 
         <details className="mt-8 text-sm text-tinta-600">
           <summary className="cursor-pointer font-medium text-tinta-700">Como os números são contados</summary>
