@@ -229,3 +229,63 @@ Na escala atual, com 190 licenças, nada justifica mudança. As demais entradas 
 - **Prevenção:** o cadastro de empresa passa a gravar razão social, nome fantasia e representante sem espaços repetidos. O formulário de licença aplica a mesma regra à razão social de empresa sem cadastro.
 - **Empresa de teste em produção:** mantida, por decisão do usuário.
 - **Migração de auditoria dos órgãos** (`20261113120000`): autorizada, mas a aplicação pela ferramenta do Supabase parou num pedido de confirmação que ficou sem resposta. Ainda não está em produção.
+
+## 14. Últimas verificações e entrega final
+
+### Verificações finais
+
+- **Mapa × banco × consulta pública (itens 7 e 10):** os números batem, e nenhuma licença está sem localização.
+
+  | Fonte | Licenças |
+  |---|---|
+  | Licenças ativas no banco | 190 |
+  | `obras_publicas()` | 190 |
+  | GeoJSON | 190 obras distintas, em 246 desenhos (uma licença pode ter vários trechos) |
+
+- **Recuperação de acesso (item 6):** não há "Esqueci minha senha" na entrada. O administrador redefine a senha em Contas e acessos, e cada servidor troca a própria em "Minha conta". É coerente com um sistema interno que exige verificação em duas etapas. Ligar a recuperação por e-mail é decisão de segurança e depende da configuração de e-mail do Supabase.
+- **Migração de auditoria dos órgãos:** aplicada em produção pelo usuário e registrada no histórico (`20261113120000`).
+
+### Navegação (item 2)
+
+- **Empresas** (lista principal) e **Administração › Empresas:** a sobreposição é justificada. A primeira serve para consulta e exportação; a segunda reúne o que só o administrador faz (ativar, excluir, achar cadastros duplicados).
+- **Obras** e **Administração › Licenças:** há duplicação de busca e de exportação. A exportação de Administração filtra só pela busca, e a de Obras filtra por setor, situação, tipo e origem. **Recomendação:** deixar a exportação só em Obras e manter em Administração as contagens e os registros a revisar. Não foi feito, para não tirar uma função em uso sem decisão.
+
+### Entrega final (seção 16 do prompt)
+
+1. **Problemas identificados:** seções 1, 11 e 12. O crítico: o gestor apagava empresa direto pela API.
+2. **Inconsistências corrigidas:**
+   - exclusão de empresa só pelo administrador;
+   - exportações que não respeitavam ou não descreviam os filtros;
+   - processo SEI gravado com espaços;
+   - CEP de 35 empresas padronizado;
+   - nomes de 21 empresas sem espaços repetidos;
+   - auditoria de órgãos públicos.
+3. **Funcionalidades aprimoradas:**
+   - histórico de correções em lote;
+   - indicadores acionáveis no Painel;
+   - avisos de datas incoerentes e de trecho sem bairro;
+   - "Localizar no mapa" na ficha da licença;
+   - CEP que preenche o endereço da empresa;
+   - bairros oficiais nos trechos.
+4. **Interface:** celular (cabeçalho, abas, filtros do Painel) e dicas e validações dos formulários.
+5. **Banco:** duas migrações reversíveis, aplicadas e registradas: `20261112120000` e `20261113120000`.
+6. **Permissões:** o gestor perdeu a exclusão direta de empresa. Nenhuma outra mudança.
+7. **Testes:**
+
+   | Suíte | Resultado |
+   |---|---|
+   | Regras do banco | 37 arquivos passaram |
+   | Vitest | 265 passaram |
+   | Playwright | 151 passaram |
+
+   Os testes novos de segurança, exportação e auditoria falham sem a correção correspondente.
+8. **Pendentes com o usuário:**
+   - conferir no SEI as 14 licenças com datas incoerentes;
+   - corrigir os 2 trechos sem bairro;
+   - ligar a proteção contra senhas vazadas no Supabase;
+   - decidir o destino de `licencas_decisao_backup`.
+9. **Recomendações:**
+   - exportação de licenças num lugar só (Obras);
+   - recuperação de senha por e-mail, se houver configuração de envio;
+   - checagem periódica de integridade de datas;
+   - decisões de produto que ficaram em aberto: modalidade emergencial, XLSX e máscara de telefone.
