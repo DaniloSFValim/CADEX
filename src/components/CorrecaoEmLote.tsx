@@ -108,7 +108,7 @@ export default function CorrecaoEmLote({ licencas, revisar, onAplicado }: Props)
 
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant="secondary" onClick={() => adicionar(revisar)} disabled={revisar.length === 0}>
-            Adicionar as {revisar.length} com aviso de revisão
+            {revisar.length === 1 ? 'Adicionar a 1 com aviso de revisão' : `Adicionar as ${revisar.length} com aviso de revisão`}
           </Button>
         </div>
 

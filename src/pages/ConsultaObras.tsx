@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { AbasConsulta } from '../components/AbasConsulta';
 import ObrasPorMes from '../components/ObrasPorMes';
 import HistoricoAcervo from '../components/HistoricoAcervo';
@@ -81,6 +81,12 @@ export default function ConsultaObras() {
 
   const [rotulos, setRotulos] = useState<Record<string, string>>({});
   useEffect(() => { buscarObrasPublicas().then(setObras).catch(setError); }, []);
+  // ?obra=CÓDIGO abre o mapa já na obra (vem de "Localizar no mapa" na ficha da licença).
+  const [params] = useSearchParams();
+  const obraDaUrl = params.get('obra');
+  useEffect(() => {
+    if (obraDaUrl && obras?.some((o) => o.codigo === obraDaUrl)) setFoco(obraDaUrl);
+  }, [obraDaUrl, obras]);
   useEffect(() => {
     carregarBairrosGeo()
       .then((g) => setBairrosGeo(new Map((g.features as { properties: BairroGeo }[]).map((f) => [chaveBairro(f.properties.nome), f.properties]))))

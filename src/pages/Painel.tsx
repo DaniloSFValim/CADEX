@@ -31,6 +31,8 @@ export default function Painel() {
   const [atualizadoEm, setAtualizadoEm] = useState<Date | null>(null);
   const [filtros, setFiltros] = useState<Filtros>(SEM_FILTROS);
   const [janela, setJanela] = useState<(typeof JANELAS)[number]>(15);
+  // No celular, os filtros ficam recolhidos para os indicadores aparecerem na primeira tela.
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false);
   const [refData, setRefData] = useState<RefData>('protocolo');
   const [mostrar, setMostrar] = useState(PASSO_REGISTROS);
 
@@ -138,6 +140,12 @@ export default function Painel() {
 
       {/* Filtros: uma linha acima de tudo o que escopam. */}
       <section className="cartao p-4" aria-label="Filtros">
+        <button type="button" aria-expanded={filtrosAbertos} onClick={() => setFiltrosAbertos((x) => !x)}
+                className="mb-3 flex w-full items-center justify-between rounded-lg border border-tinta-200 bg-white px-3 py-2 text-sm font-semibold text-tinta-800 lg:hidden">
+          {temFiltro(filtros) ? 'Filtros (aplicados)' : 'Filtros'}
+          <span aria-hidden>{filtrosAbertos ? '▴' : '▾'}</span>
+        </button>
+        <div className={`${filtrosAbertos ? 'block' : 'hidden'} lg:block`}>
         <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Período da obra ou serviço">
           <span className="mr-1 text-sm font-medium text-tinta-700">Período da obra ou serviço</span>
           {PRESETS.map((p) => {
@@ -209,11 +217,12 @@ export default function Painel() {
             </select>
           </label>
         </div>
+        </div>
         <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-tinta-600" role="status">
           <span>
             {temFiltro(filtros)
-              ? <><strong className="text-tinta-900">{filtradas.length}</strong> de {dados.licencas.length} licenças com estes filtros</>
-              : <><strong className="text-tinta-900">{dados.licencas.length}</strong> licenças, sem filtro</>}
+              ? <><strong className="text-tinta-900">{filtradas.length}</strong> de {dados.licencas.length} {dados.licencas.length === 1 ? 'licença' : 'licenças'} com estes filtros</>
+              : <><strong className="text-tinta-900">{dados.licencas.length}</strong> {dados.licencas.length === 1 ? 'licença' : 'licenças'}, sem filtro</>}
           </span>
           {temFiltro(filtros) && <Button variant="secondary" className="px-3! py-1.5!" onClick={() => { setFiltros(SEM_FILTROS); setMostrar(PASSO_REGISTROS); }}>Limpar filtros</Button>}
         </div>

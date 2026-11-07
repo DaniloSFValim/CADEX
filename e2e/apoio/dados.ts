@@ -35,7 +35,7 @@ export function licenca(o: Partial<LicencaComTrechos> = {}): LicencaComTrechos {
     tipo_intervencao: 'obra', origem_intervencao: 'concessionaria', contrato_numero: null, processo_administrativo: null,
     ordem_servico_numero: null, objeto_contrato: null, excluida_em: null, excluida_por: null, excluida_motivo: null, empresas_no_deferimento: null, codigo_publico: `c${seq}`, emitida_em_sistema_anterior: false,
     criado_em: `${dia(-seq % 90)}T10:00:00Z`, atualizado_em: `${dia(-1)}T10:00:00Z`,
-    licenca_trechos: [{ id: uuid(5000 + seq), ordem: 1, logradouro: 'Rua A', bairro: null, referencia: null,
+    licenca_trechos: [{ id: uuid(5000 + seq), ordem: 1, logradouro: 'Rua A', bairro: 'Centro', referencia: null,
       inicio_lat: -22.9, inicio_lng: -43.1, fim_lat: null, fim_lng: null }],
     ...o,
   } as LicencaComTrechos;

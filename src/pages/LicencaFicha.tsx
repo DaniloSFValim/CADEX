@@ -84,6 +84,11 @@ export default function LicencaFicha() {
             <div className="flex flex-wrap gap-2">
               <Button variant="secondary" onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/obras'))}>Voltar à consulta</Button>
               <Button variant="secondary" onClick={() => window.print()}>Imprimir ou salvar em PDF</Button>
+              {!naLixeira && licenca.codigo_publico && (
+                <Button variant="secondary" onClick={() => navigate(`/consulta/obras?obra=${encodeURIComponent(licenca.codigo_publico)}`)}>
+                  Localizar no mapa
+                </Button>
+              )}
               {podeLicenciar && !naLixeira && (
                 <Button onClick={() => navigate(`/obras/${licenca.id}/editar`)}>Editar licença</Button>
               )}

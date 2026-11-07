@@ -136,6 +136,16 @@ export function inconsistencias(
     if (l.inicio_previsto && l.fim_previsto && diasEntre(l.inicio_previsto, l.fim_previsto) > 365) {
       p.push('Mais de um ano entre o início e o fim da obra ou serviço: confira as datas.');
     }
+    // Início depois do fim da validade: quase sempre o ano digitado errado (ex.: 2026 no lugar de 2025).
+    if (l.validade_ate && l.inicio_previsto && l.inicio_previsto > l.validade_ate) {
+      p.push('Início da obra ou serviço depois da validade da licença: confira o ano das datas.');
+    } else if (l.concluida_em && l.validade_ate && l.fim_previsto && l.fim_previsto > l.validade_ate) {
+      // Em obra aberta, fim além da validade é normal (a validade se prorroga). Concluída, é data a conferir.
+      p.push('Fim da obra ou serviço depois da validade da licença, já concluída: confira as datas ou as prorrogações.');
+    }
+    if (l.licenca_trechos.some((t) => !t.bairro?.trim())) {
+      p.push('Trecho sem bairro: na consulta pública a obra fica em "Sem bairro".');
+    }
 
     if (exec && l.contratante_id === l.executora_id && !exec.executa_obras) {
       p.push(`A ${exec.nome_fantasia || exec.razao_social} executa a própria obra, mas o cadastro não marca que ela executa obras ou serviços por conta própria.`);
@@ -155,13 +165,14 @@ export function inconsistencias(
 }
 
 /** Categoria de cada aviso de revisão, para contar por tipo de problema. */
-export type CategoriaProblema = 'processo_repetido' | 'numero_fora_padrao' | 'prazo_longo' | 'prazo_vencido' | 'outros';
+export type CategoriaProblema = 'processo_repetido' | 'numero_fora_padrao' | 'prazo_longo' | 'prazo_vencido' | 'datas_incoerentes' | 'outros';
 
 export function categoriaProblema(texto: string): CategoriaProblema {
   if (texto.startsWith('Processo SEI repetido')) return 'processo_repetido';
   if (texto.startsWith('Número fora do padrão')) return 'numero_fora_padrao';
   if (texto.startsWith('Mais de um ano')) return 'prazo_longo';
   if (texto.startsWith('Fim da obra ou serviço vencido')) return 'prazo_vencido';
+  if (texto.includes('depois da validade da licença')) return 'datas_incoerentes';
   return 'outros';
 }
 
@@ -187,7 +198,7 @@ export function contagensLicencas(
     if (l.anterior_resolucao || l.emitida_em_sistema_anterior) anterior += 1;
   }
   const avisos: Record<CategoriaProblema, number> = {
-    processo_repetido: 0, numero_fora_padrao: 0, prazo_longo: 0, prazo_vencido: 0, outros: 0,
+    processo_repetido: 0, numero_fora_padrao: 0, prazo_longo: 0, prazo_vencido: 0, datas_incoerentes: 0, outros: 0,
   };
   const revisar = inconsistencias(ls, hoje, empresas);
   for (const { problemas } of revisar) {

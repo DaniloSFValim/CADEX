@@ -59,19 +59,21 @@ export default function Empresas() {
     return m;
   }, [rts]);
 
-  const filtradas = useMemo(() => {
+  // Setor e busca: valem para a lista e para a exportação (que escolhe tipo e situação no próprio painel).
+  const porSetorEBusca = useMemo(() => {
     const q = busca.trim().toLowerCase();
     const qDig = onlyDigits(busca);
     const qCod = busca.trim().toUpperCase();
     return (empresas ?? []).filter((e) =>
-      (!tipo || e.tipo === tipo)
-      && (!setor || atuaNoSetor(e, setor as Setor))
-      && situacoesDoFiltro(situacao).includes(situacaoEfetiva(e, hoje))
+      (!setor || atuaNoSetor(e, setor as Setor))
       && (!q || e.razao_social.toLowerCase().includes(q)
           || (e.nome_fantasia ?? '').toLowerCase().includes(q)
           || e.codigo_cadex.includes(qCod)
           || (qDig.length >= 3 && e.cnpj.includes(qDig))));
-  }, [empresas, busca, tipo, setor, situacao, hoje]);
+  }, [empresas, busca, setor]);
+  const filtradas = useMemo(() => porSetorEBusca.filter((e) =>
+    (!tipo || e.tipo === tipo) && situacoesDoFiltro(situacao).includes(situacaoEfetiva(e, hoje))),
+  [porSetorEBusca, tipo, situacao, hoje]);
 
   return (
     <>
@@ -109,7 +111,11 @@ export default function Empresas() {
 
       {exportando && empresas && (
         <ExportarRelacao
-          empresas={empresas}
+          empresas={porSetorEBusca}
+          filtrosDaTela={[
+            ...(setor ? [`Setor: ${SETOR_LABEL[setor as Setor].toLowerCase()}.`] : []),
+            ...(busca.trim() ? [`Busca: "${busca.trim()}".`] : []),
+          ]}
           contexto={{
             hoje, porId, vinculos, orgaos: orgaosPorId, rts: rtsPorEmpresa,
             resumoDocs: podeEditar

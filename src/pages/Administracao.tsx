@@ -1,4 +1,6 @@
+import { useRef } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
+import { useAbaAtivaVisivel } from '../components/useAbaAtivaVisivel';
 import { Empty, Titulo } from '../components/ui';
 import { useAuth } from '../lib/auth';
 
@@ -20,6 +22,8 @@ const ABAS = [
  */
 export default function Administracao() {
   const { servidor } = useAuth();
+  const abas = useRef<HTMLElement>(null);
+  useAbaAtivaVisivel(abas);
   if (servidor?.administrador !== true) {
     return <Empty>Só administrador acessa a administração do CADEX.</Empty>;
   }
@@ -34,7 +38,7 @@ export default function Administracao() {
         descricao="Contas, empresas, licenças, parâmetros e auditoria do CADEX. Toda mudança fica na auditoria e vale no banco, não só nesta tela."
       />
       <div className="grid gap-8 lg:grid-cols-[13rem_minmax(0,1fr)]">
-        <nav className="-mx-4 overflow-x-auto px-4 lg:sticky lg:top-4 lg:mx-0 lg:self-start lg:overflow-visible lg:px-0" aria-label="Administração">
+        <nav ref={abas} className="-mx-4 overflow-x-auto px-4 lg:sticky lg:top-4 lg:mx-0 lg:self-start lg:overflow-visible lg:px-0" aria-label="Administração">
           <ul className="flex w-max gap-1 lg:w-auto lg:flex-col">
             {ABAS.map((a) => (
               <li key={a.para}><NavLink to={a.para} end={a.fim} className={aba}>{a.rotulo}</NavLink></li>
