@@ -15,6 +15,8 @@ $$;
 do $$
 declare ativa_id uuid; inativa_id uuid; n int;
 begin
+  -- Fixture: as regras de situação das empresas não fazem parte deste teste.
+  alter table empresas disable trigger user;
   insert into empresas (cnpj, razao_social, tipo, email, setores, executa_obras, situacao, ativa, codigo_cadex)
   values ('33000167000101', 'Comunica CSP Ltda.', 'operadora', 'c@csp.test', '{telecom}', true, 'deferida', true, 'CADEX-CSP-0001')
   returning id into ativa_id;
