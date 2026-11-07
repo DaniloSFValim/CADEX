@@ -181,13 +181,13 @@ test('bairro: grafias iguais (Pe/Pé) viram um grupo; filtro de região esconde 
   await page.goto('/consulta/obras');
   await abrirLista(page);
   // Um grupo só, com o nome oficial e as duas obras.
-  const grupo = page.locator('details').filter({ hasText: 'Pé Pequeno' });
+  const grupo = page.locator('section[aria-label="Lista das obras e serviços licenciados"] details').filter({ hasText: 'Pé Pequeno' });
   await expect(grupo).toHaveCount(1);
   await expect(grupo).toContainText('2 obras');
-  await expect(page.locator('details').filter({ hasText: 'Varzea das Moças' })).toHaveCount(1);
+  await expect(page.locator('section[aria-label="Lista das obras e serviços licenciados"] details').filter({ hasText: 'Varzea das Moças' })).toHaveCount(1);
 
   // Região: só Praias da Baía (onde fica Pé Pequeno).
   await page.getByLabel('Região').selectOption('Praias da Baía');
-  await expect(page.locator('details').filter({ hasText: 'Varzea das Moças' })).toHaveCount(0);
-  await expect(page.locator('details').filter({ hasText: 'Pé Pequeno' })).toHaveCount(1);
+  await expect(page.locator('section[aria-label="Lista das obras e serviços licenciados"] details').filter({ hasText: 'Varzea das Moças' })).toHaveCount(0);
+  await expect(page.locator('section[aria-label="Lista das obras e serviços licenciados"] details').filter({ hasText: 'Pé Pequeno' })).toHaveCount(1);
 });
