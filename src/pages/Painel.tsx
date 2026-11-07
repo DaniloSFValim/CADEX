@@ -233,9 +233,9 @@ export default function Painel() {
           <Empty>Nenhuma licença com estes filtros.</Empty>
         </div>
       ) : (<>
-        {/* Indicadores */}
+        {/* Indicadores: uma faixa só, com os seis números lado a lado; a descrição de cada um fica no tooltip. */}
         <section className="mt-6" aria-label="Indicadores">
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-tinta-200 bg-tinta-200 sm:grid-cols-3 lg:grid-cols-6">
             <Indicador rotulo="Licenças registradas" valor={ind.total} detalhe="no filtro atual" onClick={() => set('status', '')} ativo={filtros.status === ''} />
             <Indicador rotulo="Prazo encerrado" valor={ind.prazoVencido} detalhe="fim previsto vencido, sem conclusão" cor="border-baixa"
                        onClick={() => alternarStatus('estado:prazo_encerrado')} ativo={filtros.status === 'estado:prazo_encerrado'} />
@@ -243,8 +243,6 @@ export default function Painel() {
                        onClick={() => rolarPara('bloco-comecam')} />
             <Indicador rotulo={`Terminam em até ${janela} dias`} valor={ind.terminamNaJanela} detalhe="fim previsto, obra aberta"
                        onClick={() => rolarPara('bloco-terminam')} />
-          </div>
-          <div className="mt-3 grid grid-cols-2 gap-3">
             <Indicador rotulo="Contratantes" valor={ind.contratantes.total} detalhe={detalheParte(ind.contratantes)}
                        onClick={() => rolarPara('bloco-contratantes')} />
             <Indicador rotulo="Executoras" valor={ind.executoras.total} detalhe={detalheParte(ind.executoras)}
@@ -360,16 +358,15 @@ function Indicador({ rotulo, valor, detalhe, cor = 'border-tinta-900', onClick, 
 }) {
   const conteudo = (
     <>
-      <span className="block text-sm font-medium text-tinta-600">{rotulo}</span>
-      <span className="mt-1 block font-display text-4xl font-bold leading-none tracking-[-0.02em] text-tinta-900">{valor}</span>
-      {detalhe && <span className="mt-1.5 block text-xs text-tinta-500">{detalhe}</span>}
+      <span className="block truncate text-xs font-medium text-tinta-600">{rotulo}</span>
+      <span className="mt-0.5 block font-display text-2xl font-bold leading-none tabular-nums text-tinta-900">{valor}</span>
     </>
   );
-  const base = `block w-full rounded-lg border border-tinta-200 border-t-4 bg-white px-4 py-3 text-left ${cor}`;
+  const base = `flex min-w-0 flex-col bg-white px-3 py-2.5 text-left border-t-4 ${cor}`;
   return onClick ? (
-    <button type="button" aria-pressed={ativo} onClick={onClick}
-            className={`${base} transition-colors hover:bg-tinta-50 ${ativo ? 'ring-2 ring-marca-500' : ''}`}>{conteudo}</button>
-  ) : <div className={base}>{conteudo}</div>;
+    <button type="button" aria-pressed={ativo} title={detalhe} onClick={onClick}
+            className={`${base} transition-colors hover:bg-tinta-50 ${ativo ? 'ring-2 ring-inset ring-marca-500' : ''}`}>{conteudo}</button>
+  ) : <div title={detalhe} className={base}>{conteudo}</div>;
 }
 
 function Bloco({ id, titulo, nota, acao, children }: { id?: string; titulo: string; nota?: string; acao?: ReactNode; children: ReactNode }) {
