@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { AbasConsulta } from '../components/AbasConsulta';
 import ObrasPorMes from '../components/ObrasPorMes';
 import HistoricoAcervo from '../components/HistoricoAcervo';
-import FichaObra from '../components/FichaObra';
+import FichaObra, { type DetalheObra } from '../components/FichaObra';
 import { Cabecalho } from '../components/Cabecalho';
 import { Rodape } from '../components/Rodape';
 import { Empty, ErrorNote, Kpi, Spinner, Titulo, linkTexto } from '../components/ui';
@@ -263,7 +263,7 @@ export default function ConsultaObras() {
                   <MapaObras obras={listadas}
                              foco={foco} destaque={destaque} modo={modo} bairro={bairro}
                              onSelecionar={setFoco} onBairro={setBairro} onDestacar={setDestaque} onGrupo={setGrupo} />
-                  {selecionada && <FichaObra obra={selecionada} onFechar={() => setFoco(null)} />}
+                  {selecionada && <FichaObra obra={selecionada} onFechar={() => setFoco(null)} detalhes={detalhesDaObra(selecionada, rotulos)} />}
                 </div>
               </Suspense>
               <Legenda />
@@ -412,35 +412,15 @@ export default function ConsultaObras() {
                               onFocus={() => setDestaque(o.codigo)}
                               onBlur={() => setDestaque(null)}>
                             <div className="min-w-0">
-                              <span className="font-medium text-tinta-900">
+                              <button type="button" onClick={() => verNoMapa(o.codigo)}
+                                      className="text-left font-medium text-tinta-900 hover:text-marca-700 hover:underline">
                                 {o.trechos[0]?.logradouro ?? 'Local não informado'}
-                              </span>
+                              </button>
                               <span className="tabular ml-2 text-xs text-tinta-500">nº {o.numero}</span>
                               {o.trechos.length > 1 && <span className="ml-2 text-xs text-tinta-500">e mais {o.trechos.length - 1}</span>}
-                              <div className="text-tinta-700">
-                                {o.executora}
-                                {o.contratante && <span className="text-tinta-500"> · para {nomeLimpo(o.contratante)}</span>}
-                              </div>
-                              <div className="text-xs text-tinta-500">
-                                {rotuloTipos(o.tipos_obra, rotulos)}
-                                {` · ${TIPO_INTERVENCAO_LABEL[o.tipo_intervencao]}`}
-                                {origemPublica(o.origem) && ` pública · ${ORIGEM_LABEL[o.origem].toLowerCase()}`}
-                              </div>
                             </div>
                             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 sm:flex-col sm:items-end">
                               <SeloSituacao situacao={o.situacao} />
-                              <span className="tabular text-xs text-tinta-600">
-                                {o.inicio_previsto || o.fim_previsto
-                                  ? `${o.inicio_previsto ? dataBR(o.inicio_previsto) : '—'} a ${o.fim_previsto ? dataBR(o.fim_previsto) : '—'}`
-                                  : 'Sem período informado'}
-                              </span>
-                              <span className="flex gap-3 text-xs">
-                                <Link to={`/licenca/${o.codigo}`} className="font-semibold text-marca-700 hover:underline">Ver licença</Link>
-                                {temLocalizacao(o)
-                                  ? <button type="button" className="font-semibold text-marca-700 hover:underline"
-                                            onClick={() => verNoMapa(o.codigo)}>Ver no mapa</button>
-                                  : <span className="text-tinta-500">Sem localização</span>}
-                              </span>
                             </div>
                           </li>
                         ))}
@@ -531,6 +511,22 @@ function SeloSituacao({ situacao }: { situacao: ObraPublica['situacao'] }) {
       {SITUACAO_PUBLICA_LABEL[situacao]}
     </span>
   );
+}
+
+/** Detalhes que a ficha da obra mostra sobre o mapa. Os que não existem na obra não aparecem. */
+function detalhesDaObra(o: ObraPublica, rotulos: Record<string, string>): DetalheObra[] {
+  const periodo = o.inicio_previsto || o.fim_previsto
+    ? `${o.inicio_previsto ? dataBR(o.inicio_previsto) : '—'} a ${o.fim_previsto ? dataBR(o.fim_previsto) : '—'}`
+    : 'Sem período informado';
+  const tipo = `${rotuloTipos(o.tipos_obra, rotulos)} · ${TIPO_INTERVENCAO_LABEL[o.tipo_intervencao]}`
+    + (origemPublica(o.origem) ? ` pública · ${ORIGEM_LABEL[o.origem].toLowerCase()}` : '');
+  return [
+    o.executora ? { rotulo: 'Executora', valor: o.executora } : null,
+    o.contratante ? { rotulo: 'Contratante', valor: nomeLimpo(o.contratante) } : null,
+    { rotulo: 'Período', valor: periodo },
+    { rotulo: 'Tipo', valor: tipo },
+    temLocalizacao(o) ? null : { rotulo: 'Mapa', valor: 'Sem localização, não aparece no mapa' },
+  ].filter((d): d is DetalheObra => d !== null);
 }
 
 function rotuloTipos(tipos: string[], rotulos: Record<string, string>) {

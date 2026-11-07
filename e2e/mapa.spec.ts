@@ -12,6 +12,17 @@ const mostrarEncerradas = async (page: Page) => {
   await botao.click();
 };
 
+/** Abre cada obra da lista (pelo endereço) e devolve o texto da ficha que aparece sobre o mapa. */
+const fichasDas = async (page: Page, n: number) => {
+  const ficha = page.getByRole('article', { name: 'Ficha da obra selecionada' });
+  const textos: string[] = [];
+  for (let i = 0; i < n; i++) {
+    await lista(page).nth(i).getByRole('button').first().click();
+    textos.push(await ficha.innerText());
+  }
+  return textos;
+};
+
 const orgao = (id: string, nome: string, natureza: 'administracao_direta' | 'autarquia') =>
   ({ id, nome, sigla: nome.slice(0, 4).toUpperCase(), esfera: 'municipal' as const, cnpj: null, setores: [], natureza, criado_em: '2026-01-01', atualizado_em: '2026-01-01' });
 
@@ -28,10 +39,11 @@ test.describe('mapa de consulta', () => {
     await page.goto('/consulta/obras');
     await mostrarEncerradas(page);
     await expect(noMapa(page)).toHaveAttribute('data-trechos', '3');
-    await expect(lista(page).filter({ hasText: 'Serviço' })).toHaveCount(1);
-    await expect(lista(page).filter({ hasText: 'pública · prefeitura ou órgão municipal' })).toHaveCount(1);
-    // Contratante público aparece pelo nome do órgão, não vazio.
-    await expect(lista(page).filter({ hasText: 'para SECR' })).toHaveCount(1);
+    // Tipo, origem e contratante público ficam na ficha do mapa, pelo nome do órgão.
+    const textos = await fichasDas(page, 3);
+    expect(textos.filter((t) => t.includes('Serviço'))).toHaveLength(1);
+    expect(textos.filter((t) => t.includes('pública · prefeitura ou órgão municipal'))).toHaveLength(1);
+    expect(textos.filter((t) => t.includes('Contratante') && t.includes('SECR'))).toHaveLength(1);
   });
 
   test('mostra todas as licenças, sem filtro, e o mapa recebe todas', async ({ page }) => {
@@ -59,7 +71,9 @@ test.describe('mapa de consulta', () => {
     await page.goto('/consulta/obras');
     await mostrarEncerradas(page);
     await expect(lista(page)).toHaveCount(2);
-    await expect(page.getByText('Sem período informado')).toBeVisible();
+    // O período fica na ficha do mapa, que abre ao escolher a obra.
+    const textos = await fichasDas(page, 2);
+    expect(textos.filter((t) => t.includes('Sem período informado'))).toHaveLength(1);
     expect(erros).toEqual([]);
   });
 
@@ -67,7 +81,8 @@ test.describe('mapa de consulta', () => {
     await instalarBackend(page, { licencas: [licenca({}), licenca({ licenca_trechos: [] })] });
     await page.goto('/consulta/obras');
     await expect(lista(page)).toHaveCount(2);
-    await expect(page.getByText('Sem localização', { exact: true })).toHaveCount(1);
+    const textos = await fichasDas(page, 2);
+    expect(textos.filter((t) => t.includes('Sem localização, não aparece no mapa'))).toHaveLength(1);
     await expect(noMapa(page)).toHaveAttribute('data-trechos', '1');
   });
 
