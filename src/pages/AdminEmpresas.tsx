@@ -210,7 +210,7 @@ function LinhaEmpresa({ empresa: e, hoje, participacao: p, onMudou }: {
         ) : !confirmando ? (
           <div className="flex flex-wrap justify-end gap-2">
             {opc.desativar && (
-              <Button variant="danger" className="px-3! py-1.5!" onClick={() => setConfirmando(true)}>Desativar</Button>
+              <Button variant="secondary" className="px-3! py-1.5!" onClick={() => setConfirmando(true)}>Desativar</Button>
             )}
             {opc.reativar && (
               <Button variant="secondary" className="px-3! py-1.5!" onClick={() => setConfirmando(true)}>Reativar</Button>

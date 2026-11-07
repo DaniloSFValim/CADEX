@@ -48,11 +48,14 @@ test.describe('administração: contas', () => {
 
     // Você não se desativa; o outro, sim, depois de confirmar.
     await expect(page.locator('tr', { hasText: 'voce@teste' }).getByRole('button', { name: 'Desativar acesso' })).toHaveCount(0);
+    // A tabela é de leitura: "Editar" abre o painel logo abaixo da linha, onde ficam as ações.
     const linha = page.locator('tr', { hasText: 'gestor.comum@teste' });
-    await linha.getByRole('button', { name: 'Desativar acesso' }).click();
-    await expect(linha).toContainText('mesmo com a sessão aberta');
+    await linha.getByRole('button', { name: 'Editar' }).click();
+    const painel = linha.locator('xpath=following-sibling::tr[1]');
+    await painel.getByRole('button', { name: 'Desativar acesso' }).click();
+    await expect(painel).toContainText('mesmo com a sessão aberta');
     expect(backend.de('rpc/admin_definir_ativo')).toHaveLength(0);
-    await linha.getByRole('button', { name: 'Confirmar desativação' }).click();
+    await painel.getByRole('button', { name: 'Confirmar desativação' }).click();
 
     await expect.poll(() => backend.de('rpc/admin_definir_ativo').length).toBe(1);
     expect(backend.de('rpc/admin_definir_ativo')[0].corpo).toEqual({ p_user_id: uuid(1), p_ativo: false });

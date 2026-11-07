@@ -204,6 +204,8 @@ function ProrrogarLinha({ licenca: l, onMudou }: { licenca: LicencaComTrechos; o
   const [pedidoEmpresa, setPedidoEmpresa] = useState(false);
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState<unknown>(null);
+  // Fechado por padrão: a lista fica de leitura e o formulário só aparece quando alguém pede.
+  const [aberto, setAberto] = useState(false);
   if (!l.validade_ate) return null;
   const nome = l.numero ?? l.processo_sei;
   const salvar = async () => {
@@ -211,6 +213,7 @@ function ProrrogarLinha({ licenca: l, onMudou }: { licenca: LicencaComTrechos; o
     setErro(null);
     try {
       await prorrogarLicenca(l.id, data);
+      setAberto(false);
       onMudou(`Validade de ${nome} prorrogada até ${dataBR(data)}.`);
     } catch (e) {
       setErro(e);
@@ -218,8 +221,18 @@ function ProrrogarLinha({ licenca: l, onMudou }: { licenca: LicencaComTrechos; o
       setBusy(false);
     }
   };
+  if (!aberto) {
+    return (
+      <span className="flex items-center gap-2 text-xs text-tinta-600">
+        {l.prorrogacoes > 0 && <span className="font-semibold text-tinta-800">{rotuloProrrogacao(l.prorrogacoes)}</span>}
+        <Button variant="secondary" className="px-3! py-1.5!" onClick={() => { setData(l.validade_ate ?? ''); setAberto(true); }}>
+          Prorrogar
+        </Button>
+      </span>
+    );
+  }
   return (
-    <span className="flex flex-wrap items-center gap-2 text-xs text-tinta-600">
+    <span className="flex w-full flex-wrap items-center gap-2 rounded-sm bg-tinta-50 p-3 text-xs text-tinta-600">
       {l.prorrogacoes > 0 && <span className="font-semibold text-tinta-800">{rotuloProrrogacao(l.prorrogacoes)}</span>}
       <label className="flex items-center gap-1">
         Validade
