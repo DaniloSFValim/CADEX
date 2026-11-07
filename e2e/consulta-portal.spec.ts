@@ -69,3 +69,20 @@ test.describe('celular', () => {
     expect(larguraPagina).toBeLessThanOrEqual(390);
   });
 });
+
+test('destacar um bairro no mapa não esconde as obras dos outros bairros', async ({ page }) => {
+  const trecho = (bairro: string) => [{ id: `t-${bairro}`, ordem: 1, logradouro: `Rua ${bairro}`, bairro, referencia: null,
+    inicio_lat: -22.9, inicio_lng: -43.1, fim_lat: null, fim_lng: null }];
+  await instalarBackend(page, {
+    licencas: [
+      licenca({ numero: '851/2026', licenca_trechos: trecho('Icaraí') }),
+      licenca({ numero: '852/2026', licenca_trechos: trecho('Badu') }),
+    ],
+  });
+  await page.goto('/consulta/obras');
+  await expect(page.locator('li[id^="obra-"]')).toHaveCount(2);
+  await page.getByRole('button', { name: 'Ver Icaraí no mapa' }).click();
+  await expect(page.getByText('Bairro destacado: Icaraí')).toBeVisible();
+  // As duas continuam na lista: o destaque não filtra.
+  await expect(page.locator('li[id^="obra-"]')).toHaveCount(2);
+});

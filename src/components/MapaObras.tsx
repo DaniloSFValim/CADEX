@@ -89,11 +89,15 @@ const corPorSituacao = [
 ] as unknown as maplibregl.ExpressionSpecification;
 
 /** Mapa das obras. Clicar numa obra avisa quem chamou (a ficha aparece ao lado), sem balão. */
-export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bairro, onSelecionar, onBairro, onDestacar }: {
+export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bairro, onSelecionar, onBairro, onDestacar, onGrupo }: {
   obras: ObraPublica[]; foco?: string | null; destaque?: string | null; modo?: 'pontos' | 'calor';
   bairro?: string | null; onSelecionar?: (codigo: string) => void; onBairro?: (bairro: string) => void;
   onDestacar?: (codigo: string | null) => void;
+  /** Clique num agrupamento: códigos das obras dentro dele. Quem recebe destaca essas obras, sem esconder as outras. */
+  onGrupo?: (codigos: string[]) => void;
 }) {
+  const onGrupoRef = useRef(onGrupo);
+  onGrupoRef.current = onGrupo;
   const caixa = useRef<HTMLDivElement>(null);
   const mapa = useRef<maplibregl.Map | null>(null);
   const [pronto, setPronto] = useState(false);
@@ -250,6 +254,10 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
         void fonte.getClusterExpansionZoom(id).then((zoom) => {
           m.easeTo({ center: centro, zoom });
         }).catch(() => undefined);
+        // As obras do grupo são destacadas na lista; as demais continuam visíveis.
+        void fonte.getClusterLeaves(id, 500, 0).then((folhas) => {
+          onGrupoRef.current?.(folhas.map((f) => String(f.properties?.codigo ?? '')).filter(Boolean));
+        }).catch(() => undefined);
       });
       m.on('mouseenter', 'obras-agrupamentos', () => { m.getCanvas().style.cursor = 'pointer'; });
       // Balão de informação ao passar o mouse: obra, grupo ou área de calor.
@@ -325,10 +333,6 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
       // No calor, o clique aproxima o mapa da área. Não filtra a lista: isso fica com o bairro escolhido na lista.
       m.on('click', 'obras-calor-toque', (e: maplibregl.MapLayerMouseEvent) => {
         m.easeTo({ center: e.lngLat, zoom: Math.min(m.getZoom() + 2, 16) });
-      });
-      m.on('click', 'obras-pontos', (e: maplibregl.MapLayerMouseEvent) => {
-        const b = String(e.features?.[0]?.properties?.bairro ?? '').trim();
-        if (b) onBairroRef.current?.(b);
       });
       m.on('click', 'bairros-area', (e: maplibregl.MapLayerMouseEvent) => {
         const nome = String(e.features?.[0]?.properties?.nome ?? '').trim();
