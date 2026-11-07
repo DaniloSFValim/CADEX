@@ -296,14 +296,20 @@ export async function buscarEmpresa(id: string): Promise<Empresa> {
   return data as Empresa;
 }
 
+/** Nome como deve ser gravado: sem espaços nas pontas nem espaços repetidos no meio. Vazio vira nulo. */
+export function nomeLimpoParaGravar(v: string | null): string | null {
+  const t = (v ?? '').replace(/\s+/g, ' ').trim();
+  return t || null;
+}
+
 const limpar = (input: EmpresaInput) => {
   const vazioViraNulo = (v: string | null) => (v && v.trim() ? v.trim() : null);
   return {
     ...input,
     cnpj: onlyDigits(input.cnpj),
-    razao_social: input.razao_social.trim(),
+    razao_social: nomeLimpoParaGravar(input.razao_social) ?? '',
     email: input.email.trim(),
-    nome_fantasia: vazioViraNulo(input.nome_fantasia),
+    nome_fantasia: nomeLimpoParaGravar(input.nome_fantasia),
     telefone: vazioViraNulo(input.telefone),
     cep: vazioViraNulo(input.cep),
     logradouro: vazioViraNulo(input.logradouro),
@@ -312,7 +318,7 @@ const limpar = (input: EmpresaInput) => {
     bairro: vazioViraNulo(input.bairro),
     cidade: vazioViraNulo(input.cidade),
     uf: vazioViraNulo(input.uf)?.toUpperCase() ?? null,
-    representante: vazioViraNulo(input.representante),
+    representante: nomeLimpoParaGravar(input.representante),
     observacoes: vazioViraNulo(input.observacoes),
   };
 };

@@ -222,3 +222,10 @@ Na escala atual, com 190 licenças, nada justifica mudança. As demais entradas 
 | Vitest | 263 passaram |
 | Playwright | 151 passaram, com novos casos de exportação, responsividade e localização no mapa |
 | `tsc` e lint | Sem erros |
+
+## 13. Correções de dados autorizadas e prevenção
+
+- **Nomes de empresas** (autorizado): em 21 cadastros, a razão social e/ou o nome fantasia tinham espaços repetidos ou nas pontas, por exemplo "MUNDIVOX  COMUNICAÇÕES  LTDA.". Foram corrigidos em produção, e as 21 alterações ficaram na auditoria. Licenças e órgãos não tinham o problema.
+- **Prevenção:** o cadastro de empresa passa a gravar razão social, nome fantasia e representante sem espaços repetidos. O formulário de licença aplica a mesma regra à razão social de empresa sem cadastro.
+- **Empresa de teste em produção:** mantida, por decisão do usuário.
+- **Migração de auditoria dos órgãos** (`20261113120000`): autorizada, mas a aplicação pela ferramenta do Supabase parou num pedido de confirmação que ficou sem resposta. Ainda não está em produção.
