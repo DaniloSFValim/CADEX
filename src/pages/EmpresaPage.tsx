@@ -5,6 +5,7 @@ import { SituacaoBadge } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { formatCnpj, isValidCnpj, onlyDigits } from '../lib/cnpj';
 import { buscarCep, cepValido, formatCep } from '../lib/cep';
+import { formatTelefone } from '../lib/telefone';
 import {
   ESTADO_LABEL, SETORES, SETOR_LABEL, TIPO_LABEL, buscarEmpresa, descricaoEmpresa, ehContratante, tiposDaEmpresa, criarEmpresa, criarVinculo, criarVinculoOrgao, definirFimVinculo,
   enviarLogo, estadoDocumento, registrarDocumentos, removerLogo, urlLogo, MAX_LOGO_BYTES, TIPOS_LOGO, hojeISO, listarDocumentos, listarEmpresas,
@@ -386,7 +387,7 @@ function EmpresaForm({
         <input id="email" type="email" className={inputClass} required {...text('email')} />
       </Field>
       <Field label="Telefone" className="sm:col-span-3">
-        <input id="telefone" className={inputClass} {...text('telefone')} />
+        <input id="telefone" className={inputClass} {...text('telefone')} onChange={(e) => set('telefone', formatTelefone(e.target.value))} />
       </Field>
 
       <Field label="CEP" className="sm:col-span-2" hint="Preenche o endereço.">
