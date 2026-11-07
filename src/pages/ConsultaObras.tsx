@@ -76,6 +76,8 @@ export default function ConsultaObras() {
   const [bairrosGeo, setBairrosGeo] = useState<Map<string, BairroGeo>>(new Map());
   const [baixando, setBaixando] = useState(false);
   const [filtro, setFiltro] = useState<FiltroPainel>({ situacao: null, executora: null });
+  // A lista fica recolhida por padrão, para os gráficos e o restante da página aparecerem logo abaixo do mapa.
+  const [listaAberta, setListaAberta] = useState(false);
   const mapaRef = useRef<HTMLDivElement>(null);
   const filtroAtivo = filtro.executora !== null;
 
@@ -263,7 +265,13 @@ export default function ConsultaObras() {
                   <MapaObras obras={listadas}
                              foco={foco} destaque={destaque} modo={modo} bairro={bairro}
                              onSelecionar={setFoco} onBairro={setBairro} onDestacar={setDestaque} onGrupo={setGrupo} />
-                  {selecionada && <FichaObra obra={selecionada} onFechar={() => setFoco(null)} detalhes={detalhesDaObra(selecionada, rotulos)} />}
+                  {selecionada && (
+                    <FichaObra obra={selecionada} onFechar={() => setFoco(null)} detalhes={detalhesDaObra(selecionada, rotulos)}
+                               onVerNaLista={() => {
+                                 setListaAberta(true);
+                                 setTimeout(() => document.getElementById(`obra-${selecionada.codigo}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 150);
+                               }} />
+                  )}
                 </div>
               </Suspense>
               <Legenda />
@@ -276,6 +284,17 @@ export default function ConsultaObras() {
               </div>
               <div ref={listaRef} className="min-w-0 lg:sticky lg:top-4 lg:max-h-[85vh] lg:overflow-y-auto lg:pr-1">
             {/* Lista das obras, agrupada por bairro. Por padrão, só as vigentes ou aguardando início. */}
+            <details open={listaAberta} onToggle={(e) => setListaAberta(e.currentTarget.open)}
+                     className="group rounded-xl border border-tinta-200 bg-white">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+                <span className="font-display text-lg font-bold tracking-[-0.01em] text-tinta-900">Lista de obras e serviços</span>
+                <span className="flex items-center gap-2 text-sm text-tinta-600">
+                  {grupos.reduce((n, g) => n + g.obras.length, 0)} {grupos.reduce((n, g) => n + g.obras.length, 0) === 1 ? 'item' : 'itens'}
+                  <span className="font-semibold text-marca-700 group-open:hidden">Abrir</span>
+                  <span className="hidden font-semibold text-marca-700 group-open:inline">Fechar</span>
+                </span>
+              </summary>
+              <div className="px-4 pb-4">
             <section aria-live="polite" aria-label="Lista das obras e serviços licenciados">
               <button type="button" aria-expanded={filtrosAbertos} onClick={() => setFiltrosAbertos((v) => !v)}
                       className="mb-3 flex w-full items-center justify-between rounded-xl border border-tinta-200 bg-white px-4 py-2.5 text-sm font-semibold text-tinta-900 lg:hidden">
@@ -430,6 +449,8 @@ export default function ConsultaObras() {
                 </div>
               )}
             </section>
+              </div>
+            </details>
 
               </div>
             </div>
@@ -439,7 +460,7 @@ export default function ConsultaObras() {
             <ResumoContratantes contratantes={contratantes} />
             <ResumoExecutoras executoras={executoras}
                               selecionada={filtro.executora}
-                              onEscolher={(nome) => setFiltro((f) => ({ ...f, executora: f.executora === nome ? null : nome }))} />
+                              onEscolher={(nome) => { setFiltro((f) => ({ ...f, executora: f.executora === nome ? null : nome })); setListaAberta(true); }} />
 
             <ObrasPerto obras={todas} onSelecionar={verNoMapa} />
           </div>

@@ -8,11 +8,12 @@ export type DetalheObra = { rotulo: string; valor: string };
  * Ficha da obra selecionada, sobre o mapa: é aqui que ficam os detalhes (executora, contratante,
  * período, tipo, localização). A lista ao lado mostra só endereço, número e situação.
  */
-export default function FichaObra({ obra, onFechar, detalhes }: { obra: ObraPublica; onFechar: () => void; detalhes: DetalheObra[] }) {
+export default function FichaObra({ obra, onFechar, detalhes, onVerNaLista }: {
+  obra: ObraPublica; onFechar: () => void; detalhes: DetalheObra[]; onVerNaLista: () => void;
+}) {
   const cor = COR_SITUACAO[obra.situacao];
   const t = obra.trechos[0];
   const extras = obra.trechos.length - 1;
-  const verNaLista = () => document.getElementById(`obra-${obra.codigo}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
   return (
     <article
       aria-label="Ficha da obra selecionada"
@@ -44,7 +45,7 @@ export default function FichaObra({ obra, onFechar, detalhes }: { obra: ObraPubl
         <Link to={`/licenca/${obra.codigo}`} className="text-marca-600 hover:underline">
           Ver licença <span className="font-normal text-tinta-500">nº {obra.numero}</span>
         </Link>
-        <button type="button" onClick={verNaLista} className="text-marca-600 hover:underline">Ver na lista</button>
+        <button type="button" onClick={onVerNaLista} className="text-marca-600 hover:underline">Ver na lista</button>
       </div>
     </article>
   );
