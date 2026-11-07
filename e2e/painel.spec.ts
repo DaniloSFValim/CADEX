@@ -109,3 +109,15 @@ test.describe('painel gerencial', () => {
     await expect(page.getByRole('link', { name: 'Pendências' })).toHaveCount(0);
   });
 });
+
+test('sem obra começando nem terminando na janela, os dois cartões viram uma linha só', async ({ page }) => {
+  await instalarBackend(page, {
+    administrador: true,
+    licencas: [licenca({ inicio_previsto: dia(-300), fim_previsto: dia(-200) })],
+  });
+  await page.goto('/dashboard');
+  await expect(page.getByText('Nenhuma obra começa nem termina nos próximos 15 dias.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^Começam em até/ })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: /^Terminam em até/ })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Registradas mais recentemente' })).toBeVisible();
+});
