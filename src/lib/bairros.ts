@@ -22,3 +22,14 @@ export function carregarBairrosGeo() {
 export function mapaRegioes(bairros: BairroGeo[]): Map<string, string> {
   return new Map(bairros.map((b) => [chaveBairro(b.nome), b.regiao]));
 }
+
+/**
+ * Grafia oficial do bairro, se o nome digitado corresponder a um bairro oficial
+ * (ignorando acento, maiúscula e pontuação). Sem correspondência, devolve o texto como veio, sem espaços nas pontas.
+ */
+export function nomeOficialBairro(nome: string, oficiais: string[]): string {
+  const limpo = nome.trim();
+  const chave = chaveBairro(limpo);
+  if (!chave) return limpo;
+  return oficiais.find((o) => chaveBairro(o) === chave) ?? limpo;
+}
