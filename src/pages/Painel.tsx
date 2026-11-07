@@ -127,6 +127,7 @@ export default function Painel() {
     { rotulo: 'Próximos 90 dias', de: hoje, ate: somaDias(hoje, 90) },
   ];
   const porId = ctx.empresas as Map<string, Empresa>;
+  const semPrazos = iniciam.length === 0 && terminam.length === 0;
   const nomeExec = (l: LicencaComTrechos) => nomeExecutora(l, porId);
 
   const barrasAdmin = (['deferida', 'em_analise', 'cancelada', 'indeferida'] as SituacaoLicenca[])
@@ -306,14 +307,22 @@ export default function Painel() {
           </Bloco>
         </div>
 
-        {/* Listas */}
-        <div className="mt-6 grid gap-6 lg:grid-cols-3">
-          <Bloco id="bloco-comecam" titulo={`Começam em até ${janela} dias`}>
-            <ListaLicencas itens={iniciam.slice(0, 6)} data={(l) => dataBR(l.inicio_previsto)} nomeExec={nomeExec} hoje={hoje} vazio="Nenhuma obra aberta com início previsto nesta janela." total={iniciam.length} />
-          </Bloco>
-          <Bloco id="bloco-terminam" titulo={`Terminam em até ${janela} dias`}>
-            <ListaLicencas itens={terminam.slice(0, 6)} data={(l) => dataBR(l.fim_previsto)} nomeExec={nomeExec} hoje={hoje} vazio="Nenhuma obra aberta com fim previsto nesta janela." total={terminam.length} />
-          </Bloco>
+        {/* Listas: sem obra começando nem terminando na janela, os dois cartões viram uma linha só. */}
+        <div className={`mt-6 grid gap-6 ${semPrazos ? '' : 'lg:grid-cols-3'}`}>
+          {semPrazos ? (
+            <p id="bloco-comecam" className="cartao px-5 py-3 text-sm text-tinta-600 lg:col-span-full">
+              Nenhuma obra começa nem termina nos próximos {janela} dias.
+            </p>
+          ) : (
+            <>
+              <Bloco id="bloco-comecam" titulo={`Começam em até ${janela} dias`}>
+                <ListaLicencas itens={iniciam.slice(0, 6)} data={(l) => dataBR(l.inicio_previsto)} nomeExec={nomeExec} hoje={hoje} vazio="Nenhuma obra aberta com início previsto nesta janela." total={iniciam.length} />
+              </Bloco>
+              <Bloco id="bloco-terminam" titulo={`Terminam em até ${janela} dias`}>
+                <ListaLicencas itens={terminam.slice(0, 6)} data={(l) => dataBR(l.fim_previsto)} nomeExec={nomeExec} hoje={hoje} vazio="Nenhuma obra aberta com fim previsto nesta janela." total={terminam.length} />
+              </Bloco>
+            </>
+          )}
           <Bloco titulo="Registradas mais recentemente">
             <ListaLicencas itens={recentes} data={(l) => dataBR(l.criado_em.slice(0, 10))} nomeExec={nomeExec} hoje={hoje} vazio="Nenhuma licença." />
           </Bloco>
