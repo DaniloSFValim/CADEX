@@ -20,14 +20,19 @@ test.describe('exclusão de usuário', () => {
     await instalarBackend(page, { administrador: true, contas: contas() });
     await page.goto('/admin');
     await expect(page.locator('tr', { hasText: 'voce@teste' }).getByRole('button', { name: 'Excluir usuário' })).toHaveCount(0);
-    await expect(page.locator('tr', { hasText: 'gestor.comum@teste' }).getByRole('button', { name: 'Excluir usuário' })).toBeVisible();
+    // A ação fica no painel de edição, aberto por "Editar".
+    const linha = page.locator('tr', { hasText: 'gestor.comum@teste' });
+    await linha.getByRole('button', { name: 'Editar' }).click();
+    await expect(linha.locator('xpath=following-sibling::tr[1]').getByRole('button', { name: 'Excluir usuário' })).toBeVisible();
   });
 
   test('mostra quem é, avisa das consequências, exige o e-mail e só então exclui', async ({ page }) => {
     const backend = await instalarBackend(page, { administrador: true, contas: contas() });
     await page.goto('/admin');
     const linha = page.locator('tr', { hasText: 'gestor.comum@teste' });
-    await linha.getByRole('button', { name: 'Excluir usuário' }).click();
+    await linha.getByRole('button', { name: 'Editar' }).click();
+    const edicao = linha.locator('xpath=following-sibling::tr[1]');
+    await edicao.getByRole('button', { name: 'Excluir usuário' }).click();
 
     const painel = page.getByRole('group', { name: 'Confirmar exclusão do usuário' });
     await expect(painel).toContainText('Gestor Comum');
@@ -46,7 +51,7 @@ test.describe('exclusão de usuário', () => {
     await painel.getByRole('button', { name: 'Cancelar' }).click();
     expect(backend.de('functions/v1/admin-contas')).toHaveLength(0);
 
-    await linha.getByRole('button', { name: 'Excluir usuário' }).click();
+    await edicao.getByRole('button', { name: 'Excluir usuário' }).click();
     await painel.getByLabel('Para confirmar, digite o e-mail da conta').fill('Gestor.Comum@teste');
     await confirmar.click();
 
@@ -74,10 +79,12 @@ test.describe('exclusão de usuário', () => {
     backend.funcaoComErro('Não é possível excluir o último administrador ativo.');
     await page.goto('/admin');
     const linha = page.locator('tr', { hasText: 'outro.admin@teste' });
-    await linha.getByRole('button', { name: 'Excluir usuário' }).click();
+    await linha.getByRole('button', { name: 'Editar' }).click();
+    await linha.locator('xpath=following-sibling::tr[1]').getByRole('button', { name: 'Excluir usuário' }).click();
     await page.getByLabel('Para confirmar, digite o e-mail da conta').fill('outro.admin@teste');
     await page.getByRole('button', { name: 'Confirmar exclusão' }).click();
     await expect(page.getByRole('alert')).toContainText('Não é possível excluir o último administrador ativo.');
-    await expect(linha).toBeVisible();
+    // A linha da conta continua; o painel de edição aberto fica logo abaixo dela.
+    await expect(linha.first()).toBeVisible();
   });
 });

@@ -119,6 +119,8 @@ function SeletorPerfil({ valor, onChange, completo = false }: { valor: Papel; on
 }
 
 function NovaConta({ onCriada }: { onCriada: (msg: string) => void }) {
+  // Recolhido por padrão: a página de contas abre com a tabela, não com o formulário.
+  const [aberto, setAberto] = useState(false);
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [papel, setPapel] = useState<Papel>('gestor');
@@ -128,6 +130,14 @@ function NovaConta({ onCriada }: { onCriada: (msg: string) => void }) {
   const [cargo, setCargo] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
+
+  if (!aberto) {
+    return (
+      <div className="flex justify-end">
+        <Button onClick={() => setAberto(true)}>Nova conta</Button>
+      </div>
+    );
+  }
 
   return (
     <Card title="Nova conta">
@@ -182,6 +192,7 @@ function NovaConta({ onCriada }: { onCriada: (msg: string) => void }) {
         </label>
         <div className="flex flex-wrap items-center gap-3 md:col-span-2">
           <Button type="submit" disabled={busy}>{busy ? 'Criando…' : 'Criar conta'}</Button>
+          <Button variant="secondary" onClick={() => setAberto(false)}>Fechar</Button>
           <ErrorNote error={error} />
         </div>
       </form>
@@ -190,6 +201,7 @@ function NovaConta({ onCriada }: { onCriada: (msg: string) => void }) {
 }
 
 function LinhaConta({ conta, ehVoce, onMudou }: { conta: Conta; ehVoce: boolean; onMudou: (msg: string) => void }) {
+  const [editando, setEditando] = useState(false);
   const [nome, setNome] = useState(conta.nome ?? '');
   const [papel, setPapel] = useState<Papel>(conta.papel ?? 'gestor');
   const [administrador, setAdministrador] = useState(conta.administrador);
@@ -203,116 +215,149 @@ function LinhaConta({ conta, ehVoce, onMudou }: { conta: Conta; ehVoce: boolean;
   const alterado = nome.trim() !== conta.nome || papel !== conta.papel || administrador !== conta.administrador
     || matricula.trim() !== (conta.matricula ?? '') || cargo.trim() !== (conta.cargo ?? '');
 
+  const fechar = () => { setEditando(false); setModo('normal'); setError(null); };
   const agir = async (fn: () => Promise<unknown>, msg: string) => {
     setBusy(true); setError(null);
-    try { await fn(); setModo('normal'); onMudou(msg); } catch (err) { setError(err); } finally { setBusy(false); }
+    try { await fn(); setModo('normal'); setEditando(false); onMudou(msg); } catch (err) { setError(err); } finally { setBusy(false); }
   };
 
   return (
-    <tr className={tabela.linha}>
-      <td className={tabela.td}>
-        <input className={`${inputClass} py-1.5!`} value={nome} onChange={(e) => setNome(e.target.value)} aria-label="Nome" />
-        <div className="mt-1 grid grid-cols-2 gap-1">
-          <input className={`${inputClass} py-1.5!`} value={matricula} onChange={(e) => setMatricula(e.target.value)} aria-label="Matrícula" placeholder="Matrícula" />
-          <input className={`${inputClass} py-1.5!`} value={cargo} onChange={(e) => setCargo(e.target.value)} aria-label="Cargo" placeholder="Cargo" />
-        </div>
-        <div className="mt-1 text-xs text-tinta-500">
-          {conta.email}{ehVoce && <span className="ml-2"><Badge>você</Badge></span>}
-        </div>
-      </td>
-      <td className={`${tabela.td} min-w-[140px]`}>
-        <SeletorPerfil valor={papel} onChange={(p) => { setPapel(p); if (p !== 'gestor') setAdministrador(false); }} />
-      </td>
-      <td className={tabela.td}>
-        <label className="inline-flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={administrador} disabled={ehVoce || papel !== 'gestor'}
-                 onChange={(e) => setAdministrador(e.target.checked)} />
-          {administrador ? 'Sim' : 'Não'}
-        </label>
-        {ehVoce && <div className="text-xs text-tinta-500">outro administrador altera</div>}
-      </td>
-      <td className={tabela.td}>
-        {conta.mfa_ativa
-          ? <Badge tom="bom">Ativa</Badge>
-          : conta.papel === 'gestor'
-            ? <Badge tom="alerta">Cadastra no próximo acesso</Badge>
-            : <span className="text-xs text-tinta-500">não exigida</span>}
-      </td>
-      <td className={`${tabela.td} tabular whitespace-nowrap text-xs text-tinta-600`}>{dataHora(conta.ultimo_acesso)}</td>
-      <td className={`${tabela.td} min-w-[260px]`}>
-        {modo === 'normal' && (
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button className="px-3! py-1.5!" disabled={!alterado || busy}
-                    onClick={() => agir(async () => {
-                      await definirAcesso(conta.user_id, nome.trim(), papel, administrador);
-                      await definirDadosFuncionais(conta.user_id, matricula.trim(), cargo.trim());
-                    }, `Acesso de ${nome.trim()} atualizado.`)}>
-              Salvar
-            </Button>
-            <Button variant="secondary" className="px-3! py-1.5!"
-                    onClick={() => { setSenha(gerarSenhaProvisoria()); setModo('senha'); }}>
-              Redefinir senha
-            </Button>
-            {!ehVoce && conta.mfa_ativa && (
-              <Button variant="secondary" className="px-3! py-1.5!" onClick={() => setModo('zerar')}>Zerar duas etapas</Button>
-            )}
-            {!ehVoce && (
-              <Button variant="danger" className="px-3! py-1.5!" onClick={() => setModo('desativar')}>Desativar acesso</Button>
-            )}
-            {!ehVoce && (
-              <Button variant="danger" className="px-3! py-1.5!" onClick={() => setModo('excluir')}>Excluir usuário</Button>
-            )}
+    <>
+      <tr className={tabela.linha}>
+        <td className={tabela.td}>
+          <div className="font-medium text-tinta-900">
+            {conta.nome ?? '—'}{ehVoce && <span className="ml-2"><Badge>você</Badge></span>}
           </div>
-        )}
-        {modo === 'desativar' && (
-          <div className="flex flex-col items-end gap-2 text-right text-sm">
-            <span className="text-tinta-700">
-              {conta.nome} deixa de entrar e de ler qualquer dado, mesmo com a sessão aberta. O cadastro e o histórico ficam guardados e dá para reativar.
-            </span>
-            <div className="flex gap-2">
-              <Button variant="secondary" className="px-3! py-1.5!" onClick={() => setModo('normal')}>Cancelar</Button>
-              <Button variant="danger" className="px-3! py-1.5!" disabled={busy}
-                      onClick={() => agir(() => definirAtivo(conta.user_id, false), `Acesso de ${conta.nome} desativado.`)}>
-                Confirmar desativação
-              </Button>
+          <div className="text-xs text-tinta-500">{conta.email}</div>
+          {(conta.matricula || conta.cargo) && (
+            <div className="text-xs text-tinta-500">{[conta.matricula, conta.cargo].filter(Boolean).join(' · ')}</div>
+          )}
+        </td>
+        <td className={tabela.td}>{PERFIS.find((p) => p.valor === conta.papel)?.rotulo ?? conta.papel}</td>
+        <td className={tabela.td}>{conta.administrador ? 'Sim' : 'Não'}</td>
+        <td className={tabela.td}>
+          {conta.mfa_ativa
+            ? <Badge tom="bom">Ativa</Badge>
+            : conta.papel === 'gestor'
+              ? <Badge tom="alerta">Cadastra no próximo acesso</Badge>
+              : <span className="text-xs text-tinta-500">não exigida</span>}
+        </td>
+        <td className={`${tabela.td} tabular whitespace-nowrap text-xs text-tinta-600`}>{dataHora(conta.ultimo_acesso)}</td>
+        <td className={`${tabela.td} text-right`}>
+          {!editando && (
+            <Button variant="secondary" className="px-3! py-1.5!" onClick={() => setEditando(true)}>Editar</Button>
+          )}
+        </td>
+      </tr>
+      {editando && (
+        <tr className={tabela.linha}>
+          <td colSpan={6} className={`${tabela.td} bg-tinta-50`}>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field label="Nome">
+                <input className={inputClass} value={nome} onChange={(e) => setNome(e.target.value)} aria-label="Nome" />
+              </Field>
+              <Field label="Perfil">
+                <SeletorPerfil valor={papel} onChange={(p) => { setPapel(p); if (p !== 'gestor') setAdministrador(false); }} />
+              </Field>
+              <Field label="Matrícula">
+                <input className={inputClass} value={matricula} onChange={(e) => setMatricula(e.target.value)} aria-label="Matrícula" />
+              </Field>
+              <Field label="Cargo">
+                <input className={inputClass} value={cargo} onChange={(e) => setCargo(e.target.value)} aria-label="Cargo" />
+              </Field>
+              <label className="flex items-start gap-2 text-sm text-tinta-700 md:col-span-2">
+                <input type="checkbox" className="mt-0.5" checked={administrador} disabled={ehVoce || papel !== 'gestor'}
+                       onChange={(e) => setAdministrador(e.target.checked)} />
+                <span>
+                  Administrador de contas
+                  {ehVoce && <span className="block text-xs text-tinta-500">Outro administrador altera este campo.</span>}
+                </span>
+              </label>
             </div>
-          </div>
-        )}
-        {modo === 'excluir' && (
-          <PainelExclusao conta={conta} onCancelar={() => setModo('normal')} onExcluida={onMudou} />
-        )}
-        {modo === 'zerar' && (
-          <div className="flex flex-col items-end gap-2 text-right text-sm">
-            <span className="text-tinta-700">
-              Use quando {conta.nome} perder ou trocar de celular. No próximo acesso, ele cadastra o aplicativo de novo.
-            </span>
-            <div className="flex gap-2">
-              <Button variant="secondary" className="px-3! py-1.5!" onClick={() => setModo('normal')}>Cancelar</Button>
-              <Button className="px-3! py-1.5!" disabled={busy}
-                      onClick={() => agir(() => zerarMfa(conta.user_id),
-                        `Verificação em duas etapas de ${conta.nome} zerada. No próximo acesso, ele cadastra o aplicativo de novo.`)}>
-                Confirmar
-              </Button>
+
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-tinta-200 pt-4">
+              <div className="flex flex-wrap gap-2">
+                <Button className="px-3! py-1.5!" disabled={!alterado || busy}
+                        onClick={() => agir(async () => {
+                          await definirAcesso(conta.user_id, nome.trim(), papel, administrador);
+                          await definirDadosFuncionais(conta.user_id, matricula.trim(), cargo.trim());
+                        }, `Acesso de ${nome.trim()} atualizado.`)}>
+                  Salvar alterações
+                </Button>
+                <Button variant="secondary" className="px-3! py-1.5!" onClick={fechar}>Fechar</Button>
+              </div>
+              {modo === 'normal' && (
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="secondary" className="px-3! py-1.5!"
+                          onClick={() => { setSenha(gerarSenhaProvisoria()); setModo('senha'); }}>
+                    Redefinir senha
+                  </Button>
+                  {!ehVoce && conta.mfa_ativa && (
+                    <Button variant="secondary" className="px-3! py-1.5!" onClick={() => setModo('zerar')}>Zerar duas etapas</Button>
+                  )}
+                  {!ehVoce && (
+                    <Button variant="secondary" className="px-3! py-1.5!" onClick={() => setModo('desativar')}>Desativar acesso</Button>
+                  )}
+                  {!ehVoce && (
+                    <Button variant="danger" className="px-3! py-1.5!" onClick={() => setModo('excluir')}>Excluir usuário</Button>
+                  )}
+                </div>
+              )}
             </div>
-          </div>
-        )}
-        {modo === 'senha' && (
-          <div className="flex flex-col items-end gap-2">
-            <input className={`${inputClass} tabular py-1.5!`} value={senha} minLength={SENHA_MINIMA}
-                   onChange={(e) => setSenha(e.target.value)} aria-label="Nova senha provisória" />
-            <div className="flex gap-2">
-              <Button variant="secondary" className="px-3! py-1.5!" onClick={() => setModo('normal')}>Cancelar</Button>
-              <Button className="px-3! py-1.5!" disabled={busy || senha.length < SENHA_MINIMA}
-                      onClick={() => agir(() => redefinirSenha(conta.user_id, senha),
-                        `Senha de ${conta.nome} redefinida para ${senha}. Passe a ele e peça para trocá-la em "Minha conta".`)}>
-                Definir senha
-              </Button>
-            </div>
-          </div>
-        )}
-        <ErrorNote error={error} />
-      </td>
-    </tr>
+
+            {modo === 'desativar' && (
+              <div className="mt-4 flex flex-col items-start gap-2 text-sm">
+                <span className="text-tinta-700">
+                  {conta.nome} deixa de entrar e de ler qualquer dado, mesmo com a sessão aberta. O cadastro e o histórico ficam guardados e dá para reativar.
+                </span>
+                <div className="flex gap-2">
+                  <Button variant="secondary" className="px-3! py-1.5!" onClick={() => setModo('normal')}>Cancelar</Button>
+                  <Button variant="danger" className="px-3! py-1.5!" disabled={busy}
+                          onClick={() => agir(() => definirAtivo(conta.user_id, false), `Acesso de ${conta.nome} desativado.`)}>
+                    Confirmar desativação
+                  </Button>
+                </div>
+              </div>
+            )}
+            {modo === 'excluir' && (
+              <div className="mt-4">
+                <PainelExclusao conta={conta} onCancelar={() => setModo('normal')} onExcluida={onMudou} />
+              </div>
+            )}
+            {modo === 'zerar' && (
+              <div className="mt-4 flex flex-col items-start gap-2 text-sm">
+                <span className="text-tinta-700">
+                  Use quando {conta.nome} perder ou trocar de celular. No próximo acesso, ele cadastra o aplicativo de novo.
+                </span>
+                <div className="flex gap-2">
+                  <Button variant="secondary" className="px-3! py-1.5!" onClick={() => setModo('normal')}>Cancelar</Button>
+                  <Button className="px-3! py-1.5!" disabled={busy}
+                          onClick={() => agir(() => zerarMfa(conta.user_id),
+                            `Verificação em duas etapas de ${conta.nome} zerada. No próximo acesso, ele cadastra o aplicativo de novo.`)}>
+                    Confirmar
+                  </Button>
+                </div>
+              </div>
+            )}
+            {modo === 'senha' && (
+              <div className="mt-4 flex flex-wrap items-end gap-2">
+                <Field label="Nova senha provisória">
+                  <input className={`${inputClass} tabular`} value={senha} minLength={SENHA_MINIMA}
+                         onChange={(e) => setSenha(e.target.value)} aria-label="Nova senha provisória" />
+                </Field>
+                <Button variant="secondary" className="px-3! py-1.5!" onClick={() => setModo('normal')}>Cancelar</Button>
+                <Button className="px-3! py-1.5!" disabled={busy || senha.length < SENHA_MINIMA}
+                        onClick={() => agir(() => redefinirSenha(conta.user_id, senha),
+                          `Senha de ${conta.nome} redefinida para ${senha}. Passe a ele e peça para trocá-la em "Minha conta".`)}>
+                  Definir senha
+                </Button>
+              </div>
+            )}
+            <div className="mt-2"><ErrorNote error={error} /></div>
+          </td>
+        </tr>
+      )}
+    </>
   );
 }
 
