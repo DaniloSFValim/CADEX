@@ -21,11 +21,10 @@ export function FaixaMarca({ itens, direita }: { itens: ItemMenu[]; direita?: Re
         <Link to="/consulta/obras" className="flex items-center gap-3" title="CADEX, Cadastro de Executores">
           <img src="/brasao-niteroi.png" alt="Brasão de Niterói" width={260} height={322} className="h-14 w-auto flex-none" />
           <span className="leading-tight">
-            <span className="block font-display text-xl font-extrabold tracking-wide">CADEX · Cadastro de Executores</span>
             <span className="block text-xs text-white/85">Prefeitura Municipal de Niterói</span>
             <span className="block text-xs text-white/75">Secretaria de Conservação e Serviços Públicos</span>
             <span className="block text-xs text-white/75">Fiscalização de Serviços Concedidos</span>
-            <span className="block text-xs text-white/75">Resolução Conjunta SECONSER/SEOP nº 001/2026</span>
+            <span className="block font-display text-xl font-extrabold tracking-wide">CADEX · Cadastro de Executores de Obras e Serviços em Vias Públicas</span>
           </span>
         </Link>
 
