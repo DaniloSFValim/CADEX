@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  oQueAEmpresaFaz, type Setor,
+  nomeLimpoParaGravar, oQueAEmpresaFaz, type Setor,
   estadoDocumento, podeAtuar, resumoDocumentos, situacaoEfetiva, situacoesDoFiltro, somaDias, ultimoPorTipo,
   type Documento, type TipoDocumento,
 } from './empresas';
@@ -118,5 +118,15 @@ describe('oQueAEmpresaFaz', () => {
   });
   it('concessionária mantém os setores', () => {
     expect(oQueAEmpresaFaz({ ...base, tipo: 'concessionaria', setores: ['gas'] })).toBe('Pode executar: Gás.');
+  });
+});
+
+describe('nome gravado sem espaços sobrando', () => {
+  it('tira espaços das pontas e repetidos no meio', () => {
+    expect(nomeLimpoParaGravar('  MUNDIVOX  COMUNICAÇÕES   LTDA. ')).toBe('MUNDIVOX COMUNICAÇÕES LTDA.');
+  });
+  it('vazio ou só espaços vira nulo', () => {
+    expect(nomeLimpoParaGravar('   ')).toBeNull();
+    expect(nomeLimpoParaGravar(null)).toBeNull();
   });
 });

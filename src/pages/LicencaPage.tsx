@@ -11,7 +11,7 @@ import { formatCnpj, formatCpf, isValidCnpj, isValidCpf, onlyDigits } from '../l
 import { buscarCep, cepValido, formatCep } from '../lib/cep';
 import {
   SETORES, SETOR_LABEL, atuaNoSetor, ehContratante, hojeISO, listarDaEmpresa, listarEmpresas, listarVinculos,
-  nomeEmpresa, podeAtuar, situacaoEfetiva, type Empresa, type Registro, type Setor, type Vinculo,
+  nomeEmpresa, nomeLimpoParaGravar, podeAtuar, situacaoEfetiva, type Empresa, type Registro, type Setor, type Vinculo,
 } from '../lib/empresas';
 import {
   ESTADO_LICENCA_LABEL, ORIGENS, ORIGEM_LABEL, TIPOS_INTERVENCAO, TIPO_INTERVENCAO_LABEL, origemPublica, TOM_ESTADO_LICENCA, buscarConflitos, buscarLicenca, prorrogarLicenca, rotuloProrrogacao,
@@ -476,11 +476,11 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
         ordem_servico_numero: publica ? n(f.ordem_servico_numero) : null,
         objeto_contrato: publica ? n(f.objeto_contrato) : null,
         executora_id: executoraSemCadastro ? null : f.executora_id,
-        executora_razao_social: executoraSemCadastro ? n(f.executora_razao_social) : null,
+        executora_razao_social: executoraSemCadastro ? nomeLimpoParaGravar(f.executora_razao_social) : null,
         executora_cnpj: executoraSemCadastro && f.executora_cnpj.trim() ? onlyDigits(f.executora_cnpj) : null,
         contratante_id: (contratanteSemCadastro || contratanteOrgaoId) ? null : n(f.contratante_id),
         orgao_contratante_id: contratanteOrgaoId,
-        contratante_razao_social: contratanteSemCadastro ? n(f.contratante_razao_social) : null,
+        contratante_razao_social: contratanteSemCadastro ? nomeLimpoParaGravar(f.contratante_razao_social) : null,
         contratante_cnpj: contratanteSemCadastro && !contratanteCpf && f.contratante_cnpj.trim() ? onlyDigits(f.contratante_cnpj) : null,
         contratante_cpf: contratanteSemCadastro && contratanteCpf ? onlyDigits(f.contratante_cnpj) : null,
         imovel_endereco: drenagem ? n(f.imovel_endereco) : null,
