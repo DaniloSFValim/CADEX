@@ -213,6 +213,9 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
       const lid = (url.searchParams.get('licenca_id') ?? '').replace('eq.', '');
       return lista(linhas.filter((x) => x.licenca_id === lid));
     }
+    if (caminho === 'comunicacoes_publicas') {
+      return lista((estado.comunicacoes ?? []).map((c) => ({ ...c, razao_social: 'Empresa de teste', codigo_cadex: 'CADEX-TST-0001' })));
+    }
     if (caminho === 'comunicacoes_servico') {
       if (req.method() === 'POST') {
         const nova = { id: uuid(9600 + (estado.comunicacoes?.length ?? 0) + 1), comunicado_em: new Date().toISOString(), ...(corpo as object) };

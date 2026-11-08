@@ -48,8 +48,13 @@ test.describe('comunicação de serviço programado ao CISP', () => {
     await instalarBackend(page);
     await page.goto('/empresas/op3');
     const aviso = page.getByRole('note');
-    await expect(aviso).toContainText('153');
-    await expect(aviso).toContainText('Só empresas cadastradas no CADEX podem fazer essa comunicação');
+    // Emergência: ligação obrigatória ao 153 antes de agir; registro no CADEX depois do fato.
+    await expect(aviso).toContainText('Emergência: ligar para o 153 (CISP) antes de agir');
+    await expect(aviso).toContainText('Ligar para o 153');
+    // Serviço programado: registro no CADEX antes do início; sem ligação ao CISP.
+    await expect(aviso).toContainText('Serviço programado: registrar no CADEX antes do início');
+    await expect(aviso).toContainText('Não é preciso informar o CISP');
+    await expect(aviso).toContainText('Só empresas cadastradas no CADEX podem fazer essas comunicações');
     await expect(aviso).toContainText('número de cadastro');
     await expect(aviso).toContainText('placas dos veículos');
   });

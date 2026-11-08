@@ -9,6 +9,7 @@ import { Rodape } from '../components/Rodape';
 import { Empty, ErrorNote, Kpi, Spinner, Titulo, linkTexto } from '../components/ui';
 import { dataBR } from '../components/Situacao';
 import { hojeISO } from '../lib/empresas';
+import { buscarComunicacoesPublicas, type ComunicacaoPublica } from '../lib/comunicacoesPublicas';
 import { ORIGEM_LABEL, TIPO_INTERVENCAO_LABEL, origemPublica } from '../lib/licencas';
 import { carregarBairrosGeo, chaveBairro, type BairroGeo } from '../lib/bairros';
 import { listarTipos, mapaRotulosTipos, rotuloDoTipo } from '../lib/tiposIntervencao';
@@ -87,6 +88,9 @@ export default function ConsultaObras() {
 
   const [rotulos, setRotulos] = useState<Record<string, string>>({});
   useEffect(() => { buscarObrasPublicas().then(setObras).catch(setError); }, []);
+  // Comunicações ao CISP no mapa. Se falhar, o mapa de obras continua sem elas.
+  const [comunicacoes, setComunicacoes] = useState<ComunicacaoPublica[]>([]);
+  useEffect(() => { buscarComunicacoesPublicas().then(setComunicacoes).catch(() => setComunicacoes([])); }, []);
   // ?obra=CÓDIGO abre o mapa já na obra (vem de "Localizar no mapa" na ficha da licença).
   const [params] = useSearchParams();
   const obraDaUrl = params.get('obra');
@@ -283,7 +287,7 @@ export default function ConsultaObras() {
                   </div>
                 </details>
                 <div ref={mapaRef} className="relative scroll-mt-4 overflow-hidden rounded-xl border border-tinta-200 shadow-xs">
-                  <MapaObras obras={listadas}
+                  <MapaObras obras={listadas} comunicacoes={comunicacoes}
                              foco={foco} destaque={destaque} modo={modo} bairro={bairro}
                              onSelecionar={setFoco} onBairro={setBairro} onDestacar={setDestaque} onGrupo={setGrupo} />
                   {selecionada && (
@@ -296,6 +300,7 @@ export default function ConsultaObras() {
                 </div>
               </Suspense>
               <Legenda />
+              {comunicacoes.length > 0 && <LegendaComunicacoes />}
               <p className="mt-2 text-xs leading-relaxed text-tinta-500">
                 Cada trecho aparece como uma linha reta entre o início e o fim informados na licença, sem seguir o
                 traçado da rua. Para o percurso exato, abra a licença.
@@ -661,6 +666,24 @@ function Legenda() {
           {SITUACAO_PUBLICA_LABEL[s]}
         </li>
       ))}
+    </ul>
+  );
+}
+
+/** Comunicações ao CISP: triângulo vermelho (emergência) e quadrado âmbar (serviço programado). */
+function LegendaComunicacoes() {
+  return (
+    <ul className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-tinta-600" aria-label="Legenda das comunicações ao CISP">
+      <li className="inline-flex items-center gap-1.5">
+        <span className="inline-block h-0 w-4 border-t-[5px] border-[#b91c1c]" aria-hidden />
+        <span className="inline-block h-2.5 w-2.5 bg-[#b91c1c]" style={{ clipPath: 'polygon(50% 0, 100% 100%, 0 100%)' }} aria-hidden />
+        Emergência (comunicada depois do fato)
+      </li>
+      <li className="inline-flex items-center gap-1.5">
+        <span className="inline-block h-0 w-4 border-t-[5px] border-dashed border-[#b45309]" aria-hidden />
+        <span className="inline-block h-2.5 w-2.5 bg-[#b45309]" aria-hidden />
+        Serviço programado (comunicado antes)
+      </li>
     </ul>
   );
 }
