@@ -31,8 +31,11 @@ alter table public.comunicacoes_servico
   add constraint csp_fim_coerente check ((fim_lat is null) = (fim_lng is null)),
   add constraint csp_emergencia_tem_fato check (tipo <> 'emergencia' or ocorrido_em is not null);
 
+-- security definer: o gatilho confere a empresa como dono, não como quem grava
+-- (um representante só enxerga a própria empresa pelo RLS).
 create or replace function public.csp_antes_de_gravar()
 returns trigger language plpgsql
+security definer
 set search_path = public as $$
 declare
   placa text;

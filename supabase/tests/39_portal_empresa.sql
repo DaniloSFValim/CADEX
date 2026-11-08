@@ -112,8 +112,8 @@ begin
   set local role cadex_test_app;
   perform set_config('cadex.test_user_id', '00000000-0000-4000-8000-000000000102', true);
   perform set_config('cadex.test_aal', 'aal2', true);
-  perform pg_temp.recusa(format($q$insert into comunicacoes_servico (empresa_id, responsavel, placas, local_servico, descricao, inicio_previsto, fim_previsto)
-    values (%L, 'Fulano', array['ABC1234'], 'Rua X', 'Serviço', current_date + 5, current_date + 5)$q$,
+  perform pg_temp.recusa(format($q$insert into comunicacoes_servico (empresa_id, responsavel, placas, local_servico, descricao, tipo_servico, inicio_lat, inicio_lng, inicio_previsto, fim_previsto)
+    values (%L, 'Fulano', array['ABC1234'], 'Rua X', 'Serviço', 'Teste', -22.900000, -43.100000, current_date + 5, current_date + 5)$q$,
     '00000000-0000-4000-8000-00000000b001'), 'row-level security');
   reset role;
 end $$;
@@ -125,8 +125,8 @@ begin
   set local role cadex_test_app;
   perform set_config('cadex.test_user_id', '00000000-0000-4000-8000-000000000102', true);
   perform set_config('cadex.test_aal', 'aal2', true);
-  insert into comunicacoes_servico (empresa_id, responsavel, placas, local_servico, descricao, inicio_previsto, fim_previsto)
-  values ('00000000-0000-4000-8000-00000000a001', 'Fulano de Tal', array['abc-1234'], 'Rua A, 10', 'Manutenção', current_date + 5, current_date + 5);
+  insert into comunicacoes_servico (empresa_id, responsavel, placas, local_servico, descricao, tipo_servico, inicio_lat, inicio_lng, inicio_previsto, fim_previsto)
+  values ('00000000-0000-4000-8000-00000000a001', 'Fulano de Tal', array['abc-1234'], 'Rua A, 10', 'Manutenção', 'Teste', -22.900000, -43.100000, current_date + 5, current_date + 5);
   select count(*) into n from comunicacoes_servico;
   reset role;
   perform pg_temp.assert(n = 1, 'representante A não viu a própria comunicação');
@@ -135,8 +135,8 @@ begin
 end $$;
 
 -- 6. Representante A não lê comunicação da empresa B (criada como dono da tabela).
-insert into comunicacoes_servico (empresa_id, responsavel, placas, local_servico, descricao, inicio_previsto, fim_previsto)
-values ('00000000-0000-4000-8000-00000000b001', 'Outro', array['DEF5678'], 'Rua B', 'Serviço B', current_date + 5, current_date + 5);
+insert into comunicacoes_servico (empresa_id, responsavel, placas, local_servico, descricao, tipo_servico, inicio_lat, inicio_lng, inicio_previsto, fim_previsto)
+values ('00000000-0000-4000-8000-00000000b001', 'Outro', array['DEF5678'], 'Rua B', 'Serviço B', 'Teste', -22.900000, -43.100000, current_date + 5, current_date + 5);
 do $$
 declare n int;
 begin

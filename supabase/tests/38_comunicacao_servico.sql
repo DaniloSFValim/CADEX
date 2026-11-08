@@ -25,16 +25,16 @@ begin
   returning id into inativa_id;
 
   -- Válido: placas em minúsculas e com hífen viram o padrão.
-  insert into comunicacoes_servico (empresa_id, responsavel, placas, local_servico, descricao, inicio_previsto, fim_previsto, comunicado_em)
-  values (ativa_id, 'Fulano de Tal', array['abc-1234', 'ABC1D23'], 'Rua A, 10', 'Manutenção de rede',
+  insert into comunicacoes_servico (empresa_id, responsavel, placas, local_servico, descricao, tipo_servico, inicio_lat, inicio_lng, inicio_previsto, fim_previsto, comunicado_em)
+  values (ativa_id, 'Fulano de Tal', array['abc-1234', 'ABC1D23'], 'Rua A, 10', 'Manutenção de rede', 'Teste', -22.900000, -43.100000,
           current_date + 5, current_date + 7, now());
   select count(*) into n from comunicacoes_servico where empresa_id = ativa_id and placas = array['ABC1234', 'ABC1D23'];
   perform pg_temp.assert(n = 1, 'placas não foram normalizadas');
 
   -- Placa inválida é recusada.
   begin
-    insert into comunicacoes_servico (empresa_id, responsavel, placas, local_servico, descricao, inicio_previsto, fim_previsto)
-    values (ativa_id, 'Fulano', array['XYZ'], 'Rua B', 'Serviço', current_date + 5, current_date + 5);
+    insert into comunicacoes_servico (empresa_id, responsavel, placas, local_servico, descricao, tipo_servico, inicio_lat, inicio_lng, inicio_previsto, fim_previsto)
+    values (ativa_id, 'Fulano', array['XYZ'], 'Rua B', 'Serviço', 'Teste', -22.900000, -43.100000, current_date + 5, current_date + 5);
     raise exception 'ASSERT FALHOU: placa inválida foi aceita';
   exception when others then
     if sqlerrm like 'ASSERT FALHOU%' then raise; end if;
@@ -42,8 +42,8 @@ begin
 
   -- Empresa inativa é recusada.
   begin
-    insert into comunicacoes_servico (empresa_id, responsavel, placas, local_servico, descricao, inicio_previsto, fim_previsto)
-    values (inativa_id, 'Fulano', array['ABC1234'], 'Rua C', 'Serviço', current_date + 5, current_date + 5);
+    insert into comunicacoes_servico (empresa_id, responsavel, placas, local_servico, descricao, tipo_servico, inicio_lat, inicio_lng, inicio_previsto, fim_previsto)
+    values (inativa_id, 'Fulano', array['ABC1234'], 'Rua C', 'Serviço', 'Teste', -22.900000, -43.100000, current_date + 5, current_date + 5);
     raise exception 'ASSERT FALHOU: empresa inativa pôde comunicar';
   exception when others then
     if sqlerrm like 'ASSERT FALHOU%' then raise; end if;
@@ -51,8 +51,8 @@ begin
 
   -- Comunicação depois do início é recusada.
   begin
-    insert into comunicacoes_servico (empresa_id, responsavel, placas, local_servico, descricao, inicio_previsto, fim_previsto, comunicado_em)
-    values (ativa_id, 'Fulano', array['ABC1234'], 'Rua D', 'Serviço', current_date - 1, current_date + 3, now());
+    insert into comunicacoes_servico (empresa_id, responsavel, placas, local_servico, descricao, tipo_servico, inicio_lat, inicio_lng, inicio_previsto, fim_previsto, comunicado_em)
+    values (ativa_id, 'Fulano', array['ABC1234'], 'Rua D', 'Serviço', 'Teste', -22.900000, -43.100000, current_date - 1, current_date + 3, now());
     raise exception 'ASSERT FALHOU: comunicação tardia foi aceita';
   exception when others then
     if sqlerrm like 'ASSERT FALHOU%' then raise; end if;
@@ -60,8 +60,8 @@ begin
 
   -- Responsável vazio é recusado pela tabela.
   begin
-    insert into comunicacoes_servico (empresa_id, responsavel, placas, local_servico, descricao, inicio_previsto, fim_previsto)
-    values (ativa_id, '   ', array['ABC1234'], 'Rua E', 'Serviço', current_date + 5, current_date + 5);
+    insert into comunicacoes_servico (empresa_id, responsavel, placas, local_servico, descricao, tipo_servico, inicio_lat, inicio_lng, inicio_previsto, fim_previsto)
+    values (ativa_id, '   ', array['ABC1234'], 'Rua E', 'Serviço', 'Teste', -22.900000, -43.100000, current_date + 5, current_date + 5);
     raise exception 'ASSERT FALHOU: responsável vazio foi aceito';
   exception when others then
     if sqlerrm like 'ASSERT FALHOU%' then raise; end if;
