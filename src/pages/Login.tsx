@@ -48,8 +48,14 @@ export default function Login({ paraEmpresa = false }: { paraEmpresa?: boolean }
         {/* Formulário de acesso. */}
         <div className="flex items-center justify-center px-4 py-16">
           <div className="w-full max-w-sm">
-            <h1 className="font-display text-2xl font-bold tracking-[-0.01em] text-tinta-900">Entrar</h1>
-            <p className="mt-1.5 text-sm text-tinta-500">Acesso para servidores da SECONSER e do CISP.</p>
+            <h1 className="font-display text-2xl font-bold tracking-[-0.01em] text-tinta-900">
+              {paraEmpresa ? 'Portal das empresas' : 'Entrar'}
+            </h1>
+            <p className="mt-1.5 text-sm text-tinta-500">
+              {paraEmpresa
+                ? 'Acesso para representantes de empresas cadastrados pela SECONSER.'
+                : 'Acesso para servidores da SECONSER e do CISP.'}
+            </p>
             {motivo && (
               <p role="status" className="mt-4 rounded-sm border-l-4 border-atencao bg-atencao/6 px-3 py-2 text-sm text-tinta-800">
                 {MENSAGEM_SAIDA[motivo]}
