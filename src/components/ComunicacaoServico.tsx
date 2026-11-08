@@ -23,21 +23,7 @@ const lerPonto = (texto: string): Ponto | null => {
 /** Converte a data e hora do campo (hora local do navegador) para ISO. */
 const isoDoCampo = (valor: string): string | null => (valor ? new Date(valor).toISOString() : null);
 
-const AVISO: Record<TipoComunicacao, { titulo: string; texto: string[] }> = {
-  programado: {
-    titulo: 'Serviço programado: registrar no CADEX antes do início',
-    texto: [
-      'Registre o serviço aqui antes da data de início. Não é preciso ligar para o 153 para serviço programado.',
-    ],
-  },
-  emergencia: {
-    titulo: 'Emergência: ligar para o 153 antes de agir',
-    texto: [
-      'Ligue para o 153 (CISP, Centro Integrado de Segurança Pública) antes de começar o atendimento.',
-      `Depois do fato, registre aqui em até ${PRAZO_EMERGENCIA_HORAS} horas. Informe o protocolo do 153, se houver.`,
-    ],
-  },
-};
+
 
 /**
  * Comunicação ao CISP pela empresa: serviço programado (registro prévio) ou emergência (ligação
@@ -113,19 +99,32 @@ export default function ComunicacaoServico({ empresa, podeEditar }: { empresa: E
     }
   };
 
-  const a = AVISO[tipo];
   const emergencia = tipo === 'emergencia';
 
   return (
     <section aria-label="Comunicação de serviços ao CISP" className="cartao p-5">
-      <div role="note" className={`mb-5 border-l-4 px-4 py-3 ${emergencia ? 'border-baixa bg-baixa/5' : 'border-atencao bg-atencao/5'}`}>
-        <p className="font-display text-base font-bold text-tinta-900">{a.titulo}</p>
-        {a.texto.map((t) => <p key={t} className="mt-1 text-sm text-tinta-800">{t}</p>)}
-        <p className="mt-1 text-sm text-tinta-800">
-          <strong className="text-tinta-900">Só empresas cadastradas no CADEX podem fazer essa comunicação.</strong>{' '}
-          Obrigatório informar o <strong>número de cadastro</strong>, o <strong>responsável</strong>, as <strong>placas dos veículos</strong> e o <strong>local no mapa</strong>.
+      <div role="note" className="mb-5 space-y-3">
+        <div className="border-l-4 border-baixa bg-baixa/5 px-4 py-3">
+          <p className="font-display text-base font-bold text-tinta-900">Emergência: ligar para o 153 (CISP) antes de agir</p>
+          <p className="mt-1 text-sm text-tinta-800">
+            Ligar para o <strong className="text-tinta-900">153</strong> (Centro Integrado de Segurança Pública) é <strong className="text-tinta-900">obrigatório</strong>, antes de começar o atendimento.
+            Informe o número de cadastro, o responsável, o serviço e o local.
+          </p>
+          <p className="mt-1 text-sm text-tinta-800">
+            O registro no CADEX também é obrigatório e vem <strong className="text-tinta-900">depois</strong> do fato, em até {PRAZO_EMERGENCIA_HORAS} horas.
+          </p>
+        </div>
+        <div className="border-l-4 border-atencao bg-atencao/5 px-4 py-3">
+          <p className="font-display text-base font-bold text-tinta-900">Serviço programado: registrar no CADEX antes do início</p>
+          <p className="mt-1 text-sm text-tinta-800">
+            O registro no CADEX é obrigatório e precisa ser feito <strong className="text-tinta-900">antes</strong> da data de início. Não é preciso informar o CISP.
+          </p>
+        </div>
+        <p className="text-sm text-tinta-800">
+          <strong className="text-tinta-900">Só empresas cadastradas no CADEX podem fazer essas comunicações.</strong>{' '}
+          Informe o número de cadastro, o responsável, as placas dos veículos e o local no mapa.
+          Número de cadastro: <span className="tabular font-semibold text-tinta-900">{empresa.codigo_cadex}</span>
         </p>
-        <p className="mt-2 text-sm text-tinta-700">Número de cadastro: <span className="tabular font-semibold text-tinta-900">{empresa.codigo_cadex}</span></p>
       </div>
 
       {aviso && <p role="status" className="mb-4 rounded-sm border-l-4 border-alta bg-alta/10 px-3 py-2 text-sm text-tinta-800">{aviso}</p>}

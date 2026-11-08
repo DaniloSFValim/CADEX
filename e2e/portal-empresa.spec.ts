@@ -64,7 +64,7 @@ test.describe('portal das empresas', () => {
 
     await page.getByRole('button', { name: 'Nova comunicação' }).click();
     await page.getByRole('radio', { name: 'Emergência' }).check();
-    await expect(page.getByRole('note')).toContainText('Ligue para o 153');
+    await expect(page.getByRole('note')).toContainText('ligar para o 153');
     const campo = (nome: string) => page.getByLabel(new RegExp(`^${nome}`));
     const termino = new Date(Date.now() + 86400_000).toISOString().slice(0, 10);
     await campo('Tipo de serviço').fill('Rompimento de cabo');
