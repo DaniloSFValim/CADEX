@@ -36,6 +36,8 @@ export interface Cenario {
   comunicacoes?: Record<string, unknown>[];
   /** Acessos de empresa ao portal (tabela empresa_usuarios). */
   representantes?: Record<string, unknown>[];
+  /** Quem entra é representante de empresa (sem cadastro de servidor): só vê a própria empresa. */
+  acessoEmpresa?: { empresa_id: string; papel: 'representante' | 'operador'; nome: string; email: string; ativo?: boolean };
   /** Obras e serviços sem licença (tabela intervencoes_sem_licenca). */
   semLicenca?: Record<string, unknown>[];
   /** Catálogo de tipos (tabela tipos_intervencao). Sem ele, vale o catálogo padrão de viário. */
@@ -163,6 +165,9 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
     if (req.method() === 'GET' && falhas.has(caminho)) return falha();
 
     if (caminho === 'user') return responder(user);
+    if (caminho === 'servidores' && estado.acessoEmpresa) {
+      return unico ? route.fulfill({ status: 406, headers: CORS, contentType: 'application/json', body: JSON.stringify({ message: 'Nenhuma linha.' }) }) : responder([]);
+    }
     if (caminho === 'servidores') {
       const linha = {
         nome: 'Você', papel: estado.perfil, administrador: estado.administrador, ativo: true,
@@ -176,7 +181,22 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
         estado.empresas = estado.empresas.map((e) => (e.id === id ? { ...e, ...(corpo as object) } : e));
         return vazio();
       }
-      return lista(estado.empresas as unknown as Record<string, unknown>[]);
+      // Representante só enxerga a própria empresa (RLS).
+      const visiveis = estado.acessoEmpresa ? estado.empresas.filter((e) => e.id === estado.acessoEmpresa!.empresa_id) : estado.empresas;
+      return lista(visiveis as unknown as Record<string, unknown>[]);
+    }
+    if (caminho === 'empresa_usuarios' && estado.acessoEmpresa && req.method() === 'GET') {
+      const a = estado.acessoEmpresa;
+      return lista([{ user_id: ID_USUARIO, empresa_id: a.empresa_id, papel: a.papel, ativo: a.ativo ?? true, nome: a.nome, email: a.email }]);
+    }
+    if (caminho === 'empresa_licencas') {
+      const emp = estado.acessoEmpresa?.empresa_id ?? '';
+      const visiveis = estado.licencas.filter((l) => l.executora_id === emp || l.contratante_id === emp);
+      return lista(visiveis.map((l) => ({
+        id: l.id, numero: l.numero, escopo: l.escopo, setor: l.setor, tipo_intervencao: l.tipo_intervencao, situacao: l.situacao,
+        inicio_previsto: l.inicio_previsto, fim_previsto: l.fim_previsto, validade_ate: l.validade_ate,
+        executa: l.executora_id === emp, contrata: l.contratante_id === emp,
+      })) as unknown as Record<string, unknown>[]);
     }
     if (caminho === 'licencas') return lista(estado.licencas as unknown as Record<string, unknown>[]);
     if (caminho === 'tipos_intervencao') {
