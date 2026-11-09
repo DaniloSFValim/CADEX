@@ -1,7 +1,6 @@
 import { ListaCadastro, type Campo } from '../components/ListaCadastro';
-import { dataBR } from '../components/Situacao';
-import { formatCpf, isValidCpf, isValidPlaca, onlyDigits } from '../lib/cnpj';
-import { hojeISO, nomeEmpresa, type Empresa } from '../lib/empresas';
+import { formatCpf, isValidCpf, onlyDigits } from '../lib/cnpj';
+import type { Empresa } from '../lib/empresas';
 
 const UF_OPCOES = ['RJ', 'SP', 'MG', 'ES', 'Outra'].map((u) => ({ valor: u === 'Outra' ? '' : u, rotulo: u }));
 
@@ -22,39 +21,6 @@ const camposRT: Campo[] = [
   { chave: 'email', rotulo: 'E-mail' },
 ];
 
-// ---------------------------------------------------------------------
-// Pessoal técnico e crachá — arts. 6º, II, "c", 23 e 25
-// ---------------------------------------------------------------------
-const camposPessoal: Campo[] = [
-  { chave: 'nome', rotulo: 'Nome completo', obrigatorio: true, largura: 2 },
-  { chave: 'funcao', rotulo: 'Função ou cargo', obrigatorio: true },
-  { chave: 'documento_tipo', rotulo: 'Documento oficial', tipo: 'opcoes', obrigatorio: true,
-    opcoes: ['RG', 'CPF', 'CNH', 'Outro'].map((c) => ({ valor: c, rotulo: c })) },
-  { chave: 'documento_numero', rotulo: 'Nº do documento', obrigatorio: true,
-    validar: (v, t) => (t.documento_tipo === 'CPF' && !isValidCpf(v) ? 'CPF inválido.' : null) },
-  { chave: 'cracha_validade', rotulo: 'Validade do crachá', tipo: 'data' },
-  { chave: 'telefone', rotulo: 'Telefone' },
-  { chave: 'responsavel_equipe', rotulo: 'Responsável pela equipe em campo', tipo: 'marcar', largura: 3 },
-];
-
-// ---------------------------------------------------------------------
-// Veículos e maquinário — arts. 19, § 1º, e 21
-// ---------------------------------------------------------------------
-const camposVeiculo = (operadoras: Empresa[]): Campo[] => [
-  { chave: 'categoria', rotulo: 'Categoria', tipo: 'opcoes', obrigatorio: true,
-    opcoes: [{ valor: 'veiculo', rotulo: 'Veículo' }, { valor: 'maquinario', rotulo: 'Maquinário' }] },
-  { chave: 'tipo', rotulo: 'Tipo', obrigatorio: true, dica: 'Caminhão cesto aéreo, van, munck…' },
-  { chave: 'placa', rotulo: 'Placa', mascara: (v) => v.toUpperCase(),
-    obrigatorio: (t) => t.categoria === 'veiculo',
-    validar: (v) => (isValidPlaca(v) ? null : 'Placa inválida (ABC1234 ou ABC1D23).') },
-  { chave: 'modelo', rotulo: 'Marca/modelo' },
-  { chave: 'identificacao_laterais', rotulo: 'Nome da empresa nas laterais', tipo: 'marcar', largura: 2 },
-  { chave: 'identificacao_traseira', rotulo: 'Nome da operadora na traseira', tipo: 'marcar', largura: 2 },
-  { chave: 'concessionaria_traseira_id', rotulo: 'Contratante na traseira', tipo: 'opcoes', largura: 2,
-    quando: (t) => Boolean(t.identificacao_traseira),
-    opcoes: [{ valor: '', rotulo: '—' }, ...operadoras.map((o) => ({ valor: o.id, rotulo: nomeEmpresa(o) }))] },
-];
-
 const Linha = ({ titulo, detalhe }: { titulo: React.ReactNode; detalhe: React.ReactNode }) => (
   <>
     <div className="font-medium text-tinta-800">{titulo}</div>
@@ -63,11 +29,8 @@ const Linha = ({ titulo, detalhe }: { titulo: React.ReactNode; detalhe: React.Re
 );
 
 export function Operacional({
-  empresa, operadoras, podeEditar,
-}: { empresa: Empresa; operadoras: Empresa[]; podeEditar: boolean }) {
-  const porId = new Map(operadoras.map((o) => [o.id, o]));
-  const hoje = hojeISO();
-
+  empresa, podeEditar,
+}: { empresa: Empresa; podeEditar: boolean }) {
   return (
     <>
       <ListaCadastro
@@ -89,69 +52,6 @@ export function Operacional({
             </>}
           />
         )}
-      />
-
-      <ListaCadastro
-        titulo="Pessoal técnico e crachás"
-        tabela="funcionarios"
-        empresaId={empresa.id}
-        campos={camposPessoal}
-        podeEditar={podeEditar}
-        vazioTexto="Nenhum funcionário cadastrado."
-        preparar={(v) => ({
-          ...v,
-          documento_numero: v.documento_tipo === 'CPF' ? onlyDigits(String(v.documento_numero ?? '')) : v.documento_numero,
-        })}
-        resumo={(r) => {
-          const vencido = r.cracha_validade && String(r.cracha_validade) < hoje;
-          return (
-            <Linha
-              titulo={<>{String(r.nome)}{r.responsavel_equipe && <span className="ml-2 text-xs font-normal text-marca-700">responsável de equipe</span>}</>}
-              detalhe={<>
-                {String(r.funcao)}, {String(r.documento_tipo)} {String(r.documento_numero)}
-                {', crachá '}
-                <span className={vencido ? 'font-medium text-baixa' : ''}>
-                  {r.cracha_validade ? `até ${dataBR(String(r.cracha_validade))}` : 'sem validade'}
-                </span>
-                {r.telefone ? `, ${r.telefone}` : ''}
-              </>}
-            />
-          );
-        }}
-      />
-
-      <ListaCadastro
-        titulo="Veículos e maquinário"
-        tabela="veiculos"
-        empresaId={empresa.id}
-        campos={camposVeiculo(operadoras)}
-        podeEditar={podeEditar}
-        vazioTexto="Nenhum veículo cadastrado."
-        preparar={(v) => ({
-          ...v,
-          placa: v.placa ? String(v.placa).toUpperCase().replace(/[^A-Z0-9]/g, '') : null,
-          concessionaria_traseira_id: v.identificacao_traseira ? (v.concessionaria_traseira_id || null) : null,
-        })}
-        resumo={(r) => {
-          const traseira = r.concessionaria_traseira_id ? porId.get(String(r.concessionaria_traseira_id)) : undefined;
-          const semIdent = !r.identificacao_laterais || !r.identificacao_traseira;
-          return (
-            <Linha
-              titulo={<>
-                <span className="tabular font-semibold tracking-wide">{r.placa ? String(r.placa) : 'sem placa'}</span>
-                {', '}{String(r.tipo)}{r.modelo ? ` (${r.modelo})` : ''}
-              </>}
-              detalhe={<>
-                {r.categoria === 'maquinario' ? 'Maquinário' : 'Veículo'}
-                {', identificação: '}
-                <span className={semIdent ? 'font-medium text-atencao' : ''}>
-                  laterais {r.identificacao_laterais ? 'sim' : 'não'}, traseira {r.identificacao_traseira ? 'sim' : 'não'}
-                </span>
-                {traseira && ` (${nomeEmpresa(traseira)})`}
-              </>}
-            />
-          );
-        }}
       />
     </>
   );
