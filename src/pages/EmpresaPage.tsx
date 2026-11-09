@@ -6,7 +6,6 @@ import { useAuth } from '../lib/auth';
 import { formatCnpj, isValidCnpj, onlyDigits } from '../lib/cnpj';
 import { buscarCep, cepValido, formatCep } from '../lib/cep';
 import { formatTelefone } from '../lib/telefone';
-import ComunicacaoServico from '../components/ComunicacaoServico';
 import {
   ESTADO_LABEL, SETORES, SETOR_LABEL, TIPO_LABEL, buscarEmpresa, descricaoEmpresa, ehContratante, tiposDaEmpresa, criarEmpresa, criarVinculo, criarVinculoOrgao, definirFimVinculo,
   enviarLogo, estadoDocumento, registrarDocumentos, removerLogo, urlLogo, MAX_LOGO_BYTES, TIPOS_LOGO, hojeISO, listarDocumentos, listarEmpresas,
@@ -116,8 +115,6 @@ export default function EmpresaPage() {
 
       {empresa && <LicencasDaEmpresa licencas={licencas} error={licErro} todas={todas} />}
 
-      {/* Registro de comunicações é da própria empresa (portal). Servidores só consultam. */}
-      {empresa && <ComunicacaoServico empresa={empresa} podeEditar={false} />}
 
       {/* Documentos têm dados pessoais de sócios e procuradores: só a SECONSER vê. */}
       {empresa && podeEditar && <Documentos empresa={empresa} />}
