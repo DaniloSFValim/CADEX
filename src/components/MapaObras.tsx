@@ -611,7 +611,7 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, foco
 
   return (
     <div className="relative" data-trechos={desenhados}>
-      <div ref={caixa} className="h-[60vh] min-h-[360px] w-full overflow-hidden rounded-sm border border-tinta-200 bg-tinta-50"
+      <div ref={caixa} className="h-[calc(100svh-12rem)] min-h-[420px] w-full overflow-hidden rounded-sm border border-tinta-200 bg-tinta-50"
            role="region" aria-label="Mapa das obras licenciadas em Niterói" />
       {modo === 'calor' && (
         <div className="mt-2 flex flex-wrap items-center justify-between gap-3 text-xs text-tinta-600">
