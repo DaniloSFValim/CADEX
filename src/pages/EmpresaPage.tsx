@@ -7,7 +7,7 @@ import { formatCnpj, isValidCnpj, onlyDigits } from '../lib/cnpj';
 import { buscarCep, cepValido, formatCep } from '../lib/cep';
 import { formatTelefone } from '../lib/telefone';
 import {
-  ESTADO_LABEL, SETORES, SETOR_LABEL, TIPO_LABEL, buscarEmpresa, descricaoEmpresa, ehContratante, tiposDaEmpresa, criarEmpresa, criarVinculo, criarVinculoOrgao, definirFimVinculo,
+  ESTADO_LABEL, SETORES, SETOR_LABEL, TIPO_LABEL, buscarEmpresa, descricaoEmpresa, tiposDaEmpresa, criarEmpresa, criarVinculo, criarVinculoOrgao, definirFimVinculo,
   enviarLogo, estadoDocumento, registrarDocumentos, removerLogo, urlLogo, MAX_LOGO_BYTES, TIPOS_LOGO, hojeISO, listarDocumentos, listarEmpresas,
   listarTiposDocumento, listarVinculos, nomeEmpresa, resumoDocumentos,
   salvarEmpresa, situacaoEfetiva, ultimoPorTipo, SITUACAO_LABEL,
@@ -66,8 +66,6 @@ export default function EmpresaPage() {
   if (!id && !podeEditar) return <ErrorNote error="Seu perfil é só de consulta." />;
 
   const recarregar = async () => { if (empresa) setEmpresa(await buscarEmpresa(empresa.id)); };
-  // Quem pode aparecer na traseira dos veículos (art. 21): quem contrata.
-  const contratantesTodas = todas.filter((o) => ehContratante(o.tipo));
 
   return (
     <div className="space-y-6">
@@ -111,7 +109,7 @@ export default function EmpresaPage() {
 
       {empresa && <Vinculos empresa={empresa} todas={todas} podeEditar={podeEditar} />}
 
-      {empresa && <Operacional empresa={empresa} operadoras={contratantesTodas} podeEditar={podeEditar} />}
+      {empresa && <Operacional empresa={empresa} podeEditar={podeEditar} />}
 
       {empresa && <LicencasDaEmpresa licencas={licencas} error={licErro} todas={todas} />}
 
@@ -120,7 +118,7 @@ export default function EmpresaPage() {
       {empresa && podeEditar && <Documentos empresa={empresa} />}
       {!empresa && (
         <p className="text-sm text-tinta-500">
-          Salve os dados para registrar inscrição, vínculos, pessoal, veículos e documentos.
+          Salve os dados para registrar inscrição, vínculos e documentos.
         </p>
       )}
     </div>

@@ -12,15 +12,13 @@ import {
 } from '../lib/empresas';
 import { listarOrgaos, type Orgao } from '../lib/orgaos';
 
-type Secao = 'cadastro' | 'inscricao' | 'vinculos' | 'rt' | 'pessoal' | 'veiculos' | 'documentos';
+type Secao = 'cadastro' | 'inscricao' | 'vinculos' | 'rt' | 'documentos';
 
 const SECOES: { chave: Secao; rotulo: string; soGestor?: boolean }[] = [
   { chave: 'cadastro', rotulo: 'Dados cadastrais' },
   { chave: 'inscricao', rotulo: 'Inscrição e histórico' },
   { chave: 'vinculos', rotulo: 'Vínculos' },
   { chave: 'rt', rotulo: 'Responsáveis técnicos' },
-  { chave: 'pessoal', rotulo: 'Pessoal técnico' },
-  { chave: 'veiculos', rotulo: 'Veículos e maquinário' },
   { chave: 'documentos', rotulo: 'Situação dos documentos', soGestor: true },
 ];
 
@@ -31,8 +29,6 @@ interface Dados {
   orgaos: Orgao[];
   historico: Historico[];
   rt: Registro[];
-  pessoal: Registro[];
-  veiculos: Registro[];
   tipos: TipoDocumento[];
   docs: Documento[];
 }
@@ -49,16 +45,14 @@ export default function Ficha() {
     // O CISP não tem acesso a documentos: nem pede.
     Promise.all([
       buscarEmpresa(id), listarEmpresas(), listarVinculos(), listarHistorico(id),
-      listarDaEmpresa('responsaveis_tecnicos', id), listarDaEmpresa('funcionarios', id),
-      listarDaEmpresa('veiculos', id),
+      listarDaEmpresa('responsaveis_tecnicos', id),
       podeEditar ? listarTiposDocumento() : Promise.resolve([]),
       podeEditar ? listarDocumentos(id) : Promise.resolve([]),
       listarOrgaos(),
     ])
-      .then(([empresa, todas, vinculos, historico, rt, pessoal, veiculos, tipos, docs, orgaos]) => setD({
+      .then(([empresa, todas, vinculos, historico, rt, tipos, docs, orgaos]) => setD({
         empresa, todas, vinculos, historico, orgaos,
-        rt: rt.filter((r) => r.ativo), pessoal: pessoal.filter((r) => r.ativo),
-        veiculos: veiculos.filter((r) => r.ativo), tipos: tiposDaEmpresa(tipos, empresa), docs,
+        rt: rt.filter((r) => r.ativo), tipos: tiposDaEmpresa(tipos, empresa), docs,
       }))
       .catch(setError);
   }, [id, podeEditar]);
@@ -172,31 +166,6 @@ export default function Ficha() {
                       `${txt(r.conselho)} ${txt(r.registro_numero)}${r.registro_uf ? `/${r.registro_uf}` : ''}`,
                       txt(r.art_rrt_numero) || '—',
                     ])} />
-          </Bloco>
-        )}
-
-        {ver('pessoal') && (
-          <Bloco titulo="Pessoal técnico">
-            <Tabela vazio="Nenhum funcionário cadastrado." cab={['Nome', 'Função', 'Documento', 'Crachá válido até']}
-                    linhas={d.pessoal.map((r) => [
-                      `${txt(r.nome)}${r.responsavel_equipe ? ' (responsável de equipe)' : ''}`, txt(r.funcao),
-                      `${txt(r.documento_tipo)} ${txt(r.documento_numero)}`,
-                      r.cracha_validade ? dataBR(txt(r.cracha_validade)) : '—',
-                    ])} />
-          </Bloco>
-        )}
-
-        {ver('veiculos') && (
-          <Bloco titulo="Veículos e maquinário">
-            <Tabela vazio="Nenhum veículo cadastrado." cab={['Placa', 'Tipo', 'Modelo', 'Identificação visual']}
-                    linhas={d.veiculos.map((r) => {
-                      const traseira = r.concessionaria_traseira_id ? porId.get(txt(r.concessionaria_traseira_id)) : undefined;
-                      return [
-                        txt(r.placa) || (r.categoria === 'maquinario' ? 'maquinário' : '—'), txt(r.tipo), txt(r.modelo) || '—',
-                        `laterais ${r.identificacao_laterais ? 'sim' : 'não'}, traseira ${r.identificacao_traseira ? 'sim' : 'não'}`
-                          + (traseira ? ` (${nomeEmpresa(traseira)})` : ''),
-                      ];
-                    })} />
           </Bloco>
         )}
 
