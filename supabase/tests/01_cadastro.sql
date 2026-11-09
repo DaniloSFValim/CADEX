@@ -26,9 +26,9 @@ begin
 end $$;
 grant authenticated to cadex_test_app;
 
-select pg_temp.assert((select count(*) from tipos_documento) = 15,
-  'o art. 6º prevê 15 documentos');
-select pg_temp.assert((select count(*) from tipos_documento where obrigatorio) = 12,
+select pg_temp.assert((select count(*) from tipos_documento) = 16,
+  'o catálogo tem 16 documentos (inclui a carta da detentora)');
+select pg_temp.assert((select count(*) from tipos_documento where obrigatorio) = 13,
   'incisos I a III são obrigatórios; IV e V não');
 
 -- ---------------------------------------------------------------------
