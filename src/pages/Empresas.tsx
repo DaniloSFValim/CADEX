@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Badge, Button, Empty, ErrorNote, Kpi, Spinner, Titulo, botaoLink, inputClass, tabela } from '../components/ui';
 import { ExportarRelacao } from '../components/ExportarRelacao';
+import { ExportarDiarioOficial } from '../components/ExportarDiarioOficial';
 import { BARRA, SituacaoBadge } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { formatCnpj, onlyDigits } from '../lib/cnpj';
@@ -33,6 +34,7 @@ export default function Empresas() {
   const [setor, setSetor] = useState('');
   const [situacao, setSituacao] = useState('');
   const [exportando, setExportando] = useState(false);
+  const [diario, setDiario] = useState(false);
 
   useEffect(() => {
     // O CISP não tem acesso a documentos: nem pede.
@@ -84,6 +86,9 @@ export default function Empresas() {
           <Button variant="secondary" disabled={!empresas?.length} onClick={() => setExportando((x) => !x)}>
             Exportar (PDF ou planilha)
           </Button>
+          <Button variant="secondary" disabled={!empresas?.length} onClick={() => setDiario((x) => !x)}>
+            Diário Oficial
+          </Button>
           {podeEditar && <Link to="/empresas/nova" className={botaoLink.primary}>Nova empresa</Link>}
         </>}
       />
@@ -108,6 +113,11 @@ export default function Empresas() {
           </div>
         );
       })()}
+
+      {diario && empresas && (
+        <ExportarDiarioOficial empresas={empresas}
+          contexto={{ hoje, porId, vinculos, orgaos: orgaosPorId, rts: rtsPorEmpresa }} />
+      )}
 
       {exportando && empresas && (
         <ExportarRelacao

@@ -152,3 +152,28 @@ export async function baixarPdf(r: Relatorio, emitidoPor: string, agora = new Da
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+/** Célula de tabela Markdown: sem quebra de linha e com barras escapadas. */
+const celulaMd = (v: string) => v.replace(/\|/g, '\\|').replace(/\r?\n/g, ' ');
+
+/** O mesmo relatório em Markdown: título, linhas de contexto, uma tabela por grupo e o total. */
+export function relatorioMarkdown(r: Relatorio, emitidoPor: string, agora = new Date()): string {
+  const partes: string[] = [`# ${r.titulo}`, '', `Emitido em ${dataHora(agora)} por ${emitidoPor}.`, ''];
+  for (const f of r.filtros) partes.push(`- ${f}`);
+  if (r.filtros.length) partes.push('');
+  const total = totalLinhas(r);
+  for (const g of r.grupos) {
+    if (g.titulo) partes.push(`## ${g.titulo}`, '');
+    if (g.linhas.length === 0) continue;
+    partes.push(`| ${r.colunas.map(celulaMd).join(' | ')} |`);
+    partes.push(`| ${r.colunas.map(() => '---').join(' | ')} |`);
+    for (const l of g.linhas) partes.push(`| ${l.map(celulaMd).join(' | ')} |`);
+    partes.push('');
+  }
+  partes.push(`${total} ${total === 1 ? 'registro' : 'registros'}.`, '');
+  return partes.join('\n');
+}
+
+export function baixarMarkdown(r: Relatorio, emitidoPor: string, agora = new Date()) {
+  baixarArquivo(`${r.arquivo}-${sufixoData(agora)}.md`, relatorioMarkdown(r, emitidoPor, agora), 'text/markdown;charset=utf-8');
+}

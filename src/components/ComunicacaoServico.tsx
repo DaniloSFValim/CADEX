@@ -1,5 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useState } from 'react';
 import { Button, Empty, ErrorNote, Field, Spinner, inputClass } from './ui';
+import ComunicacaoLote from './ComunicacaoLote';
 import { dataBR } from './Situacao';
 import { hojeISO } from '../lib/empresas';
 import { coordenadaTexto, lerCoordenada } from '../lib/licencas';
@@ -158,8 +159,10 @@ export default function ComunicacaoServico({ empresa, podeEditar }: { empresa: E
         </div>
       )}
 
+      {podeEditar && <ComunicacaoLote empresaId={empresa.id} onRegistrado={carregar} />}
+
       {podeEditar && aberto && (
-        <form className="mt-5 grid gap-4 md:grid-cols-2" onSubmit={(e) => { e.preventDefault(); void enviar(); }}>
+        <form aria-label="Nova comunicação ao CISP" className="mt-5 grid gap-4 md:grid-cols-2" onSubmit={(e) => { e.preventDefault(); void enviar(); }}>
           <fieldset className="flex flex-wrap items-center gap-x-5 gap-y-2 md:col-span-2">
             <legend className="mb-1 text-sm font-medium text-tinta-800">Tipo de comunicação</legend>
             {(['programado', 'emergencia'] as const).map((t) => (

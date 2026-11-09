@@ -33,7 +33,8 @@ test.describe('portal das empresas', () => {
     await page.goto('/');
 
     await page.getByRole('button', { name: 'Nova comunicação' }).click();
-    const campo = (nome: string) => page.getByLabel(new RegExp(`^${nome}`));
+    const formulario = page.getByRole('form', { name: 'Nova comunicação ao CISP' });
+    const campo = (nome: string) => formulario.getByLabel(new RegExp(`^${nome}`));
     const amanha = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
     const depois = new Date(Date.now() + 4 * 86400000).toISOString().slice(0, 10);
     await campo('Tipo de serviço').fill('Reparo de rede');
@@ -63,9 +64,10 @@ test.describe('portal das empresas', () => {
     await page.goto('/');
 
     await page.getByRole('button', { name: 'Nova comunicação' }).click();
-    await page.getByRole('radio', { name: 'Emergência' }).check();
+    const formulario = page.getByRole('form', { name: 'Nova comunicação ao CISP' });
+    await formulario.getByRole('radio', { name: 'Emergência' }).check();
     await expect(page.getByRole('note')).toContainText('ligar para o 153');
-    const campo = (nome: string) => page.getByLabel(new RegExp(`^${nome}`));
+    const campo = (nome: string) => formulario.getByLabel(new RegExp(`^${nome}`));
     const termino = new Date(Date.now() + 86400_000).toISOString().slice(0, 10);
     await campo('Tipo de serviço').fill('Rompimento de cabo');
     await campo('Responsável').fill('Plantão');
@@ -92,5 +94,39 @@ test.describe('portal das empresas', () => {
     });
     expect(typeof corpo.ocorrido_em).toBe('string');
     await expect(page.getByRole('status')).toContainText('Emergência registrada para Plantão');
+  });
+  test('lote: vários locais de uma vez, com a linha errada apontada e sem gravar nada', async ({ page }) => {
+    const backend = await instalarBackend(page, { empresas: empresasPadrao(), licencas: licencas(), acessoEmpresa: acesso() });
+    await page.goto('/');
+
+    const lote = page.getByRole('region', { name: 'Cadastro em lote' });
+    const campo = (nome: string) => lote.getByLabel(new RegExp(`^${nome}`));
+    const amanha = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
+    const depois = new Date(Date.now() + 4 * 86400000).toISOString().slice(0, 10);
+    await campo('Responsável').fill('Fulano de Tal');
+    await campo('Placas dos veículos').fill('abc1234');
+    await campo('Local do serviço').fill('Centro');
+    await campo('Descrição do serviço').fill('Manutenção de rede');
+    await campo('Início previsto').fill(amanha);
+    await campo('Fim previsto').fill(depois);
+
+    // Primeiro, uma linha errada: nada é gravado.
+    await lote.getByLabel('Locais (um por linha)').fill('-22.900000; -43.120000; Poda\n-23.500000; -43.120000; Poda');
+    await lote.getByRole('button', { name: 'Verificar linhas' }).click();
+    await expect(lote.getByRole('alert')).toContainText('Linha 2');
+    await expect(lote.getByRole('button', { name: /Registrar/ })).toBeDisabled();
+    expect(backend.de('comunicacoes_servico', 'POST')).toHaveLength(0);
+
+    // Corrigido: as duas linhas entram num único pedido.
+    await lote.getByLabel('Locais (um por linha)').fill('-22.900000; -43.120000; Manutenção de rede\n-22.905000; -43.125000; Troca de poste');
+    await lote.getByRole('button', { name: 'Verificar linhas' }).click();
+    await expect(lote).toContainText('Tudo certo: 2 locais prontos');
+    await lote.getByRole('button', { name: 'Registrar 2 comunicações' }).click();
+
+    await expect.poll(() => backend.de('comunicacoes_servico', 'POST').length).toBe(1);
+    const corpo = backend.de('comunicacoes_servico', 'POST')[0].corpo as Record<string, unknown>[];
+    expect(corpo).toHaveLength(2);
+    expect(corpo[1]).toMatchObject({ empresa_id: 'ter1', tipo: 'programado', tipo_servico: 'Troca de poste', responsavel: 'Fulano de Tal', placas: ['ABC1234'], inicio_lat: -22.905, inicio_lng: -43.125 });
+    await expect(page.getByRole('status').filter({ hasText: '2 comunicações registradas em lote' })).toBeVisible();
   });
 });

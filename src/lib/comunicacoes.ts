@@ -101,9 +101,10 @@ export async function listarComunicacoes(empresaId: string): Promise<Comunicacao
   return (data ?? []) as ComunicacaoServico[];
 }
 
-export async function criarComunicacao(c: NovaComunicacao): Promise<void> {
+/** Linha gravada em comunicacoes_servico a partir do que a tela preencheu. */
+export function linhaComunicacao(c: NovaComunicacao) {
   const emergencia = c.tipo === 'emergencia';
-  const { error } = await supabase.from('comunicacoes_servico').insert({
+  return {
     empresa_id: c.empresa_id,
     tipo: c.tipo,
     tipo_servico: c.tipo_servico.trim(),
@@ -120,6 +121,19 @@ export async function criarComunicacao(c: NovaComunicacao): Promise<void> {
     inicio_lng: c.inicio_lng,
     fim_lat: c.fim_lat ?? null,
     fim_lng: c.fim_lng ?? null,
-  });
+  };
+}
+
+export async function criarComunicacao(c: NovaComunicacao): Promise<void> {
+  const { error } = await supabase.from('comunicacoes_servico').insert(linhaComunicacao(c));
+  if (error) throw error;
+}
+
+/**
+ * Grava várias comunicações em um único pedido: ou entram todas, ou nenhuma (o banco
+ * valida cada linha pelo mesmo gatilho da gravação individual).
+ */
+export async function criarComunicacoesEmLote(lista: NovaComunicacao[]): Promise<void> {
+  const { error } = await supabase.from('comunicacoes_servico').insert(lista.map(linhaComunicacao));
   if (error) throw error;
 }
