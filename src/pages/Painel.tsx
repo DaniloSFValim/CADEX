@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { AbasPainel } from '../components/AbasPainel';
-import { BarrasHorizontais, ColunasMensais, LinhaDoTempo } from '../components/graficos';
+import { BarrasHorizontais, ColunasMensais } from '../components/graficos';
 import { dataBR } from '../components/Situacao';
 import { Button, Empty, ErrorNote, Spinner, Titulo, inputClass } from '../components/ui';
 import { hojeISO, listarEmpresas, somaDias, type Empresa } from '../lib/empresas';
@@ -12,15 +12,15 @@ import {
 } from '../lib/licencas';
 import { listarOrgaos, type Orgao } from '../lib/orgaos';
 import {
-  SEM_FILTROS, aplicarFiltros, distribuicaoPorParte, evolucaoMensal, indicadores, linhaDoTempo, maisRecentes,
+  SEM_FILTROS, aplicarFiltros, distribuicaoPorParte, evolucaoMensal, indicadores,
   partesDistintas, porSituacaoAdministrativa, proximas, temFiltro, type ContextoPartes, type Filtros, type FiltroStatus,
-  type RefData,
 } from '../lib/painel';
 import { TabelaLicencas } from './Licencas';
 
 interface Dados { licencas: LicencaComTrechos[]; empresas: Empresa[]; orgaos: Orgao[] }
 
-const JANELAS = [7, 15, 30] as const;
+// Janela fixa dos indicadores de prazo: obras que começam ou terminam nos próximos 15 dias.
+const JANELA = 15;
 const PASSO_REGISTROS = 25;
 
 /** Visão geral do painel: o que está licenciado, em que ponto está e com quem, direto do banco. */
@@ -30,10 +30,6 @@ export default function Painel() {
   const [atualizando, setAtualizando] = useState(false);
   const [atualizadoEm, setAtualizadoEm] = useState<Date | null>(null);
   const [filtros, setFiltros] = useState<Filtros>(SEM_FILTROS);
-  const [janela, setJanela] = useState<(typeof JANELAS)[number]>(15);
-  // No celular, os filtros ficam recolhidos para os indicadores aparecerem na primeira tela.
-  const [filtrosAbertos, setFiltrosAbertos] = useState(false);
-  const [refData, setRefData] = useState<RefData>('protocolo');
   const [mostrar, setMostrar] = useState(PASSO_REGISTROS);
 
   const carregar = useCallback(async () => {
@@ -71,16 +67,13 @@ export default function Painel() {
   }), [dados]);
   const todas = dados?.licencas;
   const filtradas = useMemo(() => (todas ? aplicarFiltros(todas, filtros, hoje, ctx) : []), [todas, filtros, hoje, ctx]);
-  const ind = useMemo(() => indicadores(filtradas, hoje, janela, ctx), [filtradas, hoje, janela, ctx]);
+  const ind = useMemo(() => indicadores(filtradas, hoje, JANELA, ctx), [filtradas, hoje, ctx]);
   const administrativa = useMemo(() => porSituacaoAdministrativa(filtradas), [filtradas]);
   const porContratante = useMemo(() => distribuicaoPorParte(filtradas, 'contratante', ctx), [filtradas, ctx]);
   const porExecutora = useMemo(() => distribuicaoPorParte(filtradas, 'executora', ctx), [filtradas, ctx]);
-  const mensal = useMemo(() => evolucaoMensal(filtradas, refData), [filtradas, refData]);
-  const janelaTempo = useMemo(() => ({ de: somaDias(hoje, -60), ate: somaDias(hoje, 120) }), [hoje]);
-  const tempo = useMemo(() => linhaDoTempo(filtradas, hoje, janelaTempo), [filtradas, hoje, janelaTempo]);
-  const iniciam = useMemo(() => proximas(filtradas, hoje, janela, 'inicio'), [filtradas, hoje, janela]);
-  const terminam = useMemo(() => proximas(filtradas, hoje, janela, 'fim'), [filtradas, hoje, janela]);
-  const recentes = useMemo(() => maisRecentes(filtradas, 6), [filtradas]);
+  const mensal = useMemo(() => evolucaoMensal(filtradas, 'protocolo'), [filtradas]);
+  const iniciam = useMemo(() => proximas(filtradas, hoje, JANELA, 'inicio'), [filtradas, hoje]);
+  const terminam = useMemo(() => proximas(filtradas, hoje, JANELA, 'fim'), [filtradas, hoje]);
   const contratantesLista = useMemo(() => (todas ? partesDistintas(todas, 'contratante', ctx) : []), [todas, ctx]);
   const executorasLista = useMemo(() => (todas ? partesDistintas(todas, 'executora', ctx) : []), [todas, ctx]);
 
@@ -139,36 +132,9 @@ export default function Painel() {
       {Cabeca}
       {erro != null && <div className="mb-4"><ErrorNote error={erro} /></div>}
 
-      {/* Filtros: uma linha acima de tudo o que escopam. */}
+      {/* Filtros: três campos sempre visíveis; o resto fica em "Mais filtros". */}
       <section className="cartao p-4" aria-label="Filtros">
-        <button type="button" aria-expanded={filtrosAbertos} onClick={() => setFiltrosAbertos((x) => !x)}
-                className="mb-3 flex w-full items-center justify-between rounded-lg border border-tinta-200 bg-white px-3 py-2 text-sm font-semibold text-tinta-800 lg:hidden">
-          {temFiltro(filtros) ? 'Filtros (aplicados)' : 'Filtros'}
-          <span aria-hidden>{filtrosAbertos ? '▴' : '▾'}</span>
-        </button>
-        <div className={`${filtrosAbertos ? 'block' : 'hidden'} lg:block`}>
-        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Período da obra ou serviço">
-          <span className="mr-1 text-sm font-medium text-tinta-700">Período da obra ou serviço</span>
-          {PRESETS.map((p) => {
-            const ativo = filtros.de === p.de && filtros.ate === p.ate;
-            return (
-              <button key={p.rotulo} type="button" aria-pressed={ativo}
-                      onClick={() => { set('de', p.de); set('ate', p.ate); }}
-                      className={`min-h-9 rounded-full px-3 text-sm transition-colors ${ativo ? 'bg-tinta-900 text-white' : 'bg-tinta-100 text-tinta-700 hover:bg-tinta-200'}`}>
-                {p.rotulo}
-              </button>
-            );
-          })}
-          <label className="ml-2 inline-flex items-center gap-1.5 text-sm text-tinta-600">De
-            <input type="date" className={`${inputClass} w-auto! py-1.5!`} value={filtros.de} max={filtros.ate || undefined}
-                   onChange={(e) => set('de', e.target.value)} />
-          </label>
-          <label className="inline-flex items-center gap-1.5 text-sm text-tinta-600">Até
-            <input type="date" className={`${inputClass} w-auto! py-1.5!`} value={filtros.ate} min={filtros.de || undefined}
-                   onChange={(e) => set('ate', e.target.value)} />
-          </label>
-        </div>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-3">
           <label className="block text-sm font-medium text-tinta-700">Situação
             <select className={`${inputClass} mt-1`} value={filtros.status} onChange={(e) => set('status', e.target.value as FiltroStatus)}>
               <option value="">Todas</option>
@@ -199,26 +165,57 @@ export default function Painel() {
               {executorasLista.map((p) => <option key={p.chave} value={p.chave}>{p.rotulo}</option>)}
             </select>
           </label>
-          <label className="block text-sm font-medium text-tinta-700">Tipo de intervenção
-            <select className={`${inputClass} mt-1`} value={filtros.intervencao} onChange={(e) => set('intervencao', e.target.value as TipoIntervencao | '')}>
-              <option value="">Todos</option>
-              {TIPOS_INTERVENCAO.map((t) => <option key={t} value={t}>{TIPO_INTERVENCAO_LABEL[t]}</option>)}
-            </select>
-          </label>
-          <label className="block text-sm font-medium text-tinta-700">Origem da intervenção
-            <select className={`${inputClass} mt-1`} value={filtros.origem} onChange={(e) => set('origem', e.target.value as OrigemIntervencao | '')}>
-              <option value="">Todas</option>
-              {ORIGENS.map((o) => <option key={o} value={o}>{ORIGEM_LABEL[o]}</option>)}
-            </select>
-          </label>
-          <label className="block text-sm font-medium text-tinta-700">Tipo de obra
-            <select className={`${inputClass} mt-1`} value={filtros.tipo} onChange={(e) => set('tipo', e.target.value as TipoObra | '')}>
-              <option value="">Todos</option>
-              {(Object.keys(TIPO_OBRA_LABEL) as TipoObra[]).map((t) => <option key={t} value={t}>{TIPO_OBRA_LABEL[t]}</option>)}
-            </select>
-          </label>
         </div>
-        </div>
+
+        <details className="mt-3 text-sm text-tinta-700">
+          <summary className="inline-flex min-h-9 cursor-pointer items-center rounded-full bg-tinta-100 px-3 font-medium text-tinta-800 hover:bg-tinta-200">
+            Mais filtros{temFiltro(filtros) ? ' (aplicados)' : ''}
+          </summary>
+          <div className="mt-3 flex flex-col gap-3">
+            <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Período da obra ou serviço">
+              <span className="mr-1 font-medium">Período</span>
+              {PRESETS.map((p) => {
+                const ativo = filtros.de === p.de && filtros.ate === p.ate;
+                return (
+                  <button key={p.rotulo} type="button" aria-pressed={ativo}
+                          onClick={() => { set('de', p.de); set('ate', p.ate); }}
+                          className={`min-h-9 rounded-full px-3 transition-colors ${ativo ? 'bg-tinta-900 text-white' : 'bg-tinta-100 text-tinta-700 hover:bg-tinta-200'}`}>
+                    {p.rotulo}
+                  </button>
+                );
+              })}
+              <label className="ml-2 inline-flex items-center gap-1.5 text-tinta-600">De
+                <input type="date" className={`${inputClass} w-auto! py-1.5!`} value={filtros.de} max={filtros.ate || undefined}
+                       onChange={(e) => set('de', e.target.value)} />
+              </label>
+              <label className="inline-flex items-center gap-1.5 text-tinta-600">Até
+                <input type="date" className={`${inputClass} w-auto! py-1.5!`} value={filtros.ate} min={filtros.de || undefined}
+                       onChange={(e) => set('ate', e.target.value)} />
+              </label>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <label className="block font-medium">Tipo de intervenção
+                <select className={`${inputClass} mt-1`} value={filtros.intervencao} onChange={(e) => set('intervencao', e.target.value as TipoIntervencao | '')}>
+                  <option value="">Todos</option>
+                  {TIPOS_INTERVENCAO.map((t) => <option key={t} value={t}>{TIPO_INTERVENCAO_LABEL[t]}</option>)}
+                </select>
+              </label>
+              <label className="block font-medium">Origem da intervenção
+                <select className={`${inputClass} mt-1`} value={filtros.origem} onChange={(e) => set('origem', e.target.value as OrigemIntervencao | '')}>
+                  <option value="">Todas</option>
+                  {ORIGENS.map((o) => <option key={o} value={o}>{ORIGEM_LABEL[o]}</option>)}
+                </select>
+              </label>
+              <label className="block font-medium">Tipo de obra
+                <select className={`${inputClass} mt-1`} value={filtros.tipo} onChange={(e) => set('tipo', e.target.value as TipoObra | '')}>
+                  <option value="">Todos</option>
+                  {(Object.keys(TIPO_OBRA_LABEL) as TipoObra[]).map((t) => <option key={t} value={t}>{TIPO_OBRA_LABEL[t]}</option>)}
+                </select>
+              </label>
+            </div>
+          </div>
+        </details>
+
         <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-tinta-600" role="status">
           <span>
             {temFiltro(filtros)
@@ -234,29 +231,17 @@ export default function Painel() {
           <Empty>Nenhuma licença com estes filtros.</Empty>
         </div>
       ) : (<>
-        {/* Indicadores: uma faixa só, com os seis números lado a lado; a descrição de cada um fica no tooltip. */}
+        {/* Indicadores: quatro números. Os pares mostram os dois valores separados por barra. */}
         <section className="mt-6" aria-label="Indicadores">
-          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-tinta-200 bg-tinta-200 sm:grid-cols-3 lg:grid-cols-6">
+          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-tinta-200 bg-tinta-200 lg:grid-cols-4">
             <Indicador rotulo="Licenças registradas" valor={ind.total} detalhe="no filtro atual" onClick={() => set('status', '')} ativo={filtros.status === ''} />
             <Indicador rotulo="Prazo encerrado" valor={ind.prazoVencido} detalhe="fim previsto vencido, sem conclusão" cor="border-baixa"
                        onClick={() => alternarStatus('estado:prazo_encerrado')} ativo={filtros.status === 'estado:prazo_encerrado'} />
-            <Indicador rotulo={`Começam em até ${janela} dias`} valor={ind.iniciamNaJanela} detalhe="início previsto, obra aberta"
-                       onClick={() => rolarPara('bloco-comecam')} />
-            <Indicador rotulo={`Terminam em até ${janela} dias`} valor={ind.terminamNaJanela} detalhe="fim previsto, obra aberta"
-                       onClick={() => rolarPara('bloco-terminam')} />
-            <Indicador rotulo="Contratantes" valor={ind.contratantes.total} detalhe={detalheParte(ind.contratantes)}
+            <Indicador rotulo={`Começam / terminam em até ${JANELA} dias`} valor={`${ind.iniciamNaJanela} / ${ind.terminamNaJanela}`}
+                       detalhe="início previsto / fim previsto, obra aberta" onClick={() => rolarPara('bloco-comecam')} />
+            <Indicador rotulo="Contratantes / Executoras" valor={`${ind.contratantes.total} / ${ind.executoras.total}`}
+                       detalhe={`Contratantes: ${detalheParte(ind.contratantes)}. Executoras: ${detalheParte(ind.executoras)}.`}
                        onClick={() => rolarPara('bloco-contratantes')} />
-            <Indicador rotulo="Executoras" valor={ind.executoras.total} detalhe={detalheParte(ind.executoras)}
-                       onClick={() => rolarPara('bloco-executoras')} />
-          </div>
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-tinta-600" role="group" aria-label="Janela dos próximos dias">
-            Janela dos indicadores de prazo:
-            {JANELAS.map((j) => (
-              <button key={j} type="button" aria-pressed={janela === j} onClick={() => setJanela(j)}
-                      className={`min-h-9 rounded-full px-3 transition-colors ${janela === j ? 'bg-tinta-900 text-white' : 'bg-tinta-100 text-tinta-700 hover:bg-tinta-200'}`}>
-                {j} dias
-              </button>
-            ))}
           </div>
         </section>
 
@@ -266,11 +251,7 @@ export default function Painel() {
             <BarrasHorizontais itens={barrasAdmin} total={ind.total} selecionada={filtros.status}
                                onSelecionar={(c) => alternarStatus(c as FiltroStatus)} />
           </Bloco>
-          <Bloco titulo="Licenças por mês"
-                 acao={<select className={`${inputClass} w-auto! py-1.5!`} value={refData} onChange={(e) => setRefData(e.target.value as RefData)} aria-label="Data de referência">
-                   <option value="protocolo">Mês do protocolo</option>
-                   <option value="registro">Mês do registro no CADEX</option>
-                 </select>}>
+          <Bloco titulo="Licenças por mês" nota="Pelo mês do protocolo.">
             {mensal.meses.length === 0
               ? <Empty>Nenhuma licença com esta data.</Empty>
               : <ColunasMensais meses={mensal.meses} />}
@@ -292,40 +273,22 @@ export default function Painel() {
           </Bloco>
         </div>
 
+        {/* Quem começa e quem termina nos próximos 15 dias. Sem nenhum, vira uma linha só. */}
         <div className="mt-6">
-          <Bloco titulo="Obras e serviços no tempo"
-                 nota={`De ${dataBR(janelaTempo.de)} a ${dataBR(janelaTempo.ate)}: do início ao fim previstos de cada licença. Clique para abrir.`}>
-            {tempo.itens.length === 0
-              ? <Empty>Nenhuma licença com período previsto nesta janela.</Empty>
-              : <LinhaDoTempo itens={tempo.itens} janela={janelaTempo} hoje={hoje} />}
-            {(tempo.omitidas > 0 || tempo.semPeriodo > 0) && (
-              <p className="mt-2 text-xs text-tinta-500">
-                {tempo.omitidas > 0 && `${tempo.omitidas} licença${tempo.omitidas === 1 ? '' : 's'} a mais nesta janela, fora do desenho (use os filtros). `}
-                {tempo.semPeriodo > 0 && `${tempo.semPeriodo} sem início e fim previstos, fora da linha do tempo.`}
-              </p>
-            )}
-          </Bloco>
-        </div>
-
-        {/* Listas: sem obra começando nem terminando na janela, os dois cartões viram uma linha só. */}
-        <div className={`mt-6 grid gap-6 ${semPrazos ? '' : 'lg:grid-cols-3'}`}>
           {semPrazos ? (
-            <p id="bloco-comecam" className="cartao px-5 py-3 text-sm text-tinta-600 lg:col-span-full">
-              Nenhuma obra começa nem termina nos próximos {janela} dias.
+            <p id="bloco-comecam" className="cartao px-5 py-3 text-sm text-tinta-600">
+              Nenhuma obra começa nem termina nos próximos {JANELA} dias.
             </p>
           ) : (
-            <>
-              <Bloco id="bloco-comecam" titulo={`Começam em até ${janela} dias`}>
+            <div className="grid gap-6 lg:grid-cols-2">
+              <Bloco id="bloco-comecam" titulo={`Começam em até ${JANELA} dias`}>
                 <ListaLicencas itens={iniciam.slice(0, 6)} data={(l) => dataBR(l.inicio_previsto)} nomeExec={nomeExec} hoje={hoje} vazio="Nenhuma obra aberta com início previsto nesta janela." total={iniciam.length} />
               </Bloco>
-              <Bloco id="bloco-terminam" titulo={`Terminam em até ${janela} dias`}>
+              <Bloco id="bloco-terminam" titulo={`Terminam em até ${JANELA} dias`}>
                 <ListaLicencas itens={terminam.slice(0, 6)} data={(l) => dataBR(l.fim_previsto)} nomeExec={nomeExec} hoje={hoje} vazio="Nenhuma obra aberta com fim previsto nesta janela." total={terminam.length} />
               </Bloco>
-            </>
+            </div>
           )}
-          <Bloco titulo="Registradas mais recentemente">
-            <ListaLicencas itens={recentes} data={(l) => dataBR(l.criado_em.slice(0, 10))} nomeExec={nomeExec} hoje={hoje} vazio="Nenhuma licença." />
-          </Bloco>
         </div>
 
         {/* Registros correspondentes */}
@@ -363,7 +326,7 @@ const detalheParte = (c: { empresas: number; orgaos: number; outras: number }) =
    c.outras > 0 && `${c.outras} sem cadastro`].filter(Boolean).join(', ') || 'nenhuma informada';
 
 function Indicador({ rotulo, valor, detalhe, cor = 'border-tinta-900', onClick, ativo }: {
-  rotulo: string; valor: number; detalhe?: string; cor?: string; onClick?: () => void; ativo?: boolean;
+  rotulo: string; valor: number | string; detalhe?: string; cor?: string; onClick?: () => void; ativo?: boolean;
 }) {
   const conteudo = (
     <>
