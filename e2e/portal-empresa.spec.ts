@@ -129,4 +129,24 @@ test.describe('portal das empresas', () => {
     expect(corpo[1]).toMatchObject({ empresa_id: 'ter1', tipo: 'programado', tipo_servico: 'Troca de poste', responsavel: 'Fulano de Tal', placas: ['ABC1234'], inicio_lat: -22.905, inicio_lng: -43.125 });
     await expect(page.getByRole('status').filter({ hasText: '2 comunicações registradas em lote' })).toBeVisible();
   });
+  test('placa inválida é barrada antes de ir ao servidor', async ({ page }) => {
+    const backend = await instalarBackend(page, { empresas: empresasPadrao(), licencas: licencas(), acessoEmpresa: acesso() });
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Nova comunicação' }).click();
+    const formulario = page.getByRole('form', { name: 'Nova comunicação ao CISP' });
+    const campo = (nome: string) => formulario.getByLabel(new RegExp(`^${nome}`));
+    const amanha = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
+    const depois = new Date(Date.now() + 4 * 86400000).toISOString().slice(0, 10);
+    await campo('Tipo de serviço').fill('Manutenção de rede');
+    await campo('Responsável').fill('Fulano de Tal');
+    await campo('Ponto \\(coordenadas\\)').fill('-22.900000, -43.120000');
+    await campo('Placas dos veículos').fill('XYZ');
+    await campo('Local do serviço').fill('Rua A, 10');
+    await campo('Descrição do serviço').fill('Manutenção de rede');
+    await campo('Início previsto').fill(amanha);
+    await campo('Fim previsto').fill(depois);
+    await page.getByRole('button', { name: 'Registrar comunicação' }).click();
+    await expect(page.getByRole('alert')).toContainText('Placa inválida: XYZ');
+    expect(backend.de('comunicacoes_servico', 'POST')).toHaveLength(0);
+  });
 });

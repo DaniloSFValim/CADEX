@@ -60,3 +60,42 @@ export function comunicacoesParaGeoJSON(lista: ComunicacaoPublica[]): FeatureCol
   });
   return { type: 'FeatureCollection', features };
 }
+
+/** Janela de exibição, em dias, nos dois sentidos (programado à frente, emergência para trás). */
+export const DIAS_JANELA = 15;
+
+/** Dia de hoje em Niterói, em AAAA-MM-DD, independentemente do fuso de quem consulta. */
+export function hojeNiteroi(agora: Date = new Date()): string {
+  return agora.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+}
+
+/** Soma dias a uma data AAAA-MM-DD (aritmética de calendário, sem fuso). */
+function somarDias(dia: string, dias: number): string {
+  const d = new Date(`${dia}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + dias);
+  return d.toISOString().slice(0, 10);
+}
+
+/** O serviço acontece no dia informado (o intervalo inclui início e fim). */
+export function acontecendoEm(c: ComunicacaoPublica, dia: string): boolean {
+  return c.inicio_previsto <= dia && dia <= c.fim_previsto;
+}
+
+/**
+ * Janela de 15 dias de cada modalidade: programado de hoje a 15 dias à frente;
+ * emergência de 15 dias atrás até hoje. Espelha a view comunicacoes_publicas.
+ */
+export function naJanela(c: ComunicacaoPublica, hoje: string): boolean {
+  if (c.tipo === 'programado') {
+    return c.fim_previsto >= hoje && c.inicio_previsto <= somarDias(hoje, DIAS_JANELA);
+  }
+  return c.fim_previsto >= somarDias(hoje, -DIAS_JANELA) && c.inicio_previsto <= hoje;
+}
+
+/**
+ * O que o mapa mostra. Por padrão, só o que acontece hoje. Com o filtro
+ * ampliado, a janela de 15 dias de cada modalidade.
+ */
+export function filtrarComunicacoes(lista: ComunicacaoPublica[], ampliado: boolean, hoje: string): ComunicacaoPublica[] {
+  return ampliado ? lista.filter((c) => naJanela(c, hoje)) : lista.filter((c) => acontecendoEm(c, hoje));
+}

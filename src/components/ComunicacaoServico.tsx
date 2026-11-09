@@ -30,7 +30,11 @@ const isoDoCampo = (valor: string): string | null => (valor ? new Date(valor).to
  * Comunicação ao CISP pela empresa: serviço programado (registro prévio) ou emergência (ligação
  * prévia ao 153 e registro posterior ao fato). Os dois exigem o local marcado no mapa e são públicos.
  */
-export default function ComunicacaoServico({ empresa, podeEditar }: { empresa: EmpresaComunicacao; podeEditar: boolean }) {
+export default function ComunicacaoServico({ empresa, podeEditar, emLote = false }: {
+  empresa: EmpresaComunicacao; podeEditar: boolean;
+  /** Cadastro em lote: só no portal da própria empresa (login de empresa). */
+  emLote?: boolean;
+}) {
   const [lista, setLista] = useState<Comunicacao[] | null>(null);
   const [erro, setErro] = useState<unknown>(null);
   const [aberto, setAberto] = useState(false);
@@ -159,7 +163,7 @@ export default function ComunicacaoServico({ empresa, podeEditar }: { empresa: E
         </div>
       )}
 
-      {podeEditar && <ComunicacaoLote empresaId={empresa.id} onRegistrado={carregar} />}
+      {podeEditar && emLote && <ComunicacaoLote empresaId={empresa.id} onRegistrado={carregar} />}
 
       {podeEditar && aberto && (
         <form aria-label="Nova comunicação ao CISP" className="mt-5 grid gap-4 md:grid-cols-2" onSubmit={(e) => { e.preventDefault(); void enviar(); }}>
