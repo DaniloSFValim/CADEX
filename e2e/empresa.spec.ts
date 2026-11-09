@@ -59,32 +59,11 @@ test.describe('comunicação de serviço programado ao CISP', () => {
     await expect(aviso).toContainText('placas dos veículos');
   });
 
-  test('placa inválida é barrada antes de ir ao servidor; comunicação válida vai com a placa normalizada', async ({ page }) => {
-    const backend = await instalarBackend(page);
+  test('servidor consulta as comunicações da empresa, mas não registra nem vê o cadastro em lote', async ({ page }) => {
+    await instalarBackend(page);
     await page.goto('/empresas/op3');
-    await page.getByRole('button', { name: 'Nova comunicação' }).click();
-    const formulario = page.getByRole('form', { name: 'Nova comunicação ao CISP' });
-    const campo = (nome: string) => formulario.getByLabel(new RegExp(`^${nome}`));
-    const amanha = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
-    const depois = new Date(Date.now() + 4 * 86400000).toISOString().slice(0, 10);
-
-    await campo('Tipo de serviço').fill('Manutenção de rede');
-    await campo('Responsável').fill('Fulano de Tal');
-    await campo('Ponto \\(coordenadas\\)').fill('-22.900000, -43.120000');
-    await campo('Placas dos veículos').fill('XYZ');
-    await campo('Local do serviço').fill('Rua A, 10');
-    await campo('Descrição do serviço').fill('Manutenção de rede');
-    await campo('Início previsto').fill(amanha);
-    await campo('Fim previsto').fill(depois);
-    await page.getByRole('button', { name: 'Registrar comunicação' }).click();
-    await expect(page.getByRole('alert')).toContainText('Placa inválida: XYZ');
-    expect(backend.de('comunicacoes_servico', 'POST')).toHaveLength(0);
-
-    await campo('Placas dos veículos').fill('abc-1234, abc1d23');
-    await page.getByRole('button', { name: 'Registrar comunicação' }).click();
-    await expect.poll(() => backend.de('comunicacoes_servico', 'POST').length).toBe(1);
-    const corpo = backend.de('comunicacoes_servico', 'POST')[0].corpo as Record<string, unknown>;
-    expect(corpo).toMatchObject({ empresa_id: 'op3', responsavel: 'Fulano de Tal', placas: ['ABC1234', 'ABC1D23'], tipo: 'programado' });
-    await expect(page.getByRole('status')).toContainText('Comunicação registrada para Fulano de Tal');
+    await expect(page.getByRole('heading', { name: 'Comunicações registradas' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Nova comunicação' })).toHaveCount(0);
+    await expect(page.getByRole('region', { name: 'Cadastro em lote' })).toHaveCount(0);
   });
 });

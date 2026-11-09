@@ -116,7 +116,8 @@ export default function EmpresaPage() {
 
       {empresa && <LicencasDaEmpresa licencas={licencas} error={licErro} todas={todas} />}
 
-      {empresa && <ComunicacaoServico empresa={empresa} podeEditar={podeEditar} />}
+      {/* Registro de comunicações é da própria empresa (portal). Servidores só consultam. */}
+      {empresa && <ComunicacaoServico empresa={empresa} podeEditar={false} />}
 
       {/* Documentos têm dados pessoais de sócios e procuradores: só a SECONSER vê. */}
       {empresa && podeEditar && <Documentos empresa={empresa} />}
