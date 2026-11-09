@@ -48,7 +48,8 @@ jobs:
           retention-days: 7
 
   database:
-    runs-on: ubuntu-latest
+    # Fixado no Ubuntu 24.04: o ubuntu-latest passou a ser 26.04, cujo repositório não tem postgresql-16.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: Instalar PostgreSQL
