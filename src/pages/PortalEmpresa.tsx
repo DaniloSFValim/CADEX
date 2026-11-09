@@ -50,7 +50,7 @@ export default function PortalEmpresa() {
             <p className="mt-3 text-xs text-tinta-500">Alterações no cadastro são feitas pela SECONSER.</p>
           </section>
 
-          <ComunicacaoServico empresa={cadastro} podeEditar />
+          <ComunicacaoServico empresa={cadastro} podeEditar emLote />
 
           <section aria-label="Licenças da empresa" className="cartao p-5">
             <h2 className="mb-3 font-display text-lg font-bold text-tinta-900">Licenças da empresa</h2>
