@@ -9,7 +9,7 @@ import { Rodape } from '../components/Rodape';
 import { Empty, ErrorNote, Kpi, Spinner, Titulo, linkTexto } from '../components/ui';
 import { dataBR } from '../components/Situacao';
 import { hojeISO } from '../lib/empresas';
-import { buscarComunicacoesPublicas, type ComunicacaoPublica } from '../lib/comunicacoesPublicas';
+import { DIAS_JANELA, buscarComunicacoesPublicas, filtrarComunicacoes, hojeNiteroi, type ComunicacaoPublica } from '../lib/comunicacoesPublicas';
 import { ORIGEM_LABEL, TIPO_INTERVENCAO_LABEL, origemPublica } from '../lib/licencas';
 import { carregarBairrosGeo, chaveBairro, type BairroGeo } from '../lib/bairros';
 import { listarTipos, mapaRotulosTipos, rotuloDoTipo } from '../lib/tiposIntervencao';
@@ -91,6 +91,12 @@ export default function ConsultaObras() {
   // Comunicações ao CISP no mapa. Se falhar, o mapa de obras continua sem elas.
   const [comunicacoes, setComunicacoes] = useState<ComunicacaoPublica[]>([]);
   useEffect(() => { buscarComunicacoesPublicas().then(setComunicacoes).catch(() => setComunicacoes([])); }, []);
+  // Por padrão, o mapa mostra só o que acontece hoje. O filtro amplia para a janela de 15 dias.
+  const [ampliarComunicacoes, setAmpliarComunicacoes] = useState(false);
+  const comunicacoesVisiveis = useMemo(
+    () => filtrarComunicacoes(comunicacoes, ampliarComunicacoes, hojeNiteroi()),
+    [comunicacoes, ampliarComunicacoes],
+  );
   // ?obra=CÓDIGO abre o mapa já na obra (vem de "Localizar no mapa" na ficha da licença).
   const [params] = useSearchParams();
   const obraDaUrl = params.get('obra');
@@ -287,7 +293,7 @@ export default function ConsultaObras() {
                   </div>
                 </details>
                 <div ref={mapaRef} className="relative scroll-mt-4 overflow-hidden rounded-xl border border-tinta-200 shadow-xs">
-                  <MapaObras obras={listadas} comunicacoes={comunicacoes}
+                  <MapaObras obras={listadas} comunicacoes={comunicacoesVisiveis}
                              foco={foco} destaque={destaque} modo={modo} bairro={bairro}
                              onSelecionar={setFoco} onBairro={setBairro} onDestacar={setDestaque} onGrupo={setGrupo} />
                   {selecionada && (
@@ -300,7 +306,11 @@ export default function ConsultaObras() {
                 </div>
               </Suspense>
               <Legenda />
-              {comunicacoes.length > 0 && <LegendaComunicacoes />}
+              {comunicacoes.length > 0 && (
+                <FiltroComunicacoes ampliado={ampliarComunicacoes} onMudar={setAmpliarComunicacoes}
+                                    visiveis={comunicacoesVisiveis.length} total={comunicacoes.length} />
+              )}
+              {comunicacoesVisiveis.length > 0 && <LegendaComunicacoes />}
               <p className="mt-2 text-xs leading-relaxed text-tinta-500">
                 Cada trecho aparece como uma linha reta entre o início e o fim informados na licença, sem seguir o
                 traçado da rua. Para o percurso exato, abra a licença.
@@ -667,6 +677,24 @@ function Legenda() {
         </li>
       ))}
     </ul>
+  );
+}
+
+/** Filtro das comunicações: por padrão, só o que acontece hoje. */
+function FiltroComunicacoes({ ampliado, onMudar, visiveis, total }: {
+  ampliado: boolean; onMudar: (ampliado: boolean) => void; visiveis: number; total: number;
+}) {
+  return (
+    <section aria-label="Filtro das comunicações ao CISP" className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-tinta-600">
+      <label className="inline-flex cursor-pointer items-center gap-2">
+        <input type="checkbox" className="h-4 w-4 accent-tinta-800" checked={ampliado}
+               onChange={(e) => onMudar(e.target.checked)} />
+        Mostrar os próximos {DIAS_JANELA} dias (programados) e os {DIAS_JANELA} dias anteriores (emergências)
+      </label>
+      <span className="text-tinta-500">
+        {ampliado ? 'Mostrando' : 'Mostrando só o que acontece hoje:'} {visiveis} de {total} comunicações
+      </span>
+    </section>
   );
 }
 
