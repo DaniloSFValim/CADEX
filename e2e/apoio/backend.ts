@@ -218,8 +218,12 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
     }
     if (caminho === 'comunicacoes_servico') {
       if (req.method() === 'POST') {
-        const nova = { id: uuid(9600 + (estado.comunicacoes?.length ?? 0) + 1), comunicado_em: new Date().toISOString(), ...(corpo as object) };
-        estado.comunicacoes = [...(estado.comunicacoes ?? []), nova];
+        // Lote: um pedido com várias linhas entra inteiro; a tela recebe 201 sem corpo.
+        const linhas = Array.isArray(corpo) ? corpo : [corpo];
+        const novas = linhas.map((l, i) => ({
+          id: uuid(9600 + (estado.comunicacoes?.length ?? 0) + i + 1), comunicado_em: new Date().toISOString(), ...(l as object),
+        }));
+        estado.comunicacoes = [...(estado.comunicacoes ?? []), ...novas];
         return vazio();
       }
       const emp = (url.searchParams.get('empresa_id') ?? '').replace('eq.', '');

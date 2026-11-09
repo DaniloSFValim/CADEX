@@ -63,7 +63,8 @@ test.describe('comunicação de serviço programado ao CISP', () => {
     const backend = await instalarBackend(page);
     await page.goto('/empresas/op3');
     await page.getByRole('button', { name: 'Nova comunicação' }).click();
-    const campo = (nome: string) => page.getByLabel(new RegExp(`^${nome}`));
+    const formulario = page.getByRole('form', { name: 'Nova comunicação ao CISP' });
+    const campo = (nome: string) => formulario.getByLabel(new RegExp(`^${nome}`));
     const amanha = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
     const depois = new Date(Date.now() + 4 * 86400000).toISOString().slice(0, 10);
 
