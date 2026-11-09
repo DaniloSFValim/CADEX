@@ -9,8 +9,9 @@ test('no computador, o mapa ocupa cerca de 65% e a lista 35%, lado a lado', asyn
   await instalarBackend(page, { licencas: [licenca({ numero: '801/2026' })] });
   await page.goto('/consulta/obras');
   await abrirLista(page);
-  const mapa = page.locator('#conteudo .grid > div').first();
   const lista = page.locator('section[aria-label="Lista das obras e serviços licenciados"]');
+  // A grade do mapa e da lista é a que contém a lista; a grade dos indicadores não.
+  const mapa = page.locator('#conteudo .grid').filter({ has: lista }).first().locator(':scope > div').first();
   await expect(lista).toBeVisible();
   const bm = await mapa.boundingBox();
   const bl = await lista.boundingBox();

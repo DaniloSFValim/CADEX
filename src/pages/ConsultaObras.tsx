@@ -14,8 +14,8 @@ import { ORIGEM_LABEL, TIPO_INTERVENCAO_LABEL, origemPublica } from '../lib/lice
 import { carregarBairrosGeo, chaveBairro, type BairroGeo } from '../lib/bairros';
 import { listarTipos, mapaRotulosTipos, rotuloDoTipo } from '../lib/tiposIntervencao';
 import {
-  COR_SITUACAO, SITUACAO_PUBLICA_LABEL, anosDasObras, baixarObrasGeojson, buscarObrasPublicas, filtrarPainel, nomeLimpo, obrasProximas,
-  obraNoAno, obraNoMes, resumoPor, temLocalizacao, textoDistancia, type FiltroPainel, type ObraPublica, type ResumoNome,
+  COR_SITUACAO, SITUACAO_PUBLICA_LABEL, anosDasObras, baixarObrasGeojson, buscarObrasPublicas, filtrarPainel, nomeLimpo,
+  obraNoAno, obraNoMes, resumoPor, temLocalizacao, type FiltroPainel, type ObraPublica, type ResumoNome,
 } from '../lib/obras';
 
 // O mapa (MapLibre) é pesado: só carrega nesta página.
@@ -163,7 +163,6 @@ export default function ConsultaObras() {
     return saida;
   }, [grupos, limiteLista]);
   const executoras = useMemo(() => resumoPor(todas, (o) => o.executora), [todas]);
-  const contratantes = useMemo(() => resumoPor(todas, (o) => o.contratante), [todas]);
   const stats = useMemo(() => resumo(todas), [todas]);
   const selecionada = useMemo(() => (obras ?? []).find((o) => o.codigo === foco) ?? null, [obras, foco]);
   // Mapa → lista: a obra escolhida no mapa aparece na lista.
@@ -200,10 +199,7 @@ export default function ConsultaObras() {
                     className="rounded-xl text-left transition-colors hover:bg-tinta-100/60 focus-visible:outline-2 focus-visible:outline-marca-700">
               <Kpi rotulo={stats.bairros === 1 ? 'Bairro' : 'Bairros'} valor={stats.bairros} detalhe="clique para ver a lista" />
             </button>
-            <button type="button" onClick={() => document.getElementById('exec-titulo')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-                    className="rounded-xl text-left transition-colors hover:bg-tinta-100/60 focus-visible:outline-2 focus-visible:outline-marca-700">
-              <Kpi rotulo={stats.execs === 1 ? 'Executora' : 'Executoras'} valor={stats.execs} detalhe="clique para ver as executoras" />
-            </button>
+            <Kpi rotulo={stats.execs === 1 ? 'Executora' : 'Executoras'} valor={stats.execs} detalhe="filtre por executora abaixo da lista" />
           </div>
         )}
 
@@ -226,12 +222,15 @@ export default function ConsultaObras() {
               <Suspense fallback={<div className="h-[60vh] min-h-[360px] rounded-xl border border-tinta-200 bg-tinta-50" />}>
                 <details className="group mb-2 rounded-xl border border-tinta-200 bg-white px-4 py-2 text-sm">
                   <summary className="flex cursor-pointer list-none items-center justify-between gap-3 font-semibold text-tinta-900 [&::-webkit-details-marker]:hidden">
-                    Linha do tempo
+                    Opções do mapa
                     <span className="text-xs font-normal text-tinta-600">
-                      {tempo === null ? 'Todas as datas' : mesTempo === null ? `Obras de ${anoTempo}` : `${NOMES_MESES[mesTempo]} de ${anoTempo}`}
+                      Linha do tempo: {tempo === null ? 'todas as datas' : mesTempo === null ? `obras de ${anoTempo}` : `${NOMES_MESES[mesTempo]} de ${anoTempo}`}
                     </span>
                   </summary>
-                  <div className="mt-3 flex flex-col gap-3">
+                  <div className="mt-3 flex flex-col gap-4">
+                    <div>
+                      <p className="text-xs font-semibold text-tinta-700">Linha do tempo</p>
+                  <div className="flex flex-col gap-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-xs font-semibold text-tinta-700">Ano</span>
                       <button type="button" disabled={anoTempo <= anoMin} aria-label="Ano anterior"
@@ -267,15 +266,12 @@ export default function ConsultaObras() {
                       </button>
                     </div>
                   </div>
-                  <p className="mt-2 text-xs text-tinta-500">
-                    Mapa e lista mostram as mesmas obras: as que têm período previsto no ano ou mês escolhido.
-                  </p>
-                </details>
-                <details className="group mb-2 flex justify-end text-xs text-tinta-600">
-                  <summary className="cursor-pointer list-none rounded-full px-3 py-1 font-semibold text-tinta-700 hover:text-tinta-900 [&::-webkit-details-marker]:hidden">
-                    Opções do mapa
-                  </summary>
-                  <div className="mt-2 flex flex-col items-end gap-2">
+                      <p className="mt-2 text-xs text-tinta-500">
+                        Mapa e lista mostram as mesmas obras: as que têm período previsto no ano ou mês escolhido.
+                      </p>
+                    </div>
+                    <div className="border-t border-tinta-100 pt-3">
+                  <div className="flex flex-col items-start gap-2">
                     <div role="group" aria-label="Visualização do mapa" className="inline-flex rounded-full border border-tinta-200 bg-white p-0.5 text-xs font-semibold">
                       {(['pontos', 'calor'] as const).map((m) => (
                         <button key={m} type="button" aria-pressed={modo === m} onClick={() => setModo(m)}
@@ -290,6 +286,8 @@ export default function ConsultaObras() {
                       </button>
                       <span className="text-tinta-400">. Todas as obras licenciadas, para uso livre.</span>
                     </p>
+                  </div>
+                    </div>
                   </div>
                 </details>
                 <div ref={mapaRef} className="relative scroll-mt-4 overflow-hidden rounded-xl border border-tinta-200 shadow-xs">
@@ -501,12 +499,17 @@ export default function ConsultaObras() {
             <ObrasPorMes obras={todas} ano={anoTempo} hoje={hojeISO()} foco={foco} onSelecionar={setFoco} />
             <HistoricoAcervo obras={todas} rotulos={rotulos} />
 
-            <ResumoContratantes contratantes={contratantes} />
-            <ResumoExecutoras executoras={executoras}
-                              selecionada={filtro.executora}
-                              onEscolher={(nome) => { setFiltro((f) => ({ ...f, executora: f.executora === nome ? null : nome })); setListaAberta(true); }} />
-
-            <ObrasPerto obras={todas} onSelecionar={verNoMapa} />
+            {/* Único lugar onde se filtra a lista por executora: fica recolhido para não poluir a página. */}
+            <details className="mt-4 rounded-xl border border-tinta-200 bg-white p-4">
+              <summary className="cursor-pointer text-sm font-semibold text-tinta-900">
+                Filtrar por executora ({executoras.length})
+              </summary>
+              <div className="mt-3">
+                <ResumoExecutoras executoras={executoras}
+                                  selecionada={filtro.executora}
+                                  onEscolher={(nome) => { setFiltro((f) => ({ ...f, executora: f.executora === nome ? null : nome })); setListaAberta(true); }} />
+              </div>
+            </details>
           </div>
         )}
       </main>
@@ -611,30 +614,6 @@ function rotuloTipos(tipos: string[], rotulos: Record<string, string>) {
 
 const NOMES_MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 
-/** Concessionárias e órgãos contratantes: cada um leva à sua página de obras. */
-function ResumoContratantes({ contratantes }: { contratantes: ResumoNome[] }) {
-  if (contratantes.length === 0) return null;
-  return (
-    <section className="mt-4 rounded-xl border border-tinta-200 bg-white p-4" aria-labelledby="contr-titulo">
-      <h2 id="contr-titulo" className="text-sm font-semibold text-tinta-900">Concessionárias e órgãos</h2>
-      <p className="mt-1 text-xs text-tinta-500">Quem contrata cada obra. Clique para ver as obras de cada um.</p>
-      <ul className="mt-3 grid gap-x-8 gap-y-1 text-sm sm:grid-cols-2">
-        {contratantes.map((c) => (
-          <li key={c.chave}>
-            <Link to={`/consulta/obras/concessionaria/${encodeURIComponent(c.chave)}`}
-                  className="flex w-full items-baseline justify-between gap-3 border-b border-tinta-100 py-1.5 hover:bg-tinta-50">
-              <span className="min-w-0 truncate font-medium text-tinta-800 hover:text-marca-700">{c.nome}</span>
-              <span className="tabular shrink-0 text-tinta-600">
-                <strong className="font-semibold text-alta">{c.vigentes}</strong> vigentes · {c.total} no total
-              </span>
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
 function ResumoExecutoras({ executoras, selecionada, onEscolher }: {
   executoras: ResumoNome[]; selecionada: string | null; onEscolher: (nome: string) => void;
 }) {
@@ -716,53 +695,3 @@ function LegendaComunicacoes() {
   );
 }
 
-/**
- * Obras mais próximas de quem consulta. A posição vem do navegador (com a
- * permissão dele), fica só no estado desta tela e não é enviada nem gravada.
- */
-function ObrasPerto({ obras, onSelecionar }: { obras: ObraPublica[]; onSelecionar: (codigo: string) => void }) {
-  const [ponto, setPonto] = useState<[number, number] | null>(null);
-  const [buscando, setBuscando] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
-
-  const localizar = () => {
-    if (!navigator.geolocation) { setErro('Este navegador não informa a localização.'); return; }
-    setBuscando(true);
-    setErro(null);
-    navigator.geolocation.getCurrentPosition(
-      (p) => { setPonto([p.coords.longitude, p.coords.latitude]); setBuscando(false); },
-      () => { setErro('Não foi possível obter a localização. Verifique a permissão do navegador.'); setBuscando(false); },
-      { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 },
-    );
-  };
-
-  const proximas = ponto ? obrasProximas(obras, ponto) : [];
-  return (
-    <section className="mt-4 rounded-xl border border-tinta-200 bg-white p-4" aria-labelledby="perto-titulo">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="perto-titulo" className="text-sm font-semibold text-tinta-900">Obras perto de você</h2>
-        <button type="button" className={linkTexto} disabled={buscando} onClick={localizar}>
-          {buscando ? 'Localizando…' : ponto ? 'Atualizar localização' : 'Usar minha localização'}
-        </button>
-      </div>
-      <p className="mt-1 text-xs text-tinta-500">Sua localização fica só neste aparelho: não é gravada nem enviada.</p>
-      {erro && <p className="mt-2 text-sm text-baixa">{erro}</p>}
-      {ponto && proximas.length === 0 && (
-        <p className="mt-2 text-sm text-tinta-600">Nenhuma obra com localização nos filtros atuais.</p>
-      )}
-      {proximas.length > 0 && (
-        <ol className="mt-3 divide-y divide-tinta-100">
-          {proximas.map(({ obra, metros }) => (
-            <li key={obra.codigo} className="flex items-baseline justify-between gap-3 py-2 text-sm">
-              <button type="button" className="text-left font-medium text-tinta-900 hover:underline"
-                      onClick={() => onSelecionar(obra.codigo)}>
-                {obra.trechos[0]?.logradouro ?? 'Obra'}{obra.trechos[0]?.bairro ? `, ${obra.trechos[0].bairro}` : ''}
-              </button>
-              <span className="tabular shrink-0 text-tinta-600">{textoDistancia(metros)}</span>
-            </li>
-          ))}
-        </ol>
-      )}
-    </section>
-  );
-}
