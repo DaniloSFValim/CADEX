@@ -43,6 +43,6 @@ test.describe('comunicações ao CISP na consulta pública', () => {
     await instalarBackend(page, { comunicacoes: [] });
     await page.goto('/consulta/obras');
     await expect(page.getByRole('list', { name: 'Legenda das comunicações ao CISP' })).toHaveCount(0);
-    await expect(page.getByRole('section', { name: 'Filtro das comunicações ao CISP' })).toHaveCount(0);
+    await expect(page.locator('section[aria-label="Filtro das comunicações ao CISP"]')).toHaveCount(0);
   });
 });
