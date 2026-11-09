@@ -36,3 +36,13 @@ describe('relatorioMarkdown', () => {
     expect(md).toContain('1 registro.');
   });
 });
+
+describe('dados publicáveis (LGPD)', () => {
+  it('a relação do Diário Oficial não traz contato, representante nem responsável técnico', () => {
+    const r = relatorioDiarioOficial([emp({})], { hoje: HOJE, porId: new Map(), vinculos: [] });
+    const proibidas = ['e-mail', 'telefone', 'endereço', 'representante', 'responsável técnico', 'Representante', 'Responsável técnico'];
+    for (const coluna of r.colunas) {
+      for (const p of proibidas) expect(coluna.toLowerCase()).not.toContain(p.toLowerCase());
+    }
+  });
+});
