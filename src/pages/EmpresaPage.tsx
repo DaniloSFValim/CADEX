@@ -298,10 +298,11 @@ function EmpresaForm({
                   const t = e.target.value as EmpresaInput['tipo'];
                   set('tipo', t);
                   if (t === 'terceirizada') set('executa_obras', false);
-                  set('setores', t === 'operadora' ? ['telecom'] : t === 'construtora' ? ['construcao']
+                  set('setores', t === 'operadora' || t === 'detentora' ? ['telecom'] : t === 'construtora' ? ['construcao']
                     : t === 'concessionaria' ? ['gas'] : []);
                 }}>
           <option value="operadora">Operadora de telecomunicações</option>
+          <option value="detentora">Detentora (infraestrutura compartilhada, sem outorga)</option>
           <option value="concessionaria">Concessionária (gás ou saneamento)</option>
           <option value="construtora">Construtora</option>
           <option value="terceirizada">Terceirizada</option>

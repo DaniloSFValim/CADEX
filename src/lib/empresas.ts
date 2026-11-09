@@ -6,11 +6,11 @@ import { nomeOrgao, type Orgao } from './orgaos';
  * Papel da empresa. Operadora (telecom), concessionária (gás ou
  * saneamento) e construtora contratam; terceirizada executa.
  */
-export type Tipo = 'operadora' | 'concessionaria' | 'construtora' | 'terceirizada';
+export type Tipo = 'operadora' | 'detentora' | 'concessionaria' | 'construtora' | 'terceirizada';
 /** Setores de obras e serviços em via pública. */
 export type Setor = 'telecom' | 'gas' | 'saneamento' | 'drenagem' | 'construcao' | 'viario';
 /** Perfil que define os documentos exigidos (tipos_documento.perfis). */
-export type Perfil = 'telecom' | 'gas' | 'saneamento' | 'construtora' | 'terceirizada';
+export type Perfil = 'telecom' | 'gas' | 'saneamento' | 'construtora' | 'terceirizada' | 'detentora';
 /** Situação da inscrição no CADEX (arts. 7º e 8º). */
 export type Situacao = 'em_analise' | 'deferida' | 'apta' | 'em_saneamento' | 'inapta';
 /** Situação exibida: inclui VENCIDA, calculada pela validade. */
@@ -103,6 +103,7 @@ export interface Documento {
 
 export const TIPO_LABEL: Record<Tipo, string> = {
   operadora: 'Operadora',
+  detentora: 'Detentora',
   concessionaria: 'Concessionária',
   construtora: 'Construtora',
   terceirizada: 'Terceirizada',
@@ -127,6 +128,7 @@ export function descricaoEmpresa(e: Pick<Empresa, 'tipo' | 'setores'>): string {
   const setores = e.setores.map((s) => SETOR_LABEL[s].toLowerCase());
   switch (e.tipo) {
     case 'operadora': return 'Operadora de telecomunicações';
+    case 'detentora': return 'Detentora de infraestrutura de telecomunicações';
     case 'concessionaria': return `Concessionária de ${setores[0] ?? ''}`.trim();
     case 'construtora': return 'Construtora';
     default: return setores.length ? `Terceirizada: ${setores.join(', ')}` : 'Terceirizada';
@@ -637,6 +639,8 @@ export function oQueAEmpresaFaz(l: Pick<LinhaPublica, 'tipo' | 'setores' | 'situ
   switch (l.tipo) {
     case 'operadora':
       return 'Operadora de serviços de telecomunicações, com regularidade junto à Anatel declarada na inscrição.';
+    case 'detentora':
+      return 'Detentora de infraestrutura de telecomunicações, com Carta de Compartilhamento ou de Anuência, sem outorga da Anatel.';
     case 'terceirizada':
       return l.contratantes.length > 0
         ? `Contratada por ${listaComE(l.contratantes)} para mão de obra de construção e manutenção de infraestrutura de ${infra}.`
