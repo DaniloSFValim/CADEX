@@ -7,9 +7,7 @@ import { BARRA, SituacaoBadge } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { formatCnpj, onlyDigits } from '../lib/cnpj';
 import {
-  FILTRO_SITUACAO, SETORES, SETOR_LABEL, atuaNoSetor, descricaoEmpresa, tiposDaEmpresa, situacoesDoFiltro, hojeISO, situacaoEfetiva, listarDocumentos, listarEmpresas, listarResponsaveis, listarTiposDocumento, listarVinculos,
-  nomeEmpresa, resumoDocumentos, rotuloContratante, type Documento, type Empresa, type Resumo, type RtResumo, type Setor, type SituacaoEfetiva, type TipoDocumento,
-  type Vinculo,
+  FILTRO_SITUACAO, SETORES, SETOR_LABEL, atuaNoSetor, descricaoEmpresa, tiposDaEmpresa, situacoesDoFiltro, hojeISO, situacaoEfetiva, listarDocumentos, listarEmpresas, listarResponsaveis, listarTiposDocumento, listarVinculos, nomeEmpresa, resumoDocumentos, rotuloContratante, type Documento, type Empresa, type Resumo, type RtResumo, type Setor, type SituacaoEfetiva, type TipoDocumento, type Vinculo, podeAtuar,
 } from '../lib/empresas';
 import { listarOrgaos, type Orgao } from '../lib/orgaos';
 
@@ -35,6 +33,13 @@ export default function Empresas() {
   const [situacao, setSituacao] = useState('');
   const [exportando, setExportando] = useState(false);
   const [diario, setDiario] = useState(false);
+  // Empresas marcadas pelo gestor para a publicação no Diário Oficial.
+  const [marcadas, setMarcadas] = useState<Set<string>>(new Set());
+  const alternarMarcada = (id: string, marcada: boolean) => setMarcadas((atual) => {
+    const proxima = new Set(atual);
+    if (marcada) proxima.add(id); else proxima.delete(id);
+    return proxima;
+  });
 
   useEffect(() => {
     // O CISP não tem acesso a documentos: nem pede.
@@ -86,8 +91,8 @@ export default function Empresas() {
           <Button variant="secondary" disabled={!empresas?.length} onClick={() => setExportando((x) => !x)}>
             Exportar (PDF ou planilha)
           </Button>
-          <Button variant="secondary" disabled={!empresas?.length} onClick={() => setDiario((x) => !x)}>
-            Diário Oficial
+          <Button variant="secondary" disabled={marcadas.size === 0} onClick={() => setDiario((x) => !x)}>
+            Diário Oficial ({marcadas.size} {marcadas.size === 1 ? 'marcada' : 'marcadas'})
           </Button>
           {podeEditar && <Link to="/empresas/nova" className={botaoLink.primary}>Nova empresa</Link>}
         </>}
@@ -115,8 +120,9 @@ export default function Empresas() {
       })()}
 
       {diario && empresas && (
-        <ExportarDiarioOficial empresas={empresas}
-          contexto={{ hoje, porId, vinculos, orgaos: orgaosPorId, rts: rtsPorEmpresa }} />
+        <ExportarDiarioOficial empresas={empresas.filter((e) => marcadas.has(e.id))}
+          contexto={{ hoje, porId, vinculos, orgaos: orgaosPorId, rts: rtsPorEmpresa }}
+          onLimpar={() => { setMarcadas(new Set()); setDiario(false); }} />
       )}
 
       {exportando && empresas && (
@@ -221,6 +227,7 @@ export default function Empresas() {
             <table className={tabela.tabela}>
               <thead className={tabela.cabeca}>
                 <tr>
+                  {podeEditar && <th className={tabela.th}><span className="sr-only">Marcar para o Diário Oficial</span></th>}
                   <th className={`${tabela.th} border-l-4 border-l-transparent`}>Empresa</th>
                   <th className={tabela.th}>Código CADEX</th>
                   <th className={tabela.th}>CNPJ</th>
@@ -238,6 +245,16 @@ export default function Empresas() {
                   const r = resumoDocumentos(tiposDaEmpresa(tipos, e), docs.filter((d) => d.empresa_id === e.id), hoje);
                   return (
                     <tr key={e.id} className={tabela.linha}>
+                      {podeEditar && (
+                        <td className={tabela.td}>
+                          <input type="checkbox" className="accent-marca-600"
+                                 aria-label={`Marcar ${nomeEmpresa(e)} para o Diário Oficial`}
+                                 disabled={!e.ativa || !podeAtuar(situacaoEfetiva(e, hoje))}
+                                 title={!e.ativa || !podeAtuar(situacaoEfetiva(e, hoje)) ? 'Só empresas ativas e deferidas, aptas ou em saneamento podem ser marcadas.' : undefined}
+                                 checked={marcadas.has(e.id)}
+                                 onChange={(ev) => alternarMarcada(e.id, ev.target.checked)} />
+                        </td>
+                      )}
                       <td className={`${tabela.td} border-l-4 ${BARRA[situacaoEfetiva(e, hoje)]}`}>
                         <Link to={`/empresas/${e.id}`} className="font-medium text-tinta-900 hover:text-marca-700 hover:underline">
                           {nomeEmpresa(e)}
