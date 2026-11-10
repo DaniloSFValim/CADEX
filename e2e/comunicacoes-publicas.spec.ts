@@ -32,10 +32,10 @@ test.describe('comunicações ao CISP na consulta pública', () => {
     const legenda = page.getByRole('list', { name: 'Legenda das comunicações ao CISP' });
     await expect(legenda).toContainText('Emergência (comunicada depois do fato)');
     await expect(legenda).toContainText('Serviço programado (comunicado antes)');
-    await expect(page.getByText('Mostrando só o que acontece hoje: 1 de 2 comunicações')).toBeVisible();
+    await expect(page.getByText('1 de 2', { exact: true })).toBeVisible();
 
     await page.getByRole('checkbox', { name: /Mostrar os próximos 15 dias/ }).check();
-    await expect(page.getByText('Mostrando 2 de 2 comunicações')).toBeVisible();
+    await expect(page.getByText('2 de 2', { exact: true })).toBeVisible();
     await expect.poll(() => backend.de('comunicacoes_publicas').length).toBeGreaterThan(0);
   });
 

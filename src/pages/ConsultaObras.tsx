@@ -14,8 +14,8 @@ import { ORIGEM_LABEL, TIPO_INTERVENCAO_LABEL, origemPublica } from '../lib/lice
 import { carregarBairrosGeo, chaveBairro, type BairroGeo } from '../lib/bairros';
 import { listarTipos, mapaRotulosTipos, rotuloDoTipo } from '../lib/tiposIntervencao';
 import {
-  COR_SITUACAO, SITUACAO_PUBLICA_LABEL, anosDasObras, baixarObrasGeojson, buscarObrasPublicas, filtrarPainel, nomeLimpo,
-  obraNoAno, obraNoMes, resumoPor, temLocalizacao, type FiltroPainel, type ObraPublica, type ResumoNome,
+  COR_SITUACAO, SITUACAO_PUBLICA_LABEL, baixarObrasGeojson, buscarObrasPublicas, filtrarPainel, nomeLimpo,
+  resumoPor, temLocalizacao, type FiltroPainel, type ObraPublica, type ResumoNome,
 } from '../lib/obras';
 
 // O mapa (MapLibre) é pesado: só carrega nesta página.
@@ -46,35 +46,7 @@ export default function ConsultaObras() {
   const listaRef = useRef<HTMLDivElement>(null);
   // No celular, os filtros ficam recolhidos para o mapa aparecer primeiro.
   const [filtrosAbertos, setFiltrosAbertos] = useState(false);
-  // Linha do tempo: null = todas as datas; senão, o ano escolhido e, opcionalmente, o mês.
   const anoAtual = new Date().getFullYear();
-  const [tempo, setTempo] = useState<{ ano: number; mes: number | null } | null>(null);
-  const mesTempo = tempo?.mes ?? null;
-  const anoTempo = tempo?.ano ?? anoAtual;
-  const [reproduzindo, setReproduzindo] = useState(false);
-  // A navegação vai do primeiro ao último ano com obras (e sempre inclui o ano atual).
-  const anosComObras = useMemo(() => anosDasObras(obras ?? []).map(Number), [obras]);
-  const anoMin = Math.min(anoAtual, ...anosComObras);
-  const anoMax = Math.max(anoAtual, ...anosComObras);
-  // Reprodução: avança mês a mês e, ao fim do ano, passa para janeiro do ano seguinte, até o último ano com obras.
-  useEffect(() => {
-    if (!reproduzindo) return;
-    const t = window.setInterval(() => {
-      setTempo((atual) => {
-        const ano = atual?.ano ?? anoAtual;
-        const mes = atual?.mes ?? null;
-        if (mes === null) return { ano, mes: 0 };
-        if (mes < 11) return { ano, mes: mes + 1 };
-        if (ano < anoMax) return { ano: ano + 1, mes: 0 };
-        return atual;
-      });
-    }, 1100);
-    return () => window.clearInterval(t);
-  }, [reproduzindo, anoAtual, anoMax]);
-  // Para ao chegar ao último mês com obras.
-  useEffect(() => {
-    if (reproduzindo && tempo?.mes === 11 && tempo.ano >= anoMax) setReproduzindo(false);
-  }, [reproduzindo, tempo, anoMax]);
   // Bairros oficiais por chave: nome canônico e região. Vazio até carregar.
   const [bairrosGeo, setBairrosGeo] = useState<Map<string, BairroGeo>>(new Map());
   const [baixando, setBaixando] = useState(false);
@@ -132,7 +104,7 @@ export default function ConsultaObras() {
   const obrasPainel = useMemo(() => filtrarPainel(obras ?? [], filtro), [obras, filtro]);
   // Escolher uma situação específica olha todas as obras (inclusive concluídas e prazos encerrados).
   // Com período escolhido, as obras encerradas também entram: o histórico precisa aparecer na consulta por data.
-  const base = filtroAtivo ? obrasPainel : mostrarEncerradas || situacaoLista || tempo ? todas : ativas;
+  const base = filtroAtivo ? obrasPainel : mostrarEncerradas || situacaoLista ? todas : ativas;
   const termo = busca.trim().toLowerCase();
   const porBusca = (o: ObraPublica) => !termo || [o.numero, o.executora, o.contratante ?? '', o.escopo,
     ...o.trechos.flatMap((t) => [t.logradouro, t.bairro ?? ''])].some((s) => s.toLowerCase().includes(termo));
@@ -144,10 +116,8 @@ export default function ConsultaObras() {
     const fim = o.fim_previsto ?? o.inicio_previsto ?? '';
     return (!periodoIni || fim >= periodoIni) && (!periodoFim || ini <= periodoFim);
   };
-  // Linha do tempo: com ano ou mês escolhido, mapa e lista mostram só as obras desse período.
-  const porTempo = (o: ObraPublica) => !tempo || (tempo.mes === null ? obraNoAno(o, tempo.ano) : obraNoMes(o, tempo.ano, tempo.mes));
   const listadas = base.filter((o) => !situacaoLista || o.situacao === situacaoLista)
-    .filter(porRegiao).filter(porBusca).filter(porPeriodo).filter(porTempo);
+    .filter(porRegiao).filter(porBusca).filter(porPeriodo);
   const grupos = useMemo(() => (ordem === 'bairro'
     ? agruparPorBairro(listadas, bairrosGeo)
     : [{ bairro: ROTULO_ORDEM[ordem], obras: ordenarObras(listadas, ordem) }]), [listadas, bairrosGeo, ordem]);
@@ -193,23 +163,18 @@ export default function ConsultaObras() {
             <button type="button" aria-pressed={!mostrarEncerradas && !situacaoLista}
                     onClick={() => { setMostrarEncerradas(false); setSituacaoLista(''); listaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
                     className="rounded-xl text-left transition-colors hover:bg-tinta-100/60 focus-visible:outline-2 focus-visible:outline-marca-700">
-              <Kpi rotulo="Vigentes agora" valor={stats.vigentes} detalhe="clique para ver só as vigentes" tom="alta" />
+              <Kpi rotulo="Vigentes agora" valor={stats.vigentes} tom="alta" />
             </button>
             <button type="button" onClick={() => listaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
                     className="rounded-xl text-left transition-colors hover:bg-tinta-100/60 focus-visible:outline-2 focus-visible:outline-marca-700">
-              <Kpi rotulo={stats.bairros === 1 ? 'Bairro' : 'Bairros'} valor={stats.bairros} detalhe="clique para ver a lista" />
+              <Kpi rotulo={stats.bairros === 1 ? 'Bairro' : 'Bairros'} valor={stats.bairros} />
             </button>
-            <Kpi rotulo={stats.execs === 1 ? 'Executora' : 'Executoras'} valor={stats.execs} detalhe="filtre por executora abaixo da lista" />
+            <Kpi rotulo={stats.execs === 1 ? 'Executora' : 'Executoras'} valor={stats.execs} />
           </div>
         )}
 
         <AbasConsulta />
 
-        {/* Filtros numa superfície clara, logo abaixo das abas. */}
-        <p className="mt-5 text-sm text-tinta-600">
-          Para ver uma licença, escolha uma obra no mapa ou na lista e abra <strong className="font-semibold text-tinta-800">Ver licença</strong>.
-          Lá estão o trecho, a executora e o prazo.
-        </p>
         <ErrorNote error={error} />
         {!obras && !error && <Spinner label="Carregando as obras…" />}
 
@@ -220,76 +185,22 @@ export default function ConsultaObras() {
             {/* Mapa em largura total; a ficha da obra selecionada fica sobre ele. */}
             <div>
               <Suspense fallback={<div className="h-[60vh] min-h-[360px] rounded-xl border border-tinta-200 bg-tinta-50" />}>
-                <details className="group mb-2 rounded-xl border border-tinta-200 bg-white px-4 py-2 text-sm">
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 font-semibold text-tinta-900 [&::-webkit-details-marker]:hidden">
-                    Opções do mapa
-                    <span className="text-xs font-normal text-tinta-600">
-                      Linha do tempo: {tempo === null ? 'todas as datas' : mesTempo === null ? `obras de ${anoTempo}` : `${NOMES_MESES[mesTempo]} de ${anoTempo}`}
-                    </span>
-                  </summary>
-                  <div className="mt-3 flex flex-col gap-4">
-                    <div>
-                      <p className="text-xs font-semibold text-tinta-700">Linha do tempo</p>
-                  <div className="flex flex-col gap-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-xs font-semibold text-tinta-700">Ano</span>
-                      <button type="button" disabled={anoTempo <= anoMin} aria-label="Ano anterior"
-                              onClick={() => { setReproduzindo(false); setTempo((t) => ({ ano: Math.max(anoMin, (t?.ano ?? anoAtual) - 1), mes: t?.mes ?? null })); }}
-                              className="rounded-full border border-tinta-200 bg-white px-3 py-1.5 text-xs font-semibold text-tinta-800 hover:bg-tinta-50 disabled:cursor-not-allowed disabled:opacity-40">‹ Ano anterior</button>
-                      <span className="tabular min-w-[4rem] text-center text-base font-semibold text-tinta-900">{anoTempo}</span>
-                      <button type="button" disabled={anoTempo >= anoMax} aria-label="Próximo ano"
-                              onClick={() => { setReproduzindo(false); setTempo((t) => ({ ano: Math.min(anoMax, (t?.ano ?? anoAtual) + 1), mes: t?.mes ?? null })); }}
-                              className="rounded-full border border-tinta-200 bg-white px-3 py-1.5 text-xs font-semibold text-tinta-800 hover:bg-tinta-50 disabled:cursor-not-allowed disabled:opacity-40">Próximo ano ›</button>
-                      <button type="button" disabled={tempo === null}
-                              onClick={() => { setReproduzindo(false); setTempo(null); }}
-                              className="rounded-full border border-tinta-200 bg-white px-3 py-1.5 text-xs font-semibold text-tinta-800 hover:bg-tinta-50 disabled:cursor-not-allowed disabled:opacity-40">Ver todas as datas</button>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <label className="flex min-w-0 flex-1 items-center gap-3 text-tinta-700">
-                        <span className="text-xs font-semibold text-tinta-700">Mês</span>
-                        <input type="range" min={0} max={11} step={1} value={mesTempo ?? 0} aria-label="Mês do mapa"
-                               onChange={(e) => setTempo({ ano: anoTempo, mes: Number(e.target.value) })}
-                               className="w-full min-w-[12rem] accent-marca-700" aria-valuetext={NOMES_MESES[mesTempo ?? 0]} />
-                      </label>
-                      <span className="tabular text-xs text-tinta-600">
-                        {tempo === null
-                          ? 'Sem filtro de data'
-                          : `${listadas.length} obra${listadas.length === 1 ? '' : 's'} com período em ${mesTempo === null ? '' : NOMES_MESES[mesTempo] + ' de '}${anoTempo}`}
-                      </span>
-                      <button type="button" aria-pressed={reproduzindo}
-                              onClick={() => {
-                                if (!reproduzindo && (tempo === null || (tempo.mes === 11 && tempo.ano >= anoMax))) setTempo({ ano: anoTempo, mes: 0 });
-                                setReproduzindo((r) => !r);
-                              }}
-                              className="rounded-full border border-tinta-200 bg-white px-3 py-1.5 text-xs font-semibold text-tinta-800 hover:bg-tinta-50 disabled:cursor-not-allowed disabled:opacity-40">
-                        {reproduzindo ? 'Pausar' : 'Reproduzir'}
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-tinta-600">
+                  <div role="group" aria-label="Visualização do mapa" className="inline-flex rounded-full border border-tinta-200 bg-white p-0.5 text-xs font-semibold">
+                    {(['pontos', 'calor'] as const).map((m) => (
+                      <button key={m} type="button" aria-pressed={modo === m} onClick={() => setModo(m)}
+                              className={`rounded-full px-3 py-1 ${modo === m ? 'bg-marca-700 text-white' : 'text-tinta-600 hover:text-tinta-900'}`}>
+                        {m === 'pontos' ? 'Obras' : 'Mapa de calor'}
                       </button>
-                    </div>
+                    ))}
                   </div>
-                      <p className="mt-2 text-xs text-tinta-500">
-                        Mapa e lista mostram as mesmas obras: as que têm período previsto no ano ou mês escolhido.
-                      </p>
-                    </div>
-                    <div className="border-t border-tinta-100 pt-3">
-                  <div className="flex flex-col items-start gap-2">
-                    <div role="group" aria-label="Visualização do mapa" className="inline-flex rounded-full border border-tinta-200 bg-white p-0.5 text-xs font-semibold">
-                      {(['pontos', 'calor'] as const).map((m) => (
-                        <button key={m} type="button" aria-pressed={modo === m} onClick={() => setModo(m)}
-                                className={`rounded-full px-3 py-1 ${modo === m ? 'bg-marca-700 text-white' : 'text-tinta-600 hover:text-tinta-900'}`}>
-                          {m === 'pontos' ? 'Obras' : 'Mapa de calor'}
-                        </button>
-                      ))}
-                    </div>
-                    <p>
-                      <button type="button" className={linkTexto} disabled={baixando} onClick={() => void baixarGeojson()}>
-                        {baixando ? 'Preparando…' : 'Dados abertos: baixar GeoJSON'}
-                      </button>
-                      <span className="text-tinta-400">. Todas as obras licenciadas, para uso livre.</span>
-                    </p>
-                  </div>
-                    </div>
-                  </div>
-                </details>
+                  <p>
+                    <button type="button" className={linkTexto} disabled={baixando} onClick={() => void baixarGeojson()}>
+                      {baixando ? 'Preparando…' : 'Dados abertos: baixar GeoJSON'}
+                    </button>
+                    <span className="text-tinta-400">. Todas as obras licenciadas, para uso livre.</span>
+                  </p>
+                </div>
                 <div ref={mapaRef} className="relative scroll-mt-4 overflow-hidden rounded-xl border border-tinta-200 shadow-xs">
                   <MapaObras obras={listadas} comunicacoes={comunicacoesVisiveis}
                              foco={foco} destaque={destaque} modo={modo} bairro={bairro}
@@ -309,10 +220,6 @@ export default function ConsultaObras() {
                                     visiveis={comunicacoesVisiveis.length} total={comunicacoes.length} />
               )}
               {comunicacoesVisiveis.length > 0 && <LegendaComunicacoes />}
-              <p className="mt-2 text-xs leading-relaxed text-tinta-500">
-                Cada trecho aparece como uma linha reta entre o início e o fim informados na licença, sem seguir o
-                traçado da rua. Para o percurso exato, abra a licença.
-              </p>
             </div>
 
               </div>
@@ -496,7 +403,7 @@ export default function ConsultaObras() {
 
               </div>
             </div>
-            <ObrasPorMes obras={todas} ano={anoTempo} hoje={hojeISO()} foco={foco} onSelecionar={setFoco} />
+            <ObrasPorMes obras={todas} ano={anoAtual} hoje={hojeISO()} foco={foco} onSelecionar={setFoco} />
             <HistoricoAcervo obras={todas} rotulos={rotulos} />
 
             {/* Único lugar onde se filtra a lista por executora: fica recolhido para não poluir a página. */}
@@ -612,7 +519,6 @@ function rotuloTipos(tipos: string[], rotulos: Record<string, string>) {
   return tipos.map((t) => rotuloDoTipo(t, rotulos).toLowerCase()).join(', ');
 }
 
-const NOMES_MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 
 function ResumoExecutoras({ executoras, selecionada, onEscolher }: {
   executoras: ResumoNome[]; selecionada: string | null; onEscolher: (nome: string) => void;
@@ -671,7 +577,7 @@ function FiltroComunicacoes({ ampliado, onMudar, visiveis, total }: {
         Mostrar os próximos {DIAS_JANELA} dias (programados) e os {DIAS_JANELA} dias anteriores (emergências)
       </label>
       <span className="text-tinta-500">
-        {ampliado ? 'Mostrando' : 'Mostrando só o que acontece hoje:'} {visiveis} de {total} comunicações
+        {visiveis} de {total}
       </span>
     </section>
   );
