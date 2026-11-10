@@ -40,6 +40,8 @@ export interface Empresa {
   representante: string | null;
   /** Cadastro ativo. Só o administrador desativa; a empresa desativada não entra em licença nova. */
   ativa: boolean;
+  /** Empresa de teste: existe para testes internos e nunca entra em visão pública nem em exportação. */
+  teste: boolean;
   /** A titular (operadora, concessionária, construtora) executa obra ou serviço por conta própria.
    *  Habilita a licença com a mesma empresa como contratante e executora. Terceirizada não usa. */
   executa_obras: boolean;

@@ -64,9 +64,14 @@ begin
 
   insert into empresas (cnpj, razao_social, tipo, email, setores)
   values ('22333444000181', 'Terceirizada Gás Ltda.', 'terceirizada', 'tg@s.test', '{gas}') returning id into terc_gas;
-  insert into empresas (cnpj, razao_social, tipo, email, setores)
-  values ('66777888000181', 'Terceirizada Multissetor Ltda.', 'terceirizada', 'tm@s.test', '{telecom,gas,telecom}')
+  -- Como dono do banco: a consulta pública só lista empresa deferida ou apta.
+  reset role;
+  alter table empresas disable trigger empresas_situacao;
+  insert into empresas (cnpj, razao_social, tipo, email, setores, situacao, ativa, codigo_cadex)
+  values ('66777888000181', 'Terceirizada Multissetor Ltda.', 'terceirizada', 'tm@s.test', '{telecom,gas,telecom}', 'deferida', true, 'CADEX-T08-MULTI')
   returning id into terc_multi;
+  alter table empresas enable trigger empresas_situacao;
+  set local role cadex_test_app;
   perform pg_temp.assert((select setores = '{gas,telecom}' from empresas where id = terc_multi), 'setores repetidos');
   insert into empresas (cnpj, razao_social, tipo, email, setores)
   values ('77888999000181', 'Terceirizada Drenagem Ltda.', 'terceirizada', 'td@s.test', '{drenagem}') returning id into terc_dren;

@@ -10,7 +10,7 @@ const emp = (id: string, over: Partial<Empresa> = {}): Empresa => ({
   setores: ['telecom'], email: 'x@y.z', telefone: null, cep: null, logradouro: null, numero: null, complemento: null,
   bairro: null, cidade: null, uf: null, representante: null, observacoes: null, situacao: 'deferida', processo_numero: null,
   data_requerimento: null, portaria_numero: null, portaria_data: null, validade_ate: '2027-12-31', notificacao_data: null,
-  logo_arquivo: null, ativa: true, executa_obras: false, criado_em: '2026-01-01T00:00:00Z', atualizado_em: '2026-01-01T00:00:00Z', ...over,
+  logo_arquivo: null, ativa: true, teste: false, executa_obras: false, criado_em: '2026-01-01T00:00:00Z', atualizado_em: '2026-01-01T00:00:00Z', ...over,
 });
 
 let seq = 0;

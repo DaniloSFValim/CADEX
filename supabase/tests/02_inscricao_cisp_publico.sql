@@ -194,7 +194,9 @@ select set_config('cadex.test_user_id', '', true);
 do $$
 declare r record; cols text;
 begin
-  perform pg_temp.assert((select count(*) from consulta_publica()) = 3, 'consulta pública deveria listar as 3 empresas');
+  -- Consulta pública: só empresas deferidas ou aptas (vencida e as demais ficam de fora).
+  perform pg_temp.assert((select bool_and(situacao in ('deferida', 'apta')) from consulta_publica()),
+    'consulta pública listou empresa que não está deferida nem apta');
 
   select * into r from consulta_publica() where cnpj = '11222333000181';
   perform pg_temp.assert(r.situacao = 'apta' and r.codigo_cadex like 'CADEX-OPE-%'
@@ -205,8 +207,8 @@ begin
   perform pg_temp.assert(r.situacao = 'deferida' and r.contratantes = array['OpTeste'],
     'terceirizada deveria aparecer DEFERIDA, atendendo a OpTeste');
 
-  select * into r from consulta_publica() where cnpj = '55666777000181';
-  perform pg_temp.assert(r.situacao = 'vencida', 'inscrição com mais de 12 meses deveria aparecer VENCIDA');
+  perform pg_temp.assert(not exists (select 1 from consulta_publica() where cnpj = '55666777000181'),
+    'inscrição com mais de 12 meses (vencida) não deveria aparecer na consulta pública');
 
   -- Nenhum dado de contato, pessoa ou documento na consulta
   select string_agg(a.attname, ',') into cols
