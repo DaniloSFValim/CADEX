@@ -285,7 +285,7 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
       return vazio();
     }
     if (caminho === 'rpc/conflitos_de_licenca') return responder([]);
-    if (caminho === 'rpc/estatisticas_publicas') return responder({ protocoladas_12m: 73, concluidas: 211, em_andamento: 0, executoras: 8, empresas_ativas: 12 });
+    if (caminho === 'rpc/estatisticas_publicas') return responder({ autorizadas_12m: 70, concluidas_5a: 205, executoras: 8, empresas_ativas: 39 });
     if (caminho === 'rpc/emitir_documento') {
       // Numeração em memória, como o banco: 1, 2, 3... por emissão.
       const { p_tipo, p_empresa_id, p_dados } = corpo as { p_tipo: string; p_empresa_id: string; p_dados: Record<string, unknown> };
