@@ -40,11 +40,10 @@ export async function buscarObrasPublicas(): Promise<ObraPublica[]> {
 
 /** Números da consulta pública: contagens agregadas, sem dado de pessoa ou empresa individual. */
 export interface EstatisticasPublicas {
-  /** Licenças deferidas protocoladas nos últimos 12 meses (o CADEX não guarda a data de emissão). */
-  protocoladas_12m: number;
-  concluidas: number;
-  /** Obras vigentes ou aguardando início. */
-  em_andamento: number;
+  /** Licenças autorizadas (deferidas) protocoladas nos últimos 12 meses. */
+  autorizadas_12m: number;
+  /** Obras concluídas nos últimos cinco anos, até hoje. */
+  concluidas_5a: number;
   /** Empresas executoras com pelo menos uma obra no mapa. */
   executoras: number;
   /** Empresas cadastradas e ativas no CADEX. */

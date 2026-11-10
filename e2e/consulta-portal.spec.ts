@@ -36,17 +36,6 @@ test('busca por número de licença filtra a lista (e o mapa acompanha)', async 
   await expect(page.locator('li[id^="obra-"]')).toHaveCount(2);
 });
 
-test('o indicador "Em andamento ou a começar" é clicável e marca o estado', async ({ page }) => {
-  await instalarBackend(page, { licencas: [licenca({ numero: '821/2026' })] });
-  await page.goto('/consulta/obras');
-  await abrirLista(page);
-  // Por padrão a consulta mostra todas as obras; o indicador só marca quando o filtro de vigentes é escolhido.
-  const vigentes = page.getByRole('button', { name: /Em andamento ou a começar/ });
-  await expect(vigentes).toHaveAttribute('aria-pressed', 'false');
-  await vigentes.click();
-  await expect(vigentes).toHaveAttribute('aria-pressed', 'true');
-});
-
 test('ordenar por empresa muda a lista para um grupo só, sem o botão por bairro', async ({ page }) => {
   await instalarBackend(page, {
     licencas: [licenca({ numero: '831/2026', executora_id: 'ter1' }), licenca({ numero: '832/2026', executora_id: 'op1' })],
@@ -135,7 +124,7 @@ test('obra escolhida depois do primeiro lote aparece na lista aberta', async ({ 
 test('os números gerais mostram contagens úteis, não "vigentes" zerado', async ({ page }) => {
   await instalarBackend(page, { licencas: [licenca({ numero: '901/2026' })] });
   await page.goto('/consulta/obras');
-  await expect(page.getByText('Licenças deferidas nos últimos 12 meses')).toBeVisible();
-  await expect(page.getByText('Obras concluídas')).toBeVisible();
-  await expect(page.getByText('Vigentes agora')).toHaveCount(0);
+  await expect(page.getByText('Licenças autorizadas nos últimos 12 meses')).toBeVisible();
+  await expect(page.getByText('Obras concluídas nos últimos 5 anos')).toBeVisible();
+  await expect(page.getByText('Em andamento ou a começar')).toHaveCount(0);
 });

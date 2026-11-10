@@ -161,16 +161,9 @@ export default function ConsultaObras() {
         />
 
         {obras && estat && (
-          <div className="mt-8 grid grid-cols-2 gap-x-8 gap-y-6 lg:grid-cols-4">
-            <Kpi rotulo="Licenças deferidas nos últimos 12 meses" valor={estat.protocoladas_12m}
-                 detalhe="pela data do protocolo" />
-            <Kpi rotulo="Obras concluídas" valor={estat.concluidas} />
-            {/* Clicar leva à lista só com as obras em andamento ou a começar. */}
-            <button type="button" aria-pressed={!mostrarEncerradas && situacaoLista === ''}
-                    onClick={() => { setMostrarEncerradas(false); setSituacaoLista(''); listaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
-                    className="rounded-xl text-left transition-colors hover:bg-tinta-100/60 focus-visible:outline-2 focus-visible:outline-marca-700">
-              <Kpi rotulo="Em andamento ou a começar" valor={estat.em_andamento} tom="alta" />
-            </button>
+          <div className="mt-8 grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-3">
+            <Kpi rotulo="Licenças autorizadas nos últimos 12 meses" valor={estat.autorizadas_12m} />
+            <Kpi rotulo="Obras concluídas nos últimos 5 anos" valor={estat.concluidas_5a} />
             <Kpi rotulo={estat.executoras === 1 ? 'Empresa executora' : 'Empresas executoras'} valor={estat.executoras}
                  detalhe={`de ${estat.empresas_ativas} cadastradas e ativas`} />
           </div>
