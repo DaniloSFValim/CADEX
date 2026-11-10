@@ -63,7 +63,7 @@ begin
   -- 5. Programado registrado depois do início é recusado.
   perform pg_temp.recusa(format($f$insert into comunicacoes_servico (empresa_id, tipo, tipo_servico, responsavel, placas, local_servico, descricao,
     inicio_previsto, fim_previsto, comunicado_em, inicio_lat, inicio_lng)
-    values (%L, 'programado', 'Manutenção', 'Fulano', array['ABC1234'], 'Rua E', 'Manutenção', current_date - 1, current_date,
+    values (%L, 'programado', 'Manutenção', 'Fulano', array['ABC1234'], 'Rua E', 'Manutenção', hoje_niteroi() - 1, hoje_niteroi(),
     now(), -22.9, -43.1)$f$, emp), 'antes do início', 'programado tardio foi aceito');
 
   -- 6. Tipo e data do fato não mudam depois do registro.

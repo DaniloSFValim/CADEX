@@ -38,6 +38,26 @@ export async function buscarObrasPublicas(): Promise<ObraPublica[]> {
   return (data as ObraPublica[] | null) ?? [];
 }
 
+/** Números da consulta pública: contagens agregadas, sem dado de pessoa ou empresa individual. */
+export interface EstatisticasPublicas {
+  /** Licenças deferidas protocoladas nos últimos 12 meses (o CADEX não guarda a data de emissão). */
+  protocoladas_12m: number;
+  concluidas: number;
+  /** Obras vigentes ou aguardando início. */
+  em_andamento: number;
+  /** Empresas executoras com pelo menos uma obra no mapa. */
+  executoras: number;
+  /** Empresas cadastradas e ativas no CADEX. */
+  empresas_ativas: number;
+}
+
+/** Nulo se a leitura falhar: a consulta mostra o mapa mesmo sem os números. */
+export async function buscarEstatisticasPublicas(): Promise<EstatisticasPublicas | null> {
+  const { data, error } = await supabase.rpc('estatisticas_publicas');
+  if (error || !data) return null;
+  return data as EstatisticasPublicas;
+}
+
 /**
  * Dados abertos: baixa as obras licenciadas como GeoJSON (uma Feature por
  * trecho). Mesma seleção do mapa público; sem dado interno.

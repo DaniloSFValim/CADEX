@@ -52,7 +52,7 @@ begin
   -- Comunicação depois do início é recusada.
   begin
     insert into comunicacoes_servico (empresa_id, responsavel, placas, local_servico, descricao, tipo_servico, inicio_lat, inicio_lng, inicio_previsto, fim_previsto, comunicado_em)
-    values (ativa_id, 'Fulano', array['ABC1234'], 'Rua D', 'Serviço', 'Teste', -22.900000, -43.100000, current_date - 1, current_date + 3, now());
+    values (ativa_id, 'Fulano', array['ABC1234'], 'Rua D', 'Serviço', 'Teste', -22.900000, -43.100000, hoje_niteroi() - 1, hoje_niteroi() + 3, now());
     raise exception 'ASSERT FALHOU: comunicação tardia foi aceita';
   exception when others then
     if sqlerrm like 'ASSERT FALHOU%' then raise; end if;
