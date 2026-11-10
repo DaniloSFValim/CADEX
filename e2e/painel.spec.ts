@@ -43,8 +43,9 @@ test.describe('painel gerencial', () => {
     await instalarBackend(page, cenario());
     await page.goto('/dashboard');
 
+    await page.getByText('Filtrar', { exact: true }).click();
     await page.locator('select:has(option[value="estado:aguardando_inicio"])').selectOption('estado:aguardando_inicio');
-    await expect(resumo(page)).toContainText('3 de 8 licenças com estes filtros');
+    await expect(resumo(page)).toContainText('3 de 8 licenças');
     await expect(page.locator('section[aria-label="Registros"] tbody tr')).toHaveCount(3);
     await expect(indicador(page, 'Licenças registradas')).toHaveText(/Licenças registradas\s*3/);
 
@@ -57,19 +58,20 @@ test.describe('painel gerencial', () => {
     await page.goto('/dashboard');
 
     await bloco(page, 'Por contratante').getByRole('button', { name: /OpUm/ }).click();
-    await expect(resumo(page)).toContainText('6 de 8 licenças com estes filtros');
+    await expect(resumo(page)).toContainText('6 de 8 licenças');
 
+    await page.getByText('Filtrar', { exact: true }).click();
     await page.locator('select:has(option[value="estado:em_execucao"])').selectOption('estado:em_execucao');
-    await expect(resumo(page)).toContainText('1 de 8 licenças com estes filtros');
+    await expect(resumo(page)).toContainText('1 de 8 licenças');
   });
 
   test('o filtro de período mostra as licenças cujo período cruza o intervalo', async ({ page }) => {
     await instalarBackend(page, cenario());
     await page.goto('/dashboard');
-    await page.getByText('Mais filtros').click();
+    await page.getByText('Filtrar', { exact: true }).click();
     await page.getByRole('button', { name: 'Próximos 90 dias' }).click();
     // As cinco em execução ou programadas; fora ficam a vencida, a concluída e a cancelada.
-    await expect(resumo(page)).toContainText('5 de 8 licenças com estes filtros');
+    await expect(resumo(page)).toContainText('5 de 8 licenças');
   });
 
   test('sem licenças, mostra o estado vazio em vez de números zerados', async ({ page }) => {
