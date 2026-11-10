@@ -30,11 +30,11 @@ const VEREDITO: Record<SituacaoPublica, { titulo: string; cor: string; frase: (d
     frase: (d) => `A licença só vale a partir de ${dataBR(d.inicio_previsto)}. Antes disso a obra não está autorizada.`,
   },
   prazo_encerrado: {
-    titulo: 'Prazo encerrado', cor: 'border-baixa bg-baixa/6 text-baixa',
+    titulo: 'Prazo de execução encerrado', cor: 'border-baixa bg-baixa/6 text-baixa',
     frase: (d) => `O período da obra ou serviço terminou em ${dataBR(d.fim_previsto)}. A obra não está mais autorizada.`,
   },
   concluida: {
-    titulo: 'Obra encerrada', cor: 'border-tinta-400 bg-tinta-50 text-tinta-700',
+    titulo: 'Obra concluída', cor: 'border-tinta-400 bg-tinta-50 text-tinta-700',
     frase: () => 'A obra ou serviço desta licença foi encerrada.',
   },
   cancelada: {
