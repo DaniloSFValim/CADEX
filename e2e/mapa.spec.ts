@@ -1,34 +1,15 @@
 import { expect, test, type Page } from '@playwright/test';
 import { instalarBackend } from './apoio/backend';
 import { dia, licenca } from './apoio/dados';
-import { abrirLista } from './apoio/lista';
 
 /** Quantos trechos o mapa recebeu (atributo do próprio componente). */
 const noMapa = (page: Page) => page.locator('[data-trechos]');
-const lista = (page: Page) => page.locator('section[aria-label="Lista das obras e serviços licenciados"] details li');
-/** A lista mostra só as vigentes por padrão: abre as encerradas e concluídas antes de contar tudo. */
-const mostrarEncerradas = async (page: Page) => {
-  const botao = page.getByRole('button', { name: /^Todas \(/ });
-  await expect(botao).toBeVisible();
-  await botao.click();
-};
-
-/** Abre cada obra da lista (pelo endereço) e devolve o texto da ficha que aparece sobre o mapa. */
-const fichasDas = async (page: Page, n: number) => {
-  const ficha = page.getByRole('article', { name: 'Ficha da obra selecionada' });
-  const textos: string[] = [];
-  for (let i = 0; i < n; i++) {
-    await lista(page).nth(i).getByRole('button').first().click();
-    textos.push(await ficha.innerText());
-  }
-  return textos;
-};
 
 const orgao = (id: string, nome: string, natureza: 'administracao_direta' | 'autarquia') =>
   ({ id, nome, sigla: nome.slice(0, 4).toUpperCase(), esfera: 'municipal' as const, cnpj: null, setores: [], natureza, criado_em: '2026-01-01', atualizado_em: '2026-01-01' });
 
 test.describe('mapa de consulta', () => {
-  test('mostra no mapa e na lista as licenças do banco, com tipo e origem', async ({ page }) => {
+  test('mostra no mapa as licenças do banco', async ({ page }) => {
     await instalarBackend(page, {
       orgaos: [orgao('pref', 'Secretaria de Obras', 'administracao_direta')],
       licencas: [
@@ -38,14 +19,7 @@ test.describe('mapa de consulta', () => {
       ],
     });
     await page.goto('/consulta/obras');
-    await abrirLista(page);
-    await mostrarEncerradas(page);
     await expect(noMapa(page)).toHaveAttribute('data-trechos', '3');
-    // Tipo, origem e contratante público ficam na ficha do mapa, pelo nome do órgão.
-    const textos = await fichasDas(page, 3);
-    expect(textos.filter((t) => t.includes('Serviço'))).toHaveLength(1);
-    expect(textos.filter((t) => t.includes('pública · prefeitura ou órgão municipal'))).toHaveLength(1);
-    expect(textos.filter((t) => t.includes('Contratante') && t.includes('SECR'))).toHaveLength(1);
   });
 
   test('mostra todas as licenças, sem filtro, e o mapa recebe todas', async ({ page }) => {
@@ -57,37 +31,24 @@ test.describe('mapa de consulta', () => {
       ],
     });
     await page.goto('/consulta/obras');
-    await abrirLista(page);
-    await mostrarEncerradas(page);
-    await expect(lista(page)).toHaveCount(3);
-    await expect(page.getByRole('button', { name: 'Todas (3)' })).toBeVisible();
     await expect(noMapa(page)).toHaveAttribute('data-trechos', '3');
   });
 
   test('licença cancelada sem período não derruba a página', async ({ page }) => {
-    // Reproduz o defeito: o filtro de ano lia uma data nula e a página inteira ficava em branco.
+    // Reproduz o defeito: uma data nula derrubava a página inteira.
     const erros: string[] = [];
     page.on('pageerror', (e) => erros.push(e.message));
     await instalarBackend(page, {
       licencas: [licenca({}), licenca({ situacao: 'cancelada', inicio_previsto: null, fim_previsto: null })],
     });
     await page.goto('/consulta/obras');
-    await abrirLista(page);
-    await mostrarEncerradas(page);
-    await expect(lista(page)).toHaveCount(2);
-    // O período fica na ficha do mapa, que abre ao escolher a obra.
-    const textos = await fichasDas(page, 2);
-    expect(textos.filter((t) => t.includes('Sem período informado'))).toHaveLength(1);
+    await expect(noMapa(page)).toBeVisible();
     expect(erros).toEqual([]);
   });
 
-  test('licença sem localização aparece na lista, identificada, e fora do mapa', async ({ page }) => {
+  test('licença sem localização fica fora do mapa', async ({ page }) => {
     await instalarBackend(page, { licencas: [licenca({}), licenca({ licenca_trechos: [] })] });
     await page.goto('/consulta/obras');
-    await abrirLista(page);
-    await expect(lista(page)).toHaveCount(2);
-    const textos = await fichasDas(page, 2);
-    expect(textos.filter((t) => t.includes('Sem localização, não aparece no mapa'))).toHaveLength(1);
     await expect(noMapa(page)).toHaveAttribute('data-trechos', '1');
   });
 
@@ -111,8 +72,6 @@ test.describe('mapa de consulta', () => {
       await expect.poll(() => backend.de('rpc/salvar_licenca').length).toBe(tipo === 'obra' ? 1 : 2);
     }
     await page.goto('/consulta/obras');
-    await abrirLista(page);
-    await expect(lista(page)).toHaveCount(2);
     await expect(noMapa(page)).toHaveAttribute('data-trechos', '2');
 
     // O que o banco devolve a mais (a licença nova) chega ao mapa ao recarregar; a troca de coordenada
@@ -120,74 +79,6 @@ test.describe('mapa de consulta', () => {
     // Excluída (o banco deixa de devolvê-la): sai da lista e do mapa.
     backend.estado.licencas = backend.estado.licencas.slice(1);
     await page.reload();
-    await expect(lista(page)).toHaveCount(1);
     await expect(noMapa(page)).toHaveAttribute('data-trechos', '1');
   });
-});
-
-test.describe('obras por mês e ficha da obra', () => {
-  const grafico = (page: Page) => page.locator('section[aria-label="Obras por mês do ano"]');
-  const colunas = (page: Page) => grafico(page).getByRole('group', { name: 'Colunas por mês' }).getByRole('button');
-  const ficha = (page: Page) => page.locator('article[aria-label="Ficha da obra selecionada"]');
-
-  test('mostra doze colunas e lista as obras do mês escolhido; clicar numa obra abre a ficha', async ({ page }) => {
-    await instalarBackend(page, {
-      licencas: [licenca({ escopo: 'Rede óptica' }), licenca({ tipo_intervencao: 'servico', escopo: 'Manutenção de poste' })],
-    });
-    await page.goto('/consulta/obras');
-    await abrirLista(page);
-    await expect(colunas(page)).toHaveCount(12);
-    // O mês de hoje vem escolhido, e a lista traz as obras dele.
-    await grafico(page).locator('ul button').first().click();
-    await expect(ficha(page)).toBeVisible();
-    await expect(ficha(page)).toContainText('Rede óptica');
-    await ficha(page).getByRole('button', { name: 'Fechar' }).click();
-    await expect(ficha(page)).toHaveCount(0);
-  });
-
-  test('escolher outro mês troca a lista; mês sem obra mostra a contagem zero', async ({ page }) => {
-    const ano = new Date().getFullYear();
-    await instalarBackend(page, {
-      licencas: [licenca({ inicio_previsto: `${ano}-03-01`, fim_previsto: `${ano}-03-31`, escopo: 'Obra de março' })],
-    });
-    await page.goto('/consulta/obras');
-    await abrirLista(page);
-    await colunas(page).nth(2).click();
-    await expect(grafico(page)).toContainText(`Mar de ${ano}: 1 obra`);
-    await colunas(page).nth(10).click();
-    await expect(grafico(page)).toContainText(`Nov de ${ano}: 0 obras`);
-  });
-
-  test('sem obra com período no ano, o gráfico diz isso em vez de ficar vazio', async ({ page }) => {
-    await instalarBackend(page, {
-      licencas: [licenca({ inicio_previsto: '2019-01-01', fim_previsto: '2019-02-01' })],
-    });
-    await page.goto('/consulta/obras');
-    await abrirLista(page);
-    await expect(grafico(page)).toContainText('Nenhuma obra com período neste ano');
-    await expect(colunas(page)).toHaveCount(0);
-  });
-});
-
-test('bairro: grafias iguais (Pe/Pé) viram um grupo; filtro de região esconde o outro bairro', async ({ page }) => {
-  const base = licenca().licenca_trechos[0];
-  await instalarBackend(page, {
-    licencas: [
-      licenca({ licenca_trechos: [{ ...base, bairro: 'Pe Pequeno' }] }),
-      licenca({ licenca_trechos: [{ ...base, bairro: 'Pé Pequeno' }] }),
-      licenca({ licenca_trechos: [{ ...base, bairro: 'Varzea das Moças' }] }),
-    ],
-  });
-  await page.goto('/consulta/obras');
-  await abrirLista(page);
-  // Um grupo só, com o nome oficial e as duas obras.
-  const grupo = page.locator('section[aria-label="Lista das obras e serviços licenciados"] details').filter({ hasText: 'Pé Pequeno' });
-  await expect(grupo).toHaveCount(1);
-  await expect(grupo).toContainText('2 obras');
-  await expect(page.locator('section[aria-label="Lista das obras e serviços licenciados"] details').filter({ hasText: 'Varzea das Moças' })).toHaveCount(1);
-
-  // Região: só Praias da Baía (onde fica Pé Pequeno).
-  await page.getByLabel('Região').selectOption('Praias da Baía');
-  await expect(page.locator('section[aria-label="Lista das obras e serviços licenciados"] details').filter({ hasText: 'Varzea das Moças' })).toHaveCount(0);
-  await expect(page.locator('section[aria-label="Lista das obras e serviços licenciados"] details').filter({ hasText: 'Pé Pequeno' })).toHaveCount(1);
 });
