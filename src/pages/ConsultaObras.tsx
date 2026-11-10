@@ -83,7 +83,8 @@ export default function ConsultaObras() {
         {obras && estat && (
           <div className="mt-8 grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-3">
             <Kpi rotulo="Licenças autorizadas nos últimos 12 meses" valor={estat.autorizadas_12m} />
-            <Kpi rotulo="Obras concluídas nos últimos 5 anos" valor={estat.concluidas_5a} />
+            <Kpi rotulo="Obras concluídas nos últimos 5 anos" valor={estat.concluidas_5a}
+                 detalhe={`de ${obras.length} obras no mapa`} />
             <Kpi rotulo={estat.executoras === 1 ? 'Empresa executora' : 'Empresas executoras'} valor={estat.executoras}
                  detalhe={`de ${estat.empresas_ativas} cadastradas e ativas`} />
           </div>
