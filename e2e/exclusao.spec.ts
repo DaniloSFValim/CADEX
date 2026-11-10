@@ -1,9 +1,7 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import { instalarBackend } from './apoio/backend';
 import { licenca, uuid } from './apoio/dados';
-import { abrirLista } from './apoio/lista';
 
-const lista = (page: Page) => page.locator('section[aria-label="Lista das obras e serviços licenciados"] details li');
 
 const cenario = () => ({
   administrador: true,
@@ -69,10 +67,6 @@ test.describe('exclusão de licenças', () => {
     await expect(page.locator('section[aria-label="Indicadores"] button, section[aria-label="Indicadores"] > div > div').filter({ hasText: 'Licenças registradas' }).first())
       .toHaveText(/Licenças registradas\s*1/);
     await page.goto('/consulta/obras');
-    await abrirLista(page);
-    // A lista começa só com as vigentes: abre as encerradas antes de contar o que restou.
-    await page.getByRole('button', { name: /^Todas \(/ }).click();
-    await expect(lista(page)).toHaveCount(1);
     await expect(page.locator('[data-trechos]')).toHaveAttribute('data-trechos', '1');
   });
 

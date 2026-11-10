@@ -106,6 +106,11 @@ export default function Licencas() {
         </>}
       />
 
+      {licencas && (
+        <p className="mb-3 text-sm text-tinta-700" role="status">
+          <strong className="text-tinta-900">{licencas.length}</strong> licença{licencas.length === 1 ? '' : 's'} de obra registrada{licencas.length === 1 ? '' : 's'} no CADEX
+        </p>
+      )}
       {licencas && licencas.length > 0 && (
         <div className="mb-10 grid grid-cols-2 gap-x-8 gap-y-6 md:grid-cols-4">
           <Kpi rotulo="Em execução" valor={conta(['em_execucao'])} tom="alta" detalhe="dentro do período da obra ou serviço" />
