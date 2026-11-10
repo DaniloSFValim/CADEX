@@ -14,7 +14,8 @@ import { ORIGEM_LABEL, TIPO_INTERVENCAO_LABEL, origemPublica } from '../lib/lice
 import { carregarBairrosGeo, chaveBairro, type BairroGeo } from '../lib/bairros';
 import { listarTipos, mapaRotulosTipos, rotuloDoTipo } from '../lib/tiposIntervencao';
 import {
-  COR_SITUACAO, SITUACAO_PUBLICA_LABEL, baixarObrasGeojson, buscarObrasPublicas, filtrarPainel, nomeLimpo,
+  COR_SITUACAO, SITUACAO_PUBLICA_LABEL, baixarObrasGeojson, buscarEstatisticasPublicas, buscarObrasPublicas, filtrarPainel, nomeLimpo,
+  type EstatisticasPublicas,
   resumoPor, temLocalizacao, type FiltroPainel, type ObraPublica, type ResumoNome,
 } from '../lib/obras';
 
@@ -60,6 +61,9 @@ export default function ConsultaObras() {
 
   const [rotulos, setRotulos] = useState<Record<string, string>>({});
   useEffect(() => { buscarObrasPublicas().then(setObras).catch(setError); }, []);
+  // Números gerais (contagens do banco). Se falhar, o mapa e a lista continuam.
+  const [estat, setEstat] = useState<EstatisticasPublicas | null>(null);
+  useEffect(() => { void buscarEstatisticasPublicas().then(setEstat); }, []);
   // Comunicações ao CISP no mapa. Se falhar, o mapa de obras continua sem elas.
   const [comunicacoes, setComunicacoes] = useState<ComunicacaoPublica[]>([]);
   useEffect(() => { buscarComunicacoesPublicas().then(setComunicacoes).catch(() => setComunicacoes([])); }, []);
@@ -133,7 +137,6 @@ export default function ConsultaObras() {
     return saida;
   }, [grupos, limiteLista]);
   const executoras = useMemo(() => resumoPor(todas, (o) => o.executora), [todas]);
-  const stats = useMemo(() => resumo(todas), [todas]);
   const selecionada = useMemo(() => (obras ?? []).find((o) => o.codigo === foco) ?? null, [obras, foco]);
   // Mapa → lista: a obra escolhida no mapa aparece na lista.
   useEffect(() => {
@@ -157,19 +160,19 @@ export default function ConsultaObras() {
           descricao="Veja no mapa as obras licenciadas nas vias da cidade: quem executa, onde e até quando."
         />
 
-        {obras && (
-          <div className="mt-8 grid grid-cols-3 gap-x-8 gap-y-6">
-            {/* Indicadores clicáveis: Vigentes aplica o filtro; Bairros e Executoras levam à seção correspondente. */}
-            <button type="button" aria-pressed={!mostrarEncerradas && !situacaoLista}
+        {obras && estat && (
+          <div className="mt-8 grid grid-cols-2 gap-x-8 gap-y-6 lg:grid-cols-4">
+            <Kpi rotulo="Licenças deferidas nos últimos 12 meses" valor={estat.protocoladas_12m}
+                 detalhe="pela data do protocolo" />
+            <Kpi rotulo="Obras concluídas" valor={estat.concluidas} />
+            {/* Clicar leva à lista só com as obras em andamento ou a começar. */}
+            <button type="button" aria-pressed={!mostrarEncerradas && situacaoLista === ''}
                     onClick={() => { setMostrarEncerradas(false); setSituacaoLista(''); listaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
                     className="rounded-xl text-left transition-colors hover:bg-tinta-100/60 focus-visible:outline-2 focus-visible:outline-marca-700">
-              <Kpi rotulo="Vigentes agora" valor={stats.vigentes} tom="alta" />
+              <Kpi rotulo="Em andamento ou a começar" valor={estat.em_andamento} tom="alta" />
             </button>
-            <button type="button" onClick={() => listaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-                    className="rounded-xl text-left transition-colors hover:bg-tinta-100/60 focus-visible:outline-2 focus-visible:outline-marca-700">
-              <Kpi rotulo={stats.bairros === 1 ? 'Bairro' : 'Bairros'} valor={stats.bairros} />
-            </button>
-            <Kpi rotulo={stats.execs === 1 ? 'Executora' : 'Executoras'} valor={stats.execs} />
+            <Kpi rotulo={estat.executoras === 1 ? 'Empresa executora' : 'Empresas executoras'} valor={estat.executoras}
+                 detalhe={`de ${estat.empresas_ativas} cadastradas e ativas`} />
           </div>
         )}
 
@@ -474,19 +477,6 @@ function agruparPorBairro(obras: ObraPublica[], oficiais: Map<string, BairroGeo>
 
 
 /** Resumo para a faixa de números do herói, a partir das obras carregadas. */
-function resumo(obras: ObraPublica[]) {
-  const bairros = new Set<string>();
-  const execs = new Set<string>();
-  let vigentes = 0;
-  for (const o of obras) {
-    if (o.situacao === 'vigente' || o.situacao === 'aguardando_inicio') vigentes += 1;
-    for (const t of o.trechos) if (t.bairro?.trim()) bairros.add(t.bairro.trim().toLowerCase());
-    if (o.executora?.trim()) execs.add(o.executora.trim().toLowerCase());
-  }
-  return { vigentes, bairros: bairros.size, execs: execs.size, total: obras.length };
-}
-
-
 /** Selo da situação: contorno e cor da própria situação (mesma do mapa). */
 function SeloSituacao({ situacao }: { situacao: ObraPublica['situacao'] }) {
   const cor = COR_SITUACAO[situacao];

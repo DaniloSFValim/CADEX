@@ -23,6 +23,18 @@ interface Dados { licencas: LicencaComTrechos[]; empresas: Empresa[]; orgaos: Or
 const JANELA = 15;
 const PASSO_REGISTROS = 25;
 
+const ROTULO_STATUS: Record<string, string> = {
+  'estado:aguardando_inicio': 'Aguardando início',
+  'estado:em_execucao': 'Em execução',
+  'estado:prazo_encerrado': 'Prazo encerrado',
+  'grupo:concluidas': 'Concluídas',
+  'estado:concluida_sem_as_built': 'Concluída, sem As Built',
+  'situacao:deferida': 'Deferida',
+  'situacao:em_analise': 'Em análise',
+  'situacao:cancelada': 'Cancelada',
+  'situacao:indeferida': 'Indeferida (histórico)',
+};
+
 /** Visão geral do painel: o que está licenciado, em que ponto está e com quem, direto do banco. */
 export default function Painel() {
   const [dados, setDados] = useState<Dados | null>(null);
@@ -85,9 +97,9 @@ export default function Painel() {
     <>
       <Titulo
         titulo="Painel gerencial"
-        descricao="Licenças de obra registradas no CADEX, lidas do banco a cada abertura. Os filtros valem para tudo o que está abaixo."
+        descricao="Licenças de obra registradas no CADEX, lidas do banco a cada abertura."
         acoes={<>
-          {atualizadoEm && <span className="text-xs text-tinta-500" role="status">Atualizado às {atualizadoEm.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>}
+          {atualizadoEm && <span className="text-xs text-tinta-500">Atualizado às {atualizadoEm.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>}
           <Button variant="secondary" disabled={atualizando} onClick={() => void carregar()}>{atualizando ? 'Atualizando…' : 'Atualizar'}</Button>
         </>}
       />
@@ -127,102 +139,127 @@ export default function Painel() {
     .filter((s) => administrativa[s] > 0)
     .map((s) => ({ chave: `situacao:${s}`, rotulo: s === 'indeferida' ? 'Indeferida (histórico)' : SITUACAO_LICENCA_LABEL[s], n: administrativa[s] }));
 
+  // Filtros ativos, cada um com o seu ✕. Mostram o que está valendo sem abrir "Filtrar".
+  const chips: { chave: string; rotulo: string; remover: () => void }[] = [];
+  if (filtros.status) chips.push({ chave: 'status', rotulo: ROTULO_STATUS[filtros.status] ?? filtros.status, remover: () => set('status', '') });
+  if (filtros.contratante) chips.push({
+    chave: 'contratante', rotulo: `Contratante: ${contratantesLista.find((p) => p.chave === filtros.contratante)?.rotulo ?? filtros.contratante}`,
+    remover: () => set('contratante', ''),
+  });
+  if (filtros.executora) chips.push({
+    chave: 'executora', rotulo: `Executora: ${executorasLista.find((p) => p.chave === filtros.executora)?.rotulo ?? filtros.executora}`,
+    remover: () => set('executora', ''),
+  });
+  if (filtros.de || filtros.ate) chips.push({
+    chave: 'periodo', rotulo: `Período: ${filtros.de ? dataBR(filtros.de) : '…'} a ${filtros.ate ? dataBR(filtros.ate) : '…'}`,
+    remover: () => { set('de', ''); set('ate', ''); },
+  });
+  if (filtros.intervencao) chips.push({ chave: 'intervencao', rotulo: TIPO_INTERVENCAO_LABEL[filtros.intervencao], remover: () => set('intervencao', '') });
+  if (filtros.origem) chips.push({ chave: 'origem', rotulo: ORIGEM_LABEL[filtros.origem], remover: () => set('origem', '') });
+  if (filtros.tipo) chips.push({ chave: 'tipo', rotulo: TIPO_OBRA_LABEL[filtros.tipo], remover: () => set('tipo', '') });
+
   return (
     <div className={atualizando ? 'opacity-70 transition-opacity' : 'transition-opacity'}>
       {Cabeca}
       {erro != null && <div className="mb-4"><ErrorNote error={erro} /></div>}
 
-      {/* Filtros: três campos sempre visíveis; o resto fica em "Mais filtros". */}
+      {/* Filtros: chips do que está valendo, e "Filtrar" abre o resto. */}
       <section className="cartao p-4" aria-label="Filtros">
-        <div className="grid gap-3 sm:grid-cols-3">
-          <label className="block text-sm font-medium text-tinta-700">Situação
-            <select className={`${inputClass} mt-1`} value={filtros.status} onChange={(e) => set('status', e.target.value as FiltroStatus)}>
-              <option value="">Todas</option>
-              <optgroup label="Andamento da obra">
-                <option value="estado:aguardando_inicio">Aguardando início (programada)</option>
-                <option value="estado:em_execucao">Em execução (em andamento)</option>
-                <option value="estado:prazo_encerrado">Prazo encerrado (sem conclusão)</option>
-                <option value="grupo:concluidas">Concluída (com ou sem As Built)</option>
-                <option value="estado:concluida_sem_as_built">Concluída, sem As Built</option>
-              </optgroup>
-              <optgroup label="Situação administrativa">
-                <option value="situacao:deferida">Deferida</option>
-                <option value="situacao:em_analise">Em análise</option>
-                <option value="situacao:cancelada">Cancelada</option>
-                <option value="situacao:indeferida">Indeferida (histórico)</option>
-              </optgroup>
-            </select>
-          </label>
-          <label className="block text-sm font-medium text-tinta-700">Contratante
-            <select className={`${inputClass} mt-1`} value={filtros.contratante} onChange={(e) => set('contratante', e.target.value)}>
-              <option value="">Todas</option>
-              {contratantesLista.map((p) => <option key={p.chave} value={p.chave}>{p.rotulo}</option>)}
-            </select>
-          </label>
-          <label className="block text-sm font-medium text-tinta-700">Executora
-            <select className={`${inputClass} mt-1`} value={filtros.executora} onChange={(e) => set('executora', e.target.value)}>
-              <option value="">Todas</option>
-              {executorasLista.map((p) => <option key={p.chave} value={p.chave}>{p.rotulo}</option>)}
-            </select>
-          </label>
-        </div>
-
-        <details className="mt-3 text-sm text-tinta-700">
-          <summary className="inline-flex min-h-9 cursor-pointer items-center rounded-full bg-tinta-100 px-3 font-medium text-tinta-800 hover:bg-tinta-200">
-            Mais filtros{temFiltro(filtros) ? ' (aplicados)' : ''}
-          </summary>
-          <div className="mt-3 flex flex-col gap-3">
-            <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Período da obra ou serviço">
-              <span className="mr-1 font-medium">Período</span>
-              {PRESETS.map((p) => {
-                const ativo = filtros.de === p.de && filtros.ate === p.ate;
-                return (
-                  <button key={p.rotulo} type="button" aria-pressed={ativo}
-                          onClick={() => { set('de', p.de); set('ate', p.ate); }}
-                          className={`min-h-9 rounded-full px-3 transition-colors ${ativo ? 'bg-tinta-900 text-white' : 'bg-tinta-100 text-tinta-700 hover:bg-tinta-200'}`}>
-                    {p.rotulo}
-                  </button>
-                );
-              })}
-              <label className="ml-2 inline-flex items-center gap-1.5 text-tinta-600">De
-                <input type="date" className={`${inputClass} w-auto! py-1.5!`} value={filtros.de} max={filtros.ate || undefined}
-                       onChange={(e) => set('de', e.target.value)} />
+        <div className="flex flex-wrap items-center gap-2">
+          <details className="group">
+            <summary className="inline-flex min-h-9 cursor-pointer list-none items-center rounded-full bg-tinta-900 px-4 text-sm font-medium text-white [&::-webkit-details-marker]:hidden">
+              Filtrar
+            </summary>
+            <div className="mt-3 grid gap-3 rounded-lg border border-tinta-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-3">
+              <label className="block text-sm font-medium text-tinta-700">Situação
+                <select className={`${inputClass} mt-1`} value={filtros.status} onChange={(e) => set('status', e.target.value as FiltroStatus)}>
+                  <option value="">Todas</option>
+                  <optgroup label="Andamento da obra">
+                    <option value="estado:aguardando_inicio">Aguardando início (programada)</option>
+                    <option value="estado:em_execucao">Em execução (em andamento)</option>
+                    <option value="estado:prazo_encerrado">Prazo encerrado (sem conclusão)</option>
+                    <option value="grupo:concluidas">Concluída (com ou sem As Built)</option>
+                    <option value="estado:concluida_sem_as_built">Concluída, sem As Built</option>
+                  </optgroup>
+                  <optgroup label="Situação administrativa">
+                    <option value="situacao:deferida">Deferida</option>
+                    <option value="situacao:em_analise">Em análise</option>
+                    <option value="situacao:cancelada">Cancelada</option>
+                    <option value="situacao:indeferida">Indeferida (histórico)</option>
+                  </optgroup>
+                </select>
               </label>
-              <label className="inline-flex items-center gap-1.5 text-tinta-600">Até
-                <input type="date" className={`${inputClass} w-auto! py-1.5!`} value={filtros.ate} min={filtros.de || undefined}
-                       onChange={(e) => set('ate', e.target.value)} />
+              <label className="block text-sm font-medium text-tinta-700">Contratante
+                <select className={`${inputClass} mt-1`} value={filtros.contratante} onChange={(e) => set('contratante', e.target.value)}>
+                  <option value="">Todas</option>
+                  {contratantesLista.map((p) => <option key={p.chave} value={p.chave}>{p.rotulo}</option>)}
+                </select>
               </label>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <label className="block font-medium">Tipo de intervenção
+              <label className="block text-sm font-medium text-tinta-700">Executora
+                <select className={`${inputClass} mt-1`} value={filtros.executora} onChange={(e) => set('executora', e.target.value)}>
+                  <option value="">Todas</option>
+                  {executorasLista.map((p) => <option key={p.chave} value={p.chave}>{p.rotulo}</option>)}
+                </select>
+              </label>
+              <label className="block text-sm font-medium text-tinta-700">Tipo de intervenção
                 <select className={`${inputClass} mt-1`} value={filtros.intervencao} onChange={(e) => set('intervencao', e.target.value as TipoIntervencao | '')}>
                   <option value="">Todos</option>
                   {TIPOS_INTERVENCAO.map((t) => <option key={t} value={t}>{TIPO_INTERVENCAO_LABEL[t]}</option>)}
                 </select>
               </label>
-              <label className="block font-medium">Origem da intervenção
+              <label className="block text-sm font-medium text-tinta-700">Origem da intervenção
                 <select className={`${inputClass} mt-1`} value={filtros.origem} onChange={(e) => set('origem', e.target.value as OrigemIntervencao | '')}>
                   <option value="">Todas</option>
                   {ORIGENS.map((o) => <option key={o} value={o}>{ORIGEM_LABEL[o]}</option>)}
                 </select>
               </label>
-              <label className="block font-medium">Tipo de obra
+              <label className="block text-sm font-medium text-tinta-700">Tipo de obra
                 <select className={`${inputClass} mt-1`} value={filtros.tipo} onChange={(e) => set('tipo', e.target.value as TipoObra | '')}>
                   <option value="">Todos</option>
                   {(Object.keys(TIPO_OBRA_LABEL) as TipoObra[]).map((t) => <option key={t} value={t}>{TIPO_OBRA_LABEL[t]}</option>)}
                 </select>
               </label>
+              <div className="sm:col-span-2 lg:col-span-3">
+                <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Período da obra ou serviço">
+                  <span className="mr-1 text-sm font-medium text-tinta-700">Período</span>
+                  {PRESETS.map((p) => {
+                    const ativo = filtros.de === p.de && filtros.ate === p.ate;
+                    return (
+                      <button key={p.rotulo} type="button" aria-pressed={ativo}
+                              onClick={() => { set('de', p.de); set('ate', p.ate); }}
+                              className={`min-h-9 rounded-full px-3 text-sm transition-colors ${ativo ? 'bg-tinta-900 text-white' : 'bg-tinta-100 text-tinta-700 hover:bg-tinta-200'}`}>
+                        {p.rotulo}
+                      </button>
+                    );
+                  })}
+                  <label className="ml-2 inline-flex items-center gap-1.5 text-sm text-tinta-600">De
+                    <input type="date" className={`${inputClass} w-auto! py-1.5!`} value={filtros.de} max={filtros.ate || undefined}
+                           onChange={(e) => set('de', e.target.value)} />
+                  </label>
+                  <label className="inline-flex items-center gap-1.5 text-sm text-tinta-600">Até
+                    <input type="date" className={`${inputClass} w-auto! py-1.5!`} value={filtros.ate} min={filtros.de || undefined}
+                           onChange={(e) => set('ate', e.target.value)} />
+                  </label>
+                </div>
+              </div>
             </div>
-          </div>
-        </details>
+          </details>
 
-        <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-tinta-600" role="status">
-          <span>
+          {chips.map((c) => (
+            <button key={c.chave} type="button" onClick={c.remover} aria-label={`Remover o filtro ${c.rotulo}`}
+                    className="inline-flex min-h-9 items-center gap-2 rounded-full border border-marca-700 bg-marca-50 px-3 text-sm font-medium text-marca-700 hover:bg-marca-100">
+              {c.rotulo} <span aria-hidden>✕</span>
+            </button>
+          ))}
+
+          <span className="ml-auto text-sm text-tinta-600" role="status">
             {temFiltro(filtros)
-              ? <><strong className="text-tinta-900">{filtradas.length}</strong> de {dados.licencas.length} {dados.licencas.length === 1 ? 'licença' : 'licenças'} com estes filtros</>
+              ? <><strong className="text-tinta-900">{filtradas.length}</strong> de {dados.licencas.length} {dados.licencas.length === 1 ? 'licença' : 'licenças'}</>
               : <><strong className="text-tinta-900">{dados.licencas.length}</strong> {dados.licencas.length === 1 ? 'licença' : 'licenças'}, sem filtro</>}
           </span>
-          {temFiltro(filtros) && <Button variant="secondary" className="px-3! py-1.5!" onClick={() => { setFiltros(SEM_FILTROS); setMostrar(PASSO_REGISTROS); }}>Limpar filtros</Button>}
+          {temFiltro(filtros) && (
+            <Button variant="secondary" className="px-3! py-1.5!" onClick={() => { setFiltros(SEM_FILTROS); setMostrar(PASSO_REGISTROS); }}>Limpar filtros</Button>
+          )}
         </div>
       </section>
 
@@ -245,18 +282,38 @@ export default function Painel() {
           </div>
         </section>
 
-        {/* Gráficos */}
-        <div className="mt-8 grid gap-6 lg:grid-cols-2">
-          <Bloco titulo="Situação administrativa" nota="A situação registrada. Clique para filtrar.">
-            <BarrasHorizontais itens={barrasAdmin} total={ind.total} selecionada={filtros.status}
-                               onSelecionar={(c) => alternarStatus(c as FiltroStatus)} />
-          </Bloco>
-          <Bloco titulo="Licenças por mês" nota="Pelo mês do protocolo.">
-            {mensal.meses.length === 0
-              ? <Empty>Nenhuma licença com esta data.</Empty>
-              : <ColunasMensais meses={mensal.meses} />}
-            {mensal.semData > 0 && <p className="mt-2 text-xs text-tinta-500">{mensal.semData} licença{mensal.semData === 1 ? '' : 's'} sem esta data, fora do gráfico.</p>}
-          </Bloco>
+        {/* Análise: à esquerda, o que pede atenção nos próximos dias; à direita, a carteira. */}
+        <div className="mt-8 grid gap-6 lg:grid-cols-5">
+          <div className="flex flex-col gap-6 lg:col-span-2">
+            {semPrazos ? (
+              <p id="bloco-comecam" className="cartao px-5 py-3 text-sm text-tinta-600">
+                Nenhuma obra começa nem termina nos próximos {JANELA} dias.
+              </p>
+            ) : (<>
+              <Bloco id="bloco-comecam" titulo={`Começam em até ${JANELA} dias`}>
+                <ListaLicencas itens={iniciam.slice(0, 6)} data={(l) => dataBR(l.inicio_previsto)} nomeExec={nomeExec} hoje={hoje} vazio="Nenhuma obra aberta com início previsto nesta janela." total={iniciam.length} />
+              </Bloco>
+              <Bloco id="bloco-terminam" titulo={`Terminam em até ${JANELA} dias`}>
+                <ListaLicencas itens={terminam.slice(0, 6)} data={(l) => dataBR(l.fim_previsto)} nomeExec={nomeExec} hoje={hoje} vazio="Nenhuma obra aberta com fim previsto nesta janela." total={terminam.length} />
+              </Bloco>
+            </>)}
+          </div>
+          <div className="flex flex-col gap-6 lg:col-span-3">
+            <Bloco titulo="Licenças por mês" nota="Pelo mês do protocolo.">
+              {mensal.meses.length === 0
+                ? <Empty>Nenhuma licença com esta data.</Empty>
+                : <ColunasMensais meses={mensal.meses} />}
+              {mensal.semData > 0 && <p className="mt-2 text-xs text-tinta-500">{mensal.semData} licença{mensal.semData === 1 ? '' : 's'} sem esta data, fora do gráfico.</p>}
+            </Bloco>
+            <Bloco titulo="Situação administrativa" nota="Clique para filtrar.">
+              <BarrasHorizontais itens={barrasAdmin} total={ind.total} selecionada={filtros.status}
+                                 onSelecionar={(c) => alternarStatus(c as FiltroStatus)} />
+            </Bloco>
+          </div>
+        </div>
+
+        {/* Carteira: quem contrata e quem executa. */}
+        <div className="mt-6 grid gap-6 lg:grid-cols-2">
           <Bloco id="bloco-contratantes" titulo="Por contratante" nota="Clique para filtrar.">
             {porContratante.barras.length === 0 ? <Empty>Nenhuma contratante informada.</Empty> : (
               <BarrasHorizontais itens={porContratante.barras} total={ind.total} selecionada={filtros.contratante}
@@ -271,24 +328,6 @@ export default function Painel() {
             )}
             <RodapeBarras demais={porExecutora.demais} semInformacao={porExecutora.semInformacao} sem="sem executora informada" />
           </Bloco>
-        </div>
-
-        {/* Quem começa e quem termina nos próximos 15 dias. Sem nenhum, vira uma linha só. */}
-        <div className="mt-6">
-          {semPrazos ? (
-            <p id="bloco-comecam" className="cartao px-5 py-3 text-sm text-tinta-600">
-              Nenhuma obra começa nem termina nos próximos {JANELA} dias.
-            </p>
-          ) : (
-            <div className="grid gap-6 lg:grid-cols-2">
-              <Bloco id="bloco-comecam" titulo={`Começam em até ${JANELA} dias`}>
-                <ListaLicencas itens={iniciam.slice(0, 6)} data={(l) => dataBR(l.inicio_previsto)} nomeExec={nomeExec} hoje={hoje} vazio="Nenhuma obra aberta com início previsto nesta janela." total={iniciam.length} />
-              </Bloco>
-              <Bloco id="bloco-terminam" titulo={`Terminam em até ${JANELA} dias`}>
-                <ListaLicencas itens={terminam.slice(0, 6)} data={(l) => dataBR(l.fim_previsto)} nomeExec={nomeExec} hoje={hoje} vazio="Nenhuma obra aberta com fim previsto nesta janela." total={terminam.length} />
-              </Bloco>
-            </div>
-          )}
         </div>
 
         {/* Registros correspondentes */}
