@@ -70,8 +70,8 @@ export async function baixarObrasGeojson(): Promise<void> {
 export const SITUACAO_PUBLICA_LABEL: Record<SituacaoPublica, string> = {
   vigente: 'Vigente',
   aguardando_inicio: 'Aguardando início',
-  prazo_encerrado: 'Prazo encerrado',
-  concluida: 'Encerrada',
+  prazo_encerrado: 'Prazo de execução encerrado',
+  concluida: 'Concluída',
   cancelada: 'Cancelada',
   suspensa: 'Suspensa a pedido',
 };
