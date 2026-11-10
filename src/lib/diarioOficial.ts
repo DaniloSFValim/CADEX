@@ -13,7 +13,7 @@ const CHAVES_DIARIO = ['codigo', 'razao', 'fantasia', 'cnpj', 'tipo', 'situacao'
  * a mesma regra do art. 3º usada no restante do sistema. Vencida ou inapta fica de fora.
  */
 export function empresasAutorizadas(empresas: Empresa[], hoje: string): Empresa[] {
-  return empresas.filter((e) => e.ativa && podeAtuar(situacaoEfetiva(e, hoje)));
+  return empresas.filter((e) => e.ativa && !e.teste && podeAtuar(situacaoEfetiva(e, hoje)));
 }
 
 export function relatorioDiarioOficial(autorizadas: Empresa[], contexto: Contexto): Relatorio {

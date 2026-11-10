@@ -22,6 +22,10 @@ describe('empresasAutorizadas', () => {
       emp({ id: 'c', situacao: 'inapta' }), emp({ id: 'd', situacao: 'apta', validade_ate: '2026-01-01' })];
     expect(empresasAutorizadas(lista, HOJE)).toEqual([]);
   });
+  it('exclui empresa de teste, mesmo deferida e ativa', () => {
+    const lista = [emp({ id: 'a', teste: false }), emp({ id: 'b', teste: true })];
+    expect(empresasAutorizadas(lista, HOJE).map((e) => e.id)).toEqual(['a']);
+  });
 });
 
 describe('relatorioMarkdown', () => {

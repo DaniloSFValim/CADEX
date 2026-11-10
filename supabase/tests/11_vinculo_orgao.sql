@@ -47,8 +47,13 @@ create temp table ids (nome text primary key, id uuid);
 do $$
 declare ter uuid; ope uuid; semob uuid;
 begin
-  insert into empresas (cnpj, razao_social, tipo, email, setores)
-  values ('24144040000175', 'Serttel Viário Ltda.', 'terceirizada', 'te@vinc.test', '{viario}') returning id into ter;
+  -- Fixture como dono do banco: a consulta pública só lista empresa deferida ou apta.
+  reset role;
+  alter table empresas disable trigger user;
+  insert into empresas (cnpj, razao_social, tipo, email, setores, situacao, ativa, codigo_cadex)
+  values ('24144040000175', 'Serttel Viário Ltda.', 'terceirizada', 'te@vinc.test', '{viario}', 'deferida', true, 'CADEX-T11-TER') returning id into ter;
+  alter table empresas enable trigger user;
+  set local role cadex_test_app;
   insert into empresas (cnpj, razao_social, tipo, email)
   values ('12345678000195', 'Operadora Vinc S.A.', 'operadora', 'op@vinc.test') returning id into ope;
   insert into orgaos_publicos (nome, sigla, esfera, setores)
