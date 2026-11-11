@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Badge, Button, Card, ErrorNote, Field, Spinner, Titulo, inputClass, type Tom } from '../components/ui';
 import { SituacaoBadge } from '../components/Situacao';
@@ -500,13 +500,13 @@ function Vinculos({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
-  const recarregar = () =>
+  const recarregar = useCallback(() =>
     listarVinculos()
       .then((v) => setVinculos(v.filter((x) => x.contratada_id === empresa.id || x.contratante_id === empresa.id)))
-      .catch(setError);
+      .catch(setError), [empresa.id]);
 
-  useEffect(() => { void recarregar(); }, [empresa.id]);
-  useEffect(() => { listarOrgaos().then(setOrgaos).catch(() => {}); }, []);
+  useEffect(() => { void recarregar(); }, [recarregar]);
+  useEffect(() => { listarOrgaos().then(setOrgaos).catch(setError); }, []);
 
   const agir = async (fn: () => Promise<void>) => {
     setBusy(true); setError(null);
@@ -708,6 +708,8 @@ function Documentos({ empresa }: { empresa: Empresa }) {
       .catch(setError)
       .finally(() => setLoading(false));
 
+  // Recarrega só ao trocar de empresa: regravar a ficha não pode apagar o rascunho de documentos.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { void recarregar(); }, [empresa.id]);
 
   const hoje = hojeISO();

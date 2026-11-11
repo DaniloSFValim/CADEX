@@ -68,7 +68,7 @@ export function App() {
 }
 
 function AreaRestrita() {
-  const { session, servidor, empresa, mfa, loading, signOut } = useAuth();
+  const { session, erroPerfil, servidor, empresa, mfa, loading, signOut } = useAuth();
 
   if (!isConfigured) {
     return (
@@ -83,6 +83,22 @@ function AreaRestrita() {
   // sessão expirou (há um motivo guardado), leva à tela de acesso para
   // explicar a saída e deixar entrar de novo.
   if (!session) return <Navigate to={lerMotivo() ? '/entrar' : '/consulta/obras'} replace />;
+
+  // Falha ao ler o perfil (rede ou servidor) não é falta de acesso: dizer "não autorizado" aqui
+  // manda a pessoa atrás do administrador por um problema de conexão.
+  if (erroPerfil && !servidor && !empresa) {
+    return (
+      <div className="mx-auto max-w-md p-8 text-center" role="alert">
+        <p className="text-sm text-tinta-700">
+          Não foi possível conferir o seu acesso agora. Confira a internet e tente de novo.
+        </p>
+        <div className="mt-4 flex flex-wrap justify-center gap-2">
+          <Button onClick={() => window.location.reload()}>Tentar de novo</Button>
+          <Button variant="secondary" onClick={() => void signOut()}>Sair</Button>
+        </div>
+      </div>
+    );
+  }
 
   if (!servidor && !empresa) {
     return (

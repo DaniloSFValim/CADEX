@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Badge, Button, Card, Empty, ErrorNote, Field, Spinner, inputClass } from './ui';
 import { listarDaEmpresa, salvarDaEmpresa, type Registro, type Tabela } from '../lib/empresas';
 
@@ -49,8 +49,9 @@ export function ListaCadastro({
   const [error, setError] = useState<unknown>(null);
   const [verInativos, setVerInativos] = useState(false);
 
-  const recarregar = () => listarDaEmpresa(tabela, empresaId).then(setItens).catch(setError);
-  useEffect(() => { void recarregar(); }, [tabela, empresaId]);
+  const recarregar = useCallback(
+    () => listarDaEmpresa(tabela, empresaId).then(setItens).catch(setError), [tabela, empresaId]);
+  useEffect(() => { void recarregar(); }, [recarregar]);
 
   const abrir = (r: Registro | 'novo') => {
     setError(null);

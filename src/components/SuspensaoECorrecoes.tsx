@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Button, ErrorNote, Field, inputClass } from './ui';
 import { dataBR } from './Situacao';
 import { useAuth } from '../lib/auth';
@@ -27,10 +27,11 @@ export function SuspensaoECorrecoes({ licenca, hoje, onMudou }: {
   const [novoPedido, setNovoPedido] = useState('');
   const [resolucoes, setResolucoes] = useState<Record<string, string>>({});
 
-  const carregar = () => Promise.all([listarSuspensoes(licenca.id), listarPedidosCorrecao(licenca.id)])
+  const carregar = useCallback(() => Promise.all([listarSuspensoes(licenca.id), listarPedidosCorrecao(licenca.id)])
     .then(([s, p]) => { setSuspensoes(s); setPedidos(p); })
-    .catch(setErro);
-  useEffect(() => { void carregar(); }, [licenca.id, licenca.atualizado_em]);
+    .catch(setErro), [licenca.id]);
+  // Recarrega também quando a licença é regravada (atualizado_em muda).
+  useEffect(() => { void carregar(); }, [carregar, licenca.atualizado_em]);
 
   const acao = async (fn: () => Promise<void>) => {
     setBusy(true);

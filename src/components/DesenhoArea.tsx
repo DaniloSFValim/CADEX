@@ -3,6 +3,7 @@ import * as maplibregl from 'maplibre-gl';
 import { estiloBase } from './MapaObras';
 import { problemaArea, type Anel } from '../lib/areaTrecho';
 import { Button } from './ui';
+import { MAPA_LOCALE } from '../lib/mapaLocale';
 
 export type TipoTrecho = 'ponto' | 'segmento' | 'area';
 type Ponto = [number, number]; // [longitude, latitude]
@@ -34,7 +35,7 @@ export default function DesenhoArea({ tipo, inicio, fim, area, onChange, ro }: {
       if (!vivo || !caixa.current) return;
       const m = new maplibregl.Map({
         container: caixa.current, style: base, bounds: NITEROI, maxBounds: [[-43.4, -23.2], [-42.7, -22.6]],
-        attributionControl: { compact: true }, cooperativeGestures: true,
+        attributionControl: { compact: true }, cooperativeGestures: true, locale: MAPA_LOCALE,
       });
       m.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
       m.on('load', () => {
@@ -71,7 +72,10 @@ export default function DesenhoArea({ tipo, inicio, fim, area, onChange, ro }: {
   // Redesenha sempre que o formulário muda a marcação.
   useEffect(() => { desenhar(); }, [tipo, inicio, fim, area]);
 
+  // Lê a marcação pela referência: o mapa carrega depois dos dados, e a função registrada no
+  // carregamento desenharia a marcação da primeira renderização, já vencida.
   function desenhar() {
+    const { tipo, inicio, fim, area } = atual.current;
     const m = mapa.current;
     if (!m || !pronto.current) return;
     const fonte = m.getSource('marcas') as maplibregl.GeoJSONSource | undefined;

@@ -86,7 +86,7 @@ export default function ConsultaObras() {
             <Kpi rotulo="Obras concluídas nos últimos 5 anos" valor={estat.concluidas_5a}
                  detalhe={`de ${obras.length} obras no mapa`} />
             <Kpi rotulo={estat.executoras === 1 ? 'Empresa executora' : 'Empresas executoras'} valor={estat.executoras}
-                 detalhe={`de ${estat.empresas_ativas} cadastradas e ativas`} />
+                 detalhe={`de ${estat.empresas_ativas} habilitadas no cadastro`} />
           </div>
         )}
 

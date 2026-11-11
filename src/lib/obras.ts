@@ -46,7 +46,7 @@ export interface EstatisticasPublicas {
   concluidas_5a: number;
   /** Empresas executoras com pelo menos uma obra no mapa. */
   executoras: number;
-  /** Empresas cadastradas e ativas no CADEX. */
+  /** Empresas que a consulta pública lista: ativas, deferidas ou aptas. */
   empresas_ativas: number;
 }
 
