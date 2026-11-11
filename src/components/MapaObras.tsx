@@ -14,6 +14,7 @@ import { COR_SITUACAO, anosDasObras, obrasParaGeoJSON, pontosDeCalor, type ObraP
 import { comunicacoesParaGeoJSON, type ComunicacaoPublica } from '../lib/comunicacoesPublicas';
 import { carregarBairrosGeo, chaveBairro } from '../lib/bairros';
 import type { SituacaoPublica } from '../lib/licencas';
+import { MAPA_LOCALE } from '../lib/mapaLocale';
 
 /** Niterói, com folga. */
 const NITEROI: maplibregl.LngLatBoundsLike = [[-43.135, -22.995], [-42.955, -22.865]];
@@ -274,7 +275,7 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, foco
       };
       const m = new maplibregl.Map({
         container: caixa.current, style, bounds: NITEROI, maxBounds: [[-43.4, -23.2], [-42.7, -22.6]],
-        attributionControl: { compact: true }, cooperativeGestures: true,
+        attributionControl: { compact: true }, cooperativeGestures: true, locale: MAPA_LOCALE,
       });
       m.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
       // Bloco do mapa-base que falha não impede o uso; só avisa se o estilo nem carregou.

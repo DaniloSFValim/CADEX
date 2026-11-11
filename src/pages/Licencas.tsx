@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ExportarLicencas } from '../components/ExportarLicencas';
 import { Badge, Button, Card, Empty, ErrorNote, Kpi, Spinner, Titulo, botaoLink, inputClass, tabela } from '../components/ui';
@@ -37,10 +37,10 @@ export default function Licencas() {
   const [exportando, setExportando] = useState(false);
   const hoje = hojeISO();
 
-  const carregar = () => Promise.all([listarLicencas(), listarEmpresas(), administrador ? listarOrgaos() : Promise.resolve([])])
+  const carregar = useCallback(() => Promise.all([listarLicencas(), listarEmpresas(), administrador ? listarOrgaos() : Promise.resolve([])])
     .then(([l, e, o]) => { setLicencas(l); setEmpresas(e); setOrgaos(o); })
-    .catch(setError);
-  useEffect(() => { void carregar(); }, [administrador]);
+    .catch(setError), [administrador]);
+  useEffect(() => { void carregar(); }, [carregar]);
   // Exclusão só para o administrador; a lixeira fica em Administração → Licenças.
   const excluir = administrador ? { orgaos, hoje: hojeISO(), onExcluida: (m: string) => { setAviso(m); void carregar(); } } : undefined;
 

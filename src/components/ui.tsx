@@ -136,15 +136,20 @@ export function Empty({ children }: { children: ReactNode }) {
 export function errorMessage(error: unknown): string {
   if (!error) return '';
   if (typeof error === 'string') return error;
-  if (error instanceof Error && error.message) return error.message;
-  if (typeof error === 'object') {
-    const e = error as Record<string, unknown>;
-    const msg = typeof e.message === 'string' ? e.message : '';
-    if (e.code === '23505' || msg.includes('empresas_cnpj_key')) {
-      return 'Já existe uma empresa cadastrada com este CNPJ.';
-    }
-    if (typeof e.message === 'string' && e.message) return e.message;
+  const e = (typeof error === 'object' ? error : {}) as Record<string, unknown>;
+  const msg = typeof e.message === 'string' ? e.message : '';
+  // Sem rede ou servidor fora do ar: o navegador devolve um texto técnico em inglês.
+  if (/failed to fetch|networkerror|load failed|network request failed/i.test(msg)) {
+    return 'Sem conexão com o servidor. Confira a internet e tente de novo; nada foi gravado.';
   }
+  if (/jwt expired|invalid jwt|refresh token/i.test(msg)) {
+    return 'A sessão expirou. Entre de novo para continuar.';
+  }
+  if (msg.includes('empresas_cnpj_key')) return 'Já existe uma empresa cadastrada com este CNPJ.';
+  if (msg.includes('licencas_numero_ativo')) return 'Já existe uma licença ativa com este número. Confira o número ou abra a licença que já está registrada.';
+  // Outras duplicidades (número de licença, código etc.): não é o CNPJ, e dizer que é confunde.
+  if (e.code === '23505') return 'Já existe um registro com estes mesmos dados. Confira os campos e tente de novo.';
+  if (msg) return msg;
   return 'Erro inesperado.';
 }
 

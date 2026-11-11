@@ -88,7 +88,9 @@ export default function Consulta() {
           <select className={`${inputClass} py-3! text-base!`} value={situacao}
                   onChange={(e) => setSituacao(e.target.value)} aria-label="Situação">
             <option value="">Qualquer situação</option>
-            {FILTRO_SITUACAO.map((f) => <option key={f.valor} value={f.valor}>{f.rotulo}</option>)}
+            {/* O público só vê empresas deferidas ou aptas: as outras opções nunca trariam resultado. */}
+            {FILTRO_SITUACAO.filter((f) => f.valor === 'deferida' || f.valor === 'apta')
+              .map((f) => <option key={f.valor} value={f.valor}>{f.rotulo}</option>)}
           </select>
           <select className={`${inputClass} py-3! text-base!`} value={setor}
                   onChange={(e) => setSetor(e.target.value)} aria-label="Setor">
