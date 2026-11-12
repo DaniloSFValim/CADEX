@@ -635,7 +635,7 @@ export async function consultaPublica(): Promise<LinhaPublica[]> {
 /** Situações em que a empresa pode atuar hoje (mesma regra da consulta pública). */
 export const SITUACOES_HABILITADAS: SituacaoEfetiva[] = ['deferida', 'apta', 'em_saneamento'];
 
-const listaComE = (xs: string[]) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} e ${xs[xs.length - 1]}`);
+export const listaComE = (xs: string[]) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} e ${xs[xs.length - 1]}`);
 
 /**
  * O que a empresa faz, em uma frase para o público. Diz só o que a inscrição comprova:
