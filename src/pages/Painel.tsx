@@ -36,7 +36,8 @@ const ROTULO_STATUS: Record<string, string> = {
 };
 
 /** Visão geral do painel: o que está licenciado, em que ponto está e com quem, direto do banco. */
-export default function Painel() {
+/** Painel: a visão geral, ou só os registros quando a aba "Registros" está aberta. Os filtros valem para as duas. */
+export default function Painel({ aba = 'visao' }: { aba?: 'visao' | 'registros' }) {
   const [dados, setDados] = useState<Dados | null>(null);
   const [erro, setErro] = useState<unknown>(null);
   const [atualizando, setAtualizando] = useState(false);
@@ -268,6 +269,7 @@ export default function Painel() {
           <Empty>Nenhuma licença com estes filtros.</Empty>
         </div>
       ) : (<>
+        {aba === 'visao' && (<>
         {/* Indicadores: quatro números. Os pares mostram os dois valores separados por barra. */}
         <section className="mt-6" aria-label="Indicadores">
           <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-tinta-200 bg-tinta-200 lg:grid-cols-4">
@@ -330,7 +332,20 @@ export default function Painel() {
           </Bloco>
         </div>
 
-        {/* Registros correspondentes */}
+        <details className="mt-8 text-sm text-tinta-600">
+          <summary className="cursor-pointer font-medium text-tinta-700">Como os números são contados</summary>
+          <ul className="mt-2 max-w-3xl list-disc space-y-1 pl-5">
+            <li>O CADEX não registra a data efetiva de início da obra, só o período previsto e a conclusão. Por isso nada é dado como começado ou terminado só porque uma data passou.</li>
+            <li><strong>Aguardando início</strong> (programada): deferida, sem conclusão registrada, com o início previsto ainda por vir. <strong>Em execução</strong> (em andamento): deferida, sem conclusão registrada, com o período previsto em curso. <strong>Prazo encerrado</strong>: deferida, sem conclusão registrada, com o fim previsto já passado.</li>
+            <li><strong>Concluída</strong>: tem a conclusão registrada. <strong>Começam / terminam em até N dias</strong>: obras abertas com a data prevista entre hoje e hoje mais N dias.</li>
+            <li>Cada licença tem uma contratante e uma executora, e é contada uma vez em cada. Quando a própria contratante executa, a mesma empresa aparece nas duas listas.</li>
+            <li>O filtro de período mostra as licenças cujo período previsto cruza o intervalo; sem período, vale a data do protocolo.</li>
+          </ul>
+        </details>
+        </>)}
+
+        {/* Registros correspondentes: aba própria. */}
+        {aba === 'registros' && (
         <section className="mt-8" aria-label="Registros">
           <h2 className="mb-3 font-display text-xl font-bold tracking-[-0.01em] text-tinta-900">Registros ({filtradas.length})</h2>
           <div className="cartao">
@@ -344,17 +359,7 @@ export default function Painel() {
             </div>
           )}
         </section>
-
-        <details className="mt-8 text-sm text-tinta-600">
-          <summary className="cursor-pointer font-medium text-tinta-700">Como os números são contados</summary>
-          <ul className="mt-2 max-w-3xl list-disc space-y-1 pl-5">
-            <li>O CADEX não registra a data efetiva de início da obra, só o período previsto e a conclusão. Por isso nada é dado como começado ou terminado só porque uma data passou.</li>
-            <li><strong>Aguardando início</strong> (programada): deferida, sem conclusão registrada, com o início previsto ainda por vir. <strong>Em execução</strong> (em andamento): deferida, sem conclusão registrada, com o período previsto em curso. <strong>Prazo encerrado</strong>: deferida, sem conclusão registrada, com o fim previsto já passado.</li>
-            <li><strong>Concluída</strong>: tem a conclusão registrada. <strong>Começam / terminam em até N dias</strong>: obras abertas com a data prevista entre hoje e hoje mais N dias.</li>
-            <li>Cada licença tem uma contratante e uma executora, e é contada uma vez em cada. Quando a própria contratante executa, a mesma empresa aparece nas duas listas.</li>
-            <li>O filtro de período mostra as licenças cujo período previsto cruza o intervalo; sem período, vale a data do protocolo.</li>
-          </ul>
-        </details>
+        )}
       </>)}
     </div>
   );

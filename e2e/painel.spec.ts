@@ -36,6 +36,8 @@ test.describe('painel gerencial', () => {
     await expect(indicador(page, 'Começam / terminam em até 15 dias')).toHaveText(/Começam \/ terminam em até 15 dias\s*2 \/ 1/);
     await expect(indicador(page, 'Contratantes / Executoras')).toHaveText(/Contratantes \/ Executoras\s*2 \/ \d+/);
     await expect(resumo(page)).toHaveText(/8\s+licenças, sem filtro/);
+    // Os registros ficam na aba própria.
+    await page.getByRole('link', { name: 'Registros', exact: true }).click();
     await expect(page.locator('section[aria-label="Registros"] tbody tr')).toHaveCount(8);
   });
 
@@ -46,8 +48,10 @@ test.describe('painel gerencial', () => {
     await page.getByText('Filtrar', { exact: true }).click();
     await page.locator('select:has(option[value="estado:aguardando_inicio"])').selectOption('estado:aguardando_inicio');
     await expect(resumo(page)).toContainText('3 de 8 licenças');
-    await expect(page.locator('section[aria-label="Registros"] tbody tr')).toHaveCount(3);
     await expect(indicador(page, 'Licenças registradas')).toHaveText(/Licenças registradas\s*3/);
+    // O filtro vale também na aba Registros.
+    await page.getByRole('link', { name: 'Registros', exact: true }).click();
+    await expect(page.locator('section[aria-label="Registros"] tbody tr')).toHaveCount(3);
 
     await page.getByRole('button', { name: 'Limpar filtros' }).click();
     await expect(resumo(page)).toHaveText(/8\s+licenças, sem filtro/);

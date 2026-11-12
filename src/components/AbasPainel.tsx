@@ -14,6 +14,7 @@ export function AbasPainel() {
       <ul className="flex flex-wrap gap-1">
         <li><NavLink to="/dashboard" end className={aba}>Visão geral</NavLink></li>
         <li><NavLink to="/dashboard/pendencias" className={aba}>Pendências</NavLink></li>
+        <li><NavLink to="/dashboard/registros" className={aba}>Registros</NavLink></li>
       </ul>
     </nav>
   );

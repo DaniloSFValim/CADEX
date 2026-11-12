@@ -151,6 +151,7 @@ function AreaRestrita() {
         <Route index element={<Navigate to={servidor.papel === 'gestor' ? '/dashboard' : '/empresas'} replace />} />
         <Route path="empresas" element={<Empresas />} />
         <Route path="dashboard" element={<Painel />} />
+        <Route path="dashboard/registros" element={<Painel aba="registros" />} />
         <Route path="dashboard/pendencias" element={<Pendencias />} />
         <Route path="anatel" element={<CruzamentoAnatel />} />
         <Route path="empresas/nova" element={<EmpresaPage />} />
