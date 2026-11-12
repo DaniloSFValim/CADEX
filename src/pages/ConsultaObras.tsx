@@ -169,10 +169,10 @@ function rotuloTipos(tipos: string[], rotulos: Record<string, string>) {
 function Legenda() {
   const itens: (keyof typeof COR_SITUACAO)[] = ['vigente', 'aguardando_inicio', 'prazo_encerrado', 'concluida', 'cancelada'];
   return (
-    <ul className="mt-2.5 flex flex-wrap gap-x-5 gap-y-1 text-xs text-tinta-600" aria-label="Legenda">
+    <ul className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm font-medium text-tinta-800" aria-label="Legenda">
       {itens.map((s) => (
-        <li key={s} className="inline-flex items-center gap-1.5">
-          <span className="inline-block h-1.5 w-4 rounded-full" style={{ background: COR_SITUACAO[s] }} aria-hidden />
+        <li key={s} className="inline-flex items-center gap-2">
+          <span className="inline-block h-3 w-5 rounded-full" style={{ background: COR_SITUACAO[s] }} aria-hidden />
           {SITUACAO_PUBLICA_LABEL[s]}
         </li>
       ))}

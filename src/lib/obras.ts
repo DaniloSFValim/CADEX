@@ -78,12 +78,12 @@ export const SITUACAO_PUBLICA_LABEL: Record<SituacaoPublica, string> = {
 
 /** Cores do mapa: as mesmas da situação no restante do sistema. */
 export const COR_SITUACAO: Record<SituacaoPublica, string> = {
-  vigente: '#1e7b4c',
-  aguardando_inicio: '#8f5b00',
-  prazo_encerrado: '#b3372c',
-  concluida: '#1d4ed8',
-  cancelada: '#1f2937',
-  suspensa: '#7c3aed',
+  vigente: '#16a34a',
+  aguardando_inicio: '#f59e0b',
+  prazo_encerrado: '#ef4444',
+  concluida: '#2563eb',
+  cancelada: '#111827',
+  suspensa: '#9333ea',
 };
 
 /** Ao abrir, o mapa mostra o que está autorizado agora ou prestes a começar. */
