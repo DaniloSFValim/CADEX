@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { areaParaGeoJson, lerAreaWkb, problemaArea, type Anel } from './areaTrecho';
+import { areaParaGeoJson, lerAreaWkb, lerSegmentosWkb, problemaArea, problemaSegmentos, segmentosParaGeoJson, type Anel } from './areaTrecho';
 
 // EWKB gerado pelo próprio PostGIS-formato: polígono com SRID 4326 e quatro vértices.
 const HEX = '0103000020e610000001000000050000003d0ad7a3708d45c048e17a14aee736c0cdcccccccc8c45c048e17a14aee736c0cdcccccccc8c45c06666666666e636c03d0ad7a3708d45c06666666666e636c03d0ad7a3708d45c048e17a14aee736c0';
@@ -30,5 +30,44 @@ describe('área do trecho', () => {
     expect(problemaArea([[-43.1, -22.9], [-43.09, -22.9]])).toMatch(/pelo menos 3/);
     expect(problemaArea([[-43.1, -22.9], [-43.09, -22.9], [-43.09, -22.91]])).toBeNull();
     expect(problemaArea([[-43.1, -22.9], [-44.0, -22.9], [-43.09, -22.91]])).toMatch(/fora de Niterói/);
+  });
+});
+
+describe('segmentos do trecho', () => {
+  // EWKB little-endian de uma MultiLineString com as linhas dadas (sem SRID).
+  function wkbMultiLinha(linhas: [number, number][][]): string {
+    const bytes: number[] = [];
+    const u32 = (n: number) => { const b = new Uint8Array(4); new DataView(b.buffer).setUint32(0, n, true); bytes.push(...b); };
+    const f64 = (n: number) => { const b = new Uint8Array(8); new DataView(b.buffer).setFloat64(0, n, true); bytes.push(...b); };
+    bytes.push(1); u32(5); u32(linhas.length);
+    for (const l of linhas) {
+      bytes.push(1); u32(2); u32(l.length);
+      for (const [x, y] of l) { f64(x); f64(y); }
+    }
+    return bytes.map((b) => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  it('lê as duas linhas de uma MultiLineString em EWKB', () => {
+    const hex = wkbMultiLinha([[[-43.12, -22.9], [-43.121, -22.901]], [[-43.13, -22.91], [-43.131, -22.912]]]);
+    expect(lerSegmentosWkb(hex)).toEqual([
+      [[-43.12, -22.9], [-43.121, -22.901]],
+      [[-43.13, -22.91], [-43.131, -22.912]],
+    ]);
+  });
+
+  it('não lê polígono como segmentos', () => {
+    expect(lerSegmentosWkb('0103000000010000000500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000')).toBeNull();
+  });
+
+  it('gera GeoJSON MultiLineString', () => {
+    const json = JSON.parse(segmentosParaGeoJson([[[-43.12, -22.9], [-43.121, -22.901]]]));
+    expect(json).toEqual({ type: 'MultiLineString', coordinates: [[[-43.12, -22.9], [-43.121, -22.901]]] });
+  });
+
+  it('recusa lista vazia, ponto fora de Niterói e segmento de comprimento zero', () => {
+    expect(problemaSegmentos([])).toMatch(/pelo menos um segmento/);
+    expect(problemaSegmentos([[[-43.12, -22.9], [-44.0, -22.9]]])).toMatch(/fora de Niterói/);
+    expect(problemaSegmentos([[[-43.12, -22.9], [-43.12, -22.9]]])).toMatch(/mesmo ponto/);
+    expect(problemaSegmentos([[[-43.12, -22.9], [-43.121, -22.901]]])).toBeNull();
   });
 });

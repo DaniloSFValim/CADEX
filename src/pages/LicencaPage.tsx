@@ -22,7 +22,7 @@ import {
 } from '../lib/licencas';
 import { listarOrgaos, nomeOrgao, orgaoServeOrigem, type Orgao } from '../lib/orgaos';
 import { listarTipos, type TipoIntervencao as TipoDeObra } from '../lib/tiposIntervencao';
-import { areaParaGeoJson, lerAreaWkb, problemaArea, type Anel } from '../lib/areaTrecho';
+import { areaParaGeoJson, lerAreaWkb, lerSegmentosWkb, problemaArea, problemaSegmentos, segmentosParaGeoJson, type Anel, type Segmento } from '../lib/areaTrecho';
 import { carregarBairrosGeo, nomeOficialBairro } from '../lib/bairros';
 import { PADRAO_NUMERO_CORRECAO } from '../lib/correcaoLicencas';
 
@@ -30,7 +30,7 @@ const DesenhoArea = lazy(() => import('../components/DesenhoArea'));
 
 /** Ponto: só o início. Segmento: início e fim. Área: polígono (o início é o primeiro vértice). */
 type TipoTrechoForm = 'ponto' | 'segmento' | 'area';
-interface TrechoForm { id?: string; cep: string; logradouro: string; bairro: string; referencia: string; inicio: string; fim: string; area: Anel | null; tipo: TipoTrechoForm }
+interface TrechoForm { id?: string; cep: string; logradouro: string; bairro: string; referencia: string; inicio: string; fim: string; area: Anel | null; tipo: TipoTrechoForm; segmentos: Segmento[]; pendente: [number, number] | null }
 
 type Form = {
   setor: Setor; processo_sei: string; numero: string; tipos_obra: TipoObra[]; outros_descricao: string; escopo: string; observacoes: string;
@@ -75,7 +75,7 @@ function uiDaSituacao(situacao: SituacaoLicenca, concluidaEm: string): UiSituaca
   return concluidaEm ? 'concluida' : 'em_execucao';
 }
 
-const TRECHO_VAZIO: TrechoForm = { cep: '', logradouro: '', bairro: '', referencia: '', inicio: '', fim: '', area: null, tipo: 'ponto' };
+const TRECHO_VAZIO: TrechoForm = { cep: '', logradouro: '', bairro: '', referencia: '', inicio: '', fim: '', area: null, tipo: 'ponto', segmentos: [], pendente: null };
 const ROTULO_TIPO_TRECHO: Record<TipoTrechoForm, string> = { ponto: 'Ponto', segmento: 'Segmento', area: 'Área' };
 
 const VAZIO: Form = {
@@ -117,7 +117,9 @@ const trechoParaForm = (t: Trecho & { id: string }): TrechoForm => ({
   inicio: coordenadaTexto(t.inicio_lat, t.inicio_lng),
   fim: t.fim_lat != null && t.fim_lng != null ? coordenadaTexto(t.fim_lat, t.fim_lng) : '',
   area: lerAreaWkb(t.area),
-  tipo: lerAreaWkb(t.area) ? 'area' : t.fim_lat != null && t.fim_lng != null ? 'segmento' : 'ponto',
+  segmentos: lerSegmentosWkb(t.segmentos) ?? [],
+  pendente: null,
+  tipo: lerAreaWkb(t.area) ? 'area' : (lerSegmentosWkb(t.segmentos)?.length ?? 0) > 0 || (t.fim_lat != null && t.fim_lng != null) ? 'segmento' : 'ponto',
 });
 
 export default function LicencaPage() {
@@ -369,17 +371,27 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
       ...t, tipo,
       fim: tipo === 'segmento' ? t.fim : '',
       area: tipo === 'area' ? t.area : null,
+      segmentos: tipo === 'segmento' ? t.segmentos : [],
+      pendente: tipo === 'segmento' ? t.pendente : null,
     } : t)));
     setSalvo(false);
   };
   // O mapa de marcação grava nos campos do formulário (texto de coordenadas e área).
-  const marcarNoMapa = (i: number, p: { inicio?: [number, number] | null; fim?: [number, number] | null; area?: Anel | null }) => {
+  const marcarNoMapa = (i: number, p: { inicio?: [number, number] | null; fim?: [number, number] | null; area?: Anel | null; segmentos?: Segmento[]; pendente?: [number, number] | null }) => {
     setTrechos((ts) => ts.map((t, j) => {
       if (j !== i) return t;
       const next = { ...t };
       if (p.inicio !== undefined) next.inicio = p.inicio ? coordenadaTexto(p.inicio[1], p.inicio[0]) : '';
       if (p.fim !== undefined) next.fim = p.fim ? coordenadaTexto(p.fim[1], p.fim[0]) : '';
       if (p.area !== undefined) next.area = p.area;
+      if (p.pendente !== undefined) next.pendente = p.pendente;
+      if (p.segmentos !== undefined) {
+        next.segmentos = p.segmentos;
+        // O primeiro segmento preenche início e fim, para as telas e consultas que ainda leem esses campos.
+        const [a, b] = p.segmentos[0] ?? [null, null];
+        next.inicio = a ? coordenadaTexto(a[1], a[0]) : '';
+        next.fim = b ? coordenadaTexto(b[1], b[0]) : '';
+      }
       return next;
     }));
     setSalvo(false);
@@ -453,12 +465,20 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
       if (!ini) return `Trecho${n}: coordenada de início não reconhecida ou fora de Niterói.`;
       if (t.tipo === 'segmento' && !t.fim.trim()) return `Trecho${n}: informe o fim do segmento, ou escolha Ponto.`;
       const fim = t.tipo === 'segmento' && t.fim.trim() ? lerCoordenada(t.fim) : null;
+      // Vários segmentos marcados no mapa: o trecho guarda todos, e o início e o fim são os do primeiro.
+      const varios = t.tipo === 'segmento' && t.segmentos.length > 0 ? t.segmentos : null;
+      if (varios) {
+        if (t.pendente) return `Trecho${n}: há um segmento com só o início marcado. Clique no fim dele ou desfaça o início.`;
+        const erroSeg = problemaSegmentos(varios);
+        if (erroSeg) return `Trecho${n}: ${erroSeg}`;
+      }
       if (t.tipo === 'segmento' && t.fim.trim() && !fim) return `Trecho${n}: coordenada de fim não reconhecida ou fora de Niterói.`;
       lista.push({
         ...(t.id ? { id: t.id } : {}), logradouro: t.logradouro.trim(), bairro: nomeOficialBairro(t.bairro, bairrosOficiais) || null,
         referencia: t.referencia.trim() || null, inicio_lat: ini.lat, inicio_lng: ini.lng,
         fim_lat: fim?.lat ?? null, fim_lng: fim?.lng ?? null,
         area: area ? areaParaGeoJson(area) : null,
+        segmentos: varios ? segmentosParaGeoJson(varios) : null,
       });
     }
     const n = (v: string) => v.trim() || null;
@@ -917,7 +937,9 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
                         <DesenhoArea tipo={t.tipo}
                                      inicio={lerCoordenada(t.inicio) ? [lerCoordenada(t.inicio)!.lng, lerCoordenada(t.inicio)!.lat] : null}
                                      fim={lerCoordenada(t.fim) ? [lerCoordenada(t.fim)!.lng, lerCoordenada(t.fim)!.lat] : null}
-                                     area={t.area} ro={ro} onChange={(p) => marcarNoMapa(i, p)} />
+                                     area={t.area}
+                                     segmentos={t.tipo === 'segmento' ? t.segmentos : undefined}
+                                     pendente={t.pendente} ro={ro} onChange={(p) => marcarNoMapa(i, p)} />
                       </Suspense>
                     )}
                   </div>

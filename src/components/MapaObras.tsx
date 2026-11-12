@@ -178,7 +178,7 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, inte
           { id: 'bairros-linha', type: 'line', source: 'bairros', paint: { 'line-color': '#0f766e', 'line-width': 1, 'line-opacity': 0.5 } },
           { id: 'bairros-escolhido', type: 'fill', source: 'bairros', filter: ['==', ['get', 'nome'], '__nenhum__'], paint: { 'fill-color': '#0f766e', 'fill-opacity': 0.2 } },
           {
-            id: 'obras-linhas', type: 'line', source: 'obras', filter: ['==', ['geometry-type'], 'LineString'],
+            id: 'obras-linhas', type: 'line', source: 'obras', filter: ['match', ['geometry-type'], ['LineString', 'MultiLineString'], true, false],
             layout: { 'line-cap': 'round' },
             paint: { 'line-color': corPorSituacao, 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 3, 17, 7] },
           },
