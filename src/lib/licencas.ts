@@ -425,6 +425,8 @@ export interface LicencaPublica {
   tipo_intervencao: TipoIntervencao;
   origem: OrigemIntervencao;
   numero: string;
+  /** Número do processo no SEI, publicado junto da licença. */
+  processo_sei: string;
   tipos_obra: TipoObra[];
   escopo: string;
   inicio_previsto: string;
@@ -440,6 +442,13 @@ export interface LicencaPublica {
   executora: { razao_social: string; nome_fantasia: string | null; codigo_cadex: string | null; situacao_cadex: string | null };
   contratante: { razao_social: string; nome_fantasia: string | null; codigo_cadex: string | null } | null;
   trechos: Omit<Trecho, 'id'>[];
+}
+
+/** Nome do sistema de processo pelo padrão do número: NIT-050120 é SEI; 990… é ECIGA. */
+export function rotuloProcesso(numero: string): string {
+  if (/^NIT-/i.test(numero)) return 'Processo SEI';
+  if (/^990/.test(numero)) return 'Processo ECIGA';
+  return 'Processo';
 }
 
 /** Nulo: código inexistente, ou pedido ainda não deferido. */

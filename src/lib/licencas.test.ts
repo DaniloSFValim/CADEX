@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   anteriorResolucao, cadastroRetroativo, desempenhoExecutora, erroPeriodoObra, estadoLicenca, lerCoordenada, linkMapa, mesmaEmpresaNosPapeis,
-  nomeExecutora, pendenciasLicencas, prazoDeAcaoAte, dentroDoPrazoDeAcao, rotuloProrrogacao, situacoesRegistraveis, urlPublicaLicenca,
+  nomeExecutora, pendenciasLicencas, prazoDeAcaoAte, dentroDoPrazoDeAcao, rotuloProcesso, rotuloProrrogacao, situacoesRegistraveis, urlPublicaLicenca,
 } from './licencas';
 
 describe('licença anterior à Resolução', () => {
@@ -228,5 +228,13 @@ describe('prazo de ação: suspensão e prorrogação nos 30 dias a partir do in
 
   it('sem início não há prazo para agir', () => {
     expect(dentroDoPrazoDeAcao(null, '2026-10-01')).toBe(false);
+  });
+});
+
+describe('rotuloProcesso', () => {
+  it('NIT- é SEI e 990… é ECIGA', () => {
+    expect(rotuloProcesso('NIT-050120/000201/2026')).toBe('Processo SEI');
+    expect(rotuloProcesso('9900081947/2026')).toBe('Processo ECIGA');
+    expect(rotuloProcesso('XYZ/1')).toBe('Processo');
   });
 });
