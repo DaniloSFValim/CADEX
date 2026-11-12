@@ -117,7 +117,7 @@ function desenhaMarca(forma: 'triangulo' | 'quadrado' | 'circulo', cor: string):
 const SEM_COMUNICACOES: ComunicacaoPublica[] = [];
 const SEM_INTERVENCOES: IntervencaoPublica[] = [];
 
-export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, intervencoes = SEM_INTERVENCOES, foco, destaque, modo = 'pontos', bairro, onSelecionar, onBairro, onDestacar, onGrupo, onIntervencao }: {
+export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, intervencoes = SEM_INTERVENCOES, foco, destaque, modo = 'pontos', bairro, onSelecionar, onBairro, onDestacar, onGrupo, onIntervencao, intervencaoFoco = null }: {
   obras: ObraPublica[]; comunicacoes?: ComunicacaoPublica[]; intervencoes?: IntervencaoPublica[]; foco?: string | null; destaque?: string | null; modo?: 'pontos' | 'calor';
   bairro?: string | null; onSelecionar?: (codigo: string) => void; onBairro?: (bairro: string) => void;
   onDestacar?: (codigo: string | null) => void;
@@ -125,6 +125,8 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, inte
   onGrupo?: (codigos: string[]) => void;
   /** Clique numa obra ou serviço sem licença: quem recebe mostra o cartão dela. */
   onIntervencao?: (dados: Record<string, string>) => void;
+  /** Id da obra ou serviço sem licença aberto no cartão: o mapa dá zoom nela e destaca o trecho. */
+  intervencaoFoco?: string | null;
 }) {
   const onGrupoRef = useRef(onGrupo);
   onGrupoRef.current = onGrupo;
@@ -169,6 +171,8 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, inte
           bairros: { type: 'geojson', data: { type: 'FeatureCollection', features: [] } },
           // Anel sobre a obra escolhida (o ponto de destaque ao voar até ela). Vazio sem obra escolhida.
           'foco-obra': { type: 'geojson', data: { type: 'FeatureCollection', features: [] } },
+          // Obra sem licença aberta no cartão: trecho destacado e ponto que pulsa.
+          'intervencao-foco': { type: 'geojson', data: { type: 'FeatureCollection', features: [] } },
           // Comunicações ao CISP: emergência (triângulo, vermelho) e serviço programado (quadrado, amarelo).
           comunicacoes: { type: 'geojson', data: { type: 'FeatureCollection', features: [] } },
           // Obras sem licença: de empresa cadastrada (amarelas) e do próprio órgão público (violeta).
@@ -299,6 +303,26 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, inte
               'icon-image': ['match', ['get', 'categoria'], 'publica', 'marca-publica', 'marca-obra'],
               'icon-size': ['interpolate', ['linear'], ['zoom'], 12, 0.7, 17, 1.1],
               'icon-allow-overlap': true,
+            },
+          },
+          {
+            id: 'intervencao-foco-trecho-contorno', type: 'line', source: 'intervencao-foco',
+            filter: ['match', ['geometry-type'], ['LineString', 'MultiLineString'], true, false],
+            layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#ffffff', 'line-width': 11, 'line-opacity': 0.95 },
+          },
+          {
+            id: 'intervencao-foco-trecho', type: 'line', source: 'intervencao-foco',
+            filter: ['match', ['geometry-type'], ['LineString', 'MultiLineString'], true, false],
+            layout: { 'line-cap': 'round', 'line-join': 'round' },
+            paint: { 'line-color': ['match', ['get', 'categoria'], 'publica', '#7c3aed', '#eab308'], 'line-width': 6 },
+          },
+          {
+            id: 'intervencao-foco-ponto', type: 'circle', source: 'intervencao-foco',
+            filter: ['==', ['geometry-type'], 'Point'],
+            paint: {
+              'circle-radius': 12,
+              'circle-color': ['match', ['get', 'categoria'], 'publica', '#7c3aed', '#eab308'],
+              'circle-stroke-color': '#ffffff', 'circle-stroke-width': 3,
             },
           },
         ],
@@ -498,6 +522,48 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, inte
     (m.getSource('comunicacoes') as maplibregl.GeoJSONSource | undefined)?.setData(comunicacoesParaGeoJSON(comunicacoes));
     (m.getSource('intervencoes') as maplibregl.GeoJSONSource | undefined)?.setData(intervencoesParaGeoJSON(intervencoes));
   }, [comunicacoes, intervencoes, pronto]);
+
+  // Obra sem licença aberta: o mapa vai até ela e destaca o trecho (ou o ponto, se não há trecho).
+  useEffect(() => {
+    if (!pronto || !mapa.current) return;
+    const m = mapa.current;
+    const fonte = m.getSource('intervencao-foco') as maplibregl.GeoJSONSource | undefined;
+    if (!fonte) return;
+    const achados = intervencaoFoco
+      ? intervencoesParaGeoJSON(intervencoes).features.filter((f) => f.properties?.id === intervencaoFoco)
+      : [];
+    fonte.setData({ type: 'FeatureCollection', features: achados as GeoJSON.Feature[] });
+    if (achados.length === 0) return;
+    const limites = new maplibregl.LngLatBounds();
+    const somar = (c: unknown): void => {
+      if (Array.isArray(c) && typeof c[0] === 'number') limites.extend(c as [number, number]);
+      else if (Array.isArray(c)) c.forEach(somar);
+    };
+    for (const f of achados) somar((f.geometry as GeoJSON.Geometry & { coordinates?: unknown }).coordinates);
+    if (limites.isEmpty()) return;
+    m.fitBounds(limites, {
+      padding: { top: 80, bottom: 80, left: 80, right: 80 }, maxZoom: 18, duration: 900,
+    });
+  }, [intervencaoFoco, intervencoes, pronto]);
+
+  // Ponto da obra aberta pulsa; com "reduzir movimento", fica parado num tamanho fixo.
+  useEffect(() => {
+    if (!pronto || !mapa.current || !intervencaoFoco) return;
+    const m = mapa.current;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    let quadro = 0;
+    const t0 = performance.now();
+    const passo = (agora: number) => {
+      const fase = ((agora - t0) % 1400) / 1400;
+      if (m.getLayer('intervencao-foco-ponto')) {
+        m.setPaintProperty('intervencao-foco-ponto', 'circle-radius', 9 + 9 * Math.sin(fase * Math.PI));
+        m.setPaintProperty('intervencao-foco-ponto', 'circle-stroke-opacity', 1 - 0.6 * fase);
+      }
+      quadro = requestAnimationFrame(passo);
+    };
+    quadro = requestAnimationFrame(passo);
+    return () => cancelAnimationFrame(quadro);
+  }, [intervencaoFoco, pronto]);
 
   // Mapa de calor: refaz os pontos quando muda a lista ou o ano escolhido.
   useEffect(() => {

@@ -133,6 +133,7 @@ export default function ConsultaObras() {
                              foco={foco} destaque={destaque} modo={modo} bairro={bairro}
                              onSelecionar={(c) => { setIntervencaoSel(null); setFoco(c); }}
                              onIntervencao={(d) => { setFoco(null); setIntervencaoSel(d); }}
+                             intervencaoFoco={intervencaoSel?.id ?? null}
                              onBairro={setBairro} onDestacar={setDestaque} onGrupo={setGrupo} />
                   {!selecionada && intervencaoSel && (
                     <FichaIntervencao dados={intervencaoSel} onFechar={() => setIntervencaoSel(null)} />
