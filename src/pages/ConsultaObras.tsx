@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AbasConsulta } from '../components/AbasConsulta';
 import FichaObra, { type DetalheObra } from '../components/FichaObra';
+import FichaIntervencao from '../components/FichaIntervencao';
 import { Cabecalho } from '../components/Cabecalho';
 import { Rodape } from '../components/Rodape';
 import { ErrorNote, Kpi, Spinner, Titulo, linkTexto } from '../components/ui';
@@ -25,6 +26,8 @@ export default function ConsultaObras() {
   const [obras, setObras] = useState<ObraPublica[] | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [foco, setFoco] = useState<string | null>(null);
+  // Obra ou serviço sem licença selecionado no mapa: cartão próprio, no mesmo canto da ficha da licença.
+  const [intervencaoSel, setIntervencaoSel] = useState<Record<string, string> | null>(null);
   const [destaque, setDestaque] = useState<string | null>(null);
   const [modo, setModo] = useState<'pontos' | 'calor'>('pontos');
   // Por padrão, a consulta mostra todas as obras licenciadas, inclusive as encerradas.
@@ -128,7 +131,12 @@ export default function ConsultaObras() {
                 <div ref={mapaRef} className="relative scroll-mt-4 overflow-hidden rounded-xl border border-tinta-200 shadow-xs">
                   <MapaObras obras={listadas} comunicacoes={comunicacoesVisiveis} intervencoes={intervencoesVisiveis}
                              foco={foco} destaque={destaque} modo={modo} bairro={bairro}
-                             onSelecionar={setFoco} onBairro={setBairro} onDestacar={setDestaque} onGrupo={setGrupo} />
+                             onSelecionar={(c) => { setIntervencaoSel(null); setFoco(c); }}
+                             onIntervencao={(d) => { setFoco(null); setIntervencaoSel(d); }}
+                             onBairro={setBairro} onDestacar={setDestaque} onGrupo={setGrupo} />
+                  {!selecionada && intervencaoSel && (
+                    <FichaIntervencao dados={intervencaoSel} onFechar={() => setIntervencaoSel(null)} />
+                  )}
                   {selecionada && (
                     <FichaObra obra={selecionada} onFechar={() => setFoco(null)} detalhes={detalhesDaObra(selecionada, rotulos)} />
                   )}
