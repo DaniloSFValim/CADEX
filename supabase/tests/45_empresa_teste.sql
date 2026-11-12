@@ -77,9 +77,9 @@ begin
 
   -- Comunicação de empresa de teste não aparece no mapa público do CISP.
   insert into comunicacoes_servico (empresa_id, tipo, tipo_servico, responsavel, placas, local_servico, descricao,
-    inicio_previsto, fim_previsto, inicio_lat, inicio_lng)
+    inicio_previsto, fim_previsto, comunicado_em, inicio_lat, inicio_lng)
   values (emp_teste, 'programado', 'Manutenção', 'Fulano', array['ABC1234'], 'Rua T', 'Teste',
-    public.hoje_niteroi(), public.hoje_niteroi(), -22.9, -43.1);
+    public.hoje_niteroi(), public.hoje_niteroi(), now() - interval '3 days', -22.9, -43.1);
   select count(*) into n from comunicacoes_publicas where razao_social = 'Empresa de Teste Ltda.';
   perform pg_temp.assert(n = 0, 'comunicação da empresa de teste apareceu no mapa público');
 end $$;

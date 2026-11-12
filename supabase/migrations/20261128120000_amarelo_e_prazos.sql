@@ -3,7 +3,7 @@
 --
 -- Serviço programado: registrado com 24 horas de antecedência; no mapa, de 15
 -- dias à frente e até 7 dias depois do fim do serviço.
--- Emergência: registrada em até 15 dias do fato (antes, 72 horas); no mapa,
+-- Emergência: registrada em até 72 horas do fato (igual à regra anterior); no mapa,
 -- 15 dias para trás.
 -- Obra sem licença em execução: no mapa público (amarela), com a mesma janela
 -- dos programados. Concluída ou cancelada sai do mapa.
@@ -63,12 +63,12 @@ begin
         raise exception 'Serviço programado precisa ser registrado com 24 horas de antecedência.';
       end if;
     else
-      -- Emergência: o registro é posterior ao fato, dentro de 15 dias.
+      -- Emergência: o registro é posterior ao fato, dentro de 72 horas.
       if new.ocorrido_em > now() then
         raise exception 'A data e hora da emergência não podem estar no futuro.';
       end if;
-      if now() - new.ocorrido_em > interval '15 days' then
-        raise exception 'Emergência precisa ser registrada em até 15 dias do fato.';
+      if now() - new.ocorrido_em > interval '72 hours' then
+        raise exception 'Emergência precisa ser registrada em até 72 horas do fato.';
       end if;
       new.comunicado_em := now();
       new.inicio_previsto := (new.ocorrido_em at time zone fuso)::date;
