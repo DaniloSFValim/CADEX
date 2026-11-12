@@ -107,6 +107,7 @@ function Conteudo({ d }: { d: Dados }) {
 
       <dl className="cartao mt-6 grid gap-x-6 gap-y-5 p-5 sm:grid-cols-2 sm:p-6">
         <Item rotulo="Licença nº"><span className="tabular text-lg font-semibold">{d.numero}</span></Item>
+        <Item rotulo="Processo SEI"><span className="tabular">{d.processo_sei}</span></Item>
         <Item rotulo="Início da obra ou serviço">
           <span className="tabular">{dataBR(d.inicio_previsto)}</span>
         </Item>

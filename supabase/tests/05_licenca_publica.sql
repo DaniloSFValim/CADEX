@@ -73,7 +73,10 @@ begin
   perform pg_temp.assert(j -> 'executora' ->> 'situacao_cadex' = 'apta', 'sem a situação no CADEX');
   perform pg_temp.assert(j -> 'contratante' ->> 'razao_social' = 'Operadora Pública S.A.', 'sem a contratante');
   perform pg_temp.assert(jsonb_array_length(j -> 'trechos') = 1, 'sem os trechos');
-  perform pg_temp.assert(j::text not like '%NIT-050120%' and j::text not like '%ART-SIGILO%'
+  -- O número do processo SEI é público por decisão da SECONSER (licença pública).
+  perform pg_temp.assert(j ? 'processo_sei' and j ->> 'processo_sei' like 'NIT-050120/%',
+    'a licença pública deveria trazer o número do processo SEI');
+  perform pg_temp.assert(j::text not like '%ART-SIGILO%'
                          and j::text not like '%nota interna%' and not (j ? 'id'),
     'vazou dado interno na página pública');
 

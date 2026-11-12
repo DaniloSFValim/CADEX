@@ -425,6 +425,8 @@ export interface LicencaPublica {
   tipo_intervencao: TipoIntervencao;
   origem: OrigemIntervencao;
   numero: string;
+  /** Número do processo no SEI, publicado junto da licença. */
+  processo_sei: string;
   tipos_obra: TipoObra[];
   escopo: string;
   inicio_previsto: string;
