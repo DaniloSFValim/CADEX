@@ -10,7 +10,7 @@ import { DIAS_JANELA, buscarComunicacoesPublicas, filtrarComunicacoes, hojeNiter
 import { ORIGEM_LABEL, TIPO_INTERVENCAO_LABEL, origemPublica } from '../lib/licencas';
 import { listarTipos, mapaRotulosTipos, rotuloDoTipo } from '../lib/tiposIntervencao';
 import {
-  COR_SITUACAO, SITUACAO_PUBLICA_LABEL, baixarObrasGeojson, buscarEstatisticasPublicas, buscarObrasPublicas, nomeLimpo, temLocalizacao,
+  COR_SITUACAO, SITUACAO_PUBLICA_LABEL, SITUACOES_NO_MAPA, baixarObrasGeojson, buscarEstatisticasPublicas, buscarObrasPublicas, nomeLimpo, temLocalizacao,
   type EstatisticasPublicas,
   type ObraPublica,
 } from '../lib/obras';
@@ -66,7 +66,7 @@ export default function ConsultaObras() {
   }
 
   const todas = useMemo(() => obras ?? [], [obras]);
-  const listadas = todas;
+  const listadas = useMemo(() => todas.filter((o) => SITUACOES_NO_MAPA.includes(o.situacao)), [todas]);
   const selecionada = useMemo(() => (obras ?? []).find((o) => o.codigo === foco) ?? null, [obras, foco]);
 
   return (
@@ -167,13 +167,16 @@ function rotuloTipos(tipos: string[], rotulos: Record<string, string>) {
 
 
 function Legenda() {
-  const itens: (keyof typeof COR_SITUACAO)[] = ['vigente', 'aguardando_inicio', 'prazo_encerrado', 'concluida', 'cancelada'];
+  const itens: { cor: string; rotulo: string }[] = [
+    { cor: COR_SITUACAO.vigente, rotulo: 'No prazo' },
+    { cor: COR_SITUACAO.prazo_encerrado, rotulo: SITUACAO_PUBLICA_LABEL.prazo_encerrado },
+  ];
   return (
     <ul className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm font-medium text-tinta-800" aria-label="Legenda">
       {itens.map((s) => (
-        <li key={s} className="inline-flex items-center gap-2">
-          <span className="inline-block h-3 w-5 rounded-full" style={{ background: COR_SITUACAO[s] }} aria-hidden />
-          {SITUACAO_PUBLICA_LABEL[s]}
+        <li key={s.rotulo} className="inline-flex items-center gap-2">
+          <span className="inline-block h-3 w-5 rounded-full" style={{ background: s.cor }} aria-hidden />
+          {s.rotulo}
         </li>
       ))}
     </ul>
