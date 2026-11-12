@@ -89,7 +89,7 @@ export default function EmpresaPage() {
           empresas={todas}
           onSubmit={async (input, contratantes) => {
             if (empresa) {
-              await salvarEmpresa(empresa.id, input);
+              await salvarEmpresa(empresa.id, input, empresa.atualizado_em);
               setEmpresa(await buscarEmpresa(empresa.id));
             } else {
               const novo = await criarEmpresa(input, contratantes);
