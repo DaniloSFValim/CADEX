@@ -1,7 +1,7 @@
 -- =====================================================================
--- Mapa público das obras sem licença: empresa cadastrada (concessionaria)
--- aparece só enquanto está na janela; obra executada pelo próprio órgão
--- (publica) não sai do mapa; empresa fora do cadastro não aparece.
+-- Mapa público das obras sem licença: as cadastradas por nós (sem_licenca)
+-- aparecem só enquanto estão na janela; a obra pública (publica) não sai do
+-- mapa; quem executa fora do cadastro também aparece.
 -- =====================================================================
 begin;
 
@@ -38,14 +38,14 @@ begin
     ('viario', 'obra', 'Teste fora do cadastro', org, 'sem_cadastro', null, 'Rua 3', '{vala}', -22.9, -43.1,
     current_date - 1, current_date + 3, 'em_execucao', null, 'Fora SA T50', '66777888000199');
 
-  select count(*) into n from intervencoes_publicas where escopo = 'Teste empresa' and categoria = 'concessionaria';
-  perform pg_temp.assert(n = 1, 'obra de empresa cadastrada em execução deveria aparecer como concessionária');
+  select count(*) into n from intervencoes_publicas where escopo = 'Teste empresa' and categoria = 'sem_licenca';
+  perform pg_temp.assert(n = 1, 'obra sem licença em execução deveria aparecer como sem licença');
 
   select count(*) into n from intervencoes_publicas where escopo = 'Teste orgao' and categoria = 'publica';
   perform pg_temp.assert(n = 1, 'obra do próprio órgão concluída deveria continuar no mapa como pública');
 
-  select count(*) into n from intervencoes_publicas where escopo = 'Teste fora do cadastro';
-  perform pg_temp.assert(n = 0, 'empresa fora do cadastro não deveria aparecer no mapa público');
+  select count(*) into n from intervencoes_publicas where escopo = 'Teste fora do cadastro' and categoria = 'sem_licenca';
+  perform pg_temp.assert(n = 1, 'serviço sem licença de empresa fora do cadastro deveria aparecer como sem licença');
 end $$;
 
 rollback;

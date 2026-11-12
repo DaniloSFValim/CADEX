@@ -114,16 +114,16 @@ where (c.tipo = 'programado'
 grant select on public.comunicacoes_publicas to anon, authenticated;
 
 -- Obras e serviços sem licença, para o mapa público. Duas categorias:
---   concessionaria  executora é empresa cadastrada no CADEX e deferida/apta:
---                   amarela, só em execução, na mesma janela dos programados.
---   publica         executada pelo próprio órgão (ex.: SECONSER): cor própria
---                   e não sai do mapa ao concluir.
--- Empresa fora do cadastro (sem_cadastro) não entra no mapa por enquanto.
--- Sem dados internos (processo, contrato, observações, quem registrou).
+--   sem_licenca  cadastrada por nós, executada por empresa cadastrada ou por
+--                empresa fora do cadastro: amarela. Em execução, na mesma
+--                janela dos programados.
+--   publica      obra pública sem licença (executada pelo próprio órgão):
+--                violeta, sem janela, não sai do mapa ao concluir.
+-- Sem dados internos (processo, contrato, observações, CNPJ, quem registrou).
 create or replace view public.intervencoes_publicas with (security_barrier = true) as
 select
   i.id,
-  case when i.executora_modo = 'propria_orgao' then 'publica' else 'concessionaria' end as categoria,
+  case when i.executora_modo = 'propria_orgao' then 'publica' else 'sem_licenca' end as categoria,
   i.situacao,
   i.setor,
   i.tipo_intervencao,
@@ -132,20 +132,16 @@ select
   i.logradouro,
   i.bairro,
   i.referencia,
-  coalesce(nullif(btrim(e.nome_fantasia), ''), e.razao_social) as executora,
+  coalesce(nullif(btrim(e.nome_fantasia), ''), e.razao_social, nullif(btrim(i.executora_razao_social), '')) as executora,
   i.inicio_lat, i.inicio_lng, i.fim_lat, i.fim_lng,
   i.inicio_previsto,
   i.fim_previsto
 from public.intervencoes_sem_licenca i
 left join public.empresas e on e.id = i.executora_id
-where (
-    i.executora_modo = 'propria_orgao'
-  )
+where i.executora_modo = 'propria_orgao'
   or (
-    i.executora_modo = 'empresa'
-    and i.situacao = 'em_execucao'
-    and e.id is not null and not e.teste
-    and public.situacao_efetiva(e.situacao, e.validade_ate) in ('deferida', 'apta')
+    i.situacao = 'em_execucao'
+    and (i.executora_modo = 'sem_cadastro' or (e.id is not null and not e.teste))
     and coalesce(i.fim_previsto, i.inicio_previsto) >= public.hoje_niteroi() - 7
     and i.inicio_previsto <= public.hoje_niteroi() + 15
   );

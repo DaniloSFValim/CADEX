@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { filtrarIntervencoes, intervencoesParaGeoJSON, type IntervencaoPublica } from './intervencoesPublicas';
 
 const base: IntervencaoPublica = {
-  id: 'a', categoria: 'concessionaria', situacao: 'em_execucao', setor: 'telecom', tipo_intervencao: 'obra',
+  id: 'a', categoria: 'sem_licenca', situacao: 'em_execucao', setor: 'telecom', tipo_intervencao: 'obra',
   escopo: 'Troca de rede', tipos_obra: ['vala'], logradouro: 'Rua A', bairro: 'Centro', referencia: null, executora: 'Operadora X',
   inicio_lat: -22.9, inicio_lng: -43.1, fim_lat: null, fim_lng: null,
   inicio_previsto: '2026-11-10', fim_previsto: '2026-11-20',
@@ -19,7 +19,7 @@ describe('intervencoesParaGeoJSON', () => {
     const fc = intervencoesParaGeoJSON(lista);
     expect(fc.features).toHaveLength(3);
     const [, trecho, publica] = fc.features;
-    expect(trecho.properties?.rotulo).toBe('Obra sem licença (empresa cadastrada)');
+    expect(trecho.properties?.rotulo).toBe('Obra ou serviço sem licença');
     expect(publica.properties?.rotulo).toBe('Obra pública sem licença');
     expect(publica.properties?.empresa).toBe('Execução própria do órgão público');
   });

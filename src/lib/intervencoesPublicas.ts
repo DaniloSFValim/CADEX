@@ -3,10 +3,10 @@ import { supabase } from './supabase';
 
 /**
  * Obra ou serviço sem licença como aparece no mapa público (view intervencoes_publicas).
- * - concessionaria: executada por empresa cadastrada no CADEX (amarela, sai do mapa ao concluir).
- * - publica: executada pelo próprio órgão público (cor própria, não sai do mapa).
+ * - sem_licenca: obra ou serviço sem licença cadastrado por nós (amarelo; sai do mapa ao concluir).
+ * - publica: obra pública sem licença, executada pelo próprio órgão (violeta; não sai do mapa).
  */
-export type CategoriaIntervencao = 'concessionaria' | 'publica';
+export type CategoriaIntervencao = 'sem_licenca' | 'publica';
 
 export interface IntervencaoPublica {
   id: string;
@@ -38,7 +38,7 @@ export async function buscarIntervencoesPublicas(): Promise<IntervencaoPublica[]
 }
 
 export const ROTULO_INTERVENCAO: Record<CategoriaIntervencao, string> = {
-  concessionaria: 'Obra sem licença (empresa cadastrada)',
+  sem_licenca: 'Obra ou serviço sem licença',
   publica: 'Obra pública sem licença',
 };
 

@@ -279,8 +279,8 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, inte
           },
           // Obras sem licença: linha contínua; amarela para empresa cadastrada, violeta para obra pública.
           {
-            id: 'intervencoes-trechos-concessionaria', type: 'line', source: 'intervencoes',
-            filter: ['all', ['==', ['geometry-type'], 'LineString'], ['==', ['get', 'categoria'], 'concessionaria']],
+            id: 'intervencoes-trechos-sem-licenca', type: 'line', source: 'intervencoes',
+            filter: ['all', ['==', ['geometry-type'], 'LineString'], ['==', ['get', 'categoria'], 'sem_licenca']],
             layout: { 'line-cap': 'round' }, paint: { 'line-color': '#eab308', 'line-width': 5, 'line-opacity': 0.9 },
           },
           {
