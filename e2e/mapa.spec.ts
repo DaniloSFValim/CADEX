@@ -22,7 +22,7 @@ test.describe('mapa de consulta', () => {
     await expect(noMapa(page)).toHaveAttribute('data-trechos', '3');
   });
 
-  test('o mapa mostra só licenças no prazo e vencidas; a concluída sai do mapa', async ({ page }) => {
+  test('o mapa mostra licenças no prazo, vencidas e concluídas; cancelada fica de fora', async ({ page }) => {
     await instalarBackend(page, {
       licencas: [
         licenca({ inicio_previsto: dia(-5), fim_previsto: dia(10) }),
@@ -31,7 +31,7 @@ test.describe('mapa de consulta', () => {
       ],
     });
     await page.goto('/consulta/obras');
-    await expect(noMapa(page)).toHaveAttribute('data-trechos', '2');
+    await expect(noMapa(page)).toHaveAttribute('data-trechos', '3');
   });
 
   test('licença cancelada sem período não derruba a página', async ({ page }) => {
