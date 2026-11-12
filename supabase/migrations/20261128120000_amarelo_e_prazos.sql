@@ -5,8 +5,9 @@
 -- dias à frente e até 7 dias depois do fim do serviço.
 -- Emergência: registrada em até 72 horas do fato (igual à regra anterior); no mapa,
 -- 15 dias para trás.
--- Obra sem licença em execução: no mapa público (amarela), com a mesma janela
--- dos programados. Concluída ou cancelada sai do mapa.
+-- Obra sem licença de empresa cadastrada: amarela, em execução, com a mesma
+-- janela dos programados. Obra executada pelo próprio órgão público: cor
+-- própria, sem janela, não sai do mapa ao concluir.
 --
 -- Reversão: recriar a função com 72 horas e sem a comparação de antecedência,
 -- e as views sem a janela nova (versões de 20261124120000 e 20261122130000).
@@ -112,11 +113,18 @@ where (c.tipo = 'programado'
 
 grant select on public.comunicacoes_publicas to anon, authenticated;
 
--- Obras sem licença em execução, para o mapa público. Sem dados internos
--- (processo, contrato, observações, quem registrou).
+-- Obras e serviços sem licença, para o mapa público. Duas categorias:
+--   concessionaria  executora é empresa cadastrada no CADEX e deferida/apta:
+--                   amarela, só em execução, na mesma janela dos programados.
+--   publica         executada pelo próprio órgão (ex.: SECONSER): cor própria
+--                   e não sai do mapa ao concluir.
+-- Empresa fora do cadastro (sem_cadastro) não entra no mapa por enquanto.
+-- Sem dados internos (processo, contrato, observações, quem registrou).
 create or replace view public.intervencoes_publicas with (security_barrier = true) as
 select
   i.id,
+  case when i.executora_modo = 'propria_orgao' then 'publica' else 'concessionaria' end as categoria,
+  i.situacao,
   i.setor,
   i.tipo_intervencao,
   i.escopo,
@@ -124,15 +132,22 @@ select
   i.logradouro,
   i.bairro,
   i.referencia,
-  coalesce(nullif(btrim(e.nome_fantasia), ''), e.razao_social, nullif(btrim(i.executora_razao_social), '')) as executora,
+  coalesce(nullif(btrim(e.nome_fantasia), ''), e.razao_social) as executora,
   i.inicio_lat, i.inicio_lng, i.fim_lat, i.fim_lng,
   i.inicio_previsto,
   i.fim_previsto
 from public.intervencoes_sem_licenca i
 left join public.empresas e on e.id = i.executora_id
-where i.situacao = 'em_execucao'
-  and (e.id is null or not e.teste)
-  and coalesce(i.fim_previsto, i.inicio_previsto) >= public.hoje_niteroi() - 7
-  and i.inicio_previsto <= public.hoje_niteroi() + 15;
+where (
+    i.executora_modo = 'propria_orgao'
+  )
+  or (
+    i.executora_modo = 'empresa'
+    and i.situacao = 'em_execucao'
+    and e.id is not null and not e.teste
+    and public.situacao_efetiva(e.situacao, e.validade_ate) in ('deferida', 'apta')
+    and coalesce(i.fim_previsto, i.inicio_previsto) >= public.hoje_niteroi() - 7
+    and i.inicio_previsto <= public.hoje_niteroi() + 15
+  );
 
 grant select on public.intervencoes_publicas to anon, authenticated;

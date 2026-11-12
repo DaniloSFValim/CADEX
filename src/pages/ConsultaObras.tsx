@@ -7,6 +7,7 @@ import { Rodape } from '../components/Rodape';
 import { ErrorNote, Kpi, Spinner, Titulo, linkTexto } from '../components/ui';
 import { dataBR } from '../components/Situacao';
 import { DIAS_JANELA, buscarComunicacoesPublicas, filtrarComunicacoes, hojeNiteroi, type ComunicacaoPublica } from '../lib/comunicacoesPublicas';
+import { buscarIntervencoesPublicas, filtrarIntervencoes, type IntervencaoPublica } from '../lib/intervencoesPublicas';
 import { ORIGEM_LABEL, TIPO_INTERVENCAO_LABEL, origemPublica } from '../lib/licencas';
 import { listarTipos, mapaRotulosTipos, rotuloDoTipo } from '../lib/tiposIntervencao';
 import {
@@ -43,11 +44,18 @@ export default function ConsultaObras() {
   // Comunicações ao CISP no mapa. Se falhar, o mapa de obras continua sem elas.
   const [comunicacoes, setComunicacoes] = useState<ComunicacaoPublica[]>([]);
   useEffect(() => { buscarComunicacoesPublicas().then(setComunicacoes).catch(() => setComunicacoes([])); }, []);
+
+  const [intervencoes, setIntervencoes] = useState<IntervencaoPublica[]>([]);
+  useEffect(() => { buscarIntervencoesPublicas().then(setIntervencoes).catch(() => setIntervencoes([])); }, []);
   // Por padrão, o mapa mostra só o que acontece hoje. O filtro amplia para a janela de 15 dias.
   const [ampliarComunicacoes, setAmpliarComunicacoes] = useState(false);
   const comunicacoesVisiveis = useMemo(
     () => filtrarComunicacoes(comunicacoes, ampliarComunicacoes, hojeNiteroi()),
     [comunicacoes, ampliarComunicacoes],
+  );
+  const intervencoesVisiveis = useMemo(
+    () => filtrarIntervencoes(intervencoes, ampliarComunicacoes, hojeNiteroi()),
+    [intervencoes, ampliarComunicacoes],
   );
   // ?obra=CÓDIGO abre o mapa já na obra (vem de "Localizar no mapa" na ficha da licença).
   const [params] = useSearchParams();
@@ -118,7 +126,7 @@ export default function ConsultaObras() {
                   </p>
                 </div>
                 <div ref={mapaRef} className="relative scroll-mt-4 overflow-hidden rounded-xl border border-tinta-200 shadow-xs">
-                  <MapaObras obras={listadas} comunicacoes={comunicacoesVisiveis}
+                  <MapaObras obras={listadas} comunicacoes={comunicacoesVisiveis} intervencoes={intervencoesVisiveis}
                              foco={foco} destaque={destaque} modo={modo} bairro={bairro}
                              onSelecionar={setFoco} onBairro={setBairro} onDestacar={setDestaque} onGrupo={setGrupo} />
                   {selecionada && (
@@ -131,7 +139,7 @@ export default function ConsultaObras() {
                 <FiltroComunicacoes ampliado={ampliarComunicacoes} onMudar={setAmpliarComunicacoes}
                                     visiveis={comunicacoesVisiveis.length} total={comunicacoes.length} />
               )}
-              {comunicacoesVisiveis.length > 0 && <LegendaComunicacoes />}
+              {(comunicacoesVisiveis.length > 0 || intervencoesVisiveis.length > 0) && <LegendaComunicacoes />}
             </div>
             </div>
           </div>
@@ -192,7 +200,7 @@ function FiltroComunicacoes({ ampliado, onMudar, visiveis, total }: {
       <label className="inline-flex cursor-pointer items-center gap-2">
         <input type="checkbox" className="h-4 w-4 accent-tinta-800" checked={ampliado}
                onChange={(e) => onMudar(e.target.checked)} />
-        Mostrar os próximos {DIAS_JANELA} dias (programados) e os {DIAS_JANELA} dias anteriores (emergências)
+        Mostrar os próximos {DIAS_JANELA} dias (programados e obras sem licença) e os {DIAS_JANELA} dias anteriores (emergências)
       </label>
       <span className="text-tinta-500">
         {visiveis} de {total}
@@ -201,19 +209,29 @@ function FiltroComunicacoes({ ampliado, onMudar, visiveis, total }: {
   );
 }
 
-/** Comunicações ao CISP: triângulo vermelho (emergência) e quadrado âmbar (serviço programado). */
+/** Comunicações ao CISP e obras sem licença: cada forma e cor do mapa. */
 function LegendaComunicacoes() {
   return (
-    <ul className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-tinta-600" aria-label="Legenda das comunicações ao CISP">
+    <ul className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-tinta-600" aria-label="Legenda das comunicações ao CISP e obras sem licença">
       <li className="inline-flex items-center gap-1.5">
         <span className="inline-block h-0 w-4 border-t-[5px] border-[#b91c1c]" aria-hidden />
         <span className="inline-block h-2.5 w-2.5 bg-[#b91c1c]" style={{ clipPath: 'polygon(50% 0, 100% 100%, 0 100%)' }} aria-hidden />
         Emergência (comunicada depois do fato)
       </li>
       <li className="inline-flex items-center gap-1.5">
-        <span className="inline-block h-0 w-4 border-t-[5px] border-dashed border-[#b45309]" aria-hidden />
-        <span className="inline-block h-2.5 w-2.5 bg-[#b45309]" aria-hidden />
+        <span className="inline-block h-0 w-4 border-t-[5px] border-dashed border-[#eab308]" aria-hidden />
+        <span className="inline-block h-2.5 w-2.5 bg-[#eab308]" aria-hidden />
         Serviço programado (comunicado antes)
+      </li>
+      <li className="inline-flex items-center gap-1.5">
+        <span className="inline-block h-0 w-4 border-t-[5px] border-[#eab308]" aria-hidden />
+        <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#eab308]" aria-hidden />
+        Obra sem licença de empresa cadastrada
+      </li>
+      <li className="inline-flex items-center gap-1.5">
+        <span className="inline-block h-0 w-4 border-t-[5px] border-[#7c3aed]" aria-hidden />
+        <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#7c3aed]" aria-hidden />
+        Obra pública sem licença
       </li>
     </ul>
   );
