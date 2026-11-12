@@ -32,6 +32,12 @@ export interface Cenario {
   auditoria: EventoAuditoria[];
   /** Documentos oficiais emitidos (tabela documentos_oficiais). */
   documentos: Record<string, unknown>[];
+  /** Comunicações prévias de serviço programado (tabela comunicacoes_servico). */
+  comunicacoes?: Record<string, unknown>[];
+  /** Acessos de empresa ao portal (tabela empresa_usuarios). */
+  representantes?: Record<string, unknown>[];
+  /** Quem entra é representante de empresa (sem cadastro de servidor): só vê a própria empresa. */
+  acessoEmpresa?: { empresa_id: string; papel: 'representante' | 'operador'; nome: string; email: string; ativo?: boolean };
   /** Obras e serviços sem licença (tabela intervencoes_sem_licenca). */
   semLicenca?: Record<string, unknown>[];
   /** Catálogo de tipos (tabela tipos_intervencao). Sem ele, vale o catálogo padrão de viário. */
@@ -159,6 +165,9 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
     if (req.method() === 'GET' && falhas.has(caminho)) return falha();
 
     if (caminho === 'user') return responder(user);
+    if (caminho === 'servidores' && estado.acessoEmpresa) {
+      return unico ? route.fulfill({ status: 406, headers: CORS, contentType: 'application/json', body: JSON.stringify({ message: 'Nenhuma linha.' }) }) : responder([]);
+    }
     if (caminho === 'servidores') {
       const linha = {
         nome: 'Você', papel: estado.perfil, administrador: estado.administrador, ativo: true,
@@ -172,7 +181,22 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
         estado.empresas = estado.empresas.map((e) => (e.id === id ? { ...e, ...(corpo as object) } : e));
         return vazio();
       }
-      return lista(estado.empresas as unknown as Record<string, unknown>[]);
+      // Representante só enxerga a própria empresa (RLS).
+      const visiveis = estado.acessoEmpresa ? estado.empresas.filter((e) => e.id === estado.acessoEmpresa!.empresa_id) : estado.empresas;
+      return lista(visiveis as unknown as Record<string, unknown>[]);
+    }
+    if (caminho === 'empresa_usuarios' && estado.acessoEmpresa && req.method() === 'GET') {
+      const a = estado.acessoEmpresa;
+      return lista([{ user_id: ID_USUARIO, empresa_id: a.empresa_id, papel: a.papel, ativo: a.ativo ?? true, nome: a.nome, email: a.email }]);
+    }
+    if (caminho === 'empresa_licencas') {
+      const emp = estado.acessoEmpresa?.empresa_id ?? '';
+      const visiveis = estado.licencas.filter((l) => l.executora_id === emp || l.contratante_id === emp);
+      return lista(visiveis.map((l) => ({
+        id: l.id, numero: l.numero, escopo: l.escopo, setor: l.setor, tipo_intervencao: l.tipo_intervencao, situacao: l.situacao,
+        inicio_previsto: l.inicio_previsto, fim_previsto: l.fim_previsto, validade_ate: l.validade_ate,
+        executa: l.executora_id === emp, contrata: l.contratante_id === emp,
+      })) as unknown as Record<string, unknown>[]);
     }
     if (caminho === 'licencas') return lista(estado.licencas as unknown as Record<string, unknown>[]);
     if (caminho === 'tipos_intervencao') {
@@ -188,6 +212,34 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
       const linhas = (caminho === 'licenca_suspensoes' ? estado.suspensoes : estado.pedidos) ?? [];
       const lid = (url.searchParams.get('licenca_id') ?? '').replace('eq.', '');
       return lista(linhas.filter((x) => x.licenca_id === lid));
+    }
+    if (caminho === 'comunicacoes_publicas') {
+      return lista((estado.comunicacoes ?? []).map((c) => ({ ...c, razao_social: 'Empresa de teste', codigo_cadex: 'CADEX-TST-0001' })));
+    }
+    if (caminho === 'comunicacoes_servico') {
+      if (req.method() === 'POST') {
+        // Lote: um pedido com várias linhas entra inteiro; a tela recebe 201 sem corpo.
+        const linhas = Array.isArray(corpo) ? corpo : [corpo];
+        const novas = linhas.map((l, i) => ({
+          id: uuid(9600 + (estado.comunicacoes?.length ?? 0) + i + 1), comunicado_em: new Date().toISOString(), ...(l as object),
+        }));
+        estado.comunicacoes = [...(estado.comunicacoes ?? []), ...novas];
+        return vazio();
+      }
+      const emp = (url.searchParams.get('empresa_id') ?? '').replace('eq.', '');
+      return lista((estado.comunicacoes ?? []).filter((x) => x.empresa_id === emp));
+    }
+    if (caminho === 'empresa_usuarios') {
+      if (req.method() === 'PATCH') {
+        const uid = (url.searchParams.get('user_id') ?? '').replace('eq.', '');
+        estado.representantes = (estado.representantes ?? []).map((x) => (x.user_id === uid ? { ...x, ...(corpo as object) } : x));
+        return vazio();
+      }
+      const comEmpresa = (estado.representantes ?? []).map((x) => ({
+        ...x,
+        empresas: estado.empresas.find((e) => e.id === x.empresa_id) ? { razao_social: estado.empresas.find((e) => e.id === x.empresa_id)!.razao_social, codigo_cadex: estado.empresas.find((e) => e.id === x.empresa_id)!.codigo_cadex } : null,
+      }));
+      return lista(comEmpresa);
     }
     if (caminho === 'intervencoes_sem_licenca') {
       if (req.method() === 'POST') {
@@ -214,6 +266,11 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
       if (erroFuncao) return route.fulfill({ status: 400, headers: CORS, contentType: 'application/json', body: JSON.stringify({ erro: erroFuncao }) });
       const { acao, user_id } = corpo as { acao: string; user_id: string };
       if (acao === 'excluir') estado.contas = estado.contas.filter((c) => c.user_id !== user_id);
+      if (acao === 'criar_representante') {
+        const p = corpo as { empresa_id: string; nome: string; email: string; papel: string };
+        const novo = { user_id: uuid(7000 + (estado.representantes?.length ?? 0) + 1), empresa_id: p.empresa_id, papel: p.papel, ativo: true, nome: p.nome, email: p.email, criado_em: new Date().toISOString(), desativado_em: null };
+        estado.representantes = [...(estado.representantes ?? []), novo];
+      }
       return responder({ ok: true });
     }
     if (caminho === 'rpc/admin_definir_dados_funcionais') {
@@ -228,6 +285,7 @@ export async function instalarBackend(page: Page, parcial: Partial<Cenario> = {}
       return vazio();
     }
     if (caminho === 'rpc/conflitos_de_licenca') return responder([]);
+    if (caminho === 'rpc/estatisticas_publicas') return responder({ autorizadas_12m: 70, concluidas_5a: 205, executoras: 8, empresas_ativas: 39 });
     if (caminho === 'rpc/emitir_documento') {
       // Numeração em memória, como o banco: 1, 2, 3... por emissão.
       const { p_tipo, p_empresa_id, p_dados } = corpo as { p_tipo: string; p_empresa_id: string; p_dados: Record<string, unknown> };

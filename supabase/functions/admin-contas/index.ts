@@ -23,6 +23,8 @@ function cabecalhosCors(origem: string): Record<string, string> {
 
 const SENHA_MINIMA = 10;
 const PAPEIS = ['gestor', 'cisp', 'licenciador'];
+// Representantes de empresa: acesso ao portal das empresas. Não são servidores.
+const PAPEIS_EMPRESA = ['representante', 'operador'];
 
 function resposta(status: number, corpo: Record<string, unknown>, cabecalhos: Record<string, string>) {
   return new Response(JSON.stringify(corpo), {
@@ -124,6 +126,44 @@ Deno.serve(async (req) => {
       // Sem o acesso gravado, a conta de login não serve para nada: desfaz.
       await admin.auth.admin.deleteUser(criado.data.user.id);
       return r(400, { erro: acesso.error.message });
+    }
+    return r(200, { ok: true, user_id: criado.data.user.id });
+  }
+
+  if (corpo.acao === 'criar_representante') {
+    const email = typeof corpo.email === 'string' ? corpo.email.trim().toLowerCase() : '';
+    const nome = typeof corpo.nome === 'string' ? corpo.nome.trim() : '';
+    const papel = typeof corpo.papel === 'string' ? corpo.papel : '';
+    const empresaId = typeof corpo.empresa_id === 'string' ? corpo.empresa_id : '';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return r(400, { erro: 'E-mail inválido.' });
+    if (!nome) return r(400, { erro: 'Informe o nome do representante.' });
+    if (!PAPEIS_EMPRESA.includes(papel)) return r(400, { erro: 'Papel inválido.' });
+    if (!empresaId) return r(400, { erro: 'Empresa não informada.' });
+    // Só empresa cadastrada e ativa recebe representante. Confere com a chave de serviço,
+    // porque o vínculo ainda não existe e a leitura de quem chamou pode não enxergar a empresa.
+    const { data: empresa, error: erroEmpresa } = await admin
+      .from('empresas').select('id, ativa').eq('id', empresaId).maybeSingle();
+    if (erroEmpresa || !empresa || empresa.ativa !== true) {
+      return r(400, { erro: 'Empresa não encontrada ou desativada no CADEX.' });
+    }
+    const criado = await admin.auth.admin.createUser({ email, password: senha, email_confirm: true });
+    if (criado.error || !criado.data.user) {
+      const jaExiste = /already|registered|exists/i.test(criado.error?.message ?? '');
+      return r(400, {
+        erro: jaExiste
+          ? 'Já existe uma conta com este e-mail. Use outro e-mail para o representante.'
+          : `Não foi possível criar a conta: ${criado.error?.message ?? 'erro desconhecido'}`,
+      });
+    }
+    // O vínculo é gravado com o token de quem chamou: a regra de gravação (gestor com
+    // verificação em duas etapas) é conferida no banco, e a auditoria registra o gestor.
+    const vinculo = await comoQuemChamou.from('empresa_usuarios').insert({
+      user_id: criado.data.user.id, empresa_id: empresaId, papel, ativo: true, nome, email,
+    });
+    if (vinculo.error) {
+      // Sem o vínculo, a conta de login não dá acesso a nada: desfaz.
+      await admin.auth.admin.deleteUser(criado.data.user.id);
+      return r(400, { erro: vinculo.error.message });
     }
     return r(200, { ok: true, user_id: criado.data.user.id });
   }

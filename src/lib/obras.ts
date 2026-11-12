@@ -38,6 +38,25 @@ export async function buscarObrasPublicas(): Promise<ObraPublica[]> {
   return (data as ObraPublica[] | null) ?? [];
 }
 
+/** Números da consulta pública: contagens agregadas, sem dado de pessoa ou empresa individual. */
+export interface EstatisticasPublicas {
+  /** Licenças autorizadas (deferidas) protocoladas nos últimos 12 meses. */
+  autorizadas_12m: number;
+  /** Obras concluídas nos últimos cinco anos, até hoje. */
+  concluidas_5a: number;
+  /** Empresas executoras com pelo menos uma obra no mapa. */
+  executoras: number;
+  /** Empresas que a consulta pública lista: ativas, deferidas ou aptas. */
+  empresas_ativas: number;
+}
+
+/** Nulo se a leitura falhar: a consulta mostra o mapa mesmo sem os números. */
+export async function buscarEstatisticasPublicas(): Promise<EstatisticasPublicas | null> {
+  const { data, error } = await supabase.rpc('estatisticas_publicas');
+  if (error || !data) return null;
+  return data as EstatisticasPublicas;
+}
+
 /**
  * Dados abertos: baixa as obras licenciadas como GeoJSON (uma Feature por
  * trecho). Mesma seleção do mapa público; sem dado interno.
@@ -51,21 +70,27 @@ export async function baixarObrasGeojson(): Promise<void> {
 export const SITUACAO_PUBLICA_LABEL: Record<SituacaoPublica, string> = {
   vigente: 'Vigente',
   aguardando_inicio: 'Aguardando início',
-  prazo_encerrado: 'Prazo encerrado',
-  concluida: 'Encerrada',
+  prazo_encerrado: 'Prazo de execução encerrado',
+  concluida: 'Concluída',
   cancelada: 'Cancelada',
   suspensa: 'Suspensa a pedido',
 };
 
 /** Cores do mapa: as mesmas da situação no restante do sistema. */
 export const COR_SITUACAO: Record<SituacaoPublica, string> = {
-  vigente: '#1e7b4c',
-  aguardando_inicio: '#8f5b00',
-  prazo_encerrado: '#b3372c',
-  concluida: '#1d4ed8',
-  cancelada: '#1f2937',
-  suspensa: '#7c3aed',
+  vigente: '#16a34a',
+  aguardando_inicio: '#16a34a',
+  prazo_encerrado: '#dc2626',
+  concluida: '#2563eb',
+  cancelada: '#111827',
+  suspensa: '#9333ea',
 };
+
+/**
+ * O que o mapa desenha: licença no prazo (verde, inclusive a que ainda vai começar) e licença com
+ * prazo encerrado (vermelha). Concluídas e canceladas saem do mapa; continuam nos números gerais.
+ */
+export const SITUACOES_NO_MAPA: SituacaoPublica[] = ['vigente', 'aguardando_inicio', 'prazo_encerrado'];
 
 /** Ao abrir, o mapa mostra o que está autorizado agora ou prestes a começar. */
 export const FILTRO_OBRAS: { valor: string; rotulo: string; inclui: SituacaoPublica[] }[] = [

@@ -201,7 +201,7 @@ test('manutenção: o histórico de correções em lote aparece, mesmo vazio', a
 test('painel: os indicadores de próximos dias e de empresas são clicáveis', async ({ page }) => {
   await instalarBackend(page, { administrador: true, licencas: [licenca({ numero: '862/2026' })] });
   await page.goto('/dashboard');
-  for (const nome of [/Começam em até/, /Terminam em até/, /^Contratantes/, /^Executoras/]) {
+  for (const nome of [/Começam \/ terminam/, /^Contratantes \/ Executoras/]) {
     await expect(page.getByRole('button', { name: nome })).toBeVisible();
   }
 });

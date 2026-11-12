@@ -78,12 +78,15 @@ export function relacaoLicencas(
 ): Relatorio {
   const cols = COLUNAS_LICENCA.filter((col) => chaves.includes(col.chave));
   const rotulo = AGRUPAR_LICENCAS.find((a) => a.valor === por)?.rotulo;
+  // Licença de empresa de teste (executora ou contratante) nunca sai em relação exportada.
+  const deTeste = (id: string | null) => Boolean(id && c.porId.get(id)?.teste);
+  const reais = licencas.filter((l) => !deTeste(l.executora_id) && !deTeste(l.contratante_id));
   return {
     titulo: 'Relação de licenças de obra',
     arquivo: 'cadex-licencas',
     filtros: por ? [...filtros, `Agrupado por: ${rotulo?.toLowerCase()}.`] : filtros,
     colunas: cols.map((col) => col.rotulo),
-    grupos: [...agrupar(licencas, (l) => grupos(l, por, c)).entries()]
+    grupos: [...agrupar(reais, (l) => grupos(l, por, c)).entries()]
       .map(([titulo, lista]) => ({ titulo, linhas: lista.map((l) => cols.map((col) => col.valor(l, c))) })),
   };
 }

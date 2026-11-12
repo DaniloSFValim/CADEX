@@ -11,8 +11,11 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { Protocol } from 'pmtiles';
 import { useEffect, useRef, useState } from 'react';
 import { COR_SITUACAO, anosDasObras, obrasParaGeoJSON, pontosDeCalor, type ObraPublica } from '../lib/obras';
+import { comunicacoesParaGeoJSON, type ComunicacaoPublica } from '../lib/comunicacoesPublicas';
+import { intervencoesParaGeoJSON, type IntervencaoPublica } from '../lib/intervencoesPublicas';
 import { carregarBairrosGeo, chaveBairro } from '../lib/bairros';
 import type { SituacaoPublica } from '../lib/licencas';
+import { MAPA_LOCALE } from '../lib/mapaLocale';
 
 /** Niterói, com folga. */
 const NITEROI: maplibregl.LngLatBoundsLike = [[-43.135, -22.995], [-42.955, -22.865]];
@@ -88,9 +91,34 @@ const corPorSituacao = [
   '#6b7280',
 ] as unknown as maplibregl.ExpressionSpecification;
 
+/** Marca de 22 px desenhada no canvas: triângulo ou quadrado, com contorno branco para ler sobre o mapa. */
+function desenhaMarca(forma: 'triangulo' | 'quadrado' | 'circulo', cor: string): ImageData {
+  const c = document.createElement('canvas');
+  c.width = 22; c.height = 22;
+  const g = c.getContext('2d');
+  if (!g) return new ImageData(22, 22);
+  g.fillStyle = cor;
+  g.strokeStyle = '#ffffff';
+  g.lineWidth = 2.5;
+  g.beginPath();
+  if (forma === 'triangulo') {
+    g.moveTo(11, 2); g.lineTo(20, 19); g.lineTo(2, 19); g.closePath();
+  } else if (forma === 'circulo') {
+    g.arc(11, 11, 8, 0, 2 * Math.PI);
+  } else {
+    g.rect(3, 3, 16, 16);
+  }
+  g.fill();
+  g.stroke();
+  return g.getImageData(0, 0, 22, 22);
+}
+
 /** Mapa das obras. Clicar numa obra avisa quem chamou (a ficha aparece ao lado), sem balão. */
-export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bairro, onSelecionar, onBairro, onDestacar, onGrupo }: {
-  obras: ObraPublica[]; foco?: string | null; destaque?: string | null; modo?: 'pontos' | 'calor';
+const SEM_COMUNICACOES: ComunicacaoPublica[] = [];
+const SEM_INTERVENCOES: IntervencaoPublica[] = [];
+
+export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, intervencoes = SEM_INTERVENCOES, foco, destaque, modo = 'pontos', bairro, onSelecionar, onBairro, onDestacar, onGrupo }: {
+  obras: ObraPublica[]; comunicacoes?: ComunicacaoPublica[]; intervencoes?: IntervencaoPublica[]; foco?: string | null; destaque?: string | null; modo?: 'pontos' | 'calor';
   bairro?: string | null; onSelecionar?: (codigo: string) => void; onBairro?: (bairro: string) => void;
   onDestacar?: (codigo: string | null) => void;
   /** Clique num agrupamento: códigos das obras dentro dele. Quem recebe destaca essas obras, sem esconder as outras. */
@@ -137,6 +165,10 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
           bairros: { type: 'geojson', data: { type: 'FeatureCollection', features: [] } },
           // Anel sobre a obra escolhida (o ponto de destaque ao voar até ela). Vazio sem obra escolhida.
           'foco-obra': { type: 'geojson', data: { type: 'FeatureCollection', features: [] } },
+          // Comunicações ao CISP: emergência (triângulo, vermelho) e serviço programado (quadrado, amarelo).
+          comunicacoes: { type: 'geojson', data: { type: 'FeatureCollection', features: [] } },
+          // Obras sem licença: de empresa cadastrada (amarelas) e do próprio órgão público (violeta).
+          intervencoes: { type: 'geojson', data: { type: 'FeatureCollection', features: [] } },
           // Anel que pulsa sobre a área de calor sob o cursor. Vazio quando o cursor não está no calor.
           'calor-foco': { type: 'geojson', data: { type: 'FeatureCollection', features: [] } },
         },
@@ -223,16 +255,81 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
               'circle-stroke-color': '#ffffff', 'circle-stroke-width': 1.5,
             },
           },
+          // Trechos de comunicação: emergência em linha contínua; programado tracejado.
+          {
+            id: 'comunicacoes-trechos-emergencia', type: 'line', source: 'comunicacoes',
+            filter: ['all', ['==', ['geometry-type'], 'LineString'], ['==', ['get', 'tipo'], 'emergencia']],
+            layout: { 'line-cap': 'round' }, paint: { 'line-color': '#b91c1c', 'line-width': 5, 'line-opacity': 0.9 },
+          },
+          {
+            id: 'comunicacoes-trechos-programado', type: 'line', source: 'comunicacoes',
+            filter: ['all', ['==', ['geometry-type'], 'LineString'], ['==', ['get', 'tipo'], 'programado']],
+            layout: { 'line-cap': 'butt' },
+            paint: { 'line-color': '#eab308', 'line-width': 5, 'line-opacity': 0.9, 'line-dasharray': [1.5, 1.2] },
+          },
+          {
+            // Marca do ponto de início: triângulo para emergência, quadrado para serviço programado.
+            id: 'comunicacoes-marcas', type: 'symbol', source: 'comunicacoes',
+            filter: ['==', ['geometry-type'], 'Point'],
+            layout: {
+              'icon-image': ['match', ['get', 'tipo'], 'emergencia', 'marca-emergencia', 'marca-programado'],
+              'icon-size': ['interpolate', ['linear'], ['zoom'], 12, 0.7, 17, 1.1],
+              'icon-allow-overlap': true,
+            },
+          },
+          // Obras sem licença: linha contínua; amarela para empresa cadastrada, violeta para obra pública.
+          {
+            id: 'intervencoes-trechos-sem-licenca', type: 'line', source: 'intervencoes',
+            filter: ['all', ['==', ['geometry-type'], 'LineString'], ['==', ['get', 'categoria'], 'sem_licenca']],
+            layout: { 'line-cap': 'round' }, paint: { 'line-color': '#eab308', 'line-width': 5, 'line-opacity': 0.9 },
+          },
+          {
+            id: 'intervencoes-trechos-publica', type: 'line', source: 'intervencoes',
+            filter: ['all', ['==', ['geometry-type'], 'LineString'], ['==', ['get', 'categoria'], 'publica']],
+            layout: { 'line-cap': 'round' }, paint: { 'line-color': '#7c3aed', 'line-width': 5, 'line-opacity': 0.9 },
+          },
+          {
+            id: 'intervencoes-marcas', type: 'symbol', source: 'intervencoes',
+            filter: ['==', ['geometry-type'], 'Point'],
+            layout: {
+              'icon-image': ['match', ['get', 'categoria'], 'publica', 'marca-publica', 'marca-obra'],
+              'icon-size': ['interpolate', ['linear'], ['zoom'], 12, 0.7, 17, 1.1],
+              'icon-allow-overlap': true,
+            },
+          },
         ],
       };
       const m = new maplibregl.Map({
         container: caixa.current, style, bounds: NITEROI, maxBounds: [[-43.4, -23.2], [-42.7, -22.6]],
-        attributionControl: { compact: true }, cooperativeGestures: true,
+        attributionControl: { compact: true }, cooperativeGestures: true, locale: MAPA_LOCALE,
       });
       m.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
       // Bloco do mapa-base que falha não impede o uso; só avisa se o estilo nem carregou.
       m.on('error', (e: maplibregl.ErrorEvent) => {
         if (vivo && !m.isStyleLoaded()) setErro(e.error?.message ?? 'Falha ao carregar o mapa.');
+      });
+      for (const camada of ['comunicacoes-marcas', 'intervencoes-marcas']) m.on('click', camada, (e: maplibregl.MapLayerMouseEvent) => {
+        const f = e.features?.[0];
+        if (!f) return;
+        const p = f.properties as Record<string, string>;
+        const corpo = document.createElement('div');
+        corpo.className = 'text-sm';
+        const linhas: [string, string][] = [
+          [p.rotulo, ''], ['Empresa', p.empresa], ['Serviço', p.servico], ['Local', p.local],
+          ['Descrição', p.descricao], ['Quando', p.quando],
+        ];
+        for (const [rotulo, valor] of linhas) {
+          const linha = document.createElement('div');
+          const forte = document.createElement('strong');
+          forte.textContent = valor ? `${rotulo}: ` : rotulo;
+          linha.appendChild(forte);
+          if (valor) linha.appendChild(document.createTextNode(valor));
+          corpo.appendChild(linha);
+        }
+        new maplibregl.Popup({ closeButton: true, maxWidth: '280px' })
+          .setLngLat((f.geometry as GeoJSON.Point).coordinates as [number, number])
+          .setDOMContent(corpo)
+          .addTo(m);
       });
       for (const camada of ['obras-linhas', 'obras-pontos', 'obras-areas']) {
         m.on('click', camada, (e: maplibregl.MapLayerMouseEvent) => {
@@ -379,6 +476,18 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
     const t = window.setTimeout(() => { aplica(); tela.style.opacity = '1'; }, 230);
     return () => window.clearTimeout(t);
   }, [obras, pronto]);
+
+  // Comunicações ao CISP e obras sem licença: as marcas entram uma vez; os dados atualizam quando mudam.
+  useEffect(() => {
+    if (!pronto || !mapa.current) return;
+    const m = mapa.current;
+    if (!m.hasImage('marca-emergencia')) m.addImage('marca-emergencia', desenhaMarca('triangulo', '#b91c1c'));
+    if (!m.hasImage('marca-programado')) m.addImage('marca-programado', desenhaMarca('quadrado', '#eab308'));
+    if (!m.hasImage('marca-obra')) m.addImage('marca-obra', desenhaMarca('circulo', '#eab308'));
+    if (!m.hasImage('marca-publica')) m.addImage('marca-publica', desenhaMarca('circulo', '#7c3aed'));
+    (m.getSource('comunicacoes') as maplibregl.GeoJSONSource | undefined)?.setData(comunicacoesParaGeoJSON(comunicacoes));
+    (m.getSource('intervencoes') as maplibregl.GeoJSONSource | undefined)?.setData(intervencoesParaGeoJSON(intervencoes));
+  }, [comunicacoes, intervencoes, pronto]);
 
   // Mapa de calor: refaz os pontos quando muda a lista ou o ano escolhido.
   useEffect(() => {
@@ -532,7 +641,7 @@ export default function MapaObras({ obras, foco, destaque, modo = 'pontos', bair
 
   return (
     <div className="relative" data-trechos={desenhados}>
-      <div ref={caixa} className="h-[60vh] min-h-[360px] w-full overflow-hidden rounded-sm border border-tinta-200 bg-tinta-50"
+      <div ref={caixa} className="h-[calc(100svh-12rem)] min-h-[420px] w-full overflow-hidden rounded-sm border border-tinta-200 bg-tinta-50"
            role="region" aria-label="Mapa das obras licenciadas em Niterói" />
       {modo === 'calor' && (
         <div className="mt-2 flex flex-wrap items-center justify-between gap-3 text-xs text-tinta-600">

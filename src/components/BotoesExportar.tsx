@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useAuth } from '../lib/auth';
-import { baixarCsv, baixarPdf, totalLinhas, type Relatorio } from '../lib/relatorio';
+import { baixarCsv, baixarMarkdown, baixarPdf, totalLinhas, type Relatorio } from '../lib/relatorio';
 import { Button, ErrorNote } from './ui';
 
 /** Baixar o relatório em PDF (para anexar ao SEI) ou em planilha. */
-export function BotoesExportar({ relatorio, desabilitado }: { relatorio: Relatorio; desabilitado?: boolean }) {
+export function BotoesExportar({ relatorio, desabilitado, semMarkdown = false }: { relatorio: Relatorio; desabilitado?: boolean; semMarkdown?: boolean }) {
   const { servidor, session } = useAuth();
   const [gerando, setGerando] = useState(false);
   const [erro, setErro] = useState<unknown>(null);
@@ -20,6 +20,7 @@ export function BotoesExportar({ relatorio, desabilitado }: { relatorio: Relator
         {gerando ? 'Gerando PDF…' : 'Baixar PDF'}
       </Button>
       <Button variant="secondary" disabled={vazio} onClick={() => baixarCsv(relatorio)}>Baixar planilha</Button>
+      {!semMarkdown && <Button variant="secondary" disabled={vazio} onClick={() => baixarMarkdown(relatorio, emitidoPor)}>Baixar Markdown</Button>}
       <span className="text-sm text-tinta-600">
         {total} registro{total === 1 ? '' : 's'}
         {relatorio.grupos.length > 1 && ` em ${relatorio.grupos.length} grupos`}, {relatorio.colunas.length} coluna{relatorio.colunas.length === 1 ? '' : 's'}

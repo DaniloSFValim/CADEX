@@ -464,7 +464,7 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
     const n = (v: string) => v.trim() || null;
     return {
       licenca: {
-        ...(licenca ? { id: licenca.id } : {}),
+        ...(licenca ? { id: licenca.id, atualizado_em_esperado: licenca.atualizado_em } : {}),
         setor: f.setor, processo_sei: f.processo_sei.trim(), numero: n(f.numero), tipos_obra: f.tipos_obra,
         outros_descricao: f.tipos_obra.includes('outros') ? n(f.outros_descricao) : null,
         escopo: f.escopo.trim(),

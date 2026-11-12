@@ -23,6 +23,12 @@ export interface Servidor {
   cargo: string | null;
 }
 
+/** Representante (ou operador) de uma empresa: acesso ao portal das empresas. Não é servidor. */
+export interface AcessoEmpresa {
+  empresaId: string;
+  papel: 'representante' | 'operador';
+}
+
 /** Verificação em duas etapas (aplicativo autenticador) da sessão atual. */
 export interface EstadoMfa {
   /** O gestor só usa o sistema depois do código do aplicativo; o CISP não precisa. */
@@ -37,9 +43,13 @@ export interface EstadoMfa {
 
 interface AuthState {
   session: Session | null;
+  /** O perfil não pôde ser lido (rede, servidor). Diferente de "sem acesso". */
+  erroPerfil: boolean;
   mfa: EstadoMfa | null;
   /** Servidor logado, ou null se o usuário não for servidor. */
   servidor: Servidor | null;
+  /** Acesso de empresa ativo, ou null. Servidor e empresa não coexistem (o banco impede). */
+  empresa: AcessoEmpresa | null;
   /** Só o gestor (SECONSER) cadastra e altera empresas/inscrições; o CISP consulta. */
   podeEditar: boolean;
   /** Gestor ou licenciador: registra e atualiza licenças de obra. */
@@ -58,25 +68,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const ultimoUsuario = useRef<string | null>(null);
   const [servidor, setServidor] = useState<Servidor | null>(null);
+  const [empresa, setEmpresa] = useState<AcessoEmpresa | null>(null);
   const [mfa, setMfa] = useState<EstadoMfa | null>(null);
   const [loading, setLoading] = useState(true);
+  const [erroPerfil, setErroPerfil] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
     const load = async (s: Session | null) => {
       let sv: Servidor | null = null;
+      let ea: AcessoEmpresa | null = null;
+      let falhou = false;
       if (s) {
         // Quem é servidor, e com que perfil, vem do banco sob RLS — nunca do
         // navegador. O banco aplica as mesmas regras em cada gravação.
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('servidores').select('nome, papel, administrador, ativo, matricula, cargo').eq('user_id', s.user.id).maybeSingle();
+        falhou = Boolean(error);
         const linha = (data as Servidor | null) ?? null;
         // Acesso desativado vale como sem acesso: o banco já recusa tudo, e a tela não finge o contrário.
         sv = linha?.ativo === false ? null : linha;
+        // Sem cadastro de servidor, procura o acesso de empresa (portal das empresas).
+        if (!sv && !falhou) {
+          const { data: vinculo, error: erroVinculo } = await supabase
+            .from('empresa_usuarios').select('empresa_id, papel, ativo').eq('user_id', s.user.id).maybeSingle();
+          falhou = Boolean(erroVinculo);
+          const v = vinculo as { empresa_id: string; papel: AcessoEmpresa['papel']; ativo: boolean } | null;
+          ea = v?.ativo === true ? { empresaId: v.empresa_id, papel: v.papel } : null;
+        }
       }
       let m: EstadoMfa | null = null;
-      if (sv) {
+      if (sv || ea) {
         const [nivel, fatores] = await Promise.all([
           supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
           supabase.auth.mfa.listFactors(),
@@ -84,13 +107,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // `totp` só traz fatores confirmados; um cadastro abandonado no meio não conta.
         const fator = fatores.data?.totp[0] ?? null;
         m = {
-          exigida: sv.papel === 'gestor' || sv.papel === 'licenciador',
+          // Empresa também usa verificação em duas etapas: o banco exige aal2 para tudo.
+          exigida: sv ? (sv.papel === 'gestor' || sv.papel === 'licenciador') : true,
           cadastrada: Boolean(fator),
           confirmada: nivel.data?.currentLevel === 'aal2',
           fatorId: fator?.id ?? null,
         };
       }
-      if (!cancelled) { setServidor(sv); setMfa(m); setLoading(false); }
+      if (!cancelled) { setServidor(sv); setEmpresa(ea); setMfa(m); setErroPerfil(falhou); setLoading(false); }
     };
 
     supabase.auth.getSession().then(({ data }) => {
@@ -116,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<AuthState>(() => ({
-    session, servidor, mfa, loading, podeEditar: servidor?.papel === 'gestor',
+    session, erroPerfil, servidor, empresa, mfa, loading, podeEditar: servidor?.papel === 'gestor',
     podeLicenciar: servidor?.papel === 'gestor' || servidor?.papel === 'licenciador',
     signIn: async (email, password) => {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -129,7 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.auth.signOut({ scope: 'global' });
       if (error) throw error;
     },
-  }), [session, servidor, mfa, loading]);
+  }), [session, erroPerfil, servidor, empresa, mfa, loading]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

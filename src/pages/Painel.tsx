@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { AbasPainel } from '../components/AbasPainel';
-import { BarrasHorizontais, ColunasMensais, LinhaDoTempo } from '../components/graficos';
+import { BarrasHorizontais, ColunasMensais } from '../components/graficos';
 import { dataBR } from '../components/Situacao';
 import { Button, Empty, ErrorNote, Spinner, Titulo, inputClass } from '../components/ui';
 import { hojeISO, listarEmpresas, somaDias, type Empresa } from '../lib/empresas';
@@ -12,16 +12,28 @@ import {
 } from '../lib/licencas';
 import { listarOrgaos, type Orgao } from '../lib/orgaos';
 import {
-  SEM_FILTROS, aplicarFiltros, distribuicaoPorParte, evolucaoMensal, indicadores, linhaDoTempo, maisRecentes,
+  SEM_FILTROS, aplicarFiltros, distribuicaoPorParte, evolucaoMensal, indicadores,
   partesDistintas, porSituacaoAdministrativa, proximas, temFiltro, type ContextoPartes, type Filtros, type FiltroStatus,
-  type RefData,
 } from '../lib/painel';
 import { TabelaLicencas } from './Licencas';
 
 interface Dados { licencas: LicencaComTrechos[]; empresas: Empresa[]; orgaos: Orgao[] }
 
-const JANELAS = [7, 15, 30] as const;
+// Janela fixa dos indicadores de prazo: obras que começam ou terminam nos próximos 15 dias.
+const JANELA = 15;
 const PASSO_REGISTROS = 25;
+
+const ROTULO_STATUS: Record<string, string> = {
+  'estado:aguardando_inicio': 'Aguardando início',
+  'estado:em_execucao': 'Em execução',
+  'estado:prazo_encerrado': 'Prazo encerrado',
+  'grupo:concluidas': 'Concluídas',
+  'estado:concluida_sem_as_built': 'Concluída, sem As Built',
+  'situacao:deferida': 'Deferida',
+  'situacao:em_analise': 'Em análise',
+  'situacao:cancelada': 'Cancelada',
+  'situacao:indeferida': 'Indeferida (histórico)',
+};
 
 /** Visão geral do painel: o que está licenciado, em que ponto está e com quem, direto do banco. */
 /** Painel: a visão geral, ou só os registros quando a aba "Registros" está aberta. Os filtros valem para as duas. */
@@ -31,10 +43,6 @@ export default function Painel({ aba = 'visao' }: { aba?: 'visao' | 'registros' 
   const [atualizando, setAtualizando] = useState(false);
   const [atualizadoEm, setAtualizadoEm] = useState<Date | null>(null);
   const [filtros, setFiltros] = useState<Filtros>(SEM_FILTROS);
-  const [janela, setJanela] = useState<(typeof JANELAS)[number]>(15);
-  // No celular, os filtros ficam recolhidos para os indicadores aparecerem na primeira tela.
-  const [filtrosAbertos, setFiltrosAbertos] = useState(false);
-  const [refData, setRefData] = useState<RefData>('protocolo');
   const [mostrar, setMostrar] = useState(PASSO_REGISTROS);
 
   const carregar = useCallback(async () => {
@@ -72,16 +80,13 @@ export default function Painel({ aba = 'visao' }: { aba?: 'visao' | 'registros' 
   }), [dados]);
   const todas = dados?.licencas;
   const filtradas = useMemo(() => (todas ? aplicarFiltros(todas, filtros, hoje, ctx) : []), [todas, filtros, hoje, ctx]);
-  const ind = useMemo(() => indicadores(filtradas, hoje, janela, ctx), [filtradas, hoje, janela, ctx]);
+  const ind = useMemo(() => indicadores(filtradas, hoje, JANELA, ctx), [filtradas, hoje, ctx]);
   const administrativa = useMemo(() => porSituacaoAdministrativa(filtradas), [filtradas]);
   const porContratante = useMemo(() => distribuicaoPorParte(filtradas, 'contratante', ctx), [filtradas, ctx]);
   const porExecutora = useMemo(() => distribuicaoPorParte(filtradas, 'executora', ctx), [filtradas, ctx]);
-  const mensal = useMemo(() => evolucaoMensal(filtradas, refData), [filtradas, refData]);
-  const janelaTempo = useMemo(() => ({ de: somaDias(hoje, -60), ate: somaDias(hoje, 120) }), [hoje]);
-  const tempo = useMemo(() => linhaDoTempo(filtradas, hoje, janelaTempo), [filtradas, hoje, janelaTempo]);
-  const iniciam = useMemo(() => proximas(filtradas, hoje, janela, 'inicio'), [filtradas, hoje, janela]);
-  const terminam = useMemo(() => proximas(filtradas, hoje, janela, 'fim'), [filtradas, hoje, janela]);
-  const recentes = useMemo(() => maisRecentes(filtradas, 6), [filtradas]);
+  const mensal = useMemo(() => evolucaoMensal(filtradas, 'protocolo'), [filtradas]);
+  const iniciam = useMemo(() => proximas(filtradas, hoje, JANELA, 'inicio'), [filtradas, hoje]);
+  const terminam = useMemo(() => proximas(filtradas, hoje, JANELA, 'fim'), [filtradas, hoje]);
   const contratantesLista = useMemo(() => (todas ? partesDistintas(todas, 'contratante', ctx) : []), [todas, ctx]);
   const executorasLista = useMemo(() => (todas ? partesDistintas(todas, 'executora', ctx) : []), [todas, ctx]);
 
@@ -93,9 +98,9 @@ export default function Painel({ aba = 'visao' }: { aba?: 'visao' | 'registros' 
     <>
       <Titulo
         titulo="Painel gerencial"
-        descricao="Licenças de obra registradas no CADEX, lidas do banco a cada abertura. Os filtros valem para tudo o que está abaixo."
+        descricao="Licenças de obra registradas no CADEX, lidas do banco a cada abertura."
         acoes={<>
-          {atualizadoEm && <span className="text-xs text-tinta-500" role="status">Atualizado às {atualizadoEm.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>}
+          {atualizadoEm && <span className="text-xs text-tinta-500">Atualizado às {atualizadoEm.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>}
           <Button variant="secondary" disabled={atualizando} onClick={() => void carregar()}>{atualizando ? 'Atualizando…' : 'Atualizar'}</Button>
         </>}
       />
@@ -135,98 +140,127 @@ export default function Painel({ aba = 'visao' }: { aba?: 'visao' | 'registros' 
     .filter((s) => administrativa[s] > 0)
     .map((s) => ({ chave: `situacao:${s}`, rotulo: s === 'indeferida' ? 'Indeferida (histórico)' : SITUACAO_LICENCA_LABEL[s], n: administrativa[s] }));
 
+  // Filtros ativos, cada um com o seu ✕. Mostram o que está valendo sem abrir "Filtrar".
+  const chips: { chave: string; rotulo: string; remover: () => void }[] = [];
+  if (filtros.status) chips.push({ chave: 'status', rotulo: ROTULO_STATUS[filtros.status] ?? filtros.status, remover: () => set('status', '') });
+  if (filtros.contratante) chips.push({
+    chave: 'contratante', rotulo: `Contratante: ${contratantesLista.find((p) => p.chave === filtros.contratante)?.rotulo ?? filtros.contratante}`,
+    remover: () => set('contratante', ''),
+  });
+  if (filtros.executora) chips.push({
+    chave: 'executora', rotulo: `Executora: ${executorasLista.find((p) => p.chave === filtros.executora)?.rotulo ?? filtros.executora}`,
+    remover: () => set('executora', ''),
+  });
+  if (filtros.de || filtros.ate) chips.push({
+    chave: 'periodo', rotulo: `Período: ${filtros.de ? dataBR(filtros.de) : '…'} a ${filtros.ate ? dataBR(filtros.ate) : '…'}`,
+    remover: () => { set('de', ''); set('ate', ''); },
+  });
+  if (filtros.intervencao) chips.push({ chave: 'intervencao', rotulo: TIPO_INTERVENCAO_LABEL[filtros.intervencao], remover: () => set('intervencao', '') });
+  if (filtros.origem) chips.push({ chave: 'origem', rotulo: ORIGEM_LABEL[filtros.origem], remover: () => set('origem', '') });
+  if (filtros.tipo) chips.push({ chave: 'tipo', rotulo: TIPO_OBRA_LABEL[filtros.tipo], remover: () => set('tipo', '') });
+
   return (
     <div className={atualizando ? 'opacity-70 transition-opacity' : 'transition-opacity'}>
       {Cabeca}
       {erro != null && <div className="mb-4"><ErrorNote error={erro} /></div>}
 
-      {/* Filtros: uma linha acima de tudo o que escopam. */}
+      {/* Filtros: chips do que está valendo, e "Filtrar" abre o resto. */}
       <section className="cartao p-4" aria-label="Filtros">
-        <button type="button" aria-expanded={filtrosAbertos} onClick={() => setFiltrosAbertos((x) => !x)}
-                className="mb-3 flex w-full items-center justify-between rounded-lg border border-tinta-200 bg-white px-3 py-2 text-sm font-semibold text-tinta-800 lg:hidden">
-          {temFiltro(filtros) ? 'Filtros (aplicados)' : 'Filtros'}
-          <span aria-hidden>{filtrosAbertos ? '▴' : '▾'}</span>
-        </button>
-        <div className={`${filtrosAbertos ? 'block' : 'hidden'} lg:block`}>
-        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Período da obra ou serviço">
-          <span className="mr-1 text-sm font-medium text-tinta-700">Período da obra ou serviço</span>
-          {PRESETS.map((p) => {
-            const ativo = filtros.de === p.de && filtros.ate === p.ate;
-            return (
-              <button key={p.rotulo} type="button" aria-pressed={ativo}
-                      onClick={() => { set('de', p.de); set('ate', p.ate); }}
-                      className={`min-h-9 rounded-full px-3 text-sm transition-colors ${ativo ? 'bg-tinta-900 text-white' : 'bg-tinta-100 text-tinta-700 hover:bg-tinta-200'}`}>
-                {p.rotulo}
-              </button>
-            );
-          })}
-          <label className="ml-2 inline-flex items-center gap-1.5 text-sm text-tinta-600">De
-            <input type="date" className={`${inputClass} w-auto! py-1.5!`} value={filtros.de} max={filtros.ate || undefined}
-                   onChange={(e) => set('de', e.target.value)} />
-          </label>
-          <label className="inline-flex items-center gap-1.5 text-sm text-tinta-600">Até
-            <input type="date" className={`${inputClass} w-auto! py-1.5!`} value={filtros.ate} min={filtros.de || undefined}
-                   onChange={(e) => set('ate', e.target.value)} />
-          </label>
-        </div>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <label className="block text-sm font-medium text-tinta-700">Situação
-            <select className={`${inputClass} mt-1`} value={filtros.status} onChange={(e) => set('status', e.target.value as FiltroStatus)}>
-              <option value="">Todas</option>
-              <optgroup label="Andamento da obra">
-                <option value="estado:aguardando_inicio">Aguardando início (programada)</option>
-                <option value="estado:em_execucao">Em execução (em andamento)</option>
-                <option value="estado:prazo_encerrado">Prazo encerrado (sem conclusão)</option>
-                <option value="grupo:concluidas">Concluída (com ou sem As Built)</option>
-                <option value="estado:concluida_sem_as_built">Concluída, sem As Built</option>
-              </optgroup>
-              <optgroup label="Situação administrativa">
-                <option value="situacao:deferida">Deferida</option>
-                <option value="situacao:em_analise">Em análise</option>
-                <option value="situacao:cancelada">Cancelada</option>
-                <option value="situacao:indeferida">Indeferida (histórico)</option>
-              </optgroup>
-            </select>
-          </label>
-          <label className="block text-sm font-medium text-tinta-700">Contratante
-            <select className={`${inputClass} mt-1`} value={filtros.contratante} onChange={(e) => set('contratante', e.target.value)}>
-              <option value="">Todas</option>
-              {contratantesLista.map((p) => <option key={p.chave} value={p.chave}>{p.rotulo}</option>)}
-            </select>
-          </label>
-          <label className="block text-sm font-medium text-tinta-700">Executora
-            <select className={`${inputClass} mt-1`} value={filtros.executora} onChange={(e) => set('executora', e.target.value)}>
-              <option value="">Todas</option>
-              {executorasLista.map((p) => <option key={p.chave} value={p.chave}>{p.rotulo}</option>)}
-            </select>
-          </label>
-          <label className="block text-sm font-medium text-tinta-700">Tipo de intervenção
-            <select className={`${inputClass} mt-1`} value={filtros.intervencao} onChange={(e) => set('intervencao', e.target.value as TipoIntervencao | '')}>
-              <option value="">Todos</option>
-              {TIPOS_INTERVENCAO.map((t) => <option key={t} value={t}>{TIPO_INTERVENCAO_LABEL[t]}</option>)}
-            </select>
-          </label>
-          <label className="block text-sm font-medium text-tinta-700">Origem da intervenção
-            <select className={`${inputClass} mt-1`} value={filtros.origem} onChange={(e) => set('origem', e.target.value as OrigemIntervencao | '')}>
-              <option value="">Todas</option>
-              {ORIGENS.map((o) => <option key={o} value={o}>{ORIGEM_LABEL[o]}</option>)}
-            </select>
-          </label>
-          <label className="block text-sm font-medium text-tinta-700">Tipo de obra
-            <select className={`${inputClass} mt-1`} value={filtros.tipo} onChange={(e) => set('tipo', e.target.value as TipoObra | '')}>
-              <option value="">Todos</option>
-              {(Object.keys(TIPO_OBRA_LABEL) as TipoObra[]).map((t) => <option key={t} value={t}>{TIPO_OBRA_LABEL[t]}</option>)}
-            </select>
-          </label>
-        </div>
-        </div>
-        <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-tinta-600" role="status">
-          <span>
+        <div className="flex flex-wrap items-center gap-2">
+          <details className="group">
+            <summary className="inline-flex min-h-9 cursor-pointer list-none items-center rounded-full bg-tinta-900 px-4 text-sm font-medium text-white [&::-webkit-details-marker]:hidden">
+              Filtrar
+            </summary>
+            <div className="mt-3 grid gap-3 rounded-lg border border-tinta-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-3">
+              <label className="block text-sm font-medium text-tinta-700">Situação
+                <select className={`${inputClass} mt-1`} value={filtros.status} onChange={(e) => set('status', e.target.value as FiltroStatus)}>
+                  <option value="">Todas</option>
+                  <optgroup label="Andamento da obra">
+                    <option value="estado:aguardando_inicio">Aguardando início (programada)</option>
+                    <option value="estado:em_execucao">Em execução (em andamento)</option>
+                    <option value="estado:prazo_encerrado">Prazo encerrado (sem conclusão)</option>
+                    <option value="grupo:concluidas">Concluída (com ou sem As Built)</option>
+                    <option value="estado:concluida_sem_as_built">Concluída, sem As Built</option>
+                  </optgroup>
+                  <optgroup label="Situação administrativa">
+                    <option value="situacao:deferida">Deferida</option>
+                    <option value="situacao:em_analise">Em análise</option>
+                    <option value="situacao:cancelada">Cancelada</option>
+                    <option value="situacao:indeferida">Indeferida (histórico)</option>
+                  </optgroup>
+                </select>
+              </label>
+              <label className="block text-sm font-medium text-tinta-700">Contratante
+                <select className={`${inputClass} mt-1`} value={filtros.contratante} onChange={(e) => set('contratante', e.target.value)}>
+                  <option value="">Todas</option>
+                  {contratantesLista.map((p) => <option key={p.chave} value={p.chave}>{p.rotulo}</option>)}
+                </select>
+              </label>
+              <label className="block text-sm font-medium text-tinta-700">Executora
+                <select className={`${inputClass} mt-1`} value={filtros.executora} onChange={(e) => set('executora', e.target.value)}>
+                  <option value="">Todas</option>
+                  {executorasLista.map((p) => <option key={p.chave} value={p.chave}>{p.rotulo}</option>)}
+                </select>
+              </label>
+              <label className="block text-sm font-medium text-tinta-700">Tipo de intervenção
+                <select className={`${inputClass} mt-1`} value={filtros.intervencao} onChange={(e) => set('intervencao', e.target.value as TipoIntervencao | '')}>
+                  <option value="">Todos</option>
+                  {TIPOS_INTERVENCAO.map((t) => <option key={t} value={t}>{TIPO_INTERVENCAO_LABEL[t]}</option>)}
+                </select>
+              </label>
+              <label className="block text-sm font-medium text-tinta-700">Origem da intervenção
+                <select className={`${inputClass} mt-1`} value={filtros.origem} onChange={(e) => set('origem', e.target.value as OrigemIntervencao | '')}>
+                  <option value="">Todas</option>
+                  {ORIGENS.map((o) => <option key={o} value={o}>{ORIGEM_LABEL[o]}</option>)}
+                </select>
+              </label>
+              <label className="block text-sm font-medium text-tinta-700">Tipo de obra
+                <select className={`${inputClass} mt-1`} value={filtros.tipo} onChange={(e) => set('tipo', e.target.value as TipoObra | '')}>
+                  <option value="">Todos</option>
+                  {(Object.keys(TIPO_OBRA_LABEL) as TipoObra[]).map((t) => <option key={t} value={t}>{TIPO_OBRA_LABEL[t]}</option>)}
+                </select>
+              </label>
+              <div className="sm:col-span-2 lg:col-span-3">
+                <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Período da obra ou serviço">
+                  <span className="mr-1 text-sm font-medium text-tinta-700">Período</span>
+                  {PRESETS.map((p) => {
+                    const ativo = filtros.de === p.de && filtros.ate === p.ate;
+                    return (
+                      <button key={p.rotulo} type="button" aria-pressed={ativo}
+                              onClick={() => { set('de', p.de); set('ate', p.ate); }}
+                              className={`min-h-9 rounded-full px-3 text-sm transition-colors ${ativo ? 'bg-tinta-900 text-white' : 'bg-tinta-100 text-tinta-700 hover:bg-tinta-200'}`}>
+                        {p.rotulo}
+                      </button>
+                    );
+                  })}
+                  <label className="ml-2 inline-flex items-center gap-1.5 text-sm text-tinta-600">De
+                    <input type="date" className={`${inputClass} w-auto! py-1.5!`} value={filtros.de} max={filtros.ate || undefined}
+                           onChange={(e) => set('de', e.target.value)} />
+                  </label>
+                  <label className="inline-flex items-center gap-1.5 text-sm text-tinta-600">Até
+                    <input type="date" className={`${inputClass} w-auto! py-1.5!`} value={filtros.ate} min={filtros.de || undefined}
+                           onChange={(e) => set('ate', e.target.value)} />
+                  </label>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          {chips.map((c) => (
+            <button key={c.chave} type="button" onClick={c.remover} aria-label={`Remover o filtro ${c.rotulo}`}
+                    className="inline-flex min-h-9 items-center gap-2 rounded-full border border-marca-700 bg-marca-50 px-3 text-sm font-medium text-marca-700 hover:bg-marca-100">
+              {c.rotulo} <span aria-hidden>✕</span>
+            </button>
+          ))}
+
+          <span className="ml-auto text-sm text-tinta-600" role="status">
             {temFiltro(filtros)
-              ? <><strong className="text-tinta-900">{filtradas.length}</strong> de {dados.licencas.length} {dados.licencas.length === 1 ? 'licença' : 'licenças'} com estes filtros</>
+              ? <><strong className="text-tinta-900">{filtradas.length}</strong> de {dados.licencas.length} {dados.licencas.length === 1 ? 'licença' : 'licenças'}</>
               : <><strong className="text-tinta-900">{dados.licencas.length}</strong> {dados.licencas.length === 1 ? 'licença' : 'licenças'}, sem filtro</>}
           </span>
-          {temFiltro(filtros) && <Button variant="secondary" className="px-3! py-1.5!" onClick={() => { setFiltros(SEM_FILTROS); setMostrar(PASSO_REGISTROS); }}>Limpar filtros</Button>}
+          {temFiltro(filtros) && (
+            <Button variant="secondary" className="px-3! py-1.5!" onClick={() => { setFiltros(SEM_FILTROS); setMostrar(PASSO_REGISTROS); }}>Limpar filtros</Button>
+          )}
         </div>
       </section>
 
@@ -236,48 +270,52 @@ export default function Painel({ aba = 'visao' }: { aba?: 'visao' | 'registros' 
         </div>
       ) : (<>
         {aba === 'visao' && (<>
-        {/* Indicadores: uma faixa só, com os seis números lado a lado; a descrição de cada um fica no tooltip. */}
+        {/* Indicadores: quatro números. Os pares mostram os dois valores separados por barra. */}
         <section className="mt-6" aria-label="Indicadores">
-          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-tinta-200 bg-tinta-200 sm:grid-cols-3 lg:grid-cols-6">
+          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-tinta-200 bg-tinta-200 lg:grid-cols-4">
             <Indicador rotulo="Licenças registradas" valor={ind.total} detalhe="no filtro atual" onClick={() => set('status', '')} ativo={filtros.status === ''} />
             <Indicador rotulo="Prazo encerrado" valor={ind.prazoVencido} detalhe="fim previsto vencido, sem conclusão" cor="border-baixa"
                        onClick={() => alternarStatus('estado:prazo_encerrado')} ativo={filtros.status === 'estado:prazo_encerrado'} />
-            <Indicador rotulo={`Começam em até ${janela} dias`} valor={ind.iniciamNaJanela} detalhe="início previsto, obra aberta"
-                       onClick={() => rolarPara('bloco-comecam')} />
-            <Indicador rotulo={`Terminam em até ${janela} dias`} valor={ind.terminamNaJanela} detalhe="fim previsto, obra aberta"
-                       onClick={() => rolarPara('bloco-terminam')} />
-            <Indicador rotulo="Contratantes" valor={ind.contratantes.total} detalhe={detalheParte(ind.contratantes)}
+            <Indicador rotulo={`Começam / terminam em até ${JANELA} dias`} valor={`${ind.iniciamNaJanela} / ${ind.terminamNaJanela}`}
+                       detalhe="início previsto / fim previsto, obra aberta" onClick={() => rolarPara('bloco-comecam')} />
+            <Indicador rotulo="Contratantes / Executoras" valor={`${ind.contratantes.total} / ${ind.executoras.total}`}
+                       detalhe={`Contratantes: ${detalheParte(ind.contratantes)}. Executoras: ${detalheParte(ind.executoras)}.`}
                        onClick={() => rolarPara('bloco-contratantes')} />
-            <Indicador rotulo="Executoras" valor={ind.executoras.total} detalhe={detalheParte(ind.executoras)}
-                       onClick={() => rolarPara('bloco-executoras')} />
-          </div>
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-tinta-600" role="group" aria-label="Janela dos próximos dias">
-            Janela dos indicadores de prazo:
-            {JANELAS.map((j) => (
-              <button key={j} type="button" aria-pressed={janela === j} onClick={() => setJanela(j)}
-                      className={`min-h-9 rounded-full px-3 transition-colors ${janela === j ? 'bg-tinta-900 text-white' : 'bg-tinta-100 text-tinta-700 hover:bg-tinta-200'}`}>
-                {j} dias
-              </button>
-            ))}
           </div>
         </section>
 
-        {/* Gráficos */}
-        <div className="mt-8 grid gap-6 lg:grid-cols-2">
-          <Bloco titulo="Situação administrativa" nota="A situação registrada. Clique para filtrar.">
-            <BarrasHorizontais itens={barrasAdmin} total={ind.total} selecionada={filtros.status}
-                               onSelecionar={(c) => alternarStatus(c as FiltroStatus)} />
-          </Bloco>
-          <Bloco titulo="Licenças por mês"
-                 acao={<select className={`${inputClass} w-auto! py-1.5!`} value={refData} onChange={(e) => setRefData(e.target.value as RefData)} aria-label="Data de referência">
-                   <option value="protocolo">Mês do protocolo</option>
-                   <option value="registro">Mês do registro no CADEX</option>
-                 </select>}>
-            {mensal.meses.length === 0
-              ? <Empty>Nenhuma licença com esta data.</Empty>
-              : <ColunasMensais meses={mensal.meses} />}
-            {mensal.semData > 0 && <p className="mt-2 text-xs text-tinta-500">{mensal.semData} licença{mensal.semData === 1 ? '' : 's'} sem esta data, fora do gráfico.</p>}
-          </Bloco>
+        {/* Análise: à esquerda, o que pede atenção nos próximos dias; à direita, a carteira. */}
+        <div className="mt-8 grid gap-6 lg:grid-cols-5">
+          <div className="flex flex-col gap-6 lg:col-span-2">
+            {semPrazos ? (
+              <p id="bloco-comecam" className="cartao px-5 py-3 text-sm text-tinta-600">
+                Nenhuma obra começa nem termina nos próximos {JANELA} dias.
+              </p>
+            ) : (<>
+              <Bloco id="bloco-comecam" titulo={`Começam em até ${JANELA} dias`}>
+                <ListaLicencas itens={iniciam.slice(0, 6)} data={(l) => dataBR(l.inicio_previsto)} nomeExec={nomeExec} hoje={hoje} vazio="Nenhuma obra aberta com início previsto nesta janela." total={iniciam.length} />
+              </Bloco>
+              <Bloco id="bloco-terminam" titulo={`Terminam em até ${JANELA} dias`}>
+                <ListaLicencas itens={terminam.slice(0, 6)} data={(l) => dataBR(l.fim_previsto)} nomeExec={nomeExec} hoje={hoje} vazio="Nenhuma obra aberta com fim previsto nesta janela." total={terminam.length} />
+              </Bloco>
+            </>)}
+          </div>
+          <div className="flex flex-col gap-6 lg:col-span-3">
+            <Bloco titulo="Licenças por mês" nota="Pelo mês do protocolo.">
+              {mensal.meses.length === 0
+                ? <Empty>Nenhuma licença com esta data.</Empty>
+                : <ColunasMensais meses={mensal.meses} />}
+              {mensal.semData > 0 && <p className="mt-2 text-xs text-tinta-500">{mensal.semData} licença{mensal.semData === 1 ? '' : 's'} sem esta data, fora do gráfico.</p>}
+            </Bloco>
+            <Bloco titulo="Situação administrativa" nota="Clique para filtrar.">
+              <BarrasHorizontais itens={barrasAdmin} total={ind.total} selecionada={filtros.status}
+                                 onSelecionar={(c) => alternarStatus(c as FiltroStatus)} />
+            </Bloco>
+          </div>
+        </div>
+
+        {/* Carteira: quem contrata e quem executa. */}
+        <div className="mt-6 grid gap-6 lg:grid-cols-2">
           <Bloco id="bloco-contratantes" titulo="Por contratante" nota="Clique para filtrar.">
             {porContratante.barras.length === 0 ? <Empty>Nenhuma contratante informada.</Empty> : (
               <BarrasHorizontais itens={porContratante.barras} total={ind.total} selecionada={filtros.contratante}
@@ -294,42 +332,16 @@ export default function Painel({ aba = 'visao' }: { aba?: 'visao' | 'registros' 
           </Bloco>
         </div>
 
-        <div className="mt-6">
-          <Bloco titulo="Obras e serviços no tempo"
-                 nota={`De ${dataBR(janelaTempo.de)} a ${dataBR(janelaTempo.ate)}: do início ao fim previstos de cada licença. Clique para abrir.`}>
-            {tempo.itens.length === 0
-              ? <Empty>Nenhuma licença com período previsto nesta janela.</Empty>
-              : <LinhaDoTempo itens={tempo.itens} janela={janelaTempo} hoje={hoje} />}
-            {(tempo.omitidas > 0 || tempo.semPeriodo > 0) && (
-              <p className="mt-2 text-xs text-tinta-500">
-                {tempo.omitidas > 0 && `${tempo.omitidas} licença${tempo.omitidas === 1 ? '' : 's'} a mais nesta janela, fora do desenho (use os filtros). `}
-                {tempo.semPeriodo > 0 && `${tempo.semPeriodo} sem início e fim previstos, fora da linha do tempo.`}
-              </p>
-            )}
-          </Bloco>
-        </div>
-
-        {/* Listas: sem obra começando nem terminando na janela, os dois cartões viram uma linha só. */}
-        <div className={`mt-6 grid gap-6 ${semPrazos ? '' : 'lg:grid-cols-3'}`}>
-          {semPrazos ? (
-            <p id="bloco-comecam" className="cartao px-5 py-3 text-sm text-tinta-600 lg:col-span-full">
-              Nenhuma obra começa nem termina nos próximos {janela} dias.
-            </p>
-          ) : (
-            <>
-              <Bloco id="bloco-comecam" titulo={`Começam em até ${janela} dias`}>
-                <ListaLicencas itens={iniciam.slice(0, 6)} data={(l) => dataBR(l.inicio_previsto)} nomeExec={nomeExec} hoje={hoje} vazio="Nenhuma obra aberta com início previsto nesta janela." total={iniciam.length} />
-              </Bloco>
-              <Bloco id="bloco-terminam" titulo={`Terminam em até ${janela} dias`}>
-                <ListaLicencas itens={terminam.slice(0, 6)} data={(l) => dataBR(l.fim_previsto)} nomeExec={nomeExec} hoje={hoje} vazio="Nenhuma obra aberta com fim previsto nesta janela." total={terminam.length} />
-              </Bloco>
-            </>
-          )}
-          <Bloco titulo="Registradas mais recentemente">
-            <ListaLicencas itens={recentes} data={(l) => dataBR(l.criado_em.slice(0, 10))} nomeExec={nomeExec} hoje={hoje} vazio="Nenhuma licença." />
-          </Bloco>
-        </div>
-
+        <details className="mt-8 text-sm text-tinta-600">
+          <summary className="cursor-pointer font-medium text-tinta-700">Como os números são contados</summary>
+          <ul className="mt-2 max-w-3xl list-disc space-y-1 pl-5">
+            <li>O CADEX não registra a data efetiva de início da obra, só o período previsto e a conclusão. Por isso nada é dado como começado ou terminado só porque uma data passou.</li>
+            <li><strong>Aguardando início</strong> (programada): deferida, sem conclusão registrada, com o início previsto ainda por vir. <strong>Em execução</strong> (em andamento): deferida, sem conclusão registrada, com o período previsto em curso. <strong>Prazo encerrado</strong>: deferida, sem conclusão registrada, com o fim previsto já passado.</li>
+            <li><strong>Concluída</strong>: tem a conclusão registrada. <strong>Começam / terminam em até N dias</strong>: obras abertas com a data prevista entre hoje e hoje mais N dias.</li>
+            <li>Cada licença tem uma contratante e uma executora, e é contada uma vez em cada. Quando a própria contratante executa, a mesma empresa aparece nas duas listas.</li>
+            <li>O filtro de período mostra as licenças cujo período previsto cruza o intervalo; sem período, vale a data do protocolo.</li>
+          </ul>
+        </details>
         </>)}
 
         {/* Registros correspondentes: aba própria. */}
@@ -348,17 +360,6 @@ export default function Painel({ aba = 'visao' }: { aba?: 'visao' | 'registros' 
           )}
         </section>
         )}
-
-        <details className="mt-8 text-sm text-tinta-600">
-          <summary className="cursor-pointer font-medium text-tinta-700">Como os números são contados</summary>
-          <ul className="mt-2 max-w-3xl list-disc space-y-1 pl-5">
-            <li>O CADEX não registra a data efetiva de início da obra, só o período previsto e a conclusão. Por isso nada é dado como começado ou terminado só porque uma data passou.</li>
-            <li><strong>Aguardando início</strong> (programada): deferida, sem conclusão registrada, com o início previsto ainda por vir. <strong>Em execução</strong> (em andamento): deferida, sem conclusão registrada, com o período previsto em curso. <strong>Prazo encerrado</strong>: deferida, sem conclusão registrada, com o fim previsto já passado.</li>
-            <li><strong>Concluída</strong>: tem a conclusão registrada. <strong>Começam / terminam em até N dias</strong>: obras abertas com a data prevista entre hoje e hoje mais N dias.</li>
-            <li>Cada licença tem uma contratante e uma executora, e é contada uma vez em cada. Quando a própria contratante executa, a mesma empresa aparece nas duas listas.</li>
-            <li>O filtro de período mostra as licenças cujo período previsto cruza o intervalo; sem período, vale a data do protocolo.</li>
-          </ul>
-        </details>
       </>)}
     </div>
   );
@@ -369,7 +370,7 @@ const detalheParte = (c: { empresas: number; orgaos: number; outras: number }) =
    c.outras > 0 && `${c.outras} sem cadastro`].filter(Boolean).join(', ') || 'nenhuma informada';
 
 function Indicador({ rotulo, valor, detalhe, cor = 'border-tinta-900', onClick, ativo }: {
-  rotulo: string; valor: number; detalhe?: string; cor?: string; onClick?: () => void; ativo?: boolean;
+  rotulo: string; valor: number | string; detalhe?: string; cor?: string; onClick?: () => void; ativo?: boolean;
 }) {
   const conteudo = (
     <>

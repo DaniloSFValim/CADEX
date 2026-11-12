@@ -33,9 +33,8 @@ test.describe('painel gerencial', () => {
 
     await expect(indicador(page, 'Licenças registradas')).toHaveText(/Licenças registradas\s*8/);
     await expect(indicador(page, 'Prazo encerrado')).toHaveText(/Prazo encerrado\s*1/);
-    await expect(indicador(page, 'Começam em até 15 dias')).toHaveText(/Começam em até 15 dias\s*2/);
-    await expect(indicador(page, 'Terminam em até 15 dias')).toHaveText(/Terminam em até 15 dias\s*1/);
-    await expect(indicador(page, 'Contratantes')).toHaveText(/Contratantes\s*2/);
+    await expect(indicador(page, 'Começam / terminam em até 15 dias')).toHaveText(/Começam \/ terminam em até 15 dias\s*2 \/ 1/);
+    await expect(indicador(page, 'Contratantes / Executoras')).toHaveText(/Contratantes \/ Executoras\s*2 \/ \d+/);
     await expect(resumo(page)).toHaveText(/8\s+licenças, sem filtro/);
     // Os registros ficam na aba própria.
     await page.getByRole('link', { name: 'Registros', exact: true }).click();
@@ -46,8 +45,9 @@ test.describe('painel gerencial', () => {
     await instalarBackend(page, cenario());
     await page.goto('/dashboard');
 
+    await page.getByText('Filtrar', { exact: true }).click();
     await page.locator('select:has(option[value="estado:aguardando_inicio"])').selectOption('estado:aguardando_inicio');
-    await expect(resumo(page)).toContainText('3 de 8 licenças com estes filtros');
+    await expect(resumo(page)).toContainText('3 de 8 licenças');
     await expect(indicador(page, 'Licenças registradas')).toHaveText(/Licenças registradas\s*3/);
     // O filtro vale também na aba Registros.
     await page.getByRole('link', { name: 'Registros', exact: true }).click();
@@ -62,18 +62,20 @@ test.describe('painel gerencial', () => {
     await page.goto('/dashboard');
 
     await bloco(page, 'Por contratante').getByRole('button', { name: /OpUm/ }).click();
-    await expect(resumo(page)).toContainText('6 de 8 licenças com estes filtros');
+    await expect(resumo(page)).toContainText('6 de 8 licenças');
 
+    await page.getByText('Filtrar', { exact: true }).click();
     await page.locator('select:has(option[value="estado:em_execucao"])').selectOption('estado:em_execucao');
-    await expect(resumo(page)).toContainText('1 de 8 licenças com estes filtros');
+    await expect(resumo(page)).toContainText('1 de 8 licenças');
   });
 
   test('o filtro de período mostra as licenças cujo período cruza o intervalo', async ({ page }) => {
     await instalarBackend(page, cenario());
     await page.goto('/dashboard');
+    await page.getByText('Filtrar', { exact: true }).click();
     await page.getByRole('button', { name: 'Próximos 90 dias' }).click();
     // As cinco em execução ou programadas; fora ficam a vencida, a concluída e a cancelada.
-    await expect(resumo(page)).toContainText('5 de 8 licenças com estes filtros');
+    await expect(resumo(page)).toContainText('5 de 8 licenças');
   });
 
   test('sem licenças, mostra o estado vazio em vez de números zerados', async ({ page }) => {
@@ -123,5 +125,5 @@ test('sem obra começando nem terminando na janela, os dois cartões viram uma l
   await expect(page.getByText('Nenhuma obra começa nem termina nos próximos 15 dias.')).toBeVisible();
   await expect(page.getByRole('heading', { name: /^Começam em até/ })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: /^Terminam em até/ })).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'Registradas mais recentemente' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Registradas mais recentemente' })).toHaveCount(0);
 });

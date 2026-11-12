@@ -6,11 +6,11 @@ import { nomeOrgao, type Orgao } from './orgaos';
  * Papel da empresa. Operadora (telecom), concessionária (gás ou
  * saneamento) e construtora contratam; terceirizada executa.
  */
-export type Tipo = 'operadora' | 'concessionaria' | 'construtora' | 'terceirizada';
+export type Tipo = 'operadora' | 'detentora' | 'concessionaria' | 'construtora' | 'terceirizada';
 /** Setores de obras e serviços em via pública. */
 export type Setor = 'telecom' | 'gas' | 'saneamento' | 'drenagem' | 'construcao' | 'viario';
 /** Perfil que define os documentos exigidos (tipos_documento.perfis). */
-export type Perfil = 'telecom' | 'gas' | 'saneamento' | 'construtora' | 'terceirizada';
+export type Perfil = 'telecom' | 'gas' | 'saneamento' | 'construtora' | 'terceirizada' | 'detentora';
 /** Situação da inscrição no CADEX (arts. 7º e 8º). */
 export type Situacao = 'em_analise' | 'deferida' | 'apta' | 'em_saneamento' | 'inapta';
 /** Situação exibida: inclui VENCIDA, calculada pela validade. */
@@ -40,6 +40,8 @@ export interface Empresa {
   representante: string | null;
   /** Cadastro ativo. Só o administrador desativa; a empresa desativada não entra em licença nova. */
   ativa: boolean;
+  /** Empresa de teste: existe para testes internos e nunca entra em visão pública nem em exportação. */
+  teste: boolean;
   /** A titular (operadora, concessionária, construtora) executa obra ou serviço por conta própria.
    *  Habilita a licença com a mesma empresa como contratante e executora. Terceirizada não usa. */
   executa_obras: boolean;
@@ -103,6 +105,7 @@ export interface Documento {
 
 export const TIPO_LABEL: Record<Tipo, string> = {
   operadora: 'Operadora',
+  detentora: 'Detentora',
   concessionaria: 'Concessionária',
   construtora: 'Construtora',
   terceirizada: 'Terceirizada',
@@ -127,6 +130,7 @@ export function descricaoEmpresa(e: Pick<Empresa, 'tipo' | 'setores'>): string {
   const setores = e.setores.map((s) => SETOR_LABEL[s].toLowerCase());
   switch (e.tipo) {
     case 'operadora': return 'Operadora de telecomunicações';
+    case 'detentora': return 'Detentora de infraestrutura de telecomunicações';
     case 'concessionaria': return `Concessionária de ${setores[0] ?? ''}`.trim();
     case 'construtora': return 'Construtora';
     default: return setores.length ? `Terceirizada: ${setores.join(', ')}` : 'Terceirizada';
@@ -336,11 +340,20 @@ export async function criarEmpresa(input: EmpresaInput, contratantes: string[] =
   return id;
 }
 
-export async function salvarEmpresa(id: string, input: EmpresaInput): Promise<void> {
+/**
+ * Grava a ficha da empresa. Com a versão que a tela carregou (atualizado_em), a gravação só passa
+ * se ninguém alterou a ficha desde então: sem isso, a última gravação sobrescreve a outra.
+ */
+export async function salvarEmpresa(id: string, input: EmpresaInput, versaoCarregada?: string): Promise<void> {
   // CNPJ e tipo não mudam depois do cadastro: o tipo está no código CADEX.
   const { cnpj: _cnpj, tipo: _tipo, ...resto } = limpar(input);
-  const { error } = await supabase.from('empresas').update(resto).eq('id', id);
+  let q = supabase.from('empresas').update(resto).eq('id', id);
+  if (versaoCarregada) q = q.eq('atualizado_em', versaoCarregada);
+  const { data, error } = await q.select('id');
   if (error) throw error;
+  if (versaoCarregada && (!data || data.length === 0)) {
+    throw new Error('Esta empresa foi alterada por outra pessoa enquanto você editava. Recarregue a página e confira antes de salvar.');
+  }
 }
 
 /**
@@ -622,7 +635,7 @@ export async function consultaPublica(): Promise<LinhaPublica[]> {
 /** Situações em que a empresa pode atuar hoje (mesma regra da consulta pública). */
 export const SITUACOES_HABILITADAS: SituacaoEfetiva[] = ['deferida', 'apta', 'em_saneamento'];
 
-const listaComE = (xs: string[]) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} e ${xs[xs.length - 1]}`);
+export const listaComE = (xs: string[]) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} e ${xs[xs.length - 1]}`);
 
 /**
  * O que a empresa faz, em uma frase para o público. Diz só o que a inscrição comprova:
@@ -637,6 +650,8 @@ export function oQueAEmpresaFaz(l: Pick<LinhaPublica, 'tipo' | 'setores' | 'situ
   switch (l.tipo) {
     case 'operadora':
       return 'Operadora de serviços de telecomunicações, com regularidade junto à Anatel declarada na inscrição.';
+    case 'detentora':
+      return 'Detentora de infraestrutura de telecomunicações, com Carta de Compartilhamento ou de Anuência, sem outorga da Anatel.';
     case 'terceirizada':
       return l.contratantes.length > 0
         ? `Contratada por ${listaComE(l.contratantes)} para mão de obra de construção e manutenção de infraestrutura de ${infra}.`

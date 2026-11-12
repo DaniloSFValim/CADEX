@@ -168,12 +168,14 @@ export function relacaoEmpresas(
   const cols = COLUNAS.filter((col) => chaves.includes(col.chave));
   const linha = (e: Empresa) => cols.map((col) => col.valor(e, c));
   const rotuloGrupo = AGRUPAR_EMPRESAS.find((a) => a.valor === por)?.rotulo;
+  // Empresa de teste nunca sai em relação exportada.
+  const reais = empresas.filter((e) => !e.teste);
   return {
     titulo: 'Relação de empresas',
     arquivo: 'cadex-empresas',
     filtros: por ? [...filtros, `Agrupado por: ${rotuloGrupo?.toLowerCase()}.`] : filtros,
     colunas: cols.map((col) => col.rotulo),
-    grupos: [...agrupar(empresas, (e) => gruposDaEmpresa(e, por, c)).entries()]
+    grupos: [...agrupar(reais, (e) => gruposDaEmpresa(e, por, c)).entries()]
       .map(([titulo, lista]) => ({ titulo, linhas: lista.map(linha) })),
   };
 }

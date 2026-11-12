@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Badge, Button, Card, ErrorNote, Field, Spinner, Titulo, inputClass, type Tom } from '../components/ui';
 import { SituacaoBadge } from '../components/Situacao';
@@ -7,7 +7,7 @@ import { formatCnpj, isValidCnpj, onlyDigits } from '../lib/cnpj';
 import { buscarCep, cepValido, formatCep } from '../lib/cep';
 import { formatTelefone } from '../lib/telefone';
 import {
-  ESTADO_LABEL, SETORES, SETOR_LABEL, TIPO_LABEL, buscarEmpresa, descricaoEmpresa, ehContratante, tiposDaEmpresa, criarEmpresa, criarVinculo, criarVinculoOrgao, definirFimVinculo,
+  ESTADO_LABEL, SETORES, SETOR_LABEL, TIPO_LABEL, buscarEmpresa, descricaoEmpresa, tiposDaEmpresa, criarEmpresa, criarVinculo, criarVinculoOrgao, definirFimVinculo,
   enviarLogo, estadoDocumento, registrarDocumentos, removerLogo, urlLogo, MAX_LOGO_BYTES, TIPOS_LOGO, hojeISO, listarDocumentos, listarEmpresas,
   listarTiposDocumento, listarVinculos, nomeEmpresa, resumoDocumentos,
   salvarEmpresa, situacaoEfetiva, ultimoPorTipo, SITUACAO_LABEL,
@@ -66,8 +66,6 @@ export default function EmpresaPage() {
   if (!id && !podeEditar) return <ErrorNote error="Seu perfil é só de consulta." />;
 
   const recarregar = async () => { if (empresa) setEmpresa(await buscarEmpresa(empresa.id)); };
-  // Quem pode aparecer na traseira dos veículos (art. 21): quem contrata.
-  const contratantesTodas = todas.filter((o) => ehContratante(o.tipo));
 
   return (
     <div className="space-y-6">
@@ -91,7 +89,7 @@ export default function EmpresaPage() {
           empresas={todas}
           onSubmit={async (input, contratantes) => {
             if (empresa) {
-              await salvarEmpresa(empresa.id, input);
+              await salvarEmpresa(empresa.id, input, empresa.atualizado_em);
               setEmpresa(await buscarEmpresa(empresa.id));
             } else {
               const novo = await criarEmpresa(input, contratantes);
@@ -111,15 +109,16 @@ export default function EmpresaPage() {
 
       {empresa && <Vinculos empresa={empresa} todas={todas} podeEditar={podeEditar} />}
 
-      {empresa && <Operacional empresa={empresa} operadoras={contratantesTodas} podeEditar={podeEditar} />}
+      {empresa && <Operacional empresa={empresa} podeEditar={podeEditar} />}
 
       {empresa && <LicencasDaEmpresa licencas={licencas} error={licErro} todas={todas} />}
+
 
       {/* Documentos têm dados pessoais de sócios e procuradores: só a SECONSER vê. */}
       {empresa && podeEditar && <Documentos empresa={empresa} />}
       {!empresa && (
         <p className="text-sm text-tinta-500">
-          Salve os dados para registrar inscrição, vínculos, pessoal, veículos e documentos.
+          Salve os dados para registrar inscrição, vínculos e documentos.
         </p>
       )}
     </div>
@@ -297,10 +296,11 @@ function EmpresaForm({
                   const t = e.target.value as EmpresaInput['tipo'];
                   set('tipo', t);
                   if (t === 'terceirizada') set('executa_obras', false);
-                  set('setores', t === 'operadora' ? ['telecom'] : t === 'construtora' ? ['construcao']
+                  set('setores', t === 'operadora' || t === 'detentora' ? ['telecom'] : t === 'construtora' ? ['construcao']
                     : t === 'concessionaria' ? ['gas'] : []);
                 }}>
           <option value="operadora">Operadora de telecomunicações</option>
+          <option value="detentora">Detentora (infraestrutura compartilhada, sem outorga)</option>
           <option value="concessionaria">Concessionária (gás ou saneamento)</option>
           <option value="construtora">Construtora</option>
           <option value="terceirizada">Terceirizada</option>
@@ -500,13 +500,13 @@ function Vinculos({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
-  const recarregar = () =>
+  const recarregar = useCallback(() =>
     listarVinculos()
       .then((v) => setVinculos(v.filter((x) => x.contratada_id === empresa.id || x.contratante_id === empresa.id)))
-      .catch(setError);
+      .catch(setError), [empresa.id]);
 
-  useEffect(() => { void recarregar(); }, [empresa.id]);
-  useEffect(() => { listarOrgaos().then(setOrgaos).catch(() => {}); }, []);
+  useEffect(() => { void recarregar(); }, [recarregar]);
+  useEffect(() => { listarOrgaos().then(setOrgaos).catch(setError); }, []);
 
   const agir = async (fn: () => Promise<void>) => {
     setBusy(true); setError(null);
@@ -708,6 +708,8 @@ function Documentos({ empresa }: { empresa: Empresa }) {
       .catch(setError)
       .finally(() => setLoading(false));
 
+  // Recarrega só ao trocar de empresa: regravar a ficha não pode apagar o rascunho de documentos.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { void recarregar(); }, [empresa.id]);
 
   const hoje = hojeISO();
