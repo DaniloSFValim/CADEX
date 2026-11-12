@@ -87,10 +87,10 @@ export const COR_SITUACAO: Record<SituacaoPublica, string> = {
 };
 
 /**
- * O que o mapa desenha: licença no prazo (verde, inclusive a que ainda vai começar) e licença com
- * prazo encerrado (vermelha). Concluídas e canceladas saem do mapa; continuam nos números gerais.
+ * O que o mapa desenha: licença no prazo (verde, inclusive a que ainda vai começar), com prazo
+ * encerrado (vermelha) e concluída (azul). Canceladas e suspensas ficam fora do mapa; continuam nos números gerais.
  */
-export const SITUACOES_NO_MAPA: SituacaoPublica[] = ['vigente', 'aguardando_inicio', 'prazo_encerrado'];
+export const SITUACOES_NO_MAPA: SituacaoPublica[] = ['vigente', 'aguardando_inicio', 'prazo_encerrado', 'concluida'];
 
 /** Ao abrir, o mapa mostra o que está autorizado agora ou prestes a começar. */
 export const FILTRO_OBRAS: { valor: string; rotulo: string; inclui: SituacaoPublica[] }[] = [

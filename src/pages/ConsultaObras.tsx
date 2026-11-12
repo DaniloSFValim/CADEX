@@ -139,7 +139,7 @@ export default function ConsultaObras() {
                 <FiltroComunicacoes ampliado={ampliarComunicacoes} onMudar={setAmpliarComunicacoes}
                                     visiveis={comunicacoesVisiveis.length} total={comunicacoes.length} />
               )}
-              {(comunicacoesVisiveis.length > 0 || intervencoesVisiveis.length > 0) && <LegendaComunicacoes />}
+              <LegendaComunicacoes />
             </div>
             </div>
           </div>
@@ -178,6 +178,7 @@ function Legenda() {
   const itens: { cor: string; rotulo: string }[] = [
     { cor: COR_SITUACAO.vigente, rotulo: 'No prazo' },
     { cor: COR_SITUACAO.prazo_encerrado, rotulo: SITUACAO_PUBLICA_LABEL.prazo_encerrado },
+    { cor: COR_SITUACAO.concluida, rotulo: SITUACAO_PUBLICA_LABEL.concluida },
   ];
   return (
     <ul className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm font-medium text-tinta-800" aria-label="Legenda">
