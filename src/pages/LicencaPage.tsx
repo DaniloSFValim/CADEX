@@ -922,10 +922,16 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
                   <CoordField label="Fim" required valor={t.fim} lida={fim} ro={ro} onChange={(v) => setTrecho(i, 'fim', v)} />
                 )}
                 {(!ro || t.area || t.inicio) && (
-                  <div className="flex flex-col gap-3 sm:col-span-6">
+                  <div className="flex flex-col gap-3 sm:col-span-6" id={`mapa-trecho-${i}`}>
                     <div>
                       <Button variant="secondary" className="px-3! py-1.5!"
-                              onClick={() => setAreaAberta(areaAberta === i ? null : i)}>
+                              onClick={() => {
+                                const abrir = areaAberta !== i;
+                                setAreaAberta(abrir ? i : null);
+                                // A barra de salvar fica colada no rodapé da tela e cobria a parte de baixo do mapa:
+                                // ao abrir, o mapa é centralizado na área visível.
+                                if (abrir) setTimeout(() => document.getElementById(`mapa-trecho-${i}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 150);
+                              }}>
                         {areaAberta === i ? 'Ocultar o mapa' : 'Marcar no mapa'}
                       </Button>
                       <span className="ml-3 text-sm text-tinta-500">
