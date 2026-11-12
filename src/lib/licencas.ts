@@ -113,6 +113,8 @@ export interface Trecho {
   fim_lng: number | null;
   /** Área da intervenção: EWKB em hexadecimal ao ler; GeoJSON (Polygon) ao gravar. */
   area?: string | null;
+  /** Vários segmentos de rua no mesmo trecho: EWKB ao ler; GeoJSON (MultiLineString) ao gravar. */
+  segmentos?: string | null;
 }
 
 export interface LicencaComTrechos extends Licenca {

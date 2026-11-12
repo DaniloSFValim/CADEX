@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import { estiloBase } from './MapaObras';
-import { problemaArea, type Anel } from '../lib/areaTrecho';
+import { problemaArea, type Anel, type Segmento } from '../lib/areaTrecho';
 import { Button } from './ui';
 import { MAPA_LOCALE } from '../lib/mapaLocale';
 
@@ -18,16 +18,23 @@ const NITEROI: maplibregl.LngLatBoundsLike = [[-43.135, -22.995], [-42.955, -22.
  * - área: cada clique acrescenta um vértice (o polígono se forma com três).
  * O formulário guarda os valores; o mapa só mostra o que o formulário tem.
  */
-export default function DesenhoArea({ tipo, inicio, fim, area, onChange, ro }: {
+/**
+ * Com "segmentos" informado (só o formulário de licença), o tipo segmento marca vários trechos
+ * de rua no mesmo trecho: cada par de cliques é um segmento, e o próximo clique começa outro.
+ */
+export default function DesenhoArea({ tipo, inicio, fim, area, segmentos, pendente, onChange, ro }: {
   tipo: TipoTrecho; inicio: Ponto | null; fim: Ponto | null; area: Anel | null;
-  onChange: (p: { inicio?: Ponto | null; fim?: Ponto | null; area?: Anel | null }) => void; ro: boolean;
+  segmentos?: Segmento[]; pendente?: Ponto | null;
+  onChange: (p: { inicio?: Ponto | null; fim?: Ponto | null; area?: Anel | null; segmentos?: Segmento[]; pendente?: Ponto | null }) => void;
+  ro: boolean;
 }) {
+  const multi = tipo === 'segmento' && segmentos !== undefined;
   const caixa = useRef<HTMLDivElement>(null);
   const mapa = useRef<maplibregl.Map | null>(null);
   const pronto = useRef(false);
   // O evento de clique é registrado uma vez: a referência garante que ele use o valor atual.
-  const atual = useRef({ tipo, inicio, fim, area, onChange, ro });
-  atual.current = { tipo, inicio, fim, area, onChange, ro };
+  const atual = useRef({ tipo, inicio, fim, area, segmentos, pendente, multi, onChange, ro });
+  atual.current = { tipo, inicio, fim, area, segmentos, pendente, multi, onChange, ro };
 
   useEffect(() => {
     let vivo = true;
@@ -54,7 +61,11 @@ export default function DesenhoArea({ tipo, inicio, fim, area, onChange, ro }: {
         if (v.ro) return;
         const c: Ponto = [e.lngLat.lng, e.lngLat.lat];
         if (v.tipo === 'ponto') v.onChange({ inicio: c, fim: null });
-        else if (v.tipo === 'segmento') {
+        else if (v.multi) {
+          // Vários segmentos: o primeiro clique do par põe o início; o segundo fecha o segmento.
+          if (!v.pendente) v.onChange({ pendente: c });
+          else v.onChange({ segmentos: [...(v.segmentos ?? []), [v.pendente, c]], pendente: null });
+        } else if (v.tipo === 'segmento') {
           // O primeiro clique põe o início; o segundo, o fim; um novo ciclo recomeça no início.
           if (!v.inicio || v.fim) v.onChange({ inicio: c, fim: null });
           else v.onChange({ fim: c });
@@ -70,19 +81,25 @@ export default function DesenhoArea({ tipo, inicio, fim, area, onChange, ro }: {
   }, []);
 
   // Redesenha sempre que o formulário muda a marcação.
-  useEffect(() => { desenhar(); }, [tipo, inicio, fim, area]);
+  useEffect(() => { desenhar(); }, [tipo, inicio, fim, area, segmentos, pendente]);
 
   // Lê a marcação pela referência: o mapa carrega depois dos dados, e a função registrada no
   // carregamento desenharia a marcação da primeira renderização, já vencida.
   function desenhar() {
-    const { tipo, inicio, fim, area } = atual.current;
+    const { tipo, inicio, fim, area, segmentos, pendente, multi } = atual.current;
     const m = mapa.current;
     if (!m || !pronto.current) return;
     const fonte = m.getSource('marcas') as maplibregl.GeoJSONSource | undefined;
     if (!fonte) return;
     const features: GeoJSON.Feature[] = [];
     const ponto = (c: Ponto): GeoJSON.Feature => ({ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: c } });
-    if (tipo === 'area') {
+    if (multi) {
+      for (const [a, b] of segmentos ?? []) {
+        features.push({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [a, b] } });
+        features.push(ponto(a), ponto(b));
+      }
+      if (pendente) features.push(ponto(pendente));
+    } else if (tipo === 'area') {
       for (const c of area ?? []) features.push(ponto(c));
       if ((area?.length ?? 0) >= 3) features.push({ type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [[...(area as Anel), (area as Anel)[0]]] } });
     } else {
@@ -94,8 +111,13 @@ export default function DesenhoArea({ tipo, inicio, fim, area, onChange, ro }: {
   }
 
   const erro = tipo === 'area' ? problemaArea(area ?? []) : null;
+  const qtdSegmentos = segmentos?.length ?? 0;
   const instrucao = tipo === 'ponto'
     ? (inicio ? 'Ponto marcado. Clique de novo para trocar.' : 'Clique no mapa para marcar o ponto.')
+    : multi
+      ? (pendente ? 'Clique no fim do segmento.'
+        : qtdSegmentos ? `${qtdSegmentos} segmento${qtdSegmentos === 1 ? '' : 's'} marcado${qtdSegmentos === 1 ? '' : 's'}. Clique para começar outro.`
+          : 'Clique no início do segmento.')
     : tipo === 'segmento'
       ? (!inicio ? 'Clique no início do trecho.' : !fim ? 'Clique no fim do trecho.' : 'Trecho marcado. Clique de novo para começar outro.')
       : (area?.length ? `${area.length} vértice${area.length === 1 ? '' : 's'} marcado${area.length === 1 ? '' : 's'}.` : 'Clique nos cantos da área.');
@@ -120,7 +142,18 @@ export default function DesenhoArea({ tipo, inicio, fim, area, onChange, ro }: {
             </Button>
           </>
         )}
-        {!ro && tipo !== 'area' && (inicio || fim) && (
+        {!ro && multi && (qtdSegmentos > 0 || pendente) && (
+          <>
+            <Button variant="secondary" className="px-3! py-1.5!"
+                    onClick={() => onChange(pendente ? { pendente: null } : { segmentos: (segmentos ?? []).slice(0, -1) })}>
+              Desfazer último {pendente ? 'início' : 'segmento'}
+            </Button>
+            <Button variant="secondary" className="px-3! py-1.5!" onClick={() => onChange({ segmentos: [], pendente: null })}>
+              Limpar segmentos
+            </Button>
+          </>
+        )}
+        {!ro && !multi && tipo !== 'area' && (inicio || fim) && (
           <Button variant="secondary" className="px-3! py-1.5!" onClick={() => onChange({ inicio: null, fim: null })}>
             Limpar marcação
           </Button>

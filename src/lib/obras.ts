@@ -29,6 +29,8 @@ export interface ObraPublica {
     logradouro: string; bairro: string | null; inicio: [number, number]; fim: [number, number] | null;
     /** Área da intervenção, quando foi desenhada (GeoJSON Polygon, em [lng, lat]). */
     area?: { type: 'Polygon'; coordinates: [number, number][][] } | null;
+    /** Vários segmentos de rua no mesmo trecho (MultiLineString, em [lng, lat]). */
+    segmentos?: { type: 'MultiLineString'; coordinates: [number, number][][] } | null;
   }[];
 }
 
@@ -151,10 +153,13 @@ export function obrasParaGeoJSON(obras: ObraPublica[]): FeatureCollection {
         ? [{ type: 'Feature', properties, geometry: t.area }] : [];
       const traço: Feature = {
         type: 'Feature',
+        // Vários segmentos do trecho entram inteiros; sem eles, a linha de início a fim (ou o ponto).
         // Fim igual ao início é um ponto: a linha de comprimento zero não aparece no mapa.
-        geometry: coordenadaValida(t.fim) && !mesmoPonto(t.inicio, t.fim)
-          ? { type: 'LineString', coordinates: [t.inicio, t.fim] }
-          : { type: 'Point', coordinates: t.inicio },
+        geometry: t.segmentos?.type === 'MultiLineString' && t.segmentos.coordinates.length > 0
+          ? t.segmentos
+          : coordenadaValida(t.fim) && !mesmoPonto(t.inicio, t.fim)
+            ? { type: 'LineString', coordinates: [t.inicio, t.fim] }
+            : { type: 'Point', coordinates: t.inicio },
         properties,
       };
       return [...area, traço];

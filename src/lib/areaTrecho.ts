@@ -52,3 +52,52 @@ export function problemaArea(anel: Anel): string | null {
   }
   return null;
 }
+
+/** Um segmento de rua: início e fim, [longitude, latitude]. */
+export type Segmento = [[number, number], [number, number]];
+
+/**
+ * Lê uma MultiLineString em EWKB hexadecimal (coluna "segmentos" do trecho). Cada linha
+ * vira um segmento de início e fim; linha com mais de dois pontos fica com o primeiro e o último.
+ */
+export function lerSegmentosWkb(hex: string | null | undefined): Segmento[] | null {
+  if (!hex || hex.length < 18 || hex.length % 2 !== 0) return null;
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < bytes.length; i++) bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
+  const view = new DataView(bytes.buffer);
+  if (bytes[0] !== 1) return null;
+  let pos = 1;
+  const tipo = view.getUint32(pos, true); pos += 4;
+  if ((tipo & 0x0fffffff) !== 5) return null; // 5 = MultiLineString
+  if (tipo & 0x20000000) pos += 4; // SRID presente
+  const linhas = view.getUint32(pos, true); pos += 4;
+  const segs: Segmento[] = [];
+  for (let l = 0; l < linhas; l++) {
+    pos += 1; // ordem dos bytes da linha
+    const tipoLinha = view.getUint32(pos, true); pos += 4;
+    if ((tipoLinha & 0x0fffffff) !== 2) return null; // 2 = LineString
+    const pontos = view.getUint32(pos, true); pos += 4;
+    const coords: [number, number][] = [];
+    for (let i = 0; i < pontos; i++) {
+      coords.push([view.getFloat64(pos, true), view.getFloat64(pos + 8, true)]);
+      pos += 16;
+    }
+    if (coords.length >= 2) segs.push([coords[0], coords[coords.length - 1]]);
+  }
+  return segs;
+}
+
+/** GeoJSON que a função salvar_licenca aceita no campo "segmentos" do trecho. */
+export function segmentosParaGeoJson(segs: Segmento[]): string {
+  return JSON.stringify({ type: 'MultiLineString', coordinates: segs.map(([a, b]) => [a, b]) });
+}
+
+/** Motivo de os segmentos não poderem ser salvos, ou null se podem. */
+export function problemaSegmentos(segs: Segmento[]): string | null {
+  if (segs.length < 1) return 'Marque pelo menos um segmento no mapa.';
+  const fora = segs.some(([a, b]) => [a, b].some(([lng, lat]) =>
+    lng < NITEROI.lngMin || lng > NITEROI.lngMax || lat < NITEROI.latMin || lat > NITEROI.latMax));
+  if (fora) return 'Há pontos fora de Niterói.';
+  if (segs.some(([a, b]) => a[0] === b[0] && a[1] === b[1])) return 'Há um segmento com início e fim no mesmo ponto.';
+  return null;
+}
