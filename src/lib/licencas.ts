@@ -444,6 +444,13 @@ export interface LicencaPublica {
   trechos: Omit<Trecho, 'id'>[];
 }
 
+/** Nome do sistema de processo pelo padrão do número: NIT-050120 é SEI; 990… é ECIGA. */
+export function rotuloProcesso(numero: string): string {
+  if (/^NIT-/i.test(numero)) return 'Processo SEI';
+  if (/^990/.test(numero)) return 'Processo ECIGA';
+  return 'Processo';
+}
+
 /** Nulo: código inexistente, ou pedido ainda não deferido. */
 export async function buscarLicencaPublica(codigo: string): Promise<LicencaPublica | null> {
   const { data, error } = await supabase.rpc('licenca_publica', { p_codigo: codigo });
