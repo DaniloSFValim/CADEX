@@ -19,7 +19,7 @@ const SELO_CARTAO: Record<SituacaoEfetiva, string> = {
 };
 import { formatCnpj, onlyDigits } from '../lib/cnpj';
 import {
-  FILTRO_SITUACAO, SETORES, SETOR_LABEL, SITUACOES_HABILITADAS, TIPO_LABEL, atuaNoSetor, consultaPublica, oQueAEmpresaFaz, situacoesDoFiltro, urlLogo,
+  FILTRO_SITUACAO, SETORES, SETOR_LABEL, SITUACOES_HABILITADAS, TIPO_LABEL, atuaNoSetor, consultaPublica, listaComE, oQueAEmpresaFaz, situacoesDoFiltro, urlLogo,
   type LinhaPublica, type Setor,
 } from '../lib/empresas';
 
@@ -181,6 +181,9 @@ function OQueFaz({ linha: l, atuacao, contratou }: {
   return (
     <div className="mt-1.5 space-y-0.5 text-sm text-tinta-700">
       {impedida && <p className="text-baixa">{oQueAEmpresaFaz(l)}</p>}
+      {!impedida && l.tipo === 'terceirizada' && l.contratantes.length > 0 && (
+        <p>Ligada a {listaComE(l.contratantes)}</p>
+      )}
       {atuacao && atuacao.total > 0 && (
         <p>
           Executou {obras(atuacao.total)} · <Link to={`/consulta/obras/executora/${chave}`} className={linkTexto}>Ver obras</Link>
