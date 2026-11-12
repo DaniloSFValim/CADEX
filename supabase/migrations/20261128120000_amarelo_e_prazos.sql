@@ -113,17 +113,22 @@ where (c.tipo = 'programado'
 
 grant select on public.comunicacoes_publicas to anon, authenticated;
 
+-- Obra pública sem licença: flag explícito (contratada ou executada pelo
+-- órgão). Quem executa "próprio órgão" continua contando como pública.
+alter table public.intervencoes_sem_licenca add column if not exists publica boolean not null default false;
+update public.intervencoes_sem_licenca set publica = true where executora_modo = 'propria_orgao';
+
 -- Obras e serviços sem licença, para o mapa público. Duas categorias:
 --   sem_licenca  cadastrada por nós, executada por empresa cadastrada ou por
 --                empresa fora do cadastro: amarela. Em execução, na mesma
 --                janela dos programados.
---   publica      obra pública sem licença (executada pelo próprio órgão):
+--   publica      obra pública sem licença (flag publica ou executada pelo órgão):
 --                violeta, sem janela, não sai do mapa ao concluir.
 -- Sem dados internos (processo, contrato, observações, CNPJ, quem registrou).
 create or replace view public.intervencoes_publicas with (security_barrier = true) as
 select
   i.id,
-  case when i.executora_modo = 'propria_orgao' then 'publica' else 'sem_licenca' end as categoria,
+  case when i.publica or i.executora_modo = 'propria_orgao' then 'publica' else 'sem_licenca' end as categoria,
   i.situacao,
   i.setor,
   i.tipo_intervencao,
@@ -138,7 +143,7 @@ select
   i.fim_previsto
 from public.intervencoes_sem_licenca i
 left join public.empresas e on e.id = i.executora_id
-where i.executora_modo = 'propria_orgao'
+where i.publica or i.executora_modo = 'propria_orgao'
   or (
     i.situacao = 'em_execucao'
     and (i.executora_modo = 'sem_cadastro' or (e.id is not null and not e.teste))

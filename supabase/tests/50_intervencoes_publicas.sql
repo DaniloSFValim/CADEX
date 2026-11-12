@@ -30,19 +30,24 @@ begin
 
   insert into intervencoes_sem_licenca (setor, tipo_intervencao, escopo, contratante_orgao_id, executora_modo, executora_id,
     logradouro, tipos_obra, inicio_lat, inicio_lng, inicio_previsto, fim_previsto, situacao, concluida_em,
-    executora_razao_social, executora_cnpj)
+    executora_razao_social, executora_cnpj, publica)
   values ('viario', 'obra', 'Teste empresa', org, 'empresa', emp, 'Rua 1', '{vala}', -22.9, -43.1,
-    current_date - 1, current_date + 3, 'em_execucao', null, null, null),
+    current_date - 1, current_date + 3, 'em_execucao', null, null, null, false),
     ('viario', 'obra', 'Teste orgao', org, 'propria_orgao', null, 'Rua 2', '{vala}', -22.9, -43.1,
-    current_date - 200, current_date - 100, 'concluida', current_date - 100, null, null),
+    current_date - 200, current_date - 100, 'concluida', current_date - 100, null, null, false),
     ('viario', 'obra', 'Teste fora do cadastro', org, 'sem_cadastro', null, 'Rua 3', '{vala}', -22.9, -43.1,
-    current_date - 1, current_date + 3, 'em_execucao', null, 'Fora SA T50', '66777888000199');
+    current_date - 1, current_date + 3, 'em_execucao', null, 'Fora SA T50', '66777888000199', false),
+    ('viario', 'obra', 'Teste publica contratada', org, 'empresa', emp, 'Rua 4', '{vala}', -22.9, -43.1,
+    current_date - 200, current_date - 100, 'concluida', current_date - 100, null, null, true);
 
   select count(*) into n from intervencoes_publicas where escopo = 'Teste empresa' and categoria = 'sem_licenca';
   perform pg_temp.assert(n = 1, 'obra sem licença em execução deveria aparecer como sem licença');
 
   select count(*) into n from intervencoes_publicas where escopo = 'Teste orgao' and categoria = 'publica';
   perform pg_temp.assert(n = 1, 'obra do próprio órgão concluída deveria continuar no mapa como pública');
+
+  select count(*) into n from intervencoes_publicas where escopo = 'Teste publica contratada' and categoria = 'publica';
+  perform pg_temp.assert(n = 1, 'obra pública contratada por empresa deveria aparecer como pública, mesmo concluída');
 
   select count(*) into n from intervencoes_publicas where escopo = 'Teste fora do cadastro' and categoria = 'sem_licenca';
   perform pg_temp.assert(n = 1, 'serviço sem licença de empresa fora do cadastro deveria aparecer como sem licença');
