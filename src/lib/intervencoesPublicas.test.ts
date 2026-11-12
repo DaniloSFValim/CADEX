@@ -6,6 +6,7 @@ const base: IntervencaoPublica = {
   escopo: 'Troca de rede', tipos_obra: ['vala'], logradouro: 'Rua A', bairro: 'Centro', referencia: null, executora: 'Operadora X',
   inicio_lat: -22.9, inicio_lng: -43.1, fim_lat: null, fim_lng: null,
   inicio_previsto: '2026-11-10', fim_previsto: '2026-11-20',
+  processo_sei: null, processo_administrativo: null, contrato_numero: null, ordem_servico_numero: null, foto_url: null, licenca_codigo: null,
 };
 
 const HOJE = '2026-11-12';
@@ -41,5 +42,21 @@ describe('filtrarIntervencoes', () => {
   it('com o filtro ampliado, mostra a empresa dentro da janela que a view já aplicou', () => {
     const futura = { ...base, id: 'f', inicio_previsto: '2026-11-14', fim_previsto: '2026-11-20' };
     expect(filtrarIntervencoes([futura], true, HOJE)).toHaveLength(1);
+  });
+});
+
+describe('transparência no cartão', () => {
+  it('leva processo, contrato, ordem de serviço, foto e licença para as propriedades do ponto', () => {
+    const fc = intervencoesParaGeoJSON([{
+      ...base, processo_sei: '9900099999/2026', processo_administrativo: 'PA-1/2026', contrato_numero: 'CT-1',
+      ordem_servico_numero: 'OS-1', foto_url: 'https://fotos.example.test/a.jpg', licenca_codigo: 'abc123',
+    }]);
+    const props = fc.features[0].properties ?? {};
+    expect(props.processo).toBe('9900099999/2026');
+    expect(props.processo_administrativo).toBe('PA-1/2026');
+    expect(props.contrato).toBe('CT-1');
+    expect(props.ordem_servico).toBe('OS-1');
+    expect(props.foto_url).toBe('https://fotos.example.test/a.jpg');
+    expect(props.licenca_codigo).toBe('abc123');
   });
 });
