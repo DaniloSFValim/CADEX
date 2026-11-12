@@ -340,11 +340,20 @@ export async function criarEmpresa(input: EmpresaInput, contratantes: string[] =
   return id;
 }
 
-export async function salvarEmpresa(id: string, input: EmpresaInput): Promise<void> {
+/**
+ * Grava a ficha da empresa. Com a versão que a tela carregou (atualizado_em), a gravação só passa
+ * se ninguém alterou a ficha desde então: sem isso, a última gravação sobrescreve a outra.
+ */
+export async function salvarEmpresa(id: string, input: EmpresaInput, versaoCarregada?: string): Promise<void> {
   // CNPJ e tipo não mudam depois do cadastro: o tipo está no código CADEX.
   const { cnpj: _cnpj, tipo: _tipo, ...resto } = limpar(input);
-  const { error } = await supabase.from('empresas').update(resto).eq('id', id);
+  let q = supabase.from('empresas').update(resto).eq('id', id);
+  if (versaoCarregada) q = q.eq('atualizado_em', versaoCarregada);
+  const { data, error } = await q.select('id');
   if (error) throw error;
+  if (versaoCarregada && (!data || data.length === 0)) {
+    throw new Error('Esta empresa foi alterada por outra pessoa enquanto você editava. Recarregue a página e confira antes de salvar.');
+  }
 }
 
 /**

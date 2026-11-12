@@ -338,7 +338,11 @@ function ordenarTrechos(l: LicencaComTrechos): LicencaComTrechos {
 
 export type LicencaInput = Omit<Licenca,
   'id' | 'empresas_no_deferimento' | 'codigo_publico' | 'emitida_em_sistema_anterior' | 'anterior_resolucao' | 'criado_em' | 'atualizado_em'
-  | 'excluida_em' | 'excluida_por' | 'excluida_motivo' | 'validade_ate' | 'prorrogacoes'> & { id?: string };
+  | 'excluida_em' | 'excluida_por' | 'excluida_motivo' | 'validade_ate' | 'prorrogacoes'> & {
+  id?: string;
+  /** Data de alteração da versão que a tela carregou. Se a licença mudou depois, o banco recusa a gravação. */
+  atualizado_em_esperado?: string | null;
+};
 
 /** Grava licença e trechos numa só transação (função salvar_licenca). */
 export async function salvarLicenca(licenca: LicencaInput, trechos: Trecho[]): Promise<string> {
