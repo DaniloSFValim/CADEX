@@ -177,7 +177,7 @@ $$;
 
 create or replace function public.obras_geojson()
 returns jsonb language sql stable security definer
-set search_path = public as $$
+set search_path = public, extensions as $$
   with hoje as (select (now() at time zone 'America/Sao_Paulo')::date as d)
   select jsonb_build_object(
     'type', 'FeatureCollection',
@@ -227,7 +227,7 @@ $$;
 
 create or replace function public.licenca_publica(p_codigo text)
 returns jsonb language sql stable security definer
-set search_path = public as $$
+set search_path = public, extensions as $$
   with hoje as (select (now() at time zone 'America/Sao_Paulo')::date as d)
   select jsonb_build_object(
     'numero', l.numero,
