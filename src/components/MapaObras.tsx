@@ -12,6 +12,7 @@ import { Protocol } from 'pmtiles';
 import { useEffect, useRef, useState } from 'react';
 import { COR_SITUACAO, anosDasObras, obrasParaGeoJSON, pontosDeCalor, type ObraPublica } from '../lib/obras';
 import { comunicacoesParaGeoJSON, type ComunicacaoPublica } from '../lib/comunicacoesPublicas';
+import { intervencoesParaGeoJSON, type IntervencaoPublica } from '../lib/intervencoesPublicas';
 import { carregarBairrosGeo, chaveBairro } from '../lib/bairros';
 import type { SituacaoPublica } from '../lib/licencas';
 import { MAPA_LOCALE } from '../lib/mapaLocale';
@@ -91,7 +92,7 @@ const corPorSituacao = [
 ] as unknown as maplibregl.ExpressionSpecification;
 
 /** Marca de 22 px desenhada no canvas: triângulo ou quadrado, com contorno branco para ler sobre o mapa. */
-function desenhaMarca(forma: 'triangulo' | 'quadrado', cor: string): ImageData {
+function desenhaMarca(forma: 'triangulo' | 'quadrado' | 'circulo', cor: string): ImageData {
   const c = document.createElement('canvas');
   c.width = 22; c.height = 22;
   const g = c.getContext('2d');
@@ -102,6 +103,8 @@ function desenhaMarca(forma: 'triangulo' | 'quadrado', cor: string): ImageData {
   g.beginPath();
   if (forma === 'triangulo') {
     g.moveTo(11, 2); g.lineTo(20, 19); g.lineTo(2, 19); g.closePath();
+  } else if (forma === 'circulo') {
+    g.arc(11, 11, 8, 0, 2 * Math.PI);
   } else {
     g.rect(3, 3, 16, 16);
   }
@@ -112,9 +115,10 @@ function desenhaMarca(forma: 'triangulo' | 'quadrado', cor: string): ImageData {
 
 /** Mapa das obras. Clicar numa obra avisa quem chamou (a ficha aparece ao lado), sem balão. */
 const SEM_COMUNICACOES: ComunicacaoPublica[] = [];
+const SEM_INTERVENCOES: IntervencaoPublica[] = [];
 
-export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, foco, destaque, modo = 'pontos', bairro, onSelecionar, onBairro, onDestacar, onGrupo }: {
-  obras: ObraPublica[]; comunicacoes?: ComunicacaoPublica[]; foco?: string | null; destaque?: string | null; modo?: 'pontos' | 'calor';
+export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, intervencoes = SEM_INTERVENCOES, foco, destaque, modo = 'pontos', bairro, onSelecionar, onBairro, onDestacar, onGrupo }: {
+  obras: ObraPublica[]; comunicacoes?: ComunicacaoPublica[]; intervencoes?: IntervencaoPublica[]; foco?: string | null; destaque?: string | null; modo?: 'pontos' | 'calor';
   bairro?: string | null; onSelecionar?: (codigo: string) => void; onBairro?: (bairro: string) => void;
   onDestacar?: (codigo: string | null) => void;
   /** Clique num agrupamento: códigos das obras dentro dele. Quem recebe destaca essas obras, sem esconder as outras. */
@@ -161,8 +165,10 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, foco
           bairros: { type: 'geojson', data: { type: 'FeatureCollection', features: [] } },
           // Anel sobre a obra escolhida (o ponto de destaque ao voar até ela). Vazio sem obra escolhida.
           'foco-obra': { type: 'geojson', data: { type: 'FeatureCollection', features: [] } },
-          // Comunicações ao CISP: emergência (triângulo, vermelho) e serviço programado (quadrado, âmbar).
+          // Comunicações ao CISP: emergência (triângulo, vermelho) e serviço programado (quadrado, amarelo).
           comunicacoes: { type: 'geojson', data: { type: 'FeatureCollection', features: [] } },
+          // Obras sem licença: de empresa cadastrada (amarelas) e do próprio órgão público (violeta).
+          intervencoes: { type: 'geojson', data: { type: 'FeatureCollection', features: [] } },
           // Anel que pulsa sobre a área de calor sob o cursor. Vazio quando o cursor não está no calor.
           'calor-foco': { type: 'geojson', data: { type: 'FeatureCollection', features: [] } },
         },
@@ -259,7 +265,7 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, foco
             id: 'comunicacoes-trechos-programado', type: 'line', source: 'comunicacoes',
             filter: ['all', ['==', ['geometry-type'], 'LineString'], ['==', ['get', 'tipo'], 'programado']],
             layout: { 'line-cap': 'butt' },
-            paint: { 'line-color': '#b45309', 'line-width': 5, 'line-opacity': 0.9, 'line-dasharray': [1.5, 1.2] },
+            paint: { 'line-color': '#eab308', 'line-width': 5, 'line-opacity': 0.9, 'line-dasharray': [1.5, 1.2] },
           },
           {
             // Marca do ponto de início: triângulo para emergência, quadrado para serviço programado.
@@ -267,6 +273,26 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, foco
             filter: ['==', ['geometry-type'], 'Point'],
             layout: {
               'icon-image': ['match', ['get', 'tipo'], 'emergencia', 'marca-emergencia', 'marca-programado'],
+              'icon-size': ['interpolate', ['linear'], ['zoom'], 12, 0.7, 17, 1.1],
+              'icon-allow-overlap': true,
+            },
+          },
+          // Obras sem licença: linha contínua; amarela para empresa cadastrada, violeta para obra pública.
+          {
+            id: 'intervencoes-trechos-sem-licenca', type: 'line', source: 'intervencoes',
+            filter: ['all', ['==', ['geometry-type'], 'LineString'], ['==', ['get', 'categoria'], 'sem_licenca']],
+            layout: { 'line-cap': 'round' }, paint: { 'line-color': '#eab308', 'line-width': 5, 'line-opacity': 0.9 },
+          },
+          {
+            id: 'intervencoes-trechos-publica', type: 'line', source: 'intervencoes',
+            filter: ['all', ['==', ['geometry-type'], 'LineString'], ['==', ['get', 'categoria'], 'publica']],
+            layout: { 'line-cap': 'round' }, paint: { 'line-color': '#7c3aed', 'line-width': 5, 'line-opacity': 0.9 },
+          },
+          {
+            id: 'intervencoes-marcas', type: 'symbol', source: 'intervencoes',
+            filter: ['==', ['geometry-type'], 'Point'],
+            layout: {
+              'icon-image': ['match', ['get', 'categoria'], 'publica', 'marca-publica', 'marca-obra'],
               'icon-size': ['interpolate', ['linear'], ['zoom'], 12, 0.7, 17, 1.1],
               'icon-allow-overlap': true,
             },
@@ -282,7 +308,7 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, foco
       m.on('error', (e: maplibregl.ErrorEvent) => {
         if (vivo && !m.isStyleLoaded()) setErro(e.error?.message ?? 'Falha ao carregar o mapa.');
       });
-      m.on('click', 'comunicacoes-marcas', (e: maplibregl.MapLayerMouseEvent) => {
+      for (const camada of ['comunicacoes-marcas', 'intervencoes-marcas']) m.on('click', camada, (e: maplibregl.MapLayerMouseEvent) => {
         const f = e.features?.[0];
         if (!f) return;
         const p = f.properties as Record<string, string>;
@@ -451,14 +477,17 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, foco
     return () => window.clearTimeout(t);
   }, [obras, pronto]);
 
-  // Comunicações ao CISP: as marcas (triângulo e quadrado) entram uma vez; os dados atualizam quando mudam.
+  // Comunicações ao CISP e obras sem licença: as marcas entram uma vez; os dados atualizam quando mudam.
   useEffect(() => {
     if (!pronto || !mapa.current) return;
     const m = mapa.current;
     if (!m.hasImage('marca-emergencia')) m.addImage('marca-emergencia', desenhaMarca('triangulo', '#b91c1c'));
-    if (!m.hasImage('marca-programado')) m.addImage('marca-programado', desenhaMarca('quadrado', '#b45309'));
+    if (!m.hasImage('marca-programado')) m.addImage('marca-programado', desenhaMarca('quadrado', '#eab308'));
+    if (!m.hasImage('marca-obra')) m.addImage('marca-obra', desenhaMarca('circulo', '#eab308'));
+    if (!m.hasImage('marca-publica')) m.addImage('marca-publica', desenhaMarca('circulo', '#7c3aed'));
     (m.getSource('comunicacoes') as maplibregl.GeoJSONSource | undefined)?.setData(comunicacoesParaGeoJSON(comunicacoes));
-  }, [comunicacoes, pronto]);
+    (m.getSource('intervencoes') as maplibregl.GeoJSONSource | undefined)?.setData(intervencoesParaGeoJSON(intervencoes));
+  }, [comunicacoes, intervencoes, pronto]);
 
   // Mapa de calor: refaz os pontos quando muda a lista ou o ano escolhido.
   useEffect(() => {

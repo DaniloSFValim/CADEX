@@ -60,11 +60,11 @@ begin
     values (%L, 'programado', 'Manutenção', 'Fulano', array['ABC1234'], 'Rua D', 'Manutenção', current_date + 3, current_date + 3)$f$, emp),
     'mapa', 'programado sem local foi aceito');
 
-  -- 5. Programado registrado depois do início é recusado.
+  -- 5. Programado registrado com menos de 24 horas de antecedência é recusado.
   perform pg_temp.recusa(format($f$insert into comunicacoes_servico (empresa_id, tipo, tipo_servico, responsavel, placas, local_servico, descricao,
     inicio_previsto, fim_previsto, comunicado_em, inicio_lat, inicio_lng)
     values (%L, 'programado', 'Manutenção', 'Fulano', array['ABC1234'], 'Rua E', 'Manutenção', hoje_niteroi() - 1, hoje_niteroi(),
-    now(), -22.9, -43.1)$f$, emp), 'antes do início', 'programado tardio foi aceito');
+    now(), -22.9, -43.1)$f$, emp), '24 horas', 'programado com menos de 24 h foi aceito');
 
   -- 6. Tipo e data do fato não mudam depois do registro.
   perform pg_temp.recusa(format($f$update comunicacoes_servico set tipo = 'programado' where empresa_id = %L and tipo = 'emergencia'$f$, emp),

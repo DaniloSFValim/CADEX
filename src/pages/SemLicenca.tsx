@@ -146,7 +146,7 @@ function lerCoordenadaPonto(texto: string): [number, number] | null {
 function paraForm(r: IntervencaoSemLicenca): FormSemLicenca {
   const s = (v: string | null) => v ?? '';
   return {
-    setor: r.setor, tipo_intervencao: r.tipo_intervencao, tipos_obra: r.tipos_obra, outros_descricao: s(r.outros_descricao),
+    setor: r.setor, publica: r.publica, tipo_intervencao: r.tipo_intervencao, tipos_obra: r.tipos_obra, outros_descricao: s(r.outros_descricao),
     escopo: r.escopo, contratante_orgao_id: r.contratante_orgao_id,
     executora_modo: r.executora_modo, executora_id: s(r.executora_id), executora_razao_social: s(r.executora_razao_social),
     executora_cnpj: s(r.executora_cnpj), logradouro: r.logradouro, bairro: s(r.bairro), referencia: s(r.referencia),
@@ -265,6 +265,10 @@ function FormSemLicenca({ atual, empresas, orgaos, tipos, somenteLeitura, onSalv
               {orgaosDoSetor.map((o) => <option key={o.id} value={o.id}>{nomeOrgao(o)}</option>)}
             </select>
           </Field>
+          <label className="inline-flex items-start gap-2 text-sm text-tinta-800 sm:col-span-2">
+            <input type="checkbox" className="mt-1" checked={f.publica} onChange={(e) => set('publica', e.target.checked)} />
+            <span>Obra pública (contratada ou executada pelo órgão). No mapa, aparece em violeta e não sai ao concluir.</span>
+          </label>
           <Field label="Quem executa" required>
             <select className={inputClass} required {...campo('executora_modo')} onChange={(e) => set('executora_modo', e.target.value as ModoExecucao)}>
               {(Object.keys(MODO_EXECUCAO_LABEL) as ModoExecucao[]).map((m) => <option key={m} value={m}>{MODO_EXECUCAO_LABEL[m]}</option>)}

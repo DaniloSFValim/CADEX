@@ -38,6 +38,8 @@ export interface IntervencaoSemLicenca {
   executora_id: string | null;
   executora_razao_social: string | null;
   executora_cnpj: string | null;
+  /** Obra pública (contratada ou executada pelo órgão): cor própria no mapa, não sai ao concluir. */
+  publica: boolean;
   logradouro: string;
   bairro: string | null;
   referencia: string | null;
@@ -63,6 +65,7 @@ export interface IntervencaoSemLicenca {
 /** O que o formulário envia. Campos de texto vazios viram nulo. */
 export interface FormSemLicenca {
   setor: Setor;
+  publica: boolean;
   tipo_intervencao: TipoIntervencao | '';
   tipos_obra: string[];
   outros_descricao: string;
@@ -92,7 +95,7 @@ export interface FormSemLicenca {
 }
 
 export const FORM_SEM_LICENCA_VAZIO: FormSemLicenca = {
-  setor: 'viario', tipo_intervencao: '', tipos_obra: [], outros_descricao: '', escopo: '', contratante_orgao_id: '', executora_modo: 'propria_orgao',
+  setor: 'viario', publica: false, tipo_intervencao: '', tipos_obra: [], outros_descricao: '', escopo: '', contratante_orgao_id: '', executora_modo: 'propria_orgao',
   executora_id: '', executora_razao_social: '', executora_cnpj: '', logradouro: '', bairro: '', referencia: '',
   inicio: '', fim: '', tipo: 'ponto', area: null, inicio_previsto: '', fim_previsto: '', situacao: 'em_execucao', concluida_em: '',
   processo_sei: '', contrato_numero: '', processo_administrativo: '', ordem_servico_numero: '', observacoes: '',
@@ -151,6 +154,7 @@ export function montarSemLicenca(f: FormSemLicenca): { linha: LinhaSemLicenca } 
       executora_id: executora,
       executora_razao_social: f.executora_modo === 'sem_cadastro' ? n(f.executora_razao_social) : null,
       executora_cnpj: f.executora_modo === 'sem_cadastro' && f.executora_cnpj.trim() ? onlyDigits(f.executora_cnpj) : null,
+      publica: f.publica,
       logradouro: f.logradouro.trim(),
       bairro: n(f.bairro),
       referencia: n(f.referencia),

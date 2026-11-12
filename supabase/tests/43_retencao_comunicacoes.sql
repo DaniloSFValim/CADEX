@@ -28,13 +28,13 @@ begin
 
   -- Programado de hoje (no dia) e de daqui a 5 dias (dentro da janela).
   insert into comunicacoes_servico (id, empresa_id, tipo, tipo_servico, responsavel, placas, local_servico, descricao,
-    inicio_previsto, fim_previsto, inicio_lat, inicio_lng)
+    inicio_previsto, fim_previsto, comunicado_em, inicio_lat, inicio_lng)
   values ('00000000-0000-4000-8000-000000004301', emp, 'programado', 'Manutenção', 'Fulano', array['ABC1234'], 'Rua A', 'Manutenção',
-    hoje, hoje, -22.9, -43.1),
+    hoje, hoje, now() - interval '3 days', -22.9, -43.1),
     ('00000000-0000-4000-8000-000000004302', emp, 'programado', 'Manutenção', 'Fulano', array['ABC1234'], 'Rua B', 'Manutenção',
-    hoje + 5, hoje + 5, -22.9, -43.1),
+    hoje + 5, hoje + 5, now() - interval '3 days', -22.9, -43.1),
     ('00000000-0000-4000-8000-000000004303', emp, 'programado', 'Manutenção', 'Fulano', array['ABC1234'], 'Rua C', 'Manutenção',
-    hoje + 20, hoje + 20, -22.9, -43.1);
+    hoje + 20, hoje + 20, now() - interval '3 days', -22.9, -43.1);
 
   -- Emergência de agora, depois ajustada para 10 e 20 dias atrás (o gatilho
   -- só valida o fato na gravação; o ajuste de data não altera o tipo).

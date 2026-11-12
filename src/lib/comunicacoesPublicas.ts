@@ -64,6 +64,9 @@ export function comunicacoesParaGeoJSON(lista: ComunicacaoPublica[]): FeatureCol
 /** Janela de exibição, em dias, nos dois sentidos (programado à frente, emergência para trás). */
 export const DIAS_JANELA = 15;
 
+/** Serviço programado segue no mapa por 7 dias depois do fim (depois, vai para o arquivo). */
+export const DIAS_APOS_FIM_PROGRAMADO = 7;
+
 /** Dia de hoje em Niterói, em AAAA-MM-DD, independentemente do fuso de quem consulta. */
 export function hojeNiteroi(agora: Date = new Date()): string {
   return agora.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
@@ -82,12 +85,12 @@ export function acontecendoEm(c: ComunicacaoPublica, dia: string): boolean {
 }
 
 /**
- * Janela de 15 dias de cada modalidade: programado de hoje a 15 dias à frente;
+ * Janela de cada modalidade: programado de 15 dias à frente até 7 dias depois do fim;
  * emergência de 15 dias atrás até hoje. Espelha a view comunicacoes_publicas.
  */
 export function naJanela(c: ComunicacaoPublica, hoje: string): boolean {
   if (c.tipo === 'programado') {
-    return c.fim_previsto >= hoje && c.inicio_previsto <= somarDias(hoje, DIAS_JANELA);
+    return c.fim_previsto >= somarDias(hoje, -DIAS_APOS_FIM_PROGRAMADO) && c.inicio_previsto <= somarDias(hoje, DIAS_JANELA);
   }
   return c.fim_previsto >= somarDias(hoje, -DIAS_JANELA) && c.inicio_previsto <= hoje;
 }
