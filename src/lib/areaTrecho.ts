@@ -53,8 +53,8 @@ export function problemaArea(anel: Anel): string | null {
   return null;
 }
 
-/** Um segmento de rua: início e fim, [longitude, latitude]. */
-export type Segmento = [[number, number], [number, number]];
+/** Um segmento de rua: linha de dois ou mais pontos, [longitude, latitude], na ordem do traçado. */
+export type Segmento = [number, number][];
 
 /**
  * Lê uma MultiLineString em EWKB hexadecimal (coluna "segmentos" do trecho). Cada linha
@@ -82,22 +82,25 @@ export function lerSegmentosWkb(hex: string | null | undefined): Segmento[] | nu
       coords.push([view.getFloat64(pos, true), view.getFloat64(pos + 8, true)]);
       pos += 16;
     }
-    if (coords.length >= 2) segs.push([coords[0], coords[coords.length - 1]]);
+    if (coords.length >= 2) segs.push(coords);
   }
   return segs;
 }
 
 /** GeoJSON que a função salvar_licenca aceita no campo "segmentos" do trecho. */
 export function segmentosParaGeoJson(segs: Segmento[]): string {
-  return JSON.stringify({ type: 'MultiLineString', coordinates: segs.map(([a, b]) => [a, b]) });
+  return JSON.stringify({ type: 'MultiLineString', coordinates: segs });
 }
 
 /** Motivo de os segmentos não poderem ser salvos, ou null se podem. */
 export function problemaSegmentos(segs: Segmento[]): string | null {
   if (segs.length < 1) return 'Marque pelo menos um segmento no mapa.';
-  const fora = segs.some(([a, b]) => [a, b].some(([lng, lat]) =>
+  if (segs.some((s) => s.length < 2)) return 'Cada segmento precisa de pelo menos dois pontos.';
+  const fora = segs.some((s) => s.some(([lng, lat]) =>
     lng < NITEROI.lngMin || lng > NITEROI.lngMax || lat < NITEROI.latMin || lat > NITEROI.latMax));
   if (fora) return 'Há pontos fora de Niterói.';
-  if (segs.some(([a, b]) => a[0] === b[0] && a[1] === b[1])) return 'Há um segmento com início e fim no mesmo ponto.';
+  if (segs.some((s) => s.every(([lng, lat]) => lng === s[0][0] && lat === s[0][1]))) {
+    return 'Há um segmento com todos os pontos no mesmo lugar.';
+  }
   return null;
 }
