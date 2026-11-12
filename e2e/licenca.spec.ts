@@ -24,6 +24,8 @@ async function preencherBasico(page: Page) {
   await campo(page, 'Logradouro').fill('Rua Mem de Sá');
   await campo(page, 'Bairro').fill('Icaraí');
   await page.getByPlaceholder('-22.895000, -43.123000').first().fill('-22.905, -43.110');
+  // Trecho novo é segmento: o fim também é preenchido.
+  await page.getByPlaceholder('-22.895000, -43.123000').nth(1).fill('-22.906, -43.111');
 }
 
 test.describe('registro de licença', () => {
