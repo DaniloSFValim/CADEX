@@ -58,6 +58,8 @@ export interface IntervencaoSemLicenca {
   processo_administrativo: string | null;
   ordem_servico_numero: string | null;
   observacoes: string | null;
+  /** Link https das fotos, hospedadas fora do CADEX. */
+  foto_url: string | null;
   licenca_id: string | null;
   atualizado_em: string;
 }
@@ -92,13 +94,14 @@ export interface FormSemLicenca {
   processo_administrativo: string;
   ordem_servico_numero: string;
   observacoes: string;
+  foto_url: string;
 }
 
 export const FORM_SEM_LICENCA_VAZIO: FormSemLicenca = {
   setor: 'viario', publica: false, tipo_intervencao: '', tipos_obra: [], outros_descricao: '', escopo: '', contratante_orgao_id: '', executora_modo: 'propria_orgao',
   executora_id: '', executora_razao_social: '', executora_cnpj: '', logradouro: '', bairro: '', referencia: '',
   inicio: '', fim: '', tipo: 'ponto', area: null, inicio_previsto: '', fim_previsto: '', situacao: 'em_execucao', concluida_em: '',
-  processo_sei: '', contrato_numero: '', processo_administrativo: '', ordem_servico_numero: '', observacoes: '',
+  processo_sei: '', contrato_numero: '', processo_administrativo: '', ordem_servico_numero: '', observacoes: '', foto_url: '',
 };
 
 /** Linha do banco, sem os campos que o banco preenche. */
@@ -172,6 +175,7 @@ export function montarSemLicenca(f: FormSemLicenca): { linha: LinhaSemLicenca } 
       processo_administrativo: n(f.processo_administrativo),
       ordem_servico_numero: n(f.ordem_servico_numero),
       observacoes: n(f.observacoes),
+      foto_url: n(f.foto_url),
       licenca_id: null,
     },
   };

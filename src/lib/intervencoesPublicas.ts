@@ -26,6 +26,14 @@ export interface IntervencaoPublica {
   fim_lng: number | null;
   inicio_previsto: string | null;
   fim_previsto: string | null;
+  processo_sei: string | null;
+  processo_administrativo: string | null;
+  contrato_numero: string | null;
+  ordem_servico_numero: string | null;
+  /** Link https das fotos (hospedadas fora do CADEX). */
+  foto_url: string | null;
+  /** Código público da licença, quando a obra foi regularizada. */
+  licenca_codigo: string | null;
 }
 
 /** Limite da consulta, como nas comunicações. */
@@ -56,6 +64,12 @@ export function intervencoesParaGeoJSON(lista: IntervencaoPublica[]): FeatureCol
       local,
       descricao: i.referencia ?? '',
       quando: `${i.inicio_previsto ?? 'início não informado'} a ${i.fim_previsto ?? 'fim não informado'}`,
+      processo: i.processo_sei ?? '',
+      processo_administrativo: i.processo_administrativo ?? '',
+      contrato: i.contrato_numero ?? '',
+      ordem_servico: i.ordem_servico_numero ?? '',
+      foto_url: i.foto_url ?? '',
+      licenca_codigo: i.licenca_codigo ?? '',
     };
     const ponto: Feature<Point> = {
       type: 'Feature', properties: propriedades,

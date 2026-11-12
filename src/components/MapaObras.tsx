@@ -117,15 +117,19 @@ function desenhaMarca(forma: 'triangulo' | 'quadrado' | 'circulo', cor: string):
 const SEM_COMUNICACOES: ComunicacaoPublica[] = [];
 const SEM_INTERVENCOES: IntervencaoPublica[] = [];
 
-export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, intervencoes = SEM_INTERVENCOES, foco, destaque, modo = 'pontos', bairro, onSelecionar, onBairro, onDestacar, onGrupo }: {
+export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, intervencoes = SEM_INTERVENCOES, foco, destaque, modo = 'pontos', bairro, onSelecionar, onBairro, onDestacar, onGrupo, onIntervencao }: {
   obras: ObraPublica[]; comunicacoes?: ComunicacaoPublica[]; intervencoes?: IntervencaoPublica[]; foco?: string | null; destaque?: string | null; modo?: 'pontos' | 'calor';
   bairro?: string | null; onSelecionar?: (codigo: string) => void; onBairro?: (bairro: string) => void;
   onDestacar?: (codigo: string | null) => void;
   /** Clique num agrupamento: códigos das obras dentro dele. Quem recebe destaca essas obras, sem esconder as outras. */
   onGrupo?: (codigos: string[]) => void;
+  /** Clique numa obra ou serviço sem licença: quem recebe mostra o cartão dela. */
+  onIntervencao?: (dados: Record<string, string>) => void;
 }) {
   const onGrupoRef = useRef(onGrupo);
   onGrupoRef.current = onGrupo;
+  const onIntervencaoRef = useRef(onIntervencao);
+  onIntervencaoRef.current = onIntervencao;
   const caixa = useRef<HTMLDivElement>(null);
   const mapa = useRef<maplibregl.Map | null>(null);
   const [pronto, setPronto] = useState(false);
@@ -308,7 +312,13 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, inte
       m.on('error', (e: maplibregl.ErrorEvent) => {
         if (vivo && !m.isStyleLoaded()) setErro(e.error?.message ?? 'Falha ao carregar o mapa.');
       });
-      for (const camada of ['comunicacoes-marcas', 'intervencoes-marcas']) m.on('click', camada, (e: maplibregl.MapLayerMouseEvent) => {
+      // Obras sem licença: o clique abre o cartão da obra (não o balão).
+      for (const camada of ['intervencoes-marcas', 'intervencoes-trechos-sem-licenca', 'intervencoes-trechos-publica']) m.on('click', camada, (e: maplibregl.MapLayerMouseEvent) => {
+        const f = e.features?.[0];
+        if (!f) return;
+        onIntervencaoRef.current?.(f.properties as Record<string, string>);
+      });
+      for (const camada of ['comunicacoes-marcas']) m.on('click', camada, (e: maplibregl.MapLayerMouseEvent) => {
         const f = e.features?.[0];
         if (!f) return;
         const p = f.properties as Record<string, string>;
