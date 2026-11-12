@@ -67,7 +67,9 @@ describe('segmentos do trecho', () => {
   it('recusa lista vazia, ponto fora de Niterói e segmento de comprimento zero', () => {
     expect(problemaSegmentos([])).toMatch(/pelo menos um segmento/);
     expect(problemaSegmentos([[[-43.12, -22.9], [-44.0, -22.9]]])).toMatch(/fora de Niterói/);
-    expect(problemaSegmentos([[[-43.12, -22.9], [-43.12, -22.9]]])).toMatch(/mesmo ponto/);
+    expect(problemaSegmentos([[[-43.12, -22.9], [-43.12, -22.9]]])).toMatch(/mesmo lugar/);
+    expect(problemaSegmentos([[[-43.12, -22.9]]])).toMatch(/pelo menos dois pontos/);
+    expect(problemaSegmentos([[[-43.12, -22.9], [-43.121, -22.901], [-43.122, -22.902]]])).toBeNull();
     expect(problemaSegmentos([[[-43.12, -22.9], [-43.121, -22.901]]])).toBeNull();
   });
 });

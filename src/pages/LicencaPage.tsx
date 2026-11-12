@@ -30,7 +30,7 @@ const DesenhoArea = lazy(() => import('../components/DesenhoArea'));
 
 /** Ponto: só o início. Segmento: início e fim. Área: polígono (o início é o primeiro vértice). */
 type TipoTrechoForm = 'ponto' | 'segmento' | 'area';
-interface TrechoForm { id?: string; cep: string; logradouro: string; bairro: string; referencia: string; inicio: string; fim: string; area: Anel | null; tipo: TipoTrechoForm; segmentos: Segmento[]; pendente: [number, number] | null }
+interface TrechoForm { id?: string; cep: string; logradouro: string; bairro: string; referencia: string; inicio: string; fim: string; area: Anel | null; tipo: TipoTrechoForm; segmentos: Segmento[]; rascunho: [number, number][] }
 
 type Form = {
   setor: Setor; processo_sei: string; numero: string; tipos_obra: TipoObra[]; outros_descricao: string; escopo: string; observacoes: string;
@@ -75,7 +75,7 @@ function uiDaSituacao(situacao: SituacaoLicenca, concluidaEm: string): UiSituaca
   return concluidaEm ? 'concluida' : 'em_execucao';
 }
 
-const TRECHO_VAZIO: TrechoForm = { cep: '', logradouro: '', bairro: '', referencia: '', inicio: '', fim: '', area: null, tipo: 'ponto', segmentos: [], pendente: null };
+const TRECHO_VAZIO: TrechoForm = { cep: '', logradouro: '', bairro: '', referencia: '', inicio: '', fim: '', area: null, tipo: 'ponto', segmentos: [], rascunho: [] };
 const ROTULO_TIPO_TRECHO: Record<TipoTrechoForm, string> = { ponto: 'Ponto', segmento: 'Segmento', area: 'Área' };
 
 const VAZIO: Form = {
@@ -118,7 +118,7 @@ const trechoParaForm = (t: Trecho & { id: string }): TrechoForm => ({
   fim: t.fim_lat != null && t.fim_lng != null ? coordenadaTexto(t.fim_lat, t.fim_lng) : '',
   area: lerAreaWkb(t.area),
   segmentos: lerSegmentosWkb(t.segmentos) ?? [],
-  pendente: null,
+  rascunho: [],
   tipo: lerAreaWkb(t.area) ? 'area' : (lerSegmentosWkb(t.segmentos)?.length ?? 0) > 0 || (t.fim_lat != null && t.fim_lng != null) ? 'segmento' : 'ponto',
 });
 
@@ -372,23 +372,25 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
       fim: tipo === 'segmento' ? t.fim : '',
       area: tipo === 'area' ? t.area : null,
       segmentos: tipo === 'segmento' ? t.segmentos : [],
-      pendente: tipo === 'segmento' ? t.pendente : null,
+      rascunho: tipo === 'segmento' ? t.rascunho : [],
     } : t)));
     setSalvo(false);
   };
   // O mapa de marcação grava nos campos do formulário (texto de coordenadas e área).
-  const marcarNoMapa = (i: number, p: { inicio?: [number, number] | null; fim?: [number, number] | null; area?: Anel | null; segmentos?: Segmento[]; pendente?: [number, number] | null }) => {
+  const marcarNoMapa = (i: number, p: { inicio?: [number, number] | null; fim?: [number, number] | null; area?: Anel | null; segmentos?: Segmento[]; rascunho?: [number, number][] }) => {
     setTrechos((ts) => ts.map((t, j) => {
       if (j !== i) return t;
       const next = { ...t };
       if (p.inicio !== undefined) next.inicio = p.inicio ? coordenadaTexto(p.inicio[1], p.inicio[0]) : '';
       if (p.fim !== undefined) next.fim = p.fim ? coordenadaTexto(p.fim[1], p.fim[0]) : '';
       if (p.area !== undefined) next.area = p.area;
-      if (p.pendente !== undefined) next.pendente = p.pendente;
+      if (p.rascunho !== undefined) next.rascunho = p.rascunho;
       if (p.segmentos !== undefined) {
         next.segmentos = p.segmentos;
         // O primeiro segmento preenche início e fim, para as telas e consultas que ainda leem esses campos.
-        const [a, b] = p.segmentos[0] ?? [null, null];
+        const primeiro = p.segmentos[0] ?? [];
+        const a = primeiro[0] ?? null;
+        const b = primeiro.length >= 2 ? primeiro[primeiro.length - 1] : null;
         next.inicio = a ? coordenadaTexto(a[1], a[0]) : '';
         next.fim = b ? coordenadaTexto(b[1], b[0]) : '';
       }
@@ -468,7 +470,7 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
       // Vários segmentos marcados no mapa: o trecho guarda todos, e o início e o fim são os do primeiro.
       const varios = t.tipo === 'segmento' && t.segmentos.length > 0 ? t.segmentos : null;
       if (varios) {
-        if (t.pendente) return `Trecho${n}: há um segmento com só o início marcado. Clique no fim dele ou desfaça o início.`;
+        if (t.rascunho.length > 0) return `Trecho${n}: há um segmento em andamento. Conclua o segmento no mapa ou cancele.`;
         const erroSeg = problemaSegmentos(varios);
         if (erroSeg) return `Trecho${n}: ${erroSeg}`;
       }
@@ -945,7 +947,7 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
                                      fim={lerCoordenada(t.fim) ? [lerCoordenada(t.fim)!.lng, lerCoordenada(t.fim)!.lat] : null}
                                      area={t.area}
                                      segmentos={t.tipo === 'segmento' ? t.segmentos : undefined}
-                                     pendente={t.pendente} ro={ro} onChange={(p) => marcarNoMapa(i, p)} />
+                                     rascunho={t.rascunho} ro={ro} onChange={(p) => marcarNoMapa(i, p)} />
                       </Suspense>
                     )}
                   </div>
