@@ -39,10 +39,10 @@ test.describe('comunicações ao CISP na consulta pública', () => {
     await expect.poll(() => backend.de('comunicacoes_publicas').length).toBeGreaterThan(0);
   });
 
-  test('sem comunicações, a legenda e o filtro não aparecem', async ({ page }) => {
+  test('sem comunicações, a legenda continua visível e o filtro não aparece', async ({ page }) => {
     await instalarBackend(page, { comunicacoes: [] });
     await page.goto('/consulta/obras');
-    await expect(page.getByRole('list', { name: 'Legenda das comunicações ao CISP' })).toHaveCount(0);
+    await expect(page.getByRole('list', { name: 'Legenda das comunicações ao CISP' })).toContainText('Obra pública sem licença');
     await expect(page.locator('section[aria-label="Filtro das comunicações ao CISP"]')).toHaveCount(0);
   });
 });

@@ -139,7 +139,7 @@ export default function ConsultaObras() {
                 <FiltroComunicacoes ampliado={ampliarComunicacoes} onMudar={setAmpliarComunicacoes}
                                     visiveis={comunicacoesVisiveis.length} total={comunicacoes.length} />
               )}
-              {(comunicacoesVisiveis.length > 0 || intervencoesVisiveis.length > 0) && <LegendaComunicacoes />}
+              <LegendaComunicacoes />
             </div>
             </div>
           </div>
