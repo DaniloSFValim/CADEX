@@ -5,6 +5,7 @@ import { Badge, Button, Card, Empty, ErrorNote, Kpi, Spinner, Titulo, botaoLink,
 import { dataBR } from '../components/Situacao';
 import { useAuth } from '../lib/auth';
 import { ExcluirLicenca } from '../components/ExclusaoLicenca';
+import ObrasSemLicencaSecao from '../components/ObrasSemLicencaSecao';
 import { listarOrgaos, type Orgao } from '../lib/orgaos';
 import { listarTipos, mapaRotulosTipos, rotuloDoTipo } from '../lib/tiposIntervencao';
 import { SETORES, SETOR_LABEL, hojeISO, listarEmpresas, nomeEmpresa, type Empresa } from '../lib/empresas';
@@ -173,6 +174,9 @@ export default function Licencas() {
           </div>
         )}
       </section>
+      <div className="mt-6">
+        <ObrasSemLicencaSecao empresas={empresas} />
+      </div>
     </>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button, Card, Empty, ErrorNote, Spinner, inputClass, tabela } from '../components/ui';
 import { ExcluirLicenca } from '../components/ExclusaoLicenca';
+import ObrasSemLicencaSecao from '../components/ObrasSemLicencaSecao';
 import { dataBR } from '../components/Situacao';
 import { contagensLicencas, inconsistencias, type CategoriaProblema } from '../lib/admin';
 import { hojeISO, listarEmpresas, type Empresa } from '../lib/empresas';
@@ -99,6 +100,10 @@ export default function AdminLicencas() {
           {' '}Lançada por engano? Use Excluir: ela vai para a lixeira, abaixo. O histórico mostra quem alterou o quê e quando, direto da auditoria.
         </p>
       </Card>
+
+      <div className="mt-6">
+        <ObrasSemLicencaSecao empresas={empresas} />
+      </div>
 
       <Card title={`Registros a revisar (${revisar.length})`} semPadding>
         <p className="border-b border-tinta-100 px-4 py-3 text-sm text-tinta-500">
