@@ -7,7 +7,7 @@ import { SETORES, SETOR_LABEL, atuaNoSetor, hojeISO, listarEmpresas, nomeEmpresa
 import { listarTipos, type TipoIntervencao as TipoDeObra } from '../lib/tiposIntervencao';
 import { TIPO_INTERVENCAO_LABEL, TIPOS_INTERVENCAO, type TipoIntervencao, coordenadaTexto, lerCoordenada } from '../lib/licencas';
 import { listarOrgaos, nomeOrgao, type Orgao } from '../lib/orgaos';
-import { lerAreaWkb, lerSegmentosWkb, type Segmento } from '../lib/areaTrecho';
+import { lerAreaWkb, lerSegmentos, type Segmento } from '../lib/areaTrecho';
 
 const DesenhoArea = lazy(() => import('../components/DesenhoArea'));
 import {
@@ -152,9 +152,9 @@ function paraForm(r: IntervencaoSemLicenca): FormSemLicenca {
     executora_cnpj: s(r.executora_cnpj), logradouro: r.logradouro, bairro: s(r.bairro), referencia: s(r.referencia),
     inicio: coordenadaTexto(r.inicio_lat, r.inicio_lng),
     fim: r.fim_lat != null && r.fim_lng != null ? coordenadaTexto(r.fim_lat, r.fim_lng) : '',
-    tipo: lerAreaWkb(r.area ?? null) ? 'area' : (lerSegmentosWkb(r.segmentos)?.length ?? 0) > 0 || (r.fim_lat != null && r.fim_lng != null) ? 'segmento' : 'ponto',
+    tipo: lerAreaWkb(r.area ?? null) ? 'area' : (lerSegmentos(r.segmentos)?.length ?? 0) > 0 || (r.fim_lat != null && r.fim_lng != null) ? 'segmento' : 'ponto',
     area: lerAreaWkb(r.area ?? null),
-    segmentos: lerSegmentosWkb(r.segmentos) ?? [],
+    segmentos: lerSegmentos(r.segmentos) ?? [],
     rascunho: [],
     inicio_previsto: s(r.inicio_previsto), fim_previsto: s(r.fim_previsto), situacao: r.situacao,
     concluida_em: s(r.concluida_em), processo_sei: s(r.processo_sei), contrato_numero: s(r.contrato_numero),

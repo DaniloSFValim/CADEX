@@ -93,6 +93,21 @@ export function segmentosParaEwkt(segs: Segmento[]): string {
   return `SRID=4326;MULTILINESTRING(${linhas})`;
 }
 
+/**
+ * Lê os segmentos em qualquer formato que a API devolve: EWKB em hexadecimal (tabelas) ou o objeto
+ * GeoJSON MultiLineString (views). Sem um dos dois, devolve null.
+ */
+export function lerSegmentos(valor: unknown): Segmento[] | null {
+  if (typeof valor === 'string') return lerSegmentosWkb(valor);
+  if (valor && typeof valor === 'object' && (valor as { type?: unknown }).type === 'MultiLineString') {
+    const coords = (valor as { coordinates?: unknown }).coordinates;
+    if (!Array.isArray(coords)) return null;
+    const segs = (coords as Segmento[]).filter((s) => Array.isArray(s) && s.length >= 2);
+    return segs.length > 0 ? segs : null;
+  }
+  return null;
+}
+
 /** GeoJSON que a função salvar_licenca aceita no campo "segmentos" do trecho. */
 export function segmentosParaGeoJson(segs: Segmento[]): string {
   return JSON.stringify({ type: 'MultiLineString', coordinates: segs });
