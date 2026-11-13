@@ -583,7 +583,9 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, inte
     let quadro = 0;
     const t0 = performance.now();
     const passo = (agora: number) => {
-      const fase = ((agora - t0) % 1400) / 1400;
+      // A fase fica entre 0 e 1: o primeiro quadro pode vir com um tempo anterior a t0, e o resto negativo
+      // levaria a opacidade acima de 1, o que o MapLibre recusa.
+      const fase = (((agora - t0) % 1400) + 1400) % 1400 / 1400;
       if (m.getLayer('intervencao-foco-ponto')) {
         m.setPaintProperty('intervencao-foco-ponto', 'circle-radius', 9 + 9 * Math.sin(fase * Math.PI));
         m.setPaintProperty('intervencao-foco-ponto', 'circle-stroke-opacity', 1 - 0.6 * fase);
