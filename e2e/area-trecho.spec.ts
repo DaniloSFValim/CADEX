@@ -2,11 +2,11 @@ import { expect, test } from '@playwright/test';
 import { instalarBackend } from './apoio/backend';
 
 test.describe('área da intervenção no formulário da licença', () => {
-  test('trecho novo começa como segmento; ponto e área não são oferecidos', async ({ page }) => {
+  test('trecho novo começa como segmento; ponto avulso é oferecido; área não é oferecida', async ({ page }) => {
     await instalarBackend(page);
     await page.goto('/obras/nova');
     await expect(page.getByRole('radio', { name: 'Segmento' })).toBeChecked();
-    await expect(page.getByRole('radio', { name: 'Ponto' })).toHaveCount(0);
+    await expect(page.getByRole('radio', { name: 'Ponto' })).toHaveCount(1);
     await expect(page.getByRole('radio', { name: 'Área' })).toHaveCount(0);
   });
 

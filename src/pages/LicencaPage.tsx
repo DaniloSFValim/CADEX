@@ -903,8 +903,8 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
                 </div>
                 <fieldset className="flex flex-wrap items-center gap-x-5 gap-y-2 sm:col-span-6" disabled={ro}>
                   <legend className="mb-1 text-sm font-medium text-tinta-800">Tipo de trecho</legend>
-                  {/* Trecho novo só aceita segmento (linha com quantos pontos forem). Ponto e área ficam só para trechos antigos que já os têm. */}
-                  {(Object.keys(ROTULO_TIPO_TRECHO) as TipoTrechoForm[]).filter((tipo) => tipo === 'segmento' || t.tipo === tipo).map((tipo) => (
+                  {/* Trecho novo aceita segmento (linha com quantos pontos forem) e ponto avulso. Área fica só para trechos antigos que já a têm. */}
+                  {(Object.keys(ROTULO_TIPO_TRECHO) as TipoTrechoForm[]).filter((tipo) => tipo === 'segmento' || tipo === 'ponto' || t.tipo === tipo).map((tipo) => (
                     <label key={tipo} className="inline-flex items-center gap-2 text-sm text-tinta-800">
                       <input type="radio" name={`tipo-trecho-${i}`} value={tipo} checked={t.tipo === tipo}
                              onChange={() => setTipoTrecho(i, tipo)} className="accent-marca-600" />
