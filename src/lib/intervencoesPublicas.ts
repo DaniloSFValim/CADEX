@@ -1,6 +1,9 @@
 import type { FeatureCollection, Feature, Point, LineString, MultiLineString } from 'geojson';
 import { supabase } from './supabase';
 import { lerSegmentosWkb, type Segmento } from './areaTrecho';
+import { SETOR_LABEL, type Setor } from './empresas';
+import { TIPO_INTERVENCAO_LABEL, type TipoIntervencao } from './licencas';
+import { SITUACAO_SEM_LICENCA_LABEL, type SituacaoSemLicenca } from './semLicenca';
 
 /**
  * Obra ou serviço sem licença como aparece no mapa público (view intervencoes_publicas).
@@ -64,6 +67,10 @@ export function intervencoesParaGeoJSON(lista: IntervencaoPublica[]): FeatureCol
       rotulo: ROTULO_INTERVENCAO[i.categoria],
       empresa: i.executora ?? (i.categoria === 'publica' ? 'Execução própria do órgão público' : ''),
       servico: i.escopo,
+      tipo: TIPO_INTERVENCAO_LABEL[i.tipo_intervencao as TipoIntervencao] ?? i.tipo_intervencao,
+      setor: SETOR_LABEL[i.setor as Setor] ?? i.setor,
+      situacao: SITUACAO_SEM_LICENCA_LABEL[i.situacao as SituacaoSemLicenca] ?? i.situacao,
+      bairro: i.bairro ?? '',
       local,
       descricao: i.referencia ?? '',
       quando: `${i.inicio_previsto ?? 'início não informado'} a ${i.fim_previsto ?? 'fim não informado'}`,
