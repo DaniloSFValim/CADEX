@@ -25,6 +25,7 @@ export default function FichaIntervencao({ dados, onFechar }: {
     ['Tipo', dados.tipo],
     ['Setor', dados.setor],
     ['Situação', dados.situacao],
+    ['Contratante', dados.contratante],
     ['Executora', dados.empresa],
     ['Serviço', dados.servico],
     ['Local', dados.local],

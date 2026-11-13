@@ -40,6 +40,8 @@ export interface IntervencaoPublica {
   licenca_codigo: string | null;
   /** Vários segmentos de rua (EWKB em hexadecimal). Nulo quando há só o trecho início-fim. */
   segmentos?: string | null;
+  /** Nome do órgão contratante. */
+  contratante?: string | null;
 }
 
 /** Limite da consulta, como nas comunicações. */
@@ -55,6 +57,19 @@ export const ROTULO_INTERVENCAO: Record<CategoriaIntervencao, string> = {
   sem_licenca: 'Obra ou serviço sem licença',
   publica: 'Obra pública sem licença',
 };
+
+/** Data ISO (aaaa-mm-dd) em dd/mm/aaaa. */
+export function dataBR(iso: string | null | undefined): string {
+  return iso ? iso.split('-').reverse().join('/') : '';
+}
+
+/** Período previsto para o cartão: "dd/mm/aaaa a dd/mm/aaaa", com aviso quando falta uma das datas. */
+export function periodoBR(inicio: string | null | undefined, fim: string | null | undefined): string {
+  const a = dataBR(inicio);
+  const b = dataBR(fim);
+  if (!a && !b) return 'Datas não informadas';
+  return `${a || 'início não informado'} a ${b || 'fim não informado'}`;
+}
 
 /** Ponto de início, com linha até o fim quando há trecho. Coordenadas no formato [lng, lat]. */
 export function intervencoesParaGeoJSON(lista: IntervencaoPublica[]): FeatureCollection {
@@ -73,7 +88,8 @@ export function intervencoesParaGeoJSON(lista: IntervencaoPublica[]): FeatureCol
       bairro: i.bairro ?? '',
       local,
       descricao: i.referencia ?? '',
-      quando: `${i.inicio_previsto ?? 'início não informado'} a ${i.fim_previsto ?? 'fim não informado'}`,
+      quando: periodoBR(i.inicio_previsto, i.fim_previsto),
+      contratante: i.contratante ?? '',
       // Um só campo de processo no cadastro (o administrativo). Linhas antigas com SEI aparecem nele.
       processo: '',
       processo_administrativo: i.processo_administrativo ?? i.processo_sei ?? '',
