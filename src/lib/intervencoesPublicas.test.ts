@@ -79,3 +79,15 @@ describe('período e contratante no cartão', () => {
     expect(fc.features[0].properties?.quando).toBe(periodoBR(base.inicio_previsto, base.fim_previsto));
   });
 });
+
+describe('galeria no cartão', () => {
+  it('leva as imagens para o mapa como texto JSON', () => {
+    const fc = intervencoesParaGeoJSON([{ ...base, fotos_imagens: ['https://a.example.test/1.jpg', 'https://a.example.test/2.jpg'] }]);
+    expect(JSON.parse(String(fc.features[0].properties?.fotos))).toEqual(['https://a.example.test/1.jpg', 'https://a.example.test/2.jpg']);
+  });
+
+  it('sem imagens, a lista vem vazia', () => {
+    const fc = intervencoesParaGeoJSON([{ ...base, fotos_imagens: null }]);
+    expect(fc.features[0].properties?.fotos).toBe('[]');
+  });
+});

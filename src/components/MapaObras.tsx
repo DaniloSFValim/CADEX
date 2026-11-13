@@ -257,6 +257,18 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, inte
             id: 'obras-calor-foco', type: 'circle', source: 'calor-foco',
             paint: { 'circle-color': 'rgba(0,0,0,0)', 'circle-radius': 18, 'circle-stroke-color': '#0b2530', 'circle-stroke-width': 2, 'circle-stroke-opacity': 0.8 },
           },
+          // Traçado da obra pública em destaque: abaixo dos pontos licenciados, para não cobri-los.
+          {
+            id: 'intervencao-foco-trecho-contorno', type: 'line', source: 'intervencao-foco',
+            filter: ['match', ['geometry-type'], ['LineString', 'MultiLineString'], true, false],
+            layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#ffffff', 'line-width': 11, 'line-opacity': 0.95 },
+          },
+          {
+            id: 'intervencao-foco-trecho', type: 'line', source: 'intervencao-foco',
+            filter: ['match', ['geometry-type'], ['LineString', 'MultiLineString'], true, false],
+            layout: { 'line-cap': 'round', 'line-join': 'round' },
+            paint: { 'line-color': ['match', ['get', 'categoria'], 'publica', '#7c3aed', '#eab308'], 'line-width': 6 },
+          },
           {
             id: 'obras-pontos', type: 'circle', source: 'obras',
             filter: ['all', ['==', ['geometry-type'], 'Point'], ['!', ['has', 'point_count']]],
@@ -297,17 +309,6 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, inte
               'icon-size': ['interpolate', ['linear'], ['zoom'], 12, 0.7, 17, 1.1],
               'icon-allow-overlap': true,
             },
-          },
-          {
-            id: 'intervencao-foco-trecho-contorno', type: 'line', source: 'intervencao-foco',
-            filter: ['match', ['geometry-type'], ['LineString', 'MultiLineString'], true, false],
-            layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#ffffff', 'line-width': 11, 'line-opacity': 0.95 },
-          },
-          {
-            id: 'intervencao-foco-trecho', type: 'line', source: 'intervencao-foco',
-            filter: ['match', ['geometry-type'], ['LineString', 'MultiLineString'], true, false],
-            layout: { 'line-cap': 'round', 'line-join': 'round' },
-            paint: { 'line-color': ['match', ['get', 'categoria'], 'publica', '#7c3aed', '#eab308'], 'line-width': 6 },
           },
           {
             id: 'intervencao-foco-ponto', type: 'circle', source: 'intervencao-foco',

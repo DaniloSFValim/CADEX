@@ -103,3 +103,25 @@ describe('obra sem licença com vários segmentos', () => {
     expect('linha' in r && r.linha.segmentos).toBeNull();
   });
 });
+
+describe('galeria de imagens da obra sem licença', () => {
+  it('aceita até 12 links https, um por linha, e grava a lista', () => {
+    const r = montarSemLicenca(base({ tipo: 'ponto', fotos_imagens: 'https://a.example.test/1.jpg\n  https://a.example.test/2.jpg  \n' }));
+    expect('linha' in r && r.linha.fotos_imagens).toEqual(['https://a.example.test/1.jpg', 'https://a.example.test/2.jpg']);
+  });
+
+  it('recusa link que não é https', () => {
+    const r = montarSemLicenca(base({ tipo: 'ponto', fotos_imagens: 'http://inseguro.example.test/1.jpg' }));
+    expect(erro(r)).toBe('Cada imagem precisa de um link https: "http://inseguro.example.test/1.jpg".');
+  });
+
+  it('recusa mais de 12 imagens', () => {
+    const lista = Array.from({ length: 13 }, (_, i) => `https://a.example.test/${i}.jpg`).join('\n');
+    expect(erro(montarSemLicenca(base({ tipo: 'ponto', fotos_imagens: lista })))).toBe('A galeria aceita até 12 imagens por obra.');
+  });
+
+  it('campo vazio grava nulo', () => {
+    const r = montarSemLicenca(base({ tipo: 'ponto', fotos_imagens: '  \n ' }));
+    expect('linha' in r && r.linha.fotos_imagens).toBeNull();
+  });
+});

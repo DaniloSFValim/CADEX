@@ -28,6 +28,8 @@ export default function ConsultaObras() {
   const [foco, setFoco] = useState<string | null>(null);
   // Obra ou serviço sem licença selecionado no mapa: cartão próprio, no mesmo canto da ficha da licença.
   const [intervencaoSel, setIntervencaoSel] = useState<Record<string, string> | null>(null);
+  // Obra pública em destaque no mapa: continua destacada ao clicar numa obra licenciada.
+  const [destaqueIntervencao, setDestaqueIntervencao] = useState<string | null>(null);
   const [destaque, setDestaque] = useState<string | null>(null);
   const [modo, setModo] = useState<'pontos' | 'calor'>('pontos');
   // Por padrão, a consulta mostra todas as obras licenciadas, inclusive as encerradas.
@@ -132,11 +134,11 @@ export default function ConsultaObras() {
                   <MapaObras obras={listadas} comunicacoes={comunicacoesVisiveis} intervencoes={intervencoesVisiveis}
                              foco={foco} destaque={destaque} modo={modo} bairro={bairro}
                              onSelecionar={(c) => { setIntervencaoSel(null); setFoco(c); }}
-                             onIntervencao={(d) => { setFoco(null); setIntervencaoSel(d); }}
-                             intervencaoFoco={intervencaoSel?.id ?? null}
+                             onIntervencao={(d) => { setFoco(null); setIntervencaoSel(d); setDestaqueIntervencao(d.id ?? null); }}
+                             intervencaoFoco={destaqueIntervencao}
                              onBairro={setBairro} onDestacar={setDestaque} onGrupo={setGrupo} />
                   {!selecionada && intervencaoSel && (
-                    <FichaIntervencao dados={intervencaoSel} onFechar={() => setIntervencaoSel(null)} />
+                    <FichaIntervencao dados={intervencaoSel} onFechar={() => { setIntervencaoSel(null); setDestaqueIntervencao(null); }} />
                   )}
                   {selecionada && (
                     <FichaObra obra={selecionada} onFechar={() => setFoco(null)} detalhes={detalhesDaObra(selecionada, rotulos)} />

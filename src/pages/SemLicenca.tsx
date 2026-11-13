@@ -159,7 +159,7 @@ function paraForm(r: IntervencaoSemLicenca): FormSemLicenca {
     inicio_previsto: s(r.inicio_previsto), fim_previsto: s(r.fim_previsto), situacao: r.situacao,
     concluida_em: s(r.concluida_em), processo_sei: s(r.processo_sei), contrato_numero: s(r.contrato_numero),
     processo_administrativo: s(r.processo_administrativo), ordem_servico_numero: s(r.ordem_servico_numero),
-    observacoes: s(r.observacoes), foto_url: s(r.foto_url),
+    observacoes: s(r.observacoes), foto_url: s(r.foto_url), fotos_imagens: (r.fotos_imagens ?? []).join('\n'),
   };
 }
 
@@ -377,8 +377,11 @@ function FormSemLicenca({ atual, empresas, orgaos, tipos, somenteLeitura, onSalv
       </Card>
 
       <Card title="Fotos (opcional)">
-        <Field label="Link das fotos (https)" hint="Pasta ou álbum das imagens, hospedado fora do CADEX. A prévia aparece no cartão da consulta pública.">
+        <Field label="Pasta com todas as fotos (https)" hint="Pasta pública (Google Drive, OneDrive etc.). Aparece no cartão como “Mais fotos”.">
           <input className={inputClass} type="url" placeholder="https://" {...campo('foto_url')} />
+        </Field>
+        <Field label="Imagens da galeria (https)" className="mt-4" hint="Um link direto de imagem por linha, até 12. Aparecem como galeria no cartão da consulta pública.">
+          <textarea className={`${inputClass} tabular`} rows={4} placeholder="https://…/foto1.jpg" {...campo('fotos_imagens')} />
         </Field>
       </Card>
 
