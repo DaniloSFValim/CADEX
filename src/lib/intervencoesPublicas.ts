@@ -1,5 +1,6 @@
-import type { FeatureCollection, Feature, Point, LineString } from 'geojson';
+import type { FeatureCollection, Feature, Point, LineString, MultiLineString } from 'geojson';
 import { supabase } from './supabase';
+import { lerSegmentosWkb, type Segmento } from './areaTrecho';
 
 /**
  * Obra ou serviço sem licença como aparece no mapa público (view intervencoes_publicas).
@@ -34,6 +35,8 @@ export interface IntervencaoPublica {
   foto_url: string | null;
   /** Código público da licença, quando a obra foi regularizada. */
   licenca_codigo: string | null;
+  /** Vários segmentos de rua (EWKB em hexadecimal). Nulo quando há só o trecho início-fim. */
+  segmentos?: string | null;
 }
 
 /** Limite da consulta, como nas comunicações. */
@@ -76,6 +79,15 @@ export function intervencoesParaGeoJSON(lista: IntervencaoPublica[]): FeatureCol
       type: 'Feature', properties: propriedades,
       geometry: { type: 'Point', coordinates: [i.inicio_lng, i.inicio_lat] },
     };
+    // Vários segmentos (os dois lados da rua) são desenhados inteiros; senão, a linha início-fim.
+    const segs: Segmento[] | null = lerSegmentosWkb(i.segmentos);
+    if (segs && segs.length > 0) {
+      const trechos: Feature<MultiLineString> = {
+        type: 'Feature', properties: propriedades,
+        geometry: { type: 'MultiLineString', coordinates: segs },
+      };
+      return [ponto, trechos];
+    }
     if (i.fim_lat == null || i.fim_lng == null) return [ponto];
     const trecho: Feature<LineString> = {
       type: 'Feature', properties: propriedades,

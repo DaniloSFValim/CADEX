@@ -288,12 +288,12 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, inte
           // Obras sem licença: linha contínua; amarela para empresa cadastrada, violeta para obra pública.
           {
             id: 'intervencoes-trechos-sem-licenca', type: 'line', source: 'intervencoes',
-            filter: ['all', ['==', ['geometry-type'], 'LineString'], ['==', ['get', 'categoria'], 'sem_licenca']],
+            filter: ['all', ['match', ['geometry-type'], ['LineString', 'MultiLineString'], true, false], ['==', ['get', 'categoria'], 'sem_licenca']],
             layout: { 'line-cap': 'round' }, paint: { 'line-color': '#eab308', 'line-width': 5, 'line-opacity': 0.9 },
           },
           {
             id: 'intervencoes-trechos-publica', type: 'line', source: 'intervencoes',
-            filter: ['all', ['==', ['geometry-type'], 'LineString'], ['==', ['get', 'categoria'], 'publica']],
+            filter: ['all', ['match', ['geometry-type'], ['LineString', 'MultiLineString'], true, false], ['==', ['get', 'categoria'], 'publica']],
             layout: { 'line-cap': 'round' }, paint: { 'line-color': '#7c3aed', 'line-width': 5, 'line-opacity': 0.9 },
           },
           {

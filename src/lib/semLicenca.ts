@@ -2,7 +2,7 @@ import { supabase } from './supabase';
 import { lerCoordenada, TIPO_INTERVENCAO_LABEL, type TipoIntervencao } from './licencas';
 import type { Setor } from './empresas';
 import { onlyDigits } from './cnpj';
-import { areaParaEwkt, problemaArea, type Anel } from './areaTrecho';
+import { areaParaEwkt, problemaArea, problemaSegmentos, segmentosParaEwkt, type Anel, type Segmento } from './areaTrecho';
 
 // ---------------------------------------------------------------------
 // Obras e serviços sem licença: registro à parte das licenças. Não entra
@@ -49,6 +49,8 @@ export interface IntervencaoSemLicenca {
   fim_lng: number | null;
   /** Área da intervenção: EWKB em hexadecimal ao ler. */
   area?: string | null;
+  /** Vários segmentos de rua: EWKB em hexadecimal ao ler. Vazio quando o trecho é um só. */
+  segmentos?: string | null;
   inicio_previsto: string | null;
   fim_previsto: string | null;
   situacao: SituacaoSemLicenca;
@@ -85,6 +87,9 @@ export interface FormSemLicenca {
   /** Ponto: só o início. Segmento: início e fim. Área: polígono (o início é o primeiro vértice). */
   tipo: 'ponto' | 'segmento' | 'area';
   area: Anel | null;
+  /** Segmentos concluídos no mapa (só no tipo segmento) e o traçado em andamento. */
+  segmentos: Segmento[];
+  rascunho: [number, number][];
   inicio_previsto: string;
   fim_previsto: string;
   situacao: SituacaoSemLicenca;
@@ -100,12 +105,12 @@ export interface FormSemLicenca {
 export const FORM_SEM_LICENCA_VAZIO: FormSemLicenca = {
   setor: 'viario', publica: false, tipo_intervencao: '', tipos_obra: [], outros_descricao: '', escopo: '', contratante_orgao_id: '', executora_modo: 'propria_orgao',
   executora_id: '', executora_razao_social: '', executora_cnpj: '', logradouro: '', bairro: '', referencia: '',
-  inicio: '', fim: '', tipo: 'ponto', area: null, inicio_previsto: '', fim_previsto: '', situacao: 'em_execucao', concluida_em: '',
+  inicio: '', fim: '', tipo: 'ponto', area: null, segmentos: [], rascunho: [], inicio_previsto: '', fim_previsto: '', situacao: 'em_execucao', concluida_em: '',
   processo_sei: '', contrato_numero: '', processo_administrativo: '', ordem_servico_numero: '', observacoes: '', foto_url: '',
 };
 
 /** Linha do banco, sem os campos que o banco preenche. */
-export type LinhaSemLicenca = Omit<IntervencaoSemLicenca, 'id' | 'atualizado_em'> & { id?: string };
+export type LinhaSemLicenca = Omit<IntervencaoSemLicenca, 'id' | 'atualizado_em' | 'segmentos'> & { id?: string; segmentos: string | null };
 
 /**
  * Confere o formulário antes de enviar. Devolve a mensagem do primeiro problema, ou a linha pronta
@@ -138,6 +143,13 @@ export function montarSemLicenca(f: FormSemLicenca): { linha: LinhaSemLicenca } 
   if (f.tipo === 'segmento' && !f.fim.trim()) return { erro: 'Informe o fim do segmento, ou escolha Ponto.' };
   const fim = f.tipo === 'segmento' && f.fim.trim() ? lerCoordenada(f.fim) : null;
   if (f.tipo === 'segmento' && f.fim.trim() && !fim) return { erro: 'Coordenada de fim não reconhecida ou fora de Niterói.' };
+  // Vários segmentos marcados no mapa: a linha guarda todos; início e fim são os do primeiro.
+  const varios = f.tipo === 'segmento' && f.segmentos.length > 0 ? f.segmentos : null;
+  if (varios) {
+    if (f.rascunho.length > 0) return { erro: 'Há um segmento em andamento. Conclua o segmento no mapa ou cancele.' };
+    const erroSeg = problemaSegmentos(varios);
+    if (erroSeg) return { erro: erroSeg };
+  }
   if (f.inicio_previsto && f.fim_previsto && f.fim_previsto < f.inicio_previsto) {
     return { erro: 'O fim previsto não pode ser anterior ao início.' };
   }
@@ -165,6 +177,7 @@ export function montarSemLicenca(f: FormSemLicenca): { linha: LinhaSemLicenca } 
       inicio_lng: ini.lng,
       fim_lat: fim?.lat ?? null,
       fim_lng: fim?.lng ?? null,
+      segmentos: varios ? segmentosParaEwkt(varios) : null,
       area: area ? areaParaEwkt(area) : null,
       inicio_previsto: n(f.inicio_previsto),
       fim_previsto: n(f.fim_previsto),

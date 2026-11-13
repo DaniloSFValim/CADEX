@@ -938,7 +938,7 @@ function LicencaForm({ licenca, empresas, vinculos, orgaos, tipos, somenteLeitur
                         {areaAberta === i ? 'Ocultar o mapa' : 'Marcar no mapa'}
                       </Button>
                       <span className="ml-3 text-sm text-tinta-500">
-                        {t.tipo === 'area' ? 'Marque os cantos da área.' : t.tipo === 'segmento' ? 'Marque o início e o fim.' : 'Marque o ponto.'}
+                        {t.tipo === 'area' ? 'Marque os cantos da área.' : t.tipo === 'segmento' ? 'Marque os pontos do trecho, um clique por ponto, e conclua cada segmento.' : 'Marque o ponto.'}
                       </span>
                     </div>
                     {areaAberta === i && (

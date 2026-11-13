@@ -7,7 +7,7 @@ import { SETORES, SETOR_LABEL, atuaNoSetor, hojeISO, listarEmpresas, nomeEmpresa
 import { listarTipos, type TipoIntervencao as TipoDeObra } from '../lib/tiposIntervencao';
 import { TIPO_INTERVENCAO_LABEL, TIPOS_INTERVENCAO, type TipoIntervencao, coordenadaTexto, lerCoordenada } from '../lib/licencas';
 import { listarOrgaos, nomeOrgao, type Orgao } from '../lib/orgaos';
-import { lerAreaWkb } from '../lib/areaTrecho';
+import { lerAreaWkb, lerSegmentosWkb, type Segmento } from '../lib/areaTrecho';
 
 const DesenhoArea = lazy(() => import('../components/DesenhoArea'));
 import {
@@ -152,8 +152,10 @@ function paraForm(r: IntervencaoSemLicenca): FormSemLicenca {
     executora_cnpj: s(r.executora_cnpj), logradouro: r.logradouro, bairro: s(r.bairro), referencia: s(r.referencia),
     inicio: coordenadaTexto(r.inicio_lat, r.inicio_lng),
     fim: r.fim_lat != null && r.fim_lng != null ? coordenadaTexto(r.fim_lat, r.fim_lng) : '',
-    tipo: lerAreaWkb(r.area ?? null) ? 'area' : r.fim_lat != null && r.fim_lng != null ? 'segmento' : 'ponto',
+    tipo: lerAreaWkb(r.area ?? null) ? 'area' : (lerSegmentosWkb(r.segmentos)?.length ?? 0) > 0 || (r.fim_lat != null && r.fim_lng != null) ? 'segmento' : 'ponto',
     area: lerAreaWkb(r.area ?? null),
+    segmentos: lerSegmentosWkb(r.segmentos) ?? [],
+    rascunho: [],
     inicio_previsto: s(r.inicio_previsto), fim_previsto: s(r.fim_previsto), situacao: r.situacao,
     concluida_em: s(r.concluida_em), processo_sei: s(r.processo_sei), contrato_numero: s(r.contrato_numero),
     processo_administrativo: s(r.processo_administrativo), ordem_servico_numero: s(r.ordem_servico_numero),
@@ -304,7 +306,10 @@ function FormSemLicenca({ atual, empresas, orgaos, tipos, somenteLeitura, onSalv
             {([['ponto', 'Ponto'], ['segmento', 'Segmento'], ['area', 'Área']] as const).map(([tipo, rotulo]) => (
               <label key={tipo} className="inline-flex items-center gap-2 text-sm text-tinta-800">
                 <input type="radio" name="tipo-trecho-sem-licenca" value={tipo} checked={f.tipo === tipo}
-                       onChange={() => setF((x) => ({ ...x, tipo, fim: tipo === 'segmento' ? x.fim : '', area: tipo === 'area' ? x.area : null }))}
+                       onChange={() => setF((x) => ({
+                         ...x, tipo, fim: tipo === 'segmento' ? x.fim : '', area: tipo === 'area' ? x.area : null,
+                         segmentos: tipo === 'segmento' ? x.segmentos : [], rascunho: tipo === 'segmento' ? x.rascunho : [],
+                       }))}
                        className="accent-marca-600" />
                 {rotulo}
               </label>
@@ -332,12 +337,24 @@ function FormSemLicenca({ atual, empresas, orgaos, tipos, somenteLeitura, onSalv
                 <Suspense fallback={<div className="h-[360px] rounded-sm border border-tinta-200 bg-tinta-50" />}>
                   <DesenhoArea tipo={f.tipo}
                                inicio={lerCoordenadaPonto(f.inicio)} fim={lerCoordenadaPonto(f.fim)} area={f.area} ro={ro}
-                               onChange={(p) => setF((x) => ({
-                                 ...x,
-                                 ...(p.inicio !== undefined ? { inicio: p.inicio ? coordenadaTexto(p.inicio[1], p.inicio[0]) : '' } : {}),
-                                 ...(p.fim !== undefined ? { fim: p.fim ? coordenadaTexto(p.fim[1], p.fim[0]) : '' } : {}),
-                                 ...(p.area !== undefined ? { area: p.area } : {}),
-                               }))} />
+                               segmentos={f.tipo === 'segmento' ? f.segmentos : undefined} rascunho={f.rascunho}
+                               onChange={(p) => setF((x) => {
+                                 const prox = { ...x };
+                                 if (p.inicio !== undefined) prox.inicio = p.inicio ? coordenadaTexto(p.inicio[1], p.inicio[0]) : '';
+                                 if (p.fim !== undefined) prox.fim = p.fim ? coordenadaTexto(p.fim[1], p.fim[0]) : '';
+                                 if (p.area !== undefined) prox.area = p.area;
+                                 if (p.rascunho !== undefined) prox.rascunho = p.rascunho;
+                                 if (p.segmentos !== undefined) {
+                                   prox.segmentos = p.segmentos;
+                                   // O primeiro segmento preenche início e fim, como nas licenças.
+                                   const primeiro: Segmento = p.segmentos[0] ?? [];
+                                   const a = primeiro[0];
+                                   const b = primeiro.length >= 2 ? primeiro[primeiro.length - 1] : undefined;
+                                   prox.inicio = a ? coordenadaTexto(a[1], a[0]) : '';
+                                   prox.fim = b ? coordenadaTexto(b[1], b[0]) : '';
+                                 }
+                                 return prox;
+                               })} />
                 </Suspense>
               )}
             </div>

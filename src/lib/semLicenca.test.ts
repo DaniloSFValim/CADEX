@@ -77,3 +77,29 @@ describe('registro sem licença', () => {
     expect(r.linha.contrato_numero).toBe('CT 9/2026');
   });
 });
+
+describe('obra sem licença com vários segmentos', () => {
+  const dois = [
+    [[-43.1245, -22.8955], [-43.125, -22.896], [-43.1255, -22.8965]],
+    [[-43.1300, -22.9000], [-43.1310, -22.9010]],
+  ] as [number, number][][];
+
+  it('grava os segmentos em EWKT e usa o início e o fim do primeiro', () => {
+    const r = montarSemLicenca(base({ tipo: 'segmento', segmentos: dois, inicio: '-22.8955, -43.1245', fim: '-22.8965, -43.1255' }));
+    expect('linha' in r).toBe(true);
+    if (!('linha' in r)) return;
+    expect(r.linha.segmentos).toBe(
+      'SRID=4326;MULTILINESTRING((-43.1245 -22.8955, -43.125 -22.896, -43.1255 -22.8965), (-43.13 -22.9, -43.131 -22.901))');
+    expect(r.linha.fim_lat).toBe(-22.8965);
+  });
+
+  it('recusa salvar com um segmento em andamento no mapa', () => {
+    const r = montarSemLicenca(base({ tipo: 'segmento', segmentos: dois, rascunho: [[-43.14, -22.9]], fim: '-22.8965, -43.1255' }));
+    expect(erro(r)).toBe('Há um segmento em andamento. Conclua o segmento no mapa ou cancele.');
+  });
+
+  it('um trecho só, sem segmentos no mapa, segue como antes (segmentos nulo)', () => {
+    const r = montarSemLicenca(base({ tipo: 'segmento', fim: '-22.8965, -43.1255' }));
+    expect('linha' in r && r.linha.segmentos).toBeNull();
+  });
+});

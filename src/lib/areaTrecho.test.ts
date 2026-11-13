@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { areaParaGeoJson, lerAreaWkb, lerSegmentosWkb, problemaArea, problemaSegmentos, segmentosParaGeoJson, type Anel } from './areaTrecho';
+import { areaParaGeoJson, lerAreaWkb, lerSegmentosWkb, problemaArea, problemaSegmentos, segmentosParaEwkt, segmentosParaGeoJson, type Anel } from './areaTrecho';
 
 // EWKB gerado pelo próprio PostGIS-formato: polígono com SRID 4326 e quatro vértices.
 const HEX = '0103000020e610000001000000050000003d0ad7a3708d45c048e17a14aee736c0cdcccccccc8c45c048e17a14aee736c0cdcccccccc8c45c06666666666e636c03d0ad7a3708d45c06666666666e636c03d0ad7a3708d45c048e17a14aee736c0';
@@ -71,5 +71,12 @@ describe('segmentos do trecho', () => {
     expect(problemaSegmentos([[[-43.12, -22.9]]])).toMatch(/pelo menos dois pontos/);
     expect(problemaSegmentos([[[-43.12, -22.9], [-43.121, -22.901], [-43.122, -22.902]]])).toBeNull();
     expect(problemaSegmentos([[[-43.12, -22.9], [-43.121, -22.901]]])).toBeNull();
+  });
+});
+
+describe('EWKT dos segmentos', () => {
+  it('monta a MultiLineString com SRID 4326', () => {
+    expect(segmentosParaEwkt([[[-43.1, -22.9], [-43.11, -22.91]], [[-43.2, -22.95], [-43.21, -22.96]]])).toBe(
+      'SRID=4326;MULTILINESTRING((-43.1 -22.9, -43.11 -22.91), (-43.2 -22.95, -43.21 -22.96))');
   });
 });
