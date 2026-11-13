@@ -34,8 +34,10 @@ export interface IntervencaoPublica {
   processo_administrativo: string | null;
   contrato_numero: string | null;
   ordem_servico_numero: string | null;
-  /** Link https das fotos (hospedadas fora do CADEX). */
+  /** Link https da pasta com todas as fotos (hospedada fora do CADEX). */
   foto_url: string | null;
+  /** Links https diretos das imagens da galeria. */
+  fotos_imagens?: string[] | null;
   /** Código público da licença, quando a obra foi regularizada. */
   licenca_codigo: string | null;
   /** Vários segmentos de rua (EWKB em hexadecimal). Nulo quando há só o trecho início-fim. */
@@ -96,6 +98,8 @@ export function intervencoesParaGeoJSON(lista: IntervencaoPublica[]): FeatureCol
       contrato: i.contrato_numero ?? '',
       ordem_servico: i.ordem_servico_numero ?? '',
       foto_url: i.foto_url ?? '',
+      // Lista de imagens como texto JSON (propriedades do GeoJSON são planas).
+      fotos: JSON.stringify((i.fotos_imagens ?? []).filter(Boolean)),
       licenca_codigo: i.licenca_codigo ?? '',
     };
     const ponto: Feature<Point> = {

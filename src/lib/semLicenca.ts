@@ -60,8 +60,10 @@ export interface IntervencaoSemLicenca {
   processo_administrativo: string | null;
   ordem_servico_numero: string | null;
   observacoes: string | null;
-  /** Link https das fotos, hospedadas fora do CADEX. */
+  /** Link https da pasta com todas as fotos ("Mais fotos" no cartão). */
   foto_url: string | null;
+  /** Links https diretos das imagens da galeria (até 12). */
+  fotos_imagens?: string[] | null;
   licenca_id: string | null;
   atualizado_em: string;
 }
@@ -100,13 +102,15 @@ export interface FormSemLicenca {
   ordem_servico_numero: string;
   observacoes: string;
   foto_url: string;
+  /** Um link https de imagem por linha. */
+  fotos_imagens: string;
 }
 
 export const FORM_SEM_LICENCA_VAZIO: FormSemLicenca = {
   setor: 'viario', publica: false, tipo_intervencao: '', tipos_obra: [], outros_descricao: '', escopo: '', contratante_orgao_id: '', executora_modo: 'propria_orgao',
   executora_id: '', executora_razao_social: '', executora_cnpj: '', logradouro: '', bairro: '', referencia: '',
   inicio: '', fim: '', tipo: 'ponto', area: null, segmentos: [], rascunho: [], inicio_previsto: '', fim_previsto: '', situacao: 'em_execucao', concluida_em: '',
-  processo_sei: '', contrato_numero: '', processo_administrativo: '', ordem_servico_numero: '', observacoes: '', foto_url: '',
+  processo_sei: '', contrato_numero: '', processo_administrativo: '', ordem_servico_numero: '', observacoes: '', foto_url: '', fotos_imagens: '',
 };
 
 /** Linha do banco, sem os campos que o banco preenche. */
@@ -156,6 +160,10 @@ export function montarSemLicenca(f: FormSemLicenca): { linha: LinhaSemLicenca } 
   if (f.situacao === 'concluida' && !f.concluida_em) return { erro: 'Informe a data de conclusão.' };
 
   const n = (v: string) => v.trim() || null;
+  const imagens = f.fotos_imagens.split('\n').map((u) => u.trim()).filter(Boolean);
+  if (imagens.length > 12) return { erro: 'A galeria aceita até 12 imagens por obra.' };
+  const fora = imagens.find((u) => !/^https:\/\/\S+$/.test(u));
+  if (fora) return { erro: `Cada imagem precisa de um link https: "${fora}".` };
   const executora = f.executora_modo === 'empresa' ? f.executora_id : null;
   return {
     linha: {
@@ -189,6 +197,7 @@ export function montarSemLicenca(f: FormSemLicenca): { linha: LinhaSemLicenca } 
       ordem_servico_numero: n(f.ordem_servico_numero),
       observacoes: n(f.observacoes),
       foto_url: n(f.foto_url),
+      fotos_imagens: imagens.length > 0 ? imagens : null,
       licenca_id: null,
     },
   };
