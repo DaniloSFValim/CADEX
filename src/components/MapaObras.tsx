@@ -287,17 +287,8 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, inte
               'icon-allow-overlap': true,
             },
           },
-          // Obras sem licença: linha contínua; amarela para empresa cadastrada, violeta para obra pública.
-          {
-            id: 'intervencoes-trechos-sem-licenca', type: 'line', source: 'intervencoes',
-            filter: ['all', ['match', ['geometry-type'], ['LineString', 'MultiLineString'], true, false], ['==', ['get', 'categoria'], 'sem_licenca']],
-            layout: { 'line-cap': 'round' }, paint: { 'line-color': '#eab308', 'line-width': 5, 'line-opacity': 0.9 },
-          },
-          {
-            id: 'intervencoes-trechos-publica', type: 'line', source: 'intervencoes',
-            filter: ['all', ['match', ['geometry-type'], ['LineString', 'MultiLineString'], true, false], ['==', ['get', 'categoria'], 'publica']],
-            layout: { 'line-cap': 'round' }, paint: { 'line-color': '#7c3aed', 'line-width': 5, 'line-opacity': 0.9 },
-          },
+          // O traçado das obras sem licença não fica sempre visível: aparece só quando o ponto é clicado
+          // (camada 'intervencao-foco'). Aqui fica só o ponto.
           {
             id: 'intervencoes-marcas', type: 'symbol', source: 'intervencoes',
             filter: ['==', ['geometry-type'], 'Point'],
@@ -339,7 +330,7 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, inte
         if (vivo && !m.isStyleLoaded()) setErro(e.error?.message ?? 'Falha ao carregar o mapa.');
       });
       // Obras sem licença: o clique voa até a obra (zoom máximo, trecho inteiro) e só então abre o cartão.
-      for (const camada of ['intervencoes-marcas', 'intervencoes-trechos-sem-licenca', 'intervencoes-trechos-publica']) m.on('click', camada, (e: maplibregl.MapLayerMouseEvent) => {
+      for (const camada of ['intervencoes-marcas']) m.on('click', camada, (e: maplibregl.MapLayerMouseEvent) => {
         const f = e.features?.[0];
         if (!f) return;
         abrirIntervencao(m, f.properties as Record<string, string>);
