@@ -64,8 +64,9 @@ export function intervencoesParaGeoJSON(lista: IntervencaoPublica[]): FeatureCol
       local,
       descricao: i.referencia ?? '',
       quando: `${i.inicio_previsto ?? 'início não informado'} a ${i.fim_previsto ?? 'fim não informado'}`,
-      processo: i.processo_sei ?? '',
-      processo_administrativo: i.processo_administrativo ?? '',
+      // Um só campo de processo no cadastro (o administrativo). Linhas antigas com SEI aparecem nele.
+      processo: '',
+      processo_administrativo: i.processo_administrativo ?? i.processo_sei ?? '',
       contrato: i.contrato_numero ?? '',
       ordem_servico: i.ordem_servico_numero ?? '',
       foto_url: i.foto_url ?? '',

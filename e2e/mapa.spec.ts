@@ -68,6 +68,7 @@ test.describe('mapa de consulta', () => {
       await page.locator('label:has(> span:text-matches("^Logradouro[*]?$")) input').fill('Rua Mem de Sá');
       await page.locator('label:has(> span:text-matches("^Bairro[*]?$")) input').fill('Icaraí');
       await page.getByPlaceholder('-22.895000, -43.123000').first().fill('-22.905, -43.110');
+      await page.getByPlaceholder('-22.895000, -43.123000').nth(1).fill('-22.906, -43.111');
       await page.getByRole('button', { name: 'Criar licença' }).click();
       await expect.poll(() => backend.de('rpc/salvar_licenca').length).toBe(tipo === 'obra' ? 1 : 2);
     }
