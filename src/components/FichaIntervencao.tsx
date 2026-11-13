@@ -45,10 +45,16 @@ export default function FichaIntervencao({ dados, onFechar }: {
         </button>
       </div>
       {foto && !fotoFalhou && (
-        <a href={foto} target="_blank" rel="noopener noreferrer" className="block bg-tinta-100" aria-label="Abrir as fotos da obra">
-          <img src={foto} alt="Prévia das fotos da obra" loading="lazy" referrerPolicy="no-referrer"
-               className="h-36 w-full object-cover" onError={() => setFotoFalhou(true)} />
-        </a>
+        <figure className="border-b border-tinta-200 bg-tinta-100">
+          <a href={foto} target="_blank" rel="noopener noreferrer" aria-label="Abrir as fotos da obra" className="block">
+            <img src={foto} alt="Prévia das fotos da obra" loading="lazy" referrerPolicy="no-referrer"
+                 className="aspect-video w-full object-cover" onError={() => setFotoFalhou(true)} />
+          </a>
+          <figcaption className="flex items-center justify-between gap-2 px-4 py-2 text-xs font-semibold text-tinta-700">
+            <span>Fotos da obra</span>
+            <a href={foto} target="_blank" rel="noopener noreferrer" className="text-marca-700 hover:underline">Abrir o álbum</a>
+          </figcaption>
+        </figure>
       )}
       <dl className="grid gap-2 p-4 text-sm">
         {linhas.map(([rotulo, valor]) => (
@@ -58,14 +64,11 @@ export default function FichaIntervencao({ dados, onFechar }: {
           </div>
         ))}
       </dl>
-      <div className="flex flex-wrap gap-4 border-t border-tinta-200 px-4 py-3 text-sm font-semibold">
-        {foto && (
-          <a href={foto} target="_blank" rel="noopener noreferrer" className="text-marca-700 hover:underline">Ver as fotos</a>
-        )}
-        {dados.licenca_codigo && (
+      {dados.licenca_codigo && (
+        <div className="flex flex-wrap gap-4 border-t border-tinta-200 px-4 py-3 text-sm font-semibold">
           <a href={`/licenca/${dados.licenca_codigo}`} className="text-marca-700 hover:underline">Ver a licença</a>
-        )}
-      </div>
+        </div>
+      )}
     </article>
   );
 }

@@ -352,15 +352,17 @@ function FormSemLicenca({ atual, empresas, orgaos, tipos, somenteLeitura, onSalv
 
       <Card title="Documentos (opcionais)">
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Processo SEI"><input className={`${inputClass} tabular`} {...campo('processo_sei')} /></Field>
+          <Field label="Processo" hint="Número do processo administrativo que autoriza a obra ou serviço."><input className={`${inputClass} tabular`} {...campo('processo_administrativo')} /></Field>
           <Field label="Contrato"><input className={`${inputClass} tabular`} {...campo('contrato_numero')} /></Field>
-          <Field label="Processo administrativo"><input className={`${inputClass} tabular`} {...campo('processo_administrativo')} /></Field>
           <Field label="Ordem de serviço"><input className={`${inputClass} tabular`} {...campo('ordem_servico_numero')} /></Field>
         </div>
-        <Field label="Link das fotos (https)" className="mt-4" hint="Pasta ou álbum das imagens, hospedado fora do CADEX. Aparece no mapa público como prévia.">
+        <Field label="Observações" className="mt-4"><textarea className={inputClass} rows={2} {...campo('observacoes')} /></Field>
+      </Card>
+
+      <Card title="Fotos (opcional)">
+        <Field label="Link das fotos (https)" hint="Pasta ou álbum das imagens, hospedado fora do CADEX. A prévia aparece no cartão da consulta pública.">
           <input className={inputClass} type="url" placeholder="https://" {...campo('foto_url')} />
         </Field>
-        <Field label="Observações" className="mt-4"><textarea className={inputClass} rows={2} {...campo('observacoes')} /></Field>
       </Card>
 
       {!ro && (
