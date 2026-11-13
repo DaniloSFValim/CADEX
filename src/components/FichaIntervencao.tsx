@@ -22,6 +22,10 @@ export default function FichaIntervencao({ dados, onFechar }: {
   const [fotoFalhou, setFotoFalhou] = useState(false);
   const processo = dados.processo;
   const linhas: [string, string][] = [
+    ['Tipo', dados.tipo],
+    ['Setor', dados.setor],
+    ['Situação', dados.situacao],
+    ['Contratante', dados.contratante],
     ['Executora', dados.empresa],
     ['Serviço', dados.servico],
     ['Local', dados.local],

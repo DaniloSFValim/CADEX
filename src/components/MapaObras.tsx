@@ -132,6 +132,8 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, inte
   onGrupoRef.current = onGrupo;
   const onIntervencaoRef = useRef(onIntervencao);
   onIntervencaoRef.current = onIntervencao;
+  const intervencoesRef = useRef(intervencoes);
+  intervencoesRef.current = intervencoes;
   const caixa = useRef<HTMLDivElement>(null);
   const mapa = useRef<maplibregl.Map | null>(null);
   const [pronto, setPronto] = useState(false);
@@ -336,11 +338,11 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, inte
       m.on('error', (e: maplibregl.ErrorEvent) => {
         if (vivo && !m.isStyleLoaded()) setErro(e.error?.message ?? 'Falha ao carregar o mapa.');
       });
-      // Obras sem licença: o clique abre o cartão da obra (não o balão).
+      // Obras sem licença: o clique voa até a obra (zoom máximo, trecho inteiro) e só então abre o cartão.
       for (const camada of ['intervencoes-marcas', 'intervencoes-trechos-sem-licenca', 'intervencoes-trechos-publica']) m.on('click', camada, (e: maplibregl.MapLayerMouseEvent) => {
         const f = e.features?.[0];
         if (!f) return;
-        onIntervencaoRef.current?.(f.properties as Record<string, string>);
+        abrirIntervencao(m, f.properties as Record<string, string>);
       });
       for (const camada of ['comunicacoes-marcas']) m.on('click', camada, (e: maplibregl.MapLayerMouseEvent) => {
         const f = e.features?.[0];
@@ -545,6 +547,33 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, inte
       padding: { top: 80, bottom: 80, left: 80, right: 80 }, maxZoom: 18, duration: 900,
     });
   }, [intervencaoFoco, intervencoes, pronto]);
+
+  /**
+   * Leva a câmera à obra no zoom máximo (ponto) ou enquadra o trecho inteiro, e abre o cartão
+   * quando a câmera para. Se a câmera já está ali, abre na hora.
+   */
+  function abrirIntervencao(m: maplibregl.Map, props: Record<string, string>) {
+    const abrir = () => onIntervencaoRef.current?.(props);
+    const alvo = intervencoesParaGeoJSON(intervencoesRef.current).features.find((f) => f.properties?.id === props.id);
+    if (!alvo) { abrir(); return; }
+    const limites = new maplibregl.LngLatBounds();
+    const somar = (c: unknown): void => {
+      if (Array.isArray(c) && typeof c[0] === 'number') limites.extend(c as [number, number]);
+      else if (Array.isArray(c)) c.forEach(somar);
+    };
+    somar((alvo.geometry as GeoJSON.Geometry & { coordinates?: unknown }).coordinates);
+    if (limites.isEmpty()) { abrir(); return; }
+    const padding = { top: 80, bottom: 80, left: 80, right: 80 };
+    const cam = m.cameraForBounds(limites, { padding, maxZoom: 18 });
+    if (!cam || !cam.center) { abrir(); return; }
+    const centro = m.getCenter();
+    const alvoCentro = maplibregl.LngLat.convert(cam.center);
+    const ja = Math.abs((cam.zoom ?? 0) - m.getZoom()) < 0.01
+      && Math.abs(alvoCentro.lng - centro.lng) < 1e-6 && Math.abs(alvoCentro.lat - centro.lat) < 1e-6;
+    if (ja) { abrir(); return; }
+    m.once('moveend', abrir);
+    m.fitBounds(limites, { padding, maxZoom: 18, duration: 1000 });
+  }
 
   // Ponto da obra aberta pulsa; com "reduzir movimento", fica parado num tamanho fixo.
   useEffect(() => {

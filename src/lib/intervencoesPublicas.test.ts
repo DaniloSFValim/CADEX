@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { filtrarIntervencoes, intervencoesParaGeoJSON, type IntervencaoPublica } from './intervencoesPublicas';
+import { filtrarIntervencoes, intervencoesParaGeoJSON, periodoBR, type IntervencaoPublica } from './intervencoesPublicas';
 
 const base: IntervencaoPublica = {
   id: 'a', categoria: 'sem_licenca', situacao: 'em_execucao', setor: 'telecom', tipo_intervencao: 'obra',
@@ -63,5 +63,19 @@ describe('transparência no cartão', () => {
   it('linha antiga só com SEI aparece no campo de processo', () => {
     const fc = intervencoesParaGeoJSON([{ ...base, processo_sei: '9900099999/2026', processo_administrativo: null }]);
     expect(fc.features[0].properties?.processo_administrativo).toBe('9900099999/2026');
+  });
+});
+
+describe('período e contratante no cartão', () => {
+  it('formata o período em dd/mm/aaaa e avisa quando falta uma data', () => {
+    expect(periodoBR('2026-11-10', '2026-12-20')).toBe('10/11/2026 a 20/12/2026');
+    expect(periodoBR('2026-11-10', null)).toBe('10/11/2026 a fim não informado');
+    expect(periodoBR(null, null)).toBe('Datas não informadas');
+  });
+
+  it('leva o nome do órgão contratante para as propriedades', () => {
+    const fc = intervencoesParaGeoJSON([{ ...base, contratante: 'Secretaria de Obras' }]);
+    expect(fc.features[0].properties?.contratante).toBe('Secretaria de Obras');
+    expect(fc.features[0].properties?.quando).toBe(periodoBR(base.inicio_previsto, base.fim_previsto));
   });
 });
