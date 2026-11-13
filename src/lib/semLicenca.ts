@@ -49,8 +49,8 @@ export interface IntervencaoSemLicenca {
   fim_lng: number | null;
   /** Área da intervenção: EWKB em hexadecimal ao ler. */
   area?: string | null;
-  /** Vários segmentos de rua: EWKB em hexadecimal ao ler. Vazio quando o trecho é um só. */
-  segmentos?: string | null;
+  /** Vários segmentos de rua: EWKB em hexadecimal na tabela, GeoJSON na view. Vazio quando o trecho é um só. */
+  segmentos?: unknown;
   inicio_previsto: string | null;
   fim_previsto: string | null;
   situacao: SituacaoSemLicenca;
