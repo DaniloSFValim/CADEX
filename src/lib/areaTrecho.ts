@@ -87,6 +87,12 @@ export function lerSegmentosWkb(hex: string | null | undefined): Segmento[] | nu
   return segs;
 }
 
+/** EWKT (SRID 4326) da MultiLineString aceita pelo PostgREST na coluna "segmentos" da obra sem licença. */
+export function segmentosParaEwkt(segs: Segmento[]): string {
+  const linhas = segs.map((s) => `(${s.map(([lng, lat]) => `${lng} ${lat}`).join(', ')})`).join(', ');
+  return `SRID=4326;MULTILINESTRING(${linhas})`;
+}
+
 /** GeoJSON que a função salvar_licenca aceita no campo "segmentos" do trecho. */
 export function segmentosParaGeoJson(segs: Segmento[]): string {
   return JSON.stringify({ type: 'MultiLineString', coordinates: segs });

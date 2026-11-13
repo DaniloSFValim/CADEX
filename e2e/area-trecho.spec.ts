@@ -26,6 +26,22 @@ test.describe('área da intervenção no formulário da licença', () => {
     await expect(page.getByRole('button', { name: 'Concluir segmento' })).toBeVisible();
   });
 
+  test('obra sem licença: segmento aceita vários cliques; o terceiro não desfaz os anteriores', async ({ page }) => {
+    await instalarBackend(page);
+    await page.goto('/obras/sem-licenca/nova');
+    await page.getByRole('radio', { name: 'Segmento' }).check();
+    await page.getByRole('button', { name: 'Marcar no mapa' }).click();
+    const mapa = page.getByRole('region', { name: 'Mapa para marcar o trecho' });
+    await expect(mapa.locator('canvas')).toHaveCount(1);
+    const caixa = await mapa.boundingBox();
+    if (!caixa) throw new Error('mapa sem área visível');
+    await page.mouse.click(caixa.x + caixa.width * 0.3, caixa.y + caixa.height * 0.5);
+    await page.mouse.click(caixa.x + caixa.width * 0.45, caixa.y + caixa.height * 0.4);
+    await page.mouse.click(caixa.x + caixa.width * 0.6, caixa.y + caixa.height * 0.5);
+    await expect(page.getByText('3 pontos neste segmento.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Concluir segmento' })).toBeVisible();
+  });
+
   test('obra sem licença: o tipo área marca o polígono no mapa', async ({ page }) => {
     await instalarBackend(page);
     await page.goto('/obras/sem-licenca/nova');
