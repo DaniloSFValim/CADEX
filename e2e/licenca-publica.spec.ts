@@ -26,7 +26,7 @@ test.describe('situação exibida na consulta pública', () => {
         concluida_em: dia(-5), inicio_previsto: dia(-20), fim_previsto: dia(30), validade_ate: dia(30) })],
     });
     await page.goto('/licenca/pubconc0002');
-    await expect(page.getByRole('heading', { name: 'Licença vigente' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Em execução' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Obra concluída' })).toHaveCount(0);
   });
 
