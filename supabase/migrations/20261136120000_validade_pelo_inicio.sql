@@ -25,10 +25,12 @@ begin
 end;
 $$;
 
--- Corrige o que já está gravado: sem prorrogação, a validade volta a ser início + 30.
+-- Corrige o que já está gravado: validade calculada pelo protocolo (protocolo + 30), sem prorrogação.
+-- A 130/2025 (protocolo + 365) fica de fora: depende de decisão.
 update public.licencas
    set validade_ate = inicio_previsto + 30
  where situacao = 'deferida' and inicio_previsto is not null and coalesce(prorrogacoes, 0) = 0
+   and validade_ate = protocolo_data + 30
    and validade_ate is distinct from inicio_previsto + 30;
 
 create or replace function public.situacao_publica(l public.licencas, p_hoje date, p_suspensa boolean)
