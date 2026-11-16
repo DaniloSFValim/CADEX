@@ -55,7 +55,7 @@ declare j jsonb := public.obras_publicas();
         o jsonb := j -> 0;
 begin
   perform pg_temp.assert(jsonb_array_length(j) = 1, 'mapa listou pedido não emitido: ' || jsonb_array_length(j));
-  perform pg_temp.assert(o ->> 'numero' = '010/2023' and o ->> 'situacao' = 'prazo_encerrado',
+  perform pg_temp.assert(o ->> 'numero' = '010/2023' and o ->> 'situacao' = 'vigente',
     'licença histórica errada no mapa');
   perform pg_temp.assert(o ->> 'executora' = 'Antiga Ltda.' and o ->> 'contratante' = 'OpMapa', 'nomes errados no mapa');
   perform pg_temp.assert(o -> 'trechos' -> 0 -> 'inicio' = '[-43.123, -22.895]'::jsonb, 'coordenada fora da ordem [lng, lat]');

@@ -70,9 +70,8 @@ export async function baixarObrasGeojson(): Promise<void> {
 }
 
 export const SITUACAO_PUBLICA_LABEL: Record<SituacaoPublica, string> = {
-  vigente: 'Vigente',
-  aguardando_inicio: 'Aguardando início',
-  prazo_encerrado: 'Prazo de execução encerrado',
+  vigente: 'Em execução',
+  aguardando_inicio: 'Programada',
   concluida: 'Concluída',
   cancelada: 'Cancelada',
   suspensa: 'Suspensa a pedido',
@@ -82,23 +81,22 @@ export const SITUACAO_PUBLICA_LABEL: Record<SituacaoPublica, string> = {
 export const COR_SITUACAO: Record<SituacaoPublica, string> = {
   vigente: '#16a34a',
   aguardando_inicio: '#16a34a',
-  prazo_encerrado: '#dc2626',
   concluida: '#2563eb',
   cancelada: '#111827',
   suspensa: '#9333ea',
 };
 
 /**
- * O que o mapa desenha: licença no prazo (verde, inclusive a que ainda vai começar), com prazo
- * encerrado (vermelha) e concluída (azul). Canceladas e suspensas ficam fora do mapa; continuam nos números gerais.
+ * O que o mapa desenha: em execução e programada (verdes) e concluída (azul). Canceladas e suspensas
+ * ficam fora do mapa; continuam nos números gerais.
  */
-export const SITUACOES_NO_MAPA: SituacaoPublica[] = ['vigente', 'aguardando_inicio', 'prazo_encerrado', 'concluida'];
+export const SITUACOES_NO_MAPA: SituacaoPublica[] = ['vigente', 'aguardando_inicio', 'concluida'];
 
 /** Ao abrir, o mapa mostra o que está autorizado agora ou prestes a começar. */
 export const FILTRO_OBRAS: { valor: string; rotulo: string; inclui: SituacaoPublica[] }[] = [
   { valor: 'vigentes', rotulo: 'Vigentes e a começar', inclui: ['vigente', 'aguardando_inicio'] },
-  { valor: 'todas', rotulo: 'Todas as licenças', inclui: ['vigente', 'aguardando_inicio', 'prazo_encerrado', 'concluida', 'cancelada', 'suspensa'] },
-  { valor: 'encerradas', rotulo: 'Encerradas, concluídas ou canceladas', inclui: ['prazo_encerrado', 'concluida', 'cancelada'] },
+  { valor: 'todas', rotulo: 'Todas as licenças', inclui: ['vigente', 'aguardando_inicio', 'concluida', 'cancelada', 'suspensa'] },
+  { valor: 'encerradas', rotulo: 'Concluídas ou canceladas', inclui: ['concluida', 'cancelada'] },
 ];
 
 export interface FiltroObras { situacao: string; ano: string; busca: string; setor?: string; intervencao?: string; origem?: string }

@@ -35,7 +35,7 @@ begin
   perform pg_temp.assert(public.situacao_publica(j, date '2026-11-16', false) = 'aguardando_inicio',
     'licença com início futuro deveria estar aguardando início, mesmo com protocolo antigo');
 
-  -- Obra começou em outubro e o prazo venceu em novembro: prazo encerrado.
+  -- Obra começou em outubro e o prazo venceu em novembro: sem conclusão, segue em execução no público.
   perform public.salvar_licenca(jsonb_build_object(
       'setor', 'telecom', 'processo_sei', 'PROC-T56-B', 'numero', '902/2026', 'tipos_obra', array['vala'], 'escopo', 'Vencida T56',
       'executora_id', ex, 'protocolo_data', '2026-09-01', 'situacao', 'deferida',
@@ -44,8 +44,8 @@ begin
 
   select * into j from licencas where numero = '902/2026';
   perform pg_temp.assert(j.validade_ate = date '2026-10-31', 'validade de licença vencida deveria ser início + 30');
-  perform pg_temp.assert(public.situacao_publica(j, date '2026-11-16', false) = 'prazo_encerrado',
-    'licença com prazo vencido deveria estar prazo encerrado');
+  perform pg_temp.assert(public.situacao_publica(j, date '2026-11-16', false) = 'vigente',
+    'licença com prazo vencido e sem conclusão deveria seguir em execução no público');
 end $$;
 
 rollback;

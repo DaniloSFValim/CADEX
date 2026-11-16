@@ -22,16 +22,12 @@ const VEREDITO: Record<SituacaoPublica, { titulo: string; cor: string; frase: (d
     frase: () => 'A obra ou serviço está suspensa a pedido. Não está autorizada enquanto durar a suspensão.',
   },
   vigente: {
-    titulo: 'Licença vigente', cor: 'border-alta bg-alta/6 text-alta',
+    titulo: 'Em execução', cor: 'border-alta bg-alta/6 text-alta',
     frase: (d) => `Obra autorizada até ${dataBR(d.fim_previsto)}.`,
   },
   aguardando_inicio: {
     titulo: 'Fora do período', cor: 'border-atencao bg-atencao/6 text-atencao',
     frase: (d) => `A licença só vale a partir de ${dataBR(d.inicio_previsto)}. Antes disso a obra não está autorizada.`,
-  },
-  prazo_encerrado: {
-    titulo: 'Prazo de execução encerrado', cor: 'border-baixa bg-baixa/6 text-baixa',
-    frase: (d) => `O período da obra ou serviço terminou em ${dataBR(d.fim_previsto)}. A obra não está mais autorizada.`,
   },
   concluida: {
     titulo: 'Obra concluída', cor: 'border-tinta-400 bg-tinta-50 text-tinta-700',

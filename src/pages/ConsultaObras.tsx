@@ -187,8 +187,7 @@ function rotuloTipos(tipos: string[], rotulos: Record<string, string>) {
 
 function Legenda() {
   const itens: { cor: string; rotulo: string }[] = [
-    { cor: COR_SITUACAO.vigente, rotulo: 'No prazo' },
-    { cor: COR_SITUACAO.prazo_encerrado, rotulo: SITUACAO_PUBLICA_LABEL.prazo_encerrado },
+    { cor: COR_SITUACAO.vigente, rotulo: 'Em execução ou programada' },
     { cor: COR_SITUACAO.concluida, rotulo: SITUACAO_PUBLICA_LABEL.concluida },
   ];
   return (
