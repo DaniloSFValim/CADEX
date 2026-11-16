@@ -164,7 +164,11 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, inte
         // Pontos próximos viram um agrupamento com a contagem; só as linhas não agrupam.
         sources: {
           ...base.sources,
-          obras: { type: 'geojson', data: obrasParaGeoJSON([]), cluster: true, clusterRadius: 28, clusterMaxZoom: 16 },
+          obras: {
+            type: 'geojson', data: obrasParaGeoJSON([]), cluster: true, clusterRadius: 28, clusterMaxZoom: 16,
+            // Quantas obras do grupo estão em execução ou programadas: o agrupamento pisca se for maior que zero.
+            clusterProperties: { emAndamento: ['+', ['case', ['match', ['get', 'situacao'], ['vigente', 'aguardando_inicio'], 1, 0], 0]] },
+          },
           // Calor e área de toque usam cada obra, sem agrupar: a densidade precisa contar obra por obra.
           brutas: { type: 'geojson', data: obrasParaGeoJSON([]) },
           // Pontos do calor: linhas viram pontos ao longo do traçado, e cada obra soma um peso pela situação.
@@ -191,6 +195,13 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, inte
             id: 'obras-linhas', type: 'line', source: 'obras', filter: ['match', ['geometry-type'], ['LineString', 'MultiLineString'], true, false],
             layout: { 'line-cap': 'round' },
             paint: { 'line-color': corPorSituacao, 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 3, 17, 7] },
+          },
+          // Agrupamento com obra em execução ou programada: anel que pisca em volta do círculo.
+          {
+            id: 'obras-agrupamentos-pulso', type: 'circle', source: 'obras',
+            filter: ['all', ['has', 'point_count'], ['>', ['get', 'emAndamento'], 0]],
+            paint: { 'circle-color': 'rgba(0,0,0,0)', 'circle-radius': RAIO_AGRUPAMENTO, 'circle-stroke-color': '#0e7482',
+              'circle-stroke-width': 3, 'circle-stroke-opacity': 0.8 },
           },
           {
             id: 'obras-agrupamentos', type: 'circle', source: 'obras', filter: ['has', 'point_count'],
@@ -268,6 +279,14 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, inte
             filter: ['match', ['geometry-type'], ['LineString', 'MultiLineString'], true, false],
             layout: { 'line-cap': 'round', 'line-join': 'round' },
             paint: { 'line-color': ['match', ['get', 'categoria'], 'publica', '#7c3aed', '#eab308'], 'line-width': 6 },
+          },
+          // Obras em execução ou programadas: anel que pisca, para chamar a atenção. Fica abaixo dos pontos.
+          {
+            id: 'obras-pulso', type: 'circle', source: 'obras',
+            filter: ['all', ['==', ['geometry-type'], 'Point'], ['!', ['has', 'point_count']],
+              ['match', ['get', 'situacao'], ['vigente', 'aguardando_inicio'], true, false]],
+            paint: { 'circle-color': 'rgba(0,0,0,0)', 'circle-radius': 12, 'circle-stroke-color': corPorSituacao,
+              'circle-stroke-width': 3, 'circle-stroke-opacity': 0.9 },
           },
           {
             id: 'obras-pontos', type: 'circle', source: 'obras',
@@ -566,6 +585,30 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, inte
     m.once('moveend', abrir);
     m.fitBounds(limites, { padding, maxZoom: 18, duration: 1000 });
   }
+
+  // Obras em execução ou programadas piscam. Com "reduzir movimento", o anel fica parado.
+  useEffect(() => {
+    if (!pronto || !mapa.current) return;
+    const m = mapa.current;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    let quadro = 0;
+    const t0 = performance.now();
+    const passo = (agora: number) => {
+      const fase = (((agora - t0) % 1600) + 1600) % 1600 / 1600;
+      const pulso = (1 - Math.cos(fase * 2 * Math.PI)) / 2; // 0 → 1 → 0, suave
+      if (m.getLayer('obras-pulso')) {
+        m.setPaintProperty('obras-pulso', 'circle-radius', 10 + 10 * pulso);
+        m.setPaintProperty('obras-pulso', 'circle-stroke-opacity', 0.9 - 0.8 * pulso);
+      }
+      if (m.getLayer('obras-agrupamentos-pulso')) {
+        m.setPaintProperty('obras-agrupamentos-pulso', 'circle-radius', ['+', RAIO_AGRUPAMENTO, 4 + 10 * pulso] as unknown as maplibregl.ExpressionSpecification);
+        m.setPaintProperty('obras-agrupamentos-pulso', 'circle-stroke-opacity', 0.8 - 0.7 * pulso);
+      }
+      quadro = requestAnimationFrame(passo);
+    };
+    quadro = requestAnimationFrame(passo);
+    return () => cancelAnimationFrame(quadro);
+  }, [pronto]);
 
   // Ponto da obra aberta pulsa; com "reduzir movimento", fica parado num tamanho fixo.
   useEffect(() => {
