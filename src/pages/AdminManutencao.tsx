@@ -1,11 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Badge, Button, Card, Empty, ErrorNote, Spinner, tabela } from '../components/ui';
-import CorrecaoEmLote from '../components/CorrecaoEmLote';
 import { listarCorrecoes, resumoCorrecao, type RegistroCorrecao } from '../lib/correcaoLicencas';
 import { ResumoLicenca } from '../components/ExclusaoLicenca';
 import { dataBR } from '../components/Situacao';
-import { inconsistencias } from '../lib/admin';
 import { hojeISO, listarEmpresas, type Empresa } from '../lib/empresas';
 import {
   excluirLicencaDefinitivamente, listarLicencas, listarLicencasExcluidas, nomeExecutora, restaurarLicenca, type LicencaComTrechos,
@@ -14,7 +12,7 @@ import { listarContas, type Conta } from '../lib/contas';
 import { listarOrgaos, type Orgao } from '../lib/orgaos';
 
 /**
- * Manutenção: correções feitas de uma vez (com prévia e motivo) e a lixeira.
+ * Manutenção: histórico de correções, lixeira e restauração. A edição das licenças fica na página de cada uma.
  * Fica fora da tela de licenças para não competir com a lista e a revisão do dia a dia.
  */
 export default function AdminManutencao() {
@@ -35,7 +33,6 @@ export default function AdminManutencao() {
 
   const hoje = hojeISO();
   const porId = useMemo(() => new Map(empresas.map((e) => [e.id, e])), [empresas]);
-  const revisar = useMemo(() => (licencas ? inconsistencias(licencas, hoje, porId) : []), [licencas, hoje, porId]);
 
   if (!licencas && !erro) return <Spinner />;
   if (!licencas) return <ErrorNote error={erro} />;
@@ -43,7 +40,12 @@ export default function AdminManutencao() {
   return (
     <div className="flex flex-col gap-10">
       {aviso && <p role="status" className="rounded-sm border-l-4 border-alta bg-alta/6 px-3 py-2 text-sm text-tinta-800">{aviso}</p>}
-      <CorrecaoEmLote licencas={licencas} revisar={revisar.map((r) => r.licenca)} onAplicado={mudou} />
+      <Card title="Correções de licenças" semPadding>
+        <p className="px-4 py-3 text-sm text-tinta-600">
+          A licença é corrigida num só lugar: a página de cada licença, aberta pela lista de Administração &gt; Licenças (botão Abrir).
+          Assim, cada alteração é feita uma vez, com o motivo gravado no histórico.
+        </p>
+      </Card>
 
       <HistoricoCorrecoes correcoes={correcoes} contas={contas} />
 

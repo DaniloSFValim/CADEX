@@ -131,7 +131,7 @@ export default function AdminLicencas() {
 
       <Card title={`Registros a revisar (${revisar.length})`} semPadding>
         <p className="border-b border-tinta-100 px-4 py-3 text-sm text-tinta-500">
-          Dado faltando, prazo vencido, prazo de mais de um ano, número fora do padrão 000/AAAA ou empresa que deixou de poder atuar. É um aviso: a correção é feita no próprio registro, ou em lote na aba Manutenção.
+          Dado faltando, prazo vencido, prazo de mais de um ano, número fora do padrão 000/AAAA ou empresa que deixou de poder atuar. É um aviso: a correção é feita na própria licença (botão Abrir). Se estiver certo, marque OK com o motivo.
           {contagens && Object.values(contagens.avisos).some((n) => n > 0) && (
             <> Avisos por tipo: {(Object.keys(rotuloAviso) as CategoriaProblema[]).filter((c) => contagens.avisos[c] > 0).map((c) => `${rotuloAviso[c].toLowerCase()} (${contagens.avisos[c]})`).join(', ')}.</>
           )}
