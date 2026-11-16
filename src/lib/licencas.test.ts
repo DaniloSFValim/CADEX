@@ -238,3 +238,10 @@ describe('rotuloProcesso', () => {
     expect(rotuloProcesso('XYZ/1')).toBe('Processo');
   });
 });
+
+describe('programada antes do início, mesmo com validade antiga', () => {
+  it('licença com início futuro é programada, mesmo que a validade gravada já tenha passado', () => {
+    const l = { situacao: 'deferida' as const, orgao_contratante_id: null, validade_ate: '2025-11-05', inicio_previsto: '2026-12-01', concluida_em: null, as_built_sei: null };
+    expect(estadoLicenca(l, '2026-11-16')).toBe('aguardando_inicio');
+  });
+});
