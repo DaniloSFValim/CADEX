@@ -5,6 +5,7 @@ import { ExcluirLicenca } from '../components/ExclusaoLicenca';
 import ObrasSemLicencaSecao from '../components/ObrasSemLicencaSecao';
 import { dataBR } from '../components/Situacao';
 import { contagensLicencas, inconsistencias, type CategoriaProblema } from '../lib/admin';
+import { aceitarAviso, aplicarRevisoes, desfazerRevisao, listarRevisoes, type RevisaoLicenca } from '../lib/revisoesLicenca';
 import { hojeISO, listarEmpresas, type Empresa } from '../lib/empresas';
 import {
   ESTADO_LICENCA_LABEL, buscarLicencasPagina, estadoLicenca, listarLicencas,
@@ -28,9 +29,15 @@ export default function AdminLicencas() {
   const [lista, setLista] = useState<PaginaLicencas | null>(null);
   const [carregandoLista, setCarregandoLista] = useState(false);
   const [erroLista, setErroLista] = useState<unknown>(null);
+  // Avisos aceitos ("OK, está correto") e o aviso que está pedindo motivo agora.
+  const [revisoes, setRevisoes] = useState<RevisaoLicenca[]>([]);
+  const [aceitando, setAceitando] = useState<{ licencaId: string; aviso: string } | null>(null);
+  const [motivo, setMotivo] = useState('');
+  const [salvandoRevisao, setSalvandoRevisao] = useState(false);
+  const [erroRevisao, setErroRevisao] = useState(false);
 
-  const carregar = () => Promise.all([listarLicencas(), listarEmpresas(), listarOrgaos()])
-    .then(([l, e, o]) => { setLicencas(l); setEmpresas(e); setOrgaos(o); })
+  const carregar = () => Promise.all([listarLicencas(), listarEmpresas(), listarOrgaos(), listarRevisoes()])
+    .then(([l, e, o, r]) => { setLicencas(l); setEmpresas(e); setOrgaos(o); setRevisoes(r); })
     .catch(setErro);
   useEffect(() => { void carregar(); }, []);
   /** Depois de excluir, restaurar ou apagar: mostra o resultado e lê o banco de novo. */
@@ -61,7 +68,24 @@ export default function AdminLicencas() {
 
   const hoje = hojeISO();
   const porId = useMemo(() => new Map(empresas.map((e) => [e.id, e])), [empresas]);
-  const revisar = useMemo(() => (licencas ? inconsistencias(licencas, hoje, porId) : []), [licencas, hoje, porId]);
+  const revisarTodas = useMemo(() => (licencas ? inconsistencias(licencas, hoje, porId) : []), [licencas, hoje, porId]);
+  // Só o que ainda não foi aceito; o aceito fica na seção de revisados, com quem decidiu e o motivo.
+  const revisar = useMemo(() => aplicarRevisoes(revisarTodas, revisoes), [revisarTodas, revisoes]);
+  const aceitos = useMemo(() => revisoes.map((r) => ({ revisao: r, licenca: licencas?.find((l) => l.id === r.licenca_id) })), [revisoes, licencas]);
+  const confirmarAceite = async () => {
+    if (!aceitando) return;
+    setSalvandoRevisao(true); setErroRevisao(false);
+    try {
+      await aceitarAviso(aceitando.licencaId, aceitando.aviso, motivo);
+      setAceitando(null); setMotivo('');
+      setAviso('Aviso aceito. Ele sai da lista e fica registrado em Revisados.');
+      await carregar();
+    } catch { setErroRevisao(true); } finally { setSalvandoRevisao(false); }
+  };
+  const desfazer = async (id: string) => {
+    setErroRevisao(false);
+    try { await desfazerRevisao(id); setAviso('Revisão desfeita: o aviso volta para a lista.'); await carregar(); } catch { setErroRevisao(true); }
+  };
   const contagens = useMemo(() => (licencas ? contagensLicencas(licencas, hoje, porId) : null), [licencas, hoje, porId]);
   const rotuloAviso: Record<CategoriaProblema, string> = {
     processo_repetido: 'Processo SEI repetido', numero_fora_padrao: 'Número fora do padrão', prazo_longo: 'Prazo de mais de um ano',
@@ -112,6 +136,7 @@ export default function AdminLicencas() {
             <> Avisos por tipo: {(Object.keys(rotuloAviso) as CategoriaProblema[]).filter((c) => contagens.avisos[c] > 0).map((c) => `${rotuloAviso[c].toLowerCase()} (${contagens.avisos[c]})`).join(', ')}.</>
           )}
         </p>
+        {erroRevisao && <div className="px-4 pt-3 text-sm text-atencao">Não foi possível salvar a revisão. Confira se você tem permissão de gestor.</div>}
         {revisar.length === 0 ? <Empty>Nenhuma licença com pendência de revisão.</Empty> : (
           <div className={tabela.moldura}>
             <table className={tabela.tabela}>
@@ -132,7 +157,27 @@ export default function AdminLicencas() {
                     </td>
                     <td className={tabela.td}>
                       <ul className="list-disc space-y-0.5 pl-4 text-sm text-tinta-700">
-                        {problemas.map((m) => <li key={m}>{m}</li>)}
+                        {problemas.map((m) => (
+                          <li key={m}>
+                            <span>{m}</span>
+                            {aceitando?.licencaId === l.id && aceitando.aviso === m ? (
+                              <div className="mt-2 flex flex-col gap-2 rounded-md border border-tinta-200 bg-white p-2">
+                                <label className="text-xs font-medium text-tinta-700">Por que está correto? (obrigatório, de 3 a 500 caracteres)
+                                  <textarea className={`${inputClass} mt-1`} rows={2} maxLength={500} value={motivo} onChange={(e) => setMotivo(e.target.value)} />
+                                </label>
+                                <div className="flex gap-2">
+                                  <Button className="px-3! py-1.5!" disabled={salvandoRevisao || motivo.trim().length < 3} onClick={() => void confirmarAceite()}>Confirmar OK</Button>
+                                  <Button variant="secondary" className="px-3! py-1.5!" onClick={() => { setAceitando(null); setMotivo(''); }}>Cancelar</Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <button type="button" className="ml-2 text-xs font-semibold text-marca-700 hover:underline"
+                                      onClick={() => { setAceitando({ licencaId: l.id, aviso: m }); setMotivo(''); setErroRevisao(false); }}>
+                                OK, está correto
+                              </button>
+                            )}
+                          </li>
+                        ))}
                       </ul>
                     </td>
                     <td className={`${tabela.td} whitespace-nowrap text-right text-sm`}>
@@ -151,7 +196,39 @@ export default function AdminLicencas() {
         )}
       </Card>
 
-
+      {aceitos.length > 0 && (
+        <div className="mt-6"><Card title={`Revisados e aceitos (${aceitos.length})`} semPadding>
+          <p className="border-b border-tinta-100 px-4 py-3 text-sm text-tinta-500">
+            Avisos que a equipe confirmou como corretos, com o motivo. Saem da lista de revisão; se o dado mudar, o aviso volta sozinho.
+          </p>
+          <div className={tabela.moldura}>
+            <table className={tabela.tabela}>
+              <thead className={tabela.cabeca}>
+                <tr>
+                  <th className={tabela.th}>Licença</th>
+                  <th className={tabela.th}>Aviso aceito</th>
+                  <th className={tabela.th}>Motivo</th>
+                  <th className={tabela.th}>Em</th>
+                  <th className={tabela.th}><span className="sr-only">Ações</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                {aceitos.map(({ revisao: r, licenca: l }) => (
+                  <tr key={r.id} className={tabela.linha}>
+                    <td className={tabela.td}>{l ? <Link to={`/obras/${l.id}`} className="font-medium text-marca-700 hover:underline">{l.numero ?? 'Sem número'}</Link> : 'Licença removida'}</td>
+                    <td className={`${tabela.td} text-sm text-tinta-700`}>{r.aviso}</td>
+                    <td className={`${tabela.td} text-sm text-tinta-700`}>{r.motivo}</td>
+                    <td className={`${tabela.td} whitespace-nowrap text-xs text-tinta-500`}>{dataBR(r.revisado_em.slice(0, 10))}</td>
+                    <td className={`${tabela.td} text-right`}>
+                      <button type="button" className="text-sm font-semibold text-marca-700 hover:underline" onClick={() => void desfazer(r.id)}>Desfazer</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card></div>
+      )}
     </div>
   );
 }
