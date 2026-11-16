@@ -167,7 +167,7 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, inte
           obras: {
             type: 'geojson', data: obrasParaGeoJSON([]), cluster: true, clusterRadius: 28, clusterMaxZoom: 16,
             // Quantas obras do grupo estão em execução ou programadas: o agrupamento pisca se for maior que zero.
-            clusterProperties: { emAndamento: ['+', ['case', ['match', ['get', 'situacao'], ['vigente', 'aguardando_inicio'], 1, 0], 0]] },
+            clusterProperties: { emAndamento: ['+', ['match', ['get', 'situacao'], ['vigente', 'aguardando_inicio'], 1, 0]] },
           },
           // Calor e área de toque usam cada obra, sem agrupar: a densidade precisa contar obra por obra.
           brutas: { type: 'geojson', data: obrasParaGeoJSON([]) },
