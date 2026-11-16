@@ -205,8 +205,9 @@ export function estadoLicenca(
   if (l.situacao !== 'deferida') return l.situacao;
   // Registro anterior à Resolução não é cobrado de As Built (art. 26): concluída é concluída.
   if (l.concluida_em) return l.as_built_sei || l.anterior_resolucao ? 'concluida' : 'concluida_sem_as_built';
-  if (l.validade_ate && hoje > l.validade_ate) return 'prazo_encerrado';
+  // Antes do início a licença é programada, mesmo que a validade gravada seja antiga.
   if (l.inicio_previsto && hoje < l.inicio_previsto) return 'aguardando_inicio';
+  if (l.validade_ate && hoje > l.validade_ate) return 'prazo_encerrado';
   return 'em_execucao';
 }
 
