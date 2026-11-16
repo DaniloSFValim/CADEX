@@ -167,7 +167,7 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, inte
           obras: {
             type: 'geojson', data: obrasParaGeoJSON([]), cluster: true, clusterRadius: 28, clusterMaxZoom: 16,
             // Quantas obras do grupo estão em execução ou programadas: o agrupamento pisca se for maior que zero.
-            clusterProperties: { emAndamento: ['+', ['case', ['match', ['get', 'situacao'], ['vigente', 'aguardando_inicio'], 1, 0], 0]] },
+            clusterProperties: { emAndamento: ['+', ['match', ['get', 'situacao'], ['vigente', 'aguardando_inicio'], 1, 0]] },
           },
           // Calor e área de toque usam cada obra, sem agrupar: a densidade precisa contar obra por obra.
           brutas: { type: 'geojson', data: obrasParaGeoJSON([]) },
@@ -320,6 +320,13 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, inte
           },
           // O traçado das obras sem licença não fica sempre visível: aparece só quando o ponto é clicado
           // (camada 'intervencao-foco'). Aqui fica só o ponto.
+          // Obra pública em vigor (em execução): anel violeta que pisca, abaixo do ponto.
+          {
+            id: 'intervencoes-publicas-halo', type: 'circle', source: 'intervencoes',
+            filter: ['all', ['==', ['geometry-type'], 'Point'], ['==', ['get', 'categoria'], 'publica'], ['==', ['get', 'em_execucao'], 1]],
+            paint: { 'circle-color': 'rgba(0,0,0,0)', 'circle-radius': 12, 'circle-stroke-color': '#7c3aed',
+              'circle-stroke-width': 3, 'circle-stroke-opacity': 0.8 },
+          },
           {
             id: 'intervencoes-marcas', type: 'symbol', source: 'intervencoes',
             filter: ['==', ['geometry-type'], 'Point'],
@@ -647,9 +654,14 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, inte
     // "zoom" precisa ser a expressão de topo; a escala entra dentro de cada valor do interpolate.
     const raio = (escala: number) => ['interpolate', ['linear'], ['zoom'], 12, 8 * escala, 17, 14 * escala] as unknown as maplibregl.ExpressionSpecification;
     const pintar = (escala: number, opacidade: number) => {
-      if (!m.getLayer('obras-vigentes-halo')) return;
-      m.setPaintProperty('obras-vigentes-halo', 'circle-radius', raio(escala));
-      m.setPaintProperty('obras-vigentes-halo', 'circle-opacity', opacidade);
+      if (m.getLayer('obras-vigentes-halo')) {
+        m.setPaintProperty('obras-vigentes-halo', 'circle-radius', raio(escala));
+        m.setPaintProperty('obras-vigentes-halo', 'circle-opacity', opacidade);
+      }
+      if (m.getLayer('intervencoes-publicas-halo')) {
+        m.setPaintProperty('intervencoes-publicas-halo', 'circle-radius', 10 + 10 * (escala - 1) / 1.6);
+        m.setPaintProperty('intervencoes-publicas-halo', 'circle-stroke-opacity', opacidade * 1.6);
+      }
     };
     if (reduzido) { pintar(1.2, 0.3); return; }
     const passo = (agora: number) => {

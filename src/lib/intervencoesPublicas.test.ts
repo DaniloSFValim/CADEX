@@ -91,3 +91,14 @@ describe('galeria no cartão', () => {
     expect(fc.features[0].properties?.fotos).toBe('[]');
   });
 });
+
+describe('destaque das obras públicas em vigor', () => {
+  it('marca em_execucao como 1 só quando a obra está em execução', () => {
+    const fc = intervencoesParaGeoJSON([
+      { ...base, id: 'e', categoria: 'publica', situacao: 'em_execucao' },
+      { ...base, id: 'c', categoria: 'publica', situacao: 'concluida' },
+    ]);
+    expect(fc.features[0].properties?.em_execucao).toBe(1);
+    expect(fc.features[1].properties?.em_execucao).toBe(0);
+  });
+});
