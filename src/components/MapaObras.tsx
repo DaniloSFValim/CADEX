@@ -269,6 +269,14 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, inte
             layout: { 'line-cap': 'round', 'line-join': 'round' },
             paint: { 'line-color': ['match', ['get', 'categoria'], 'publica', '#7c3aed', '#eab308'], 'line-width': 6 },
           },
+          // Obras em execução ou programadas: anel que pisca, para chamar a atenção. Fica abaixo dos pontos.
+          {
+            id: 'obras-pulso', type: 'circle', source: 'obras',
+            filter: ['all', ['==', ['geometry-type'], 'Point'], ['!', ['has', 'point_count']],
+              ['match', ['get', 'situacao'], ['vigente', 'aguardando_inicio'], true, false]],
+            paint: { 'circle-color': 'rgba(0,0,0,0)', 'circle-radius': 12, 'circle-stroke-color': corPorSituacao,
+              'circle-stroke-width': 3, 'circle-stroke-opacity': 0.9 },
+          },
           {
             id: 'obras-pontos', type: 'circle', source: 'obras',
             filter: ['all', ['==', ['geometry-type'], 'Point'], ['!', ['has', 'point_count']]],
@@ -566,6 +574,26 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, inte
     m.once('moveend', abrir);
     m.fitBounds(limites, { padding, maxZoom: 18, duration: 1000 });
   }
+
+  // Obras em execução ou programadas piscam. Com "reduzir movimento", o anel fica parado.
+  useEffect(() => {
+    if (!pronto || !mapa.current) return;
+    const m = mapa.current;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    let quadro = 0;
+    const t0 = performance.now();
+    const passo = (agora: number) => {
+      const fase = (((agora - t0) % 1600) + 1600) % 1600 / 1600;
+      const pulso = (1 - Math.cos(fase * 2 * Math.PI)) / 2; // 0 → 1 → 0, suave
+      if (m.getLayer('obras-pulso')) {
+        m.setPaintProperty('obras-pulso', 'circle-radius', 10 + 10 * pulso);
+        m.setPaintProperty('obras-pulso', 'circle-stroke-opacity', 0.9 - 0.8 * pulso);
+      }
+      quadro = requestAnimationFrame(passo);
+    };
+    quadro = requestAnimationFrame(passo);
+    return () => cancelAnimationFrame(quadro);
+  }, [pronto]);
 
   // Ponto da obra aberta pulsa; com "reduzir movimento", fica parado num tamanho fixo.
   useEffect(() => {
