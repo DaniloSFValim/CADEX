@@ -101,6 +101,8 @@ export function intervencoesParaGeoJSON(lista: IntervencaoPublica[]): FeatureCol
       // Lista de imagens como texto JSON (propriedades do GeoJSON são planas).
       fotos: JSON.stringify((i.fotos_imagens ?? []).filter(Boolean)),
       licenca_codigo: i.licenca_codigo ?? '',
+      // 1 quando a obra ou serviço está em execução (para o destaque piscante das obras públicas em vigor).
+      em_execucao: i.situacao === 'em_execucao' ? 1 : 0,
     };
     const ponto: Feature<Point> = {
       type: 'Feature', properties: propriedades,
