@@ -21,6 +21,15 @@ import {
 const MapaObras = lazy(() => import('../components/MapaObras'));
 /** Obras por lote na lista aberta da consulta pública. */
 
+/** Tipos que o mapa mostra, como nos filtros da faixa acima do mapa. Por padrão, todos. */
+type TipoMapa = 'todas' | 'emergencia' | 'manutencao' | 'programada';
+const TIPOS_MAPA: { valor: TipoMapa; rotulo: string }[] = [
+  { valor: 'todas', rotulo: 'Todas' },
+  { valor: 'emergencia', rotulo: 'Emergências' },
+  { valor: 'manutencao', rotulo: 'Manutenção de rotina' },
+  { valor: 'programada', rotulo: 'Obras programadas' },
+];
+
 /** Consulta pública: obras licenciadas pela SECONSER, no mapa e em lista. */
 export default function ConsultaObras() {
   const [obras, setObras] = useState<ObraPublica[] | null>(null);
@@ -32,6 +41,7 @@ export default function ConsultaObras() {
   const [destaqueIntervencao, setDestaqueIntervencao] = useState<string | null>(null);
   const [destaque, setDestaque] = useState<string | null>(null);
   const [modo, setModo] = useState<'pontos' | 'calor'>('pontos');
+  const [tipoMapa, setTipoMapa] = useState<TipoMapa>('todas');
   // Por padrão, a consulta mostra todas as obras licenciadas, inclusive as encerradas.
   // Bairro escolhido: destaca o contorno e enquadra no mapa, sem esconder as outras obras.
   const [bairro, setBairro] = useState<string | null>(null);
@@ -82,6 +92,24 @@ export default function ConsultaObras() {
   const listadas = useMemo(() => todas.filter((o) => SITUACOES_NO_MAPA.includes(o.situacao)), [todas]);
   const selecionada = useMemo(() => (obras ?? []).find((o) => o.codigo === foco) ?? null, [obras, foco]);
 
+  // Faixa de contadores e filtros: contam o que o mapa mostra com os filtros atuais de janela.
+  const comunicacoesEmergencia = useMemo(() => comunicacoesVisiveis.filter((c) => c.tipo === 'emergencia'), [comunicacoesVisiveis]);
+  const comunicacoesManutencao = useMemo(() => comunicacoesVisiveis.filter((c) => c.tipo === 'programado'), [comunicacoesVisiveis]);
+  const obrasProgramadas = useMemo(() => listadas.filter((o) => o.situacao === 'aguardando_inicio'), [listadas]);
+  const obrasEmExecucao = useMemo(() => listadas.filter((o) => o.situacao === 'vigente'), [listadas]);
+  const contagem: Record<TipoMapa, number> = {
+    todas: listadas.length + comunicacoesVisiveis.length + intervencoesVisiveis.length,
+    emergencia: comunicacoesEmergencia.length,
+    manutencao: comunicacoesManutencao.length,
+    programada: obrasProgramadas.length,
+  };
+  // O que vai para o mapa conforme o tipo escolhido. "Todas" mantém o comportamento de sempre.
+  const obrasNoMapa = tipoMapa === 'todas' ? listadas : tipoMapa === 'programada' ? obrasProgramadas : [];
+  const comunicacoesNoMapa = tipoMapa === 'todas' ? comunicacoesVisiveis
+    : tipoMapa === 'emergencia' ? comunicacoesEmergencia
+      : tipoMapa === 'manutencao' ? comunicacoesManutencao : [];
+  const intervencoesNoMapa = tipoMapa === 'todas' ? intervencoesVisiveis : [];
+
   return (
     <div className="flex min-h-screen flex-col bg-tinta-50">
       <Cabecalho />
@@ -113,6 +141,34 @@ export default function ConsultaObras() {
             <div className="min-w-0">
             {/* Mapa em largura total; a ficha da obra selecionada fica sobre ele. */}
             <div>
+              {/* Faixa de contadores: o que está acontecendo agora, nas duas listas do mapa. */}
+              <dl aria-label="Resumo da operação" className="mb-4 grid grid-cols-3 gap-3">
+                <div className="rounded-lg border border-tinta-200 bg-white px-4 py-3">
+                  <dt className="text-xs font-semibold text-tinta-600">Obras licenciadas em execução</dt>
+                  <dd className="mt-1 font-display text-2xl font-bold tabular-nums text-tinta-900">{obrasEmExecucao.length}</dd>
+                </div>
+                <div className="rounded-lg border border-tinta-200 bg-white px-4 py-3">
+                  <dt className="text-xs font-semibold text-tinta-600">Emergências no mapa</dt>
+                  <dd className="mt-1 font-display text-2xl font-bold tabular-nums text-baixa">{comunicacoesEmergencia.length}</dd>
+                </div>
+                <div className="rounded-lg border border-tinta-200 bg-white px-4 py-3">
+                  <dt className="text-xs font-semibold text-tinta-600">Obras programadas</dt>
+                  <dd className="mt-1 font-display text-2xl font-bold tabular-nums text-atencao">{obrasProgramadas.length}</dd>
+                </div>
+              </dl>
+
+              {/* Filtros por tipo: "Todas" é o padrão e mostra tudo, como antes. */}
+              <div role="group" aria-label="Tipo no mapa" className="mb-3 flex flex-wrap gap-2">
+                {TIPOS_MAPA.map((t) => (
+                  <button key={t.valor} type="button" aria-pressed={tipoMapa === t.valor} onClick={() => setTipoMapa(t.valor)}
+                          className={`rounded-full border px-3 py-1 text-xs font-semibold ${tipoMapa === t.valor
+                            ? 'border-marca-700 bg-marca-700 text-white'
+                            : 'border-tinta-200 bg-white text-tinta-700 hover:text-tinta-900'}`}>
+                    {t.rotulo} <span className="tabular-nums opacity-80">({contagem[t.valor]})</span>
+                  </button>
+                ))}
+              </div>
+
               <Suspense fallback={<div className="h-[60vh] min-h-[360px] rounded-xl border border-tinta-200 bg-tinta-50" />}>
                 <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-tinta-600">
                   <div role="group" aria-label="Visualização do mapa" className="inline-flex rounded-full border border-tinta-200 bg-white p-0.5 text-xs font-semibold">
@@ -131,7 +187,7 @@ export default function ConsultaObras() {
                   </p>
                 </div>
                 <div ref={mapaRef} className="relative scroll-mt-4 overflow-hidden rounded-xl border border-tinta-200 shadow-xs">
-                  <MapaObras obras={listadas} comunicacoes={comunicacoesVisiveis} intervencoes={intervencoesVisiveis}
+                  <MapaObras obras={obrasNoMapa} comunicacoes={comunicacoesNoMapa} intervencoes={intervencoesNoMapa}
                              foco={foco} destaque={destaque} modo={modo} bairro={bairro}
                              onSelecionar={(c) => { setIntervencaoSel(null); setFoco(c); }}
                              onIntervencao={(d) => { setFoco(null); setIntervencaoSel(d); setDestaqueIntervencao(d.id ?? null); }}
