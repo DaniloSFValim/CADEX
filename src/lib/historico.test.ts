@@ -4,7 +4,7 @@ import type { ObraPublica } from './obras';
 
 const obra = (o: Partial<ObraPublica>): ObraPublica => ({
   codigo: 'c', setor: 'telecom', numero: '001/2026', tipos_obra: ['rede'], tipo_intervencao: 'obra', origem: 'concessionaria',
-  escopo: 'Rede', inicio_previsto: '2025-03-01', fim_previsto: '2025-04-01', situacao: 'concluida', executora: 'X',
+  escopo: 'Rede', inicio_previsto: '2025-03-01', fim_previsto: '2025-04-01', situacao: 'encerrada', executora: 'X',
   contratante: null, trechos: [], ...o,
 });
 

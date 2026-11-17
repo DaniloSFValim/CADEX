@@ -72,7 +72,7 @@ export async function baixarObrasGeojson(): Promise<void> {
 export const SITUACAO_PUBLICA_LABEL: Record<SituacaoPublica, string> = {
   vigente: 'Em execução',
   aguardando_inicio: 'Programada',
-  concluida: 'Concluída',
+  encerrada: 'Encerrada',
   cancelada: 'Cancelada',
   suspensa: 'Suspensa a pedido',
 };
@@ -81,7 +81,7 @@ export const SITUACAO_PUBLICA_LABEL: Record<SituacaoPublica, string> = {
 export const COR_SITUACAO: Record<SituacaoPublica, string> = {
   vigente: '#16a34a',
   aguardando_inicio: '#16a34a',
-  concluida: '#2563eb',
+  encerrada: '#2563eb',
   cancelada: '#111827',
   suspensa: '#9333ea',
 };
@@ -90,13 +90,13 @@ export const COR_SITUACAO: Record<SituacaoPublica, string> = {
  * O que o mapa desenha: em execução e programada (verdes) e concluída (azul). Canceladas e suspensas
  * ficam fora do mapa; continuam nos números gerais.
  */
-export const SITUACOES_NO_MAPA: SituacaoPublica[] = ['vigente', 'aguardando_inicio', 'concluida'];
+export const SITUACOES_NO_MAPA: SituacaoPublica[] = ['vigente', 'aguardando_inicio', 'encerrada'];
 
 /** Ao abrir, o mapa mostra o que está autorizado agora ou prestes a começar. */
 export const FILTRO_OBRAS: { valor: string; rotulo: string; inclui: SituacaoPublica[] }[] = [
   { valor: 'vigentes', rotulo: 'Vigentes e a começar', inclui: ['vigente', 'aguardando_inicio'] },
-  { valor: 'todas', rotulo: 'Todas as licenças', inclui: ['vigente', 'aguardando_inicio', 'concluida', 'cancelada', 'suspensa'] },
-  { valor: 'encerradas', rotulo: 'Concluídas ou canceladas', inclui: ['concluida', 'cancelada'] },
+  { valor: 'todas', rotulo: 'Todas as licenças', inclui: ['vigente', 'aguardando_inicio', 'encerrada', 'cancelada', 'suspensa'] },
+  { valor: 'encerradas', rotulo: 'Encerradas ou canceladas', inclui: ['encerrada', 'cancelada'] },
 ];
 
 export interface FiltroObras { situacao: string; ano: string; busca: string; setor?: string; intervencao?: string; origem?: string }
