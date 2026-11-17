@@ -185,7 +185,8 @@ function FormSemLicenca({ atual, empresas, orgaos, tipos, somenteLeitura, onSalv
 
   // Empresa e órgão que servem ao setor escolhido.
   const empresasDoSetor = empresas.filter((e) => e.ativa && atuaNoSetor(e, f.setor));
-  const orgaosDoSetor = orgaos.filter((o) => o.setores.length === 0 || o.setores.includes(f.setor));
+  // Obra pública: qualquer órgão pode contratar ou executar, em qualquer setor. Sem isso, o setor sem órgão cadastrado não salva.
+  const orgaosDoSetor = orgaos.filter((o) => f.publica || o.setores.length === 0 || o.setores.includes(f.setor));
   // Tipos do setor: os ativos, mais os já marcados neste registro (mesmo desativados depois).
   const tiposDoSetor = tipos.filter((t) => t.setor === f.setor && (t.ativo || f.tipos_obra.includes(t.codigo)));
 
