@@ -21,14 +21,27 @@ import {
 const MapaObras = lazy(() => import('../components/MapaObras'));
 /** Obras por lote na lista aberta da consulta pública. */
 
-/** Tipos que o mapa mostra, como nos filtros da faixa acima do mapa. Por padrão, todos. */
-type TipoMapa = 'todas' | 'emergencia' | 'manutencao' | 'programada';
-const TIPOS_MAPA: { valor: TipoMapa; rotulo: string; cor?: string }[] = [
+/** Categorias do mapa, pela origem do registro. "Todas" é o padrão. */
+type Categoria = 'todas' | 'licenciadas' | 'sem_licenca' | 'emergencia' | 'manutencao';
+const CATEGORIAS: { valor: Categoria; rotulo: string; cor?: string }[] = [
   { valor: 'todas', rotulo: 'Todas' },
+  { valor: 'licenciadas', rotulo: 'Licenciadas' },
+  { valor: 'sem_licenca', rotulo: 'Obras públicas sem licença', cor: '#7c3aed' },
   { valor: 'emergencia', rotulo: 'Emergências', cor: '#dc2626' },
   { valor: 'manutencao', rotulo: 'Manutenção de rotina', cor: '#2563eb' },
-  { valor: 'programada', rotulo: 'Obras programadas', cor: '#eab308' },
 ];
+/** Situações das licenciadas, pelas datas do cronograma no dia da consulta. */
+type SituacaoFiltro = 'todas' | 'aguardando_inicio' | 'vigente' | 'encerrada';
+const SITUACOES_FILTRO: { valor: SituacaoFiltro; rotulo: string; cor?: string }[] = [
+  { valor: 'todas', rotulo: 'Todas' },
+  { valor: 'aguardando_inicio', rotulo: 'Programadas', cor: '#16a34a' },
+  { valor: 'vigente', rotulo: 'Em execução', cor: '#16a34a' },
+  { valor: 'encerrada', rotulo: 'Encerradas', cor: '#2563eb' },
+];
+const ROTULO_CATEGORIA: Record<Categoria, string> = {
+  todas: 'Todas', licenciadas: 'Licenciadas', sem_licenca: 'Obras públicas sem licença',
+  emergencia: 'Emergências', manutencao: 'Manutenção de rotina',
+};
 
 /** Consulta pública: obras licenciadas pela SECONSER, no mapa e em lista. */
 export default function ConsultaObras() {
@@ -41,7 +54,8 @@ export default function ConsultaObras() {
   const [destaqueIntervencao, setDestaqueIntervencao] = useState<string | null>(null);
   const [destaque, setDestaque] = useState<string | null>(null);
   const [modo, setModo] = useState<'pontos' | 'calor'>('pontos');
-  const [tipoMapa, setTipoMapa] = useState<TipoMapa>('todas');
+  const [categoria, setCategoria] = useState<Categoria>('todas');
+  const [situacaoFiltro, setSituacaoFiltro] = useState<SituacaoFiltro>('todas');
   // Por padrão, a consulta mostra todas as obras licenciadas, inclusive as encerradas.
   // Bairro escolhido: destaca o contorno e enquadra no mapa, sem esconder as outras obras.
   const [bairro, setBairro] = useState<string | null>(null);
@@ -95,13 +109,18 @@ export default function ConsultaObras() {
   // Faixa de contadores e filtros: contam o que o mapa mostra com os filtros atuais de janela.
   const comunicacoesEmergencia = useMemo(() => comunicacoesVisiveis.filter((c) => c.tipo === 'emergencia'), [comunicacoesVisiveis]);
   const comunicacoesManutencao = useMemo(() => comunicacoesVisiveis.filter((c) => c.tipo === 'programado'), [comunicacoesVisiveis]);
-  const obrasProgramadas = useMemo(() => listadas.filter((o) => o.situacao === 'aguardando_inicio'), [listadas]);
-  // O que vai para o mapa conforme o tipo escolhido. "Todas" mantém o comportamento de sempre.
-  const obrasNoMapa = tipoMapa === 'todas' ? listadas : tipoMapa === 'programada' ? obrasProgramadas : [];
-  const comunicacoesNoMapa = tipoMapa === 'todas' ? comunicacoesVisiveis
-    : tipoMapa === 'emergencia' ? comunicacoesEmergencia
-      : tipoMapa === 'manutencao' ? comunicacoesManutencao : [];
-  const intervencoesNoMapa = tipoMapa === 'todas' ? intervencoesVisiveis : [];
+  // Obras públicas sem licença: as que cadastramos por conta própria. As de empresa sem licença não entram no público.
+  const obrasPublicasSemLicenca = useMemo(() => intervencoesVisiveis.filter((i) => i.categoria === 'publica'), [intervencoesVisiveis]);
+  // O que vai para o mapa. "Todas" mantém o comportamento de sempre.
+  const licenciadasNoMapa = categoria === 'todas' || categoria === 'licenciadas';
+  const obrasNoMapa = !licenciadasNoMapa ? []
+    : categoria === 'licenciadas' && situacaoFiltro !== 'todas' ? listadas.filter((o) => o.situacao === situacaoFiltro)
+      : listadas;
+  const comunicacoesNoMapa = categoria === 'todas' ? comunicacoesVisiveis
+    : categoria === 'emergencia' ? comunicacoesEmergencia
+      : categoria === 'manutencao' ? comunicacoesManutencao : [];
+  const intervencoesNoMapa = categoria === 'todas' || categoria === 'sem_licenca' ? obrasPublicasSemLicenca : [];
+  const semRegistro = obrasNoMapa.length + comunicacoesNoMapa.length + intervencoesNoMapa.length === 0;
 
   return (
     <div className="flex min-h-screen flex-col bg-tinta-50">
@@ -135,18 +154,37 @@ export default function ConsultaObras() {
             <div className="min-w-0">
             {/* Mapa em largura total; a ficha da obra selecionada fica sobre ele. */}
             <div>
-              {/* Filtros por tipo, com a mesma cor de cada tipo na legenda. "Todas" é o padrão. */}
-              <div role="group" aria-label="Tipo no mapa" className="mb-4 flex flex-wrap items-center gap-2">
-                {TIPOS_MAPA.map((t) => (
-                  <button key={t.valor} type="button" aria-pressed={tipoMapa === t.valor} onClick={() => setTipoMapa(t.valor)}
-                          className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-medium ${tipoMapa === t.valor
+              {/* Categoria primeiro; as situações das licenciadas aparecem só quando "Licenciadas" está escolhida. */}
+              <div role="group" aria-label="Categoria no mapa" className="mb-3 flex flex-wrap items-center gap-2">
+                {CATEGORIAS.map((c) => (
+                  <button key={c.valor} type="button" aria-pressed={categoria === c.valor}
+                          onClick={() => { setCategoria(c.valor); setSituacaoFiltro('todas'); }}
+                          className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-medium ${categoria === c.valor
                             ? 'border-tinta-900 bg-tinta-900 text-white'
                             : 'border-tinta-300 bg-white text-tinta-800 hover:border-tinta-500'}`}>
-                    {t.cor && <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ background: t.cor }} />}
-                    {t.rotulo}
+                    {c.cor && <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ background: c.cor }} />}
+                    {c.rotulo}
                   </button>
                 ))}
               </div>
+              {categoria === 'licenciadas' && (
+                <div role="group" aria-label="Situação das licenciadas" className="mb-4 flex flex-wrap items-center gap-2">
+                  {SITUACOES_FILTRO.map((t) => (
+                    <button key={t.valor} type="button" aria-pressed={situacaoFiltro === t.valor} onClick={() => setSituacaoFiltro(t.valor)}
+                            className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${situacaoFiltro === t.valor
+                              ? 'border-tinta-700 bg-tinta-700 text-white'
+                              : 'border-tinta-300 bg-white text-tinta-700 hover:border-tinta-500'}`}>
+                      {t.cor && <span aria-hidden="true" className="h-2 w-2 rounded-full" style={{ background: t.cor }} />}
+                      {t.rotulo}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {semRegistro && (
+                <p role="status" className="mb-3 text-sm text-tinta-600">
+                  Nenhum registro em "{ROTULO_CATEGORIA[categoria]}" agora.
+                </p>
+              )}
 
               <Suspense fallback={<div className="h-[60vh] min-h-[360px] rounded-xl border border-tinta-200 bg-tinta-50" />}>
                 <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-tinta-600">
@@ -223,7 +261,7 @@ function rotuloTipos(tipos: string[], rotulos: Record<string, string>) {
 function Legenda() {
   const itens: { cor: string; rotulo: string }[] = [
     { cor: COR_SITUACAO.vigente, rotulo: 'Em execução ou programada' },
-    { cor: COR_SITUACAO.concluida, rotulo: SITUACAO_PUBLICA_LABEL.concluida },
+    { cor: COR_SITUACAO.encerrada, rotulo: SITUACAO_PUBLICA_LABEL.encerrada },
   ];
   return (
     <ul className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm font-medium text-tinta-800" aria-label="Legenda">

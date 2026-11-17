@@ -10,7 +10,7 @@ const obra = (o: Partial<ObraPublica>): ObraPublica => ({
 
 const obras = [
   obra({}),
-  obra({ codigo: 'c2', numero: '045/2022', inicio_previsto: '2022-03-20', fim_previsto: '2022-04-20', situacao: 'concluida', executora: 'Antiga Ltda.',
+  obra({ codigo: 'c2', numero: '045/2022', inicio_previsto: '2022-03-20', fim_previsto: '2022-04-20', situacao: 'encerrada', executora: 'Antiga Ltda.',
          trechos: [{ logradouro: 'Rua da Conceição', bairro: 'Centro', inicio: [-43.12, -22.89], fim: [-43.121, -22.891] }] }),
   obra({ codigo: 'c3', numero: '050/2026', situacao: 'aguardando_inicio' }),
   obra({ codigo: 'c4', numero: '060/2025', inicio_previsto: '2025-05-01', fim_previsto: '2025-06-01', situacao: 'cancelada' }),
@@ -37,7 +37,7 @@ describe('GeoJSON do mapa', () => {
     expect(fc.features).toHaveLength(2);
     expect(fc.features[0].geometry).toEqual({ type: 'Point', coordinates: [-43.11, -22.905] });
     expect(fc.features[1].geometry).toEqual({ type: 'LineString', coordinates: [[-43.12, -22.89], [-43.121, -22.891]] });
-    expect(fc.features[1].properties).toMatchObject({ codigo: 'c2', situacao: 'concluida', logradouro: 'Rua da Conceição' });
+    expect(fc.features[1].properties).toMatchObject({ codigo: 'c2', situacao: 'encerrada', logradouro: 'Rua da Conceição' });
   });
 });
 
@@ -125,10 +125,10 @@ describe('obras por mês', () => {
   it('separa a contagem por situação', () => {
     const meses = obrasNoMes([
       obra({ codigo: 'a', inicio_previsto: '2026-01-01', fim_previsto: '2026-01-31', situacao: 'vigente' }),
-      obra({ codigo: 'b', inicio_previsto: '2026-01-10', fim_previsto: '2026-02-10', situacao: 'concluida' }),
+      obra({ codigo: 'b', inicio_previsto: '2026-01-10', fim_previsto: '2026-02-10', situacao: 'encerrada' }),
     ], 2026);
-    expect(meses[0].porSituacao).toEqual({ vigente: 1, concluida: 1 });
-    expect(meses[1].porSituacao).toEqual({ concluida: 1 });
+    expect(meses[0].porSituacao).toEqual({ vigente: 1, encerrada: 1 });
+    expect(meses[1].porSituacao).toEqual({ encerrada: 1 });
   });
   it('obra sem período, ou de outro ano, não entra em nenhum mês', () => {
     const meses = obrasNoMes([
@@ -159,7 +159,7 @@ describe('filtro do painel', () => {
   const lista = [
     obra({ codigo: 'a', situacao: 'vigente', executora: 'Rede Fibra' }),
     obra({ codigo: 'b', situacao: 'aguardando_inicio', executora: 'Rede Fibra' }),
-    obra({ codigo: 'c', situacao: 'concluida', executora: 'Outra Ltda.' }),
+    obra({ codigo: 'c', situacao: 'encerrada', executora: 'Outra Ltda.' }),
   ];
   it('sem filtro devolve todas', () => {
     expect(filtrarPainel(lista, { situacao: null, executora: null })).toHaveLength(3);
@@ -194,7 +194,7 @@ describe('mapa de calor', () => {
 
   it('vigente pesa mais que concluída', () => {
     const v = pontosDeCalor([obra({ situacao: 'vigente' })]);
-    const c = pontosDeCalor([obra({ situacao: 'concluida' })]);
+    const c = pontosDeCalor([obra({ situacao: 'encerrada' })]);
     expect(soma(v)).toBeGreaterThan(soma(c));
   });
 
@@ -238,7 +238,7 @@ describe('atuacaoPorExecutora', () => {
   it('soma obras e vigentes pela chave do nome e ordena os tipos pelo mais frequente', () => {
     const lista = [
       obra({ codigo: 'x1', executora: 'Braços', situacao: 'vigente', tipos_obra: ['rede', 'ramal'] as ObraPublica['tipos_obra'] }),
-      obra({ codigo: 'x2', executora: 'BRACOS ', situacao: 'concluida', tipos_obra: ['rede'] as ObraPublica['tipos_obra'] }),
+      obra({ codigo: 'x2', executora: 'BRACOS ', situacao: 'encerrada', tipos_obra: ['rede'] as ObraPublica['tipos_obra'] }),
       obra({ codigo: 'x3', executora: 'Outra', situacao: 'aguardando_inicio', tipos_obra: [] }),
     ];
     const m = atuacaoPorExecutora(lista);
@@ -256,7 +256,7 @@ describe('contratacaoPorContratante', () => {
   it('conta as obras pela contratante e ignora obra sem contratante', () => {
     const lista = [
       obra({ codigo: 'y1', contratante: 'OpUm', situacao: 'vigente' }),
-      obra({ codigo: 'y2', contratante: 'opum', situacao: 'concluida' }),
+      obra({ codigo: 'y2', contratante: 'opum', situacao: 'encerrada' }),
       obra({ codigo: 'y3', contratante: null }),
     ];
     const m = contratacaoPorContratante(lista);

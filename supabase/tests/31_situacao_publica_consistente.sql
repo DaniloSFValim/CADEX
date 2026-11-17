@@ -73,10 +73,10 @@ declare
   codA text := (select codigo_publico from licencas where id = (select id from ids where nome = 'a'));
   codO text := 'orgaoconsist01';
 begin
-  perform pg_temp.assert((public.licenca_publica(codA)->>'situacao') = 'vigente',
-    'página: licença prorrogada com fim de obra passado continua vigente');
-  perform pg_temp.assert((select elem->>'situacao' from jsonb_array_elements(public.obras_publicas()) elem where elem->>'codigo' = codA) = 'vigente',
-    'lista: licença prorrogada continua vigente');
+  perform pg_temp.assert((public.licenca_publica(codA)->>'situacao') = 'encerrada',
+    'página: licença com fim de obra passado deveria estar encerrada');
+  perform pg_temp.assert((select elem->>'situacao' from jsonb_array_elements(public.obras_publicas()) elem where elem->>'codigo' = codA) = 'encerrada',
+    'lista: licença com fim de obra passado deveria estar encerrada');
   perform pg_temp.assert((public.licenca_publica(codO)->>'situacao') = 'vigente',
     'página: órgão público segue o prazo de 30 dias (vigente dentro dele)');
   perform pg_temp.assert((select elem->>'situacao' from jsonb_array_elements(public.obras_publicas()) elem where elem->>'codigo' = codO) = 'vigente',
@@ -92,8 +92,8 @@ begin
   perform pg_temp.assert(public.situacao_publica(r, current_date, false) = 'vigente',
     'concluída dentro do período segue a data (vigente)');
   r.fim_previsto := current_date - 1;
-  perform pg_temp.assert(public.situacao_publica(r, current_date, false) = 'concluida',
-    'concluída só depois do fim da obra');
+  perform pg_temp.assert(public.situacao_publica(r, current_date, false) = 'encerrada',
+    'passado o fim previsto, a obra fica encerrada');
   r.concluida_em := null;
   perform pg_temp.assert(public.situacao_publica(r, current_date, true) = 'suspensa',
     'suspensa tem prioridade sobre a validade (licença não concluída)');

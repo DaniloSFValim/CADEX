@@ -396,9 +396,9 @@ function obrasPublicas(estado: Cenario) {
     // Mesma ordem de situacao_publica() no banco (migração 20261106120000).
     const suspensa = (estado.suspensoes ?? []).some((s) => s.licenca_id === l.id && s.fim === null);
     const situacao = l.situacao === 'cancelada' ? 'cancelada'
-      : l.concluida_em && (!l.fim_previsto || hoje > l.fim_previsto) ? 'concluida'
-        : suspensa ? 'suspensa'
-          : l.inicio_previsto && hoje < l.inicio_previsto ? 'aguardando_inicio' : 'vigente';
+      : suspensa ? 'suspensa'
+        : l.inicio_previsto && hoje < l.inicio_previsto ? 'aguardando_inicio'
+          : l.fim_previsto && hoje > l.fim_previsto ? 'encerrada' : 'vigente';
     return {
       codigo: l.codigo_publico, setor: l.setor, numero: l.numero, tipos_obra: l.tipos_obra, tipo_intervencao: l.tipo_intervencao,
       origem: l.origem_intervencao, escopo: l.escopo, inicio_previsto: l.inicio_previsto, fim_previsto: l.fim_previsto,

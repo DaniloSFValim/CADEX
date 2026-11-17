@@ -10,8 +10,8 @@ test.describe('licença na consulta pública', () => {
         concluida_em: dia(-5), inicio_previsto: dia(-60), fim_previsto: dia(-10), validade_ate: dia(-10) })],
     });
     await page.goto('/licenca/pubconc0001');
-    await expect(page.getByRole('heading', { name: 'Obra concluída' })).toBeVisible();
-    await expect(page.getByText('A obra ou serviço desta licença foi encerrada.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Encerrada' })).toBeVisible();
+    await expect(page.getByText(/O prazo de execução terminou em/)).toBeVisible();
     await expect(page.getByText('Histórico da situação')).toHaveCount(0);
     await expect(page.getByText('Pedido registrado')).toHaveCount(0);
     await expect(page.getByText('Deferida')).toHaveCount(0);
@@ -19,7 +19,7 @@ test.describe('licença na consulta pública', () => {
 });
 
 test.describe('situação exibida na consulta pública', () => {
-  test('obra concluída dentro do período segue a data, sem o rótulo de concluída', async ({ page }) => {
+  test('obra concluída antes do fim segue a data: em execução, sem rótulo de encerrada', async ({ page }) => {
     await instalarBackend(page, {
       administrador: false,
       licencas: [licenca({ id: uuid(522), numero: '522/2026', codigo_publico: 'pubconc0002', escopo: 'Concluída cedo',
@@ -27,7 +27,7 @@ test.describe('situação exibida na consulta pública', () => {
     });
     await page.goto('/licenca/pubconc0002');
     await expect(page.getByRole('heading', { name: 'Em execução' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Obra concluída' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Encerrada' })).toHaveCount(0);
   });
 
   test('a executora aparece só com o código, sem a situação da inscrição', async ({ page }) => {

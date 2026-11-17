@@ -108,7 +108,7 @@ begin
   perform pg_temp.assert(j -> 'executora' ->> 'razao_social' = 'Antiga Construtora Ltda.'
                          and j -> 'executora' ->> 'codigo_cadex' is null
                          and (j ->> 'anterior_resolucao')::boolean
-                         and j ->> 'situacao' = 'vigente'
+                         and j ->> 'situacao' = 'encerrada'
                          and j::text not like '%11222333000181%',
     'página pública da licença histórica errada: ' || j::text);
 end $$;
