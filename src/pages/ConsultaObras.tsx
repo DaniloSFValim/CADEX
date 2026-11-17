@@ -96,7 +96,6 @@ export default function ConsultaObras() {
   const comunicacoesEmergencia = useMemo(() => comunicacoesVisiveis.filter((c) => c.tipo === 'emergencia'), [comunicacoesVisiveis]);
   const comunicacoesManutencao = useMemo(() => comunicacoesVisiveis.filter((c) => c.tipo === 'programado'), [comunicacoesVisiveis]);
   const obrasProgramadas = useMemo(() => listadas.filter((o) => o.situacao === 'aguardando_inicio'), [listadas]);
-  const obrasEmExecucao = useMemo(() => listadas.filter((o) => o.situacao === 'vigente'), [listadas]);
   // O que vai para o mapa conforme o tipo escolhido. "Todas" mantém o comportamento de sempre.
   const obrasNoMapa = tipoMapa === 'todas' ? listadas : tipoMapa === 'programada' ? obrasProgramadas : [];
   const comunicacoesNoMapa = tipoMapa === 'todas' ? comunicacoesVisiveis
@@ -115,6 +114,8 @@ export default function ConsultaObras() {
           descricao="Veja no mapa as obras licenciadas nas vias da cidade: quem executa, onde e até quando."
         />
 
+        <AbasConsulta />
+
         {obras && estat && (
           <div className="mt-8 grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-3">
             <Kpi rotulo="Licenças autorizadas nos últimos 12 meses" valor={estat.autorizadas_12m} />
@@ -125,7 +126,6 @@ export default function ConsultaObras() {
           </div>
         )}
 
-        <AbasConsulta />
 
         <ErrorNote error={error} />
         {!obras && !error && <Spinner label="Carregando as obras…" />}
@@ -135,13 +135,6 @@ export default function ConsultaObras() {
             <div className="min-w-0">
             {/* Mapa em largura total; a ficha da obra selecionada fica sobre ele. */}
             <div>
-              {/* Números da operação no mesmo estilo da linha de cima, sem caixas. */}
-              <div className="mb-6 grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-3">
-                <Kpi rotulo="Obras licenciadas em execução" valor={obrasEmExecucao.length} />
-                <Kpi rotulo="Emergências no mapa" valor={comunicacoesEmergencia.length} tom={comunicacoesEmergencia.length ? 'baixa' : undefined} />
-                <Kpi rotulo="Obras programadas" valor={obrasProgramadas.length} tom={obrasProgramadas.length ? 'atencao' : undefined} />
-              </div>
-
               {/* Filtros por tipo, com a mesma cor de cada tipo na legenda. "Todas" é o padrão. */}
               <div role="group" aria-label="Tipo no mapa" className="mb-4 flex flex-wrap items-center gap-2">
                 {TIPOS_MAPA.map((t) => (
