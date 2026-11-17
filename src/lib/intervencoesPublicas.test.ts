@@ -102,3 +102,17 @@ describe('destaque das obras públicas em vigor', () => {
     expect(fc.features[1].properties?.em_execucao).toBe(0);
   });
 });
+
+describe('demais empresas no cartão', () => {
+  it('lista concessionária e terceirizadas com o papel de cada uma', () => {
+    const fc = intervencoesParaGeoJSON([{ ...base, executoras_adicionais: [
+      { papel: 'concessionaria', nome: 'Concessionária X' }, { papel: 'terceirizada', nome: 'Terceirizada Y' },
+    ] }]);
+    expect(fc.features[0].properties?.outras_empresas).toBe('Concessionária X (concessionária) · Terceirizada Y (terceirizada)');
+  });
+
+  it('sem outras empresas, o campo vem vazio', () => {
+    const fc = intervencoesParaGeoJSON([{ ...base, executoras_adicionais: null }]);
+    expect(fc.features[0].properties?.outras_empresas).toBe('');
+  });
+});

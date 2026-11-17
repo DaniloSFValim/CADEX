@@ -12,7 +12,8 @@ import { lerAreaWkb, lerSegmentos, type Segmento } from '../lib/areaTrecho';
 const DesenhoArea = lazy(() => import('../components/DesenhoArea'));
 import {
   FORM_SEM_LICENCA_VAZIO, MODO_EXECUCAO_LABEL, SITUACAO_SEM_LICENCA_LABEL, listarSemLicenca, montarSemLicenca,
-  salvarSemLicenca, type FormSemLicenca, type IntervencaoSemLicenca, type ModoExecucao, type SituacaoSemLicenca,
+  salvarSemLicenca, type FormEmpresaAdicional, type FormSemLicenca, type IntervencaoSemLicenca, type ModoExecucao, type PapelEmpresa,
+  type SituacaoSemLicenca, PAPEL_EMPRESA_LABEL,
 } from '../lib/semLicenca';
 
 /** Lista das obras e serviços sem licença. Só gestor e licenciador criam ou alteram. */
@@ -160,6 +161,7 @@ function paraForm(r: IntervencaoSemLicenca): FormSemLicenca {
     concluida_em: s(r.concluida_em), processo_sei: s(r.processo_sei), contrato_numero: s(r.contrato_numero),
     processo_administrativo: s(r.processo_administrativo), ordem_servico_numero: s(r.ordem_servico_numero),
     observacoes: s(r.observacoes), foto_url: s(r.foto_url), fotos_imagens: (r.fotos_imagens ?? []).join('\n'),
+    adicionais: (r.executoras_adicionais ?? []).map((a) => ({ papel: a.papel, modo: a.modo, executora_id: a.executora_id ?? '', nome: a.nome, cnpj: a.cnpj ?? '' })),
   };
 }
 
@@ -182,6 +184,9 @@ function FormSemLicenca({ atual, empresas, orgaos, tipos, somenteLeitura, onSalv
     setEditando(false);
   }
   const set = <K extends keyof FormSemLicenca>(k: K, v: FormSemLicenca[K]) => setF((x) => ({ ...x, [k]: v }));
+  const atualizaAdicional = (i: number, parte: Partial<FormEmpresaAdicional>) =>
+    setF((x) => ({ ...x, adicionais: x.adicionais.map((a, j) => (j === i ? { ...a, ...parte } : a)) }));
+  const removeAdicional = (i: number) => setF((x) => ({ ...x, adicionais: x.adicionais.filter((_, j) => j !== i) }));
 
   // Empresa e órgão que servem ao setor escolhido.
   const empresasDoSetor = empresas.filter((e) => e.ativa && atuaNoSetor(e, f.setor));
@@ -296,6 +301,47 @@ function FormSemLicenca({ atual, empresas, orgaos, tipos, somenteLeitura, onSalv
             </>
           )}
         </div>
+        <fieldset className="mt-4" disabled={ro}>
+          <legend className="text-sm font-medium text-tinta-700">
+            Outras empresas envolvidas <span className="font-normal text-tinta-500">concessionária ou terceirizada, se houver (até 10)</span>
+          </legend>
+          {f.adicionais.map((a, i) => (
+            <div key={i} className="mt-2 grid gap-3 sm:grid-cols-[1fr_1fr_2fr_auto]">
+              <select className={inputClass} aria-label={`Papel da empresa ${i + 1}`} value={a.papel}
+                      onChange={(e) => atualizaAdicional(i, { papel: e.target.value as PapelEmpresa })}>
+                {(Object.keys(PAPEL_EMPRESA_LABEL) as PapelEmpresa[]).map((p) => <option key={p} value={p}>{PAPEL_EMPRESA_LABEL[p]}</option>)}
+              </select>
+              <select className={inputClass} aria-label={`Modo da empresa ${i + 1}`} value={a.modo}
+                      onChange={(e) => atualizaAdicional(i, { modo: e.target.value as 'empresa' | 'sem_cadastro', executora_id: '', nome: '', cnpj: '' })}>
+                <option value="empresa">Cadastrada no CADEX</option>
+                <option value="sem_cadastro">Fora do cadastro</option>
+              </select>
+              {a.modo === 'empresa' ? (
+                <select className={inputClass} aria-label={`Empresa ${i + 1}`} value={a.executora_id}
+                        onChange={(e) => {
+                          const e2 = empresas.find((x) => x.id === e.target.value);
+                          atualizaAdicional(i, { executora_id: e.target.value, nome: e2 ? nomeEmpresa(e2) : '' });
+                        }}>
+                  <option value="">Selecione</option>
+                  {empresas.filter((e) => e.ativa).map((e) => <option key={e.id} value={e.id}>{nomeEmpresa(e)}</option>)}
+                </select>
+              ) : (
+                <div className="flex gap-2">
+                  <input className={inputClass} aria-label={`Razão social ${i + 1}`} placeholder="Razão social" value={a.nome}
+                         onChange={(e) => atualizaAdicional(i, { nome: e.target.value })} />
+                  <input className={`${inputClass} tabular`} aria-label={`CNPJ ${i + 1}`} placeholder="CNPJ (opcional)" inputMode="numeric" value={a.cnpj}
+                         onChange={(e) => atualizaAdicional(i, { cnpj: e.target.value })} />
+                </div>
+              )}
+              <button type="button" className="text-sm font-semibold text-baixa hover:underline" onClick={() => removeAdicional(i)}>Remover</button>
+            </div>
+          ))}
+          <button type="button" className="mt-3 text-sm font-semibold text-marca-700 hover:underline disabled:opacity-50"
+                  disabled={f.adicionais.length >= 10}
+                  onClick={() => setF((x) => ({ ...x, adicionais: [...x.adicionais, { papel: 'terceirizada', modo: 'empresa', executora_id: '', nome: '', cnpj: '' }] }))}>
+            + Adicionar empresa
+          </button>
+        </fieldset>
       </Card>
 
       <Card title="Onde e quando">
