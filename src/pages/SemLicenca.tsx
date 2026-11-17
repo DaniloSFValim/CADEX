@@ -161,6 +161,7 @@ function paraForm(r: IntervencaoSemLicenca): FormSemLicenca {
     concluida_em: s(r.concluida_em), processo_sei: s(r.processo_sei), contrato_numero: s(r.contrato_numero),
     processo_administrativo: s(r.processo_administrativo), ordem_servico_numero: s(r.ordem_servico_numero),
     observacoes: s(r.observacoes), foto_url: s(r.foto_url), fotos_imagens: (r.fotos_imagens ?? []).join('\n'),
+    links: (r.links_publicos ?? []).map((l) => ({ rotulo: l.rotulo, url: l.url })),
     adicionais: (r.executoras_adicionais ?? []).map((a) => ({ papel: a.papel, modo: a.modo, executora_id: a.executora_id ?? '', nome: a.nome, cnpj: a.cnpj ?? '' })),
   };
 }
@@ -187,6 +188,9 @@ function FormSemLicenca({ atual, empresas, orgaos, tipos, somenteLeitura, onSalv
   const atualizaAdicional = (i: number, parte: Partial<FormEmpresaAdicional>) =>
     setF((x) => ({ ...x, adicionais: x.adicionais.map((a, j) => (j === i ? { ...a, ...parte } : a)) }));
   const removeAdicional = (i: number) => setF((x) => ({ ...x, adicionais: x.adicionais.filter((_, j) => j !== i) }));
+  const atualizaLink = (i: number, parte: Partial<{ rotulo: string; url: string }>) =>
+    setF((x) => ({ ...x, links: x.links.map((l, j) => (j === i ? { ...l, ...parte } : l)) }));
+  const removeLink = (i: number) => setF((x) => ({ ...x, links: x.links.filter((_, j) => j !== i) }));
 
   // Empresa e órgão que servem ao setor escolhido.
   const empresasDoSetor = empresas.filter((e) => e.ativa && atuaNoSetor(e, f.setor));
@@ -340,6 +344,25 @@ function FormSemLicenca({ atual, empresas, orgaos, tipos, somenteLeitura, onSalv
                   disabled={f.adicionais.length >= 10}
                   onClick={() => setF((x) => ({ ...x, adicionais: [...x.adicionais, { papel: 'terceirizada', modo: 'empresa', executora_id: '', nome: '', cnpj: '' }] }))}>
             + Adicionar empresa
+          </button>
+        </fieldset>
+        <fieldset className="mt-4" disabled={ro}>
+          <legend className="text-sm font-medium text-tinta-700">
+            Links da obra <span className="font-normal text-tinta-500">projeto, documentos ou outros (https, até 8)</span>
+          </legend>
+          {f.links.map((l, i) => (
+            <div key={i} className="mt-2 grid gap-3 sm:grid-cols-[1fr_2fr_auto]">
+              <input className={inputClass} aria-label={`Nome do link ${i + 1}`} placeholder="Ex.: Projeto" value={l.rotulo}
+                     onChange={(e) => atualizaLink(i, { rotulo: e.target.value })} />
+              <input className={inputClass} aria-label={`Endereço do link ${i + 1}`} placeholder="https://" value={l.url}
+                     onChange={(e) => atualizaLink(i, { url: e.target.value })} />
+              <button type="button" className="text-sm font-semibold text-baixa hover:underline" onClick={() => removeLink(i)}>Remover</button>
+            </div>
+          ))}
+          <button type="button" className="mt-3 text-sm font-semibold text-marca-700 hover:underline disabled:opacity-50"
+                  disabled={f.links.length >= 8}
+                  onClick={() => setF((x) => ({ ...x, links: [...x.links, { rotulo: '', url: '' }] }))}>
+            + Adicionar link
           </button>
         </fieldset>
       </Card>
