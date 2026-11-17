@@ -499,7 +499,8 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, inte
           (m.getSource('bairros') as maplibregl.GeoJSONSource | undefined)?.setData(fc);
         }).catch(() => { /* sem os limites, o mapa segue só com as obras */ });
       });
-      const marcarPronto = () => { if (vivo && m.getSource('obras')) setPronto(true); };
+      // Se uma parte do mapa falhou no começo e o mapa carregou depois, o aviso de erro sai.
+      const marcarPronto = () => { if (vivo && m.getSource('obras')) { setErro(''); setPronto(true); } };
       m.once('style.load', marcarPronto);
       m.once('idle', marcarPronto);
       mapa.current = m;
