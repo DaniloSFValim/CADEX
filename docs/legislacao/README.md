@@ -40,3 +40,12 @@ A regra interna do CADEX fixa validade de 30 dias a partir do início para todas
 - **Protocolo do CISP:** o art. 20 exige o número do protocolo no registro. No CADEX o campo é opcional e nenhuma validação o exige.
 - **Imagens e escopo executado:** o art. 20 exige imagens e escopo do serviço executado após a conclusão. O CADEX não tem campo de conclusão nem de imagens para a emergência.
 - **Ligação ao CISP antes de agir (art. 19):** a tela já orienta isso ("ligar para o 153 antes de agir"). Está de acordo.
+
+## Obra conjunta: prefeitura e concessionárias (em aberto)
+
+Caso informado pelo responsável pelo produto: a prefeitura executa com apoio das concessionárias, por meio de empresas terceirizadas. O cadastro adotado é o de **obra pública sem licença**, com a concessionária registrada no escopo (apoio técnico). Não é licenciada.
+
+Dúvidas que precisam de leitura jurídica antes de publicar:
+- **Terceirizada da prefeitura:** o art. 3º (caput e §1º) exige inscrição ativa no CADEX para pessoa jurídica que atua nas vias públicas, e estende isso à subcontratada em qualquer grau. Não está claro se isso vale para a terceirizada contratada pela prefeitura, que é de direito público. Se valer, a obra pública sem licença precisa registrar a terceirizada como executora inscrita.
+- **Inversão de papéis (concessionária executa, com apoio da prefeitura):** nesse caso a obra precisa de licença (art. 11). Sem licença, é irregularidade, e não obra pública.
+- **Campo de parceiros:** não há campo próprio para a concessionária. Hoje ela fica no escopo.
