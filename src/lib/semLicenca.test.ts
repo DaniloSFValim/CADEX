@@ -125,3 +125,28 @@ describe('galeria de imagens da obra sem licença', () => {
     expect('linha' in r && r.linha.fotos_imagens).toBeNull();
   });
 });
+
+describe('outras empresas envolvidas', () => {
+  const adicional = (o: Partial<FormSemLicenca['adicionais'][number]> = {}) =>
+    ({ papel: 'terceirizada' as const, modo: 'empresa' as const, executora_id: 'emp2', nome: 'Terceirizada Y', cnpj: '', ...o });
+
+  it('grava a lista de empresas adicionais', () => {
+    const r = montarSemLicenca(base({ adicionais: [adicional(), adicional({ papel: 'concessionaria', modo: 'sem_cadastro', executora_id: '', nome: 'Concessionária X', cnpj: '12.345.678/0001-95' })] }));
+    if (!('linha' in r)) throw new Error('deveria passar');
+    expect(r.linha.executoras_adicionais).toEqual([
+      { papel: 'terceirizada', modo: 'empresa', executora_id: 'emp2', nome: 'Terceirizada Y', cnpj: null },
+      { papel: 'concessionaria', modo: 'sem_cadastro', executora_id: null, nome: 'Concessionária X', cnpj: '12345678000195' },
+    ]);
+  });
+
+  it('recusa mais de 10 empresas adicionais', () => {
+    const muitas = Array.from({ length: 11 }, () => adicional());
+    expect(erro(montarSemLicenca(base({ adicionais: muitas })))).toBe('Cadastre até 10 empresas adicionais.');
+  });
+
+  it('recusa linha sem empresa escolhida, e CNPJ com dígitos faltando', () => {
+    expect(erro(montarSemLicenca(base({ adicionais: [adicional({ executora_id: '' })] })))).toBe('Escolha a empresa de cada linha adicional.');
+    expect(erro(montarSemLicenca(base({ adicionais: [adicional({ modo: 'sem_cadastro', executora_id: '', nome: 'Z', cnpj: '123' })] }))))
+      .toBe('O CNPJ de uma empresa adicional precisa ter 14 dígitos.');
+  });
+});

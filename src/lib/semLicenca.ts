@@ -13,6 +13,20 @@ import { areaParaEwkt, problemaArea, problemaSegmentos, segmentosParaEwkt, type 
 export type ModoExecucao = 'propria_orgao' | 'empresa' | 'sem_cadastro';
 export type SituacaoSemLicenca = 'em_execucao' | 'concluida' | 'cancelada';
 
+/** Empresa que atua junto com a executora principal: concessionária ou terceirizada. */
+export type PapelEmpresa = 'concessionaria' | 'terceirizada';
+export const PAPEL_EMPRESA_LABEL: Record<PapelEmpresa, string> = { concessionaria: 'Concessionária', terceirizada: 'Terceirizada' };
+/** Como fica no banco (lista de até 10). */
+export interface EmpresaAdicional {
+  papel: PapelEmpresa;
+  modo: 'empresa' | 'sem_cadastro';
+  executora_id: string | null;
+  nome: string;
+  cnpj: string | null;
+}
+/** Como fica no formulário. */
+export interface FormEmpresaAdicional { papel: PapelEmpresa; modo: 'empresa' | 'sem_cadastro'; executora_id: string; nome: string; cnpj: string }
+
 export const MODO_EXECUCAO_LABEL: Record<ModoExecucao, string> = {
   propria_orgao: 'Executa o próprio órgão contratante',
   empresa: 'Empresa cadastrada no CADEX',
@@ -64,6 +78,8 @@ export interface IntervencaoSemLicenca {
   foto_url: string | null;
   /** Links https diretos das imagens da galeria (até 12). */
   fotos_imagens?: string[] | null;
+  /** Concessionária e terceirizadas que atuam junto (até 10). */
+  executoras_adicionais?: EmpresaAdicional[] | null;
   licenca_id: string | null;
   atualizado_em: string;
 }
@@ -104,13 +120,15 @@ export interface FormSemLicenca {
   foto_url: string;
   /** Um link https de imagem por linha. */
   fotos_imagens: string;
+  /** Concessionária e terceirizadas que atuam junto. */
+  adicionais: FormEmpresaAdicional[];
 }
 
 export const FORM_SEM_LICENCA_VAZIO: FormSemLicenca = {
   setor: 'viario', publica: false, tipo_intervencao: '', tipos_obra: [], outros_descricao: '', escopo: '', contratante_orgao_id: '', executora_modo: 'propria_orgao',
   executora_id: '', executora_razao_social: '', executora_cnpj: '', logradouro: '', bairro: '', referencia: '',
   inicio: '', fim: '', tipo: 'ponto', area: null, segmentos: [], rascunho: [], inicio_previsto: '', fim_previsto: '', situacao: 'em_execucao', concluida_em: '',
-  processo_sei: '', contrato_numero: '', processo_administrativo: '', ordem_servico_numero: '', observacoes: '', foto_url: '', fotos_imagens: '',
+  processo_sei: '', contrato_numero: '', processo_administrativo: '', ordem_servico_numero: '', observacoes: '', foto_url: '', fotos_imagens: '', adicionais: [],
 };
 
 /** Linha do banco, sem os campos que o banco preenche. */
@@ -159,6 +177,20 @@ export function montarSemLicenca(f: FormSemLicenca): { linha: LinhaSemLicenca } 
   }
   if (f.situacao === 'concluida' && !f.concluida_em) return { erro: 'Informe a data de conclusão.' };
 
+  const adicionais: EmpresaAdicional[] = [];
+  if (f.adicionais.length > 10) return { erro: 'Cadastre até 10 empresas adicionais.' };
+  for (const a of f.adicionais) {
+    if (a.modo === 'empresa' && !a.executora_id) return { erro: 'Escolha a empresa de cada linha adicional.' };
+    if (!a.nome.trim()) return { erro: 'Informe o nome de cada empresa adicional.' };
+    if (a.modo === 'sem_cadastro' && a.cnpj.trim() && onlyDigits(a.cnpj).length !== 14) {
+      return { erro: 'O CNPJ de uma empresa adicional precisa ter 14 dígitos.' };
+    }
+    adicionais.push({
+      papel: a.papel, modo: a.modo, executora_id: a.modo === 'empresa' ? a.executora_id : null,
+      nome: a.nome.trim(), cnpj: a.modo === 'sem_cadastro' && a.cnpj.trim() ? onlyDigits(a.cnpj) : null,
+    });
+  }
+
   const n = (v: string) => v.trim() || null;
   const imagens = f.fotos_imagens.split('\n').map((u) => u.trim()).filter(Boolean);
   if (imagens.length > 12) return { erro: 'A galeria aceita até 12 imagens por obra.' };
@@ -198,6 +230,7 @@ export function montarSemLicenca(f: FormSemLicenca): { linha: LinhaSemLicenca } 
       observacoes: n(f.observacoes),
       foto_url: n(f.foto_url),
       fotos_imagens: imagens.length > 0 ? imagens : null,
+      executoras_adicionais: adicionais,
       licenca_id: null,
     },
   };
