@@ -23,11 +23,11 @@ const MapaObras = lazy(() => import('../components/MapaObras'));
 
 /** Tipos que o mapa mostra, como nos filtros da faixa acima do mapa. Por padrão, todos. */
 type TipoMapa = 'todas' | 'emergencia' | 'manutencao' | 'programada';
-const TIPOS_MAPA: { valor: TipoMapa; rotulo: string }[] = [
+const TIPOS_MAPA: { valor: TipoMapa; rotulo: string; cor?: string }[] = [
   { valor: 'todas', rotulo: 'Todas' },
-  { valor: 'emergencia', rotulo: 'Emergências' },
-  { valor: 'manutencao', rotulo: 'Manutenção de rotina' },
-  { valor: 'programada', rotulo: 'Obras programadas' },
+  { valor: 'emergencia', rotulo: 'Emergências', cor: '#dc2626' },
+  { valor: 'manutencao', rotulo: 'Manutenção de rotina', cor: '#2563eb' },
+  { valor: 'programada', rotulo: 'Obras programadas', cor: '#eab308' },
 ];
 
 /** Consulta pública: obras licenciadas pela SECONSER, no mapa e em lista. */
@@ -97,12 +97,6 @@ export default function ConsultaObras() {
   const comunicacoesManutencao = useMemo(() => comunicacoesVisiveis.filter((c) => c.tipo === 'programado'), [comunicacoesVisiveis]);
   const obrasProgramadas = useMemo(() => listadas.filter((o) => o.situacao === 'aguardando_inicio'), [listadas]);
   const obrasEmExecucao = useMemo(() => listadas.filter((o) => o.situacao === 'vigente'), [listadas]);
-  const contagem: Record<TipoMapa, number> = {
-    todas: listadas.length + comunicacoesVisiveis.length + intervencoesVisiveis.length,
-    emergencia: comunicacoesEmergencia.length,
-    manutencao: comunicacoesManutencao.length,
-    programada: obrasProgramadas.length,
-  };
   // O que vai para o mapa conforme o tipo escolhido. "Todas" mantém o comportamento de sempre.
   const obrasNoMapa = tipoMapa === 'todas' ? listadas : tipoMapa === 'programada' ? obrasProgramadas : [];
   const comunicacoesNoMapa = tipoMapa === 'todas' ? comunicacoesVisiveis
@@ -141,30 +135,22 @@ export default function ConsultaObras() {
             <div className="min-w-0">
             {/* Mapa em largura total; a ficha da obra selecionada fica sobre ele. */}
             <div>
-              {/* Faixa de contadores: o que está acontecendo agora, nas duas listas do mapa. */}
-              <dl aria-label="Resumo da operação" className="mb-4 grid grid-cols-3 gap-3">
-                <div className="rounded-lg border border-tinta-200 bg-white px-4 py-3">
-                  <dt className="text-xs font-semibold text-tinta-600">Obras licenciadas em execução</dt>
-                  <dd className="mt-1 font-display text-2xl font-bold tabular-nums text-tinta-900">{obrasEmExecucao.length}</dd>
-                </div>
-                <div className="rounded-lg border border-tinta-200 bg-white px-4 py-3">
-                  <dt className="text-xs font-semibold text-tinta-600">Emergências no mapa</dt>
-                  <dd className="mt-1 font-display text-2xl font-bold tabular-nums text-baixa">{comunicacoesEmergencia.length}</dd>
-                </div>
-                <div className="rounded-lg border border-tinta-200 bg-white px-4 py-3">
-                  <dt className="text-xs font-semibold text-tinta-600">Obras programadas</dt>
-                  <dd className="mt-1 font-display text-2xl font-bold tabular-nums text-atencao">{obrasProgramadas.length}</dd>
-                </div>
-              </dl>
+              {/* Números da operação no mesmo estilo da linha de cima, sem caixas. */}
+              <div className="mb-6 grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-3">
+                <Kpi rotulo="Obras licenciadas em execução" valor={obrasEmExecucao.length} />
+                <Kpi rotulo="Emergências no mapa" valor={comunicacoesEmergencia.length} tom={comunicacoesEmergencia.length ? 'baixa' : undefined} />
+                <Kpi rotulo="Obras programadas" valor={obrasProgramadas.length} tom={obrasProgramadas.length ? 'atencao' : undefined} />
+              </div>
 
-              {/* Filtros por tipo: "Todas" é o padrão e mostra tudo, como antes. */}
-              <div role="group" aria-label="Tipo no mapa" className="mb-3 flex flex-wrap gap-2">
+              {/* Filtros por tipo, com a mesma cor de cada tipo na legenda. "Todas" é o padrão. */}
+              <div role="group" aria-label="Tipo no mapa" className="mb-4 flex flex-wrap items-center gap-2">
                 {TIPOS_MAPA.map((t) => (
                   <button key={t.valor} type="button" aria-pressed={tipoMapa === t.valor} onClick={() => setTipoMapa(t.valor)}
-                          className={`rounded-full border px-3 py-1 text-xs font-semibold ${tipoMapa === t.valor
-                            ? 'border-marca-700 bg-marca-700 text-white'
-                            : 'border-tinta-200 bg-white text-tinta-700 hover:text-tinta-900'}`}>
-                    {t.rotulo} <span className="tabular-nums opacity-80">({contagem[t.valor]})</span>
+                          className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-medium ${tipoMapa === t.valor
+                            ? 'border-tinta-900 bg-tinta-900 text-white'
+                            : 'border-tinta-300 bg-white text-tinta-800 hover:border-tinta-500'}`}>
+                    {t.cor && <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ background: t.cor }} />}
+                    {t.rotulo}
                   </button>
                 ))}
               </div>
