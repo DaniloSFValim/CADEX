@@ -24,6 +24,19 @@ const ATRIBUICAO = '<a href="https://www.openstreetmap.org/copyright" target="_b
 let protocoloRegistrado = false;
 
 /**
+ * Cores do padrão OpenStreetMap (Standard) aplicadas sobre a base própria: o mapa fica com a leitura
+ * do OSM sem depender dos blocos públicos dele.
+ */
+const CORES_OSM = {
+  background: '#f2efe9', earth: '#f2efe9', water: '#aad3df', buildings: '#d9d0c9',
+  park_a: '#c8facc', park_b: '#c8facc', wood_a: '#add19e', wood_b: '#add19e', scrub_a: '#c8d7ab', scrub_b: '#c8d7ab',
+  highway: '#e892a2', major: '#fcd6a4', link: '#fcd6a4', minor_a: '#ffffff', minor_b: '#ffffff', minor_service: '#ffffff',
+  highway_casing_early: '#c97a8a', highway_casing_late: '#c97a8a', major_casing_early: '#c9a478', major_casing_late: '#c9a478',
+  minor_casing: '#cfcfcf', minor_service_casing: '#cfcfcf', link_casing: '#c9a478',
+  railway: '#bbbbbb', boundaries: '#9e9cab',
+} as const;
+
+/**
  * Base própria (public/mapa, gerada pela automação "Base do mapa"), servida
  * pelo próprio site. Enquanto ela não existir, usa os blocos públicos do
  * OpenStreetMap, sem garantia de disponibilidade: só para a fase piloto.
@@ -48,7 +61,7 @@ export async function estiloBase(): Promise<StyleSpecification> {
       glyphs: `${origem}/mapa/fontes/{fontstack}/{range}.pbf`,
       sprite: `${origem}/mapa/sprites/light`,
       sources: { base: { type: 'vector', url: `pmtiles://${arquivo}`, attribution: ATRIBUICAO } },
-      layers: layers('base', namedFlavor('light'), { lang: 'pt' }),
+      layers: layers('base', { ...namedFlavor('light'), ...CORES_OSM }, { lang: 'pt' }),
     };
   }
   return {
