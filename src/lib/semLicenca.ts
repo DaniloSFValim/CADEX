@@ -13,6 +13,10 @@ import { areaParaEwkt, problemaArea, problemaSegmentos, segmentosParaEwkt, type 
 export type ModoExecucao = 'propria_orgao' | 'empresa' | 'sem_cadastro';
 export type SituacaoSemLicenca = 'em_execucao' | 'concluida' | 'cancelada';
 
+/** Link do cartão público: projeto, documento ou outro (https). */
+export interface LinkPublico { rotulo: string; url: string }
+export interface FormLinkPublico { rotulo: string; url: string }
+
 /** Empresa que atua junto com a executora principal: concessionária ou terceirizada. */
 export type PapelEmpresa = 'concessionaria' | 'terceirizada';
 export const PAPEL_EMPRESA_LABEL: Record<PapelEmpresa, string> = { concessionaria: 'Concessionária', terceirizada: 'Terceirizada' };
@@ -80,6 +84,8 @@ export interface IntervencaoSemLicenca {
   fotos_imagens?: string[] | null;
   /** Concessionária e terceirizadas que atuam junto (até 10). */
   executoras_adicionais?: EmpresaAdicional[] | null;
+  /** Links do cartão público: projeto, documentos e outros (até 8). */
+  links_publicos?: LinkPublico[] | null;
   licenca_id: string | null;
   atualizado_em: string;
 }
@@ -122,13 +128,15 @@ export interface FormSemLicenca {
   fotos_imagens: string;
   /** Concessionária e terceirizadas que atuam junto. */
   adicionais: FormEmpresaAdicional[];
+  /** Links do cartão público. */
+  links: FormLinkPublico[];
 }
 
 export const FORM_SEM_LICENCA_VAZIO: FormSemLicenca = {
   setor: 'viario', publica: false, tipo_intervencao: '', tipos_obra: [], outros_descricao: '', escopo: '', contratante_orgao_id: '', executora_modo: 'propria_orgao',
   executora_id: '', executora_razao_social: '', executora_cnpj: '', logradouro: '', bairro: '', referencia: '',
   inicio: '', fim: '', tipo: 'ponto', area: null, segmentos: [], rascunho: [], inicio_previsto: '', fim_previsto: '', situacao: 'em_execucao', concluida_em: '',
-  processo_sei: '', contrato_numero: '', processo_administrativo: '', ordem_servico_numero: '', observacoes: '', foto_url: '', fotos_imagens: '', adicionais: [],
+  processo_sei: '', contrato_numero: '', processo_administrativo: '', ordem_servico_numero: '', observacoes: '', foto_url: '', fotos_imagens: '', adicionais: [], links: [],
 };
 
 /** Linha do banco, sem os campos que o banco preenche. */
@@ -191,6 +199,17 @@ export function montarSemLicenca(f: FormSemLicenca): { linha: LinhaSemLicenca } 
     });
   }
 
+  if (f.links.length > 8) return { erro: 'Cadastre até 8 links na obra.' };
+  const links: LinkPublico[] = [];
+  for (const l of f.links) {
+    const rotulo = l.rotulo.trim();
+    const url = l.url.trim();
+    if (!rotulo && !url) continue;
+    if (!rotulo) return { erro: 'Informe o nome de cada link (ex.: Projeto).' };
+    if (!/^https:\/\/\S+$/.test(url)) return { erro: `O link "${rotulo}" precisa começar com https://.` };
+    links.push({ rotulo, url });
+  }
+
   const n = (v: string) => v.trim() || null;
   const imagens = f.fotos_imagens.split('\n').map((u) => u.trim()).filter(Boolean);
   if (imagens.length > 12) return { erro: 'A galeria aceita até 12 imagens por obra.' };
@@ -231,6 +250,7 @@ export function montarSemLicenca(f: FormSemLicenca): { linha: LinhaSemLicenca } 
       foto_url: n(f.foto_url),
       fotos_imagens: imagens.length > 0 ? imagens : null,
       executoras_adicionais: adicionais,
+      links_publicos: links,
       licenca_id: null,
     },
   };

@@ -14,6 +14,18 @@ function lerFotos(texto: string | undefined): string[] {
   }
 }
 
+/** Links do cartão (JSON): só https, até 8. */
+function lerLinks(texto: string | undefined): { rotulo: string; url: string }[] {
+  try {
+    const v: unknown = JSON.parse(texto || '[]');
+    return Array.isArray(v)
+      ? v.filter((l): l is { rotulo: string; url: string } => typeof l?.rotulo === 'string' && typeof l?.url === 'string' && /^https:\/\/\S+$/.test(l.url)).slice(0, 8)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
 /** Só https: o link das fotos vem do cadastro e vai para uma imagem de outro site. */
 function fotoSegura(url: string | undefined): string | null {
   return url && /^https:\/\/\S+$/.test(url) ? url : null;
@@ -30,6 +42,7 @@ export default function FichaIntervencao({ dados, onFechar }: {
   const cor = publica ? COR_OBRA_PUBLICA : '#eab308';
   const pasta = fotoSegura(dados.foto_url);
   const fotos = lerFotos(dados.fotos);
+  const linksDoCartao = lerLinks(dados.links);
   const [falhas, setFalhas] = useState<Set<string>>(() => new Set());
   const visiveis = fotos.filter((u) => !falhas.has(u));
   const processo = dados.processo;
@@ -85,6 +98,14 @@ export default function FichaIntervencao({ dados, onFechar }: {
           ))}
         </dl>
       </div>
+      {linksDoCartao.length > 0 && (
+        <div className="border-t border-tinta-200 px-3 py-1.5 text-xs" aria-label="Links da obra">
+          <span className="mr-3 font-semibold text-tinta-600">Links:</span>
+          {linksDoCartao.map((l) => (
+            <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer" className="mr-4 font-semibold text-marca-700 hover:underline">{l.rotulo}</a>
+          ))}
+        </div>
+      )}
       {(pasta || dados.licenca_codigo) && (
         <div className="flex flex-wrap gap-4 border-t border-tinta-200 px-3 py-1.5 text-xs font-semibold">
           {pasta && (

@@ -46,6 +46,8 @@ export interface IntervencaoPublica {
   contratante?: string | null;
   /** Concessionária e terceirizadas que atuam junto. */
   executoras_adicionais?: { papel: string; nome: string }[] | null;
+  /** Links do cartão: projeto, documentos e outros. */
+  links_publicos?: { rotulo: string; url: string }[] | null;
 }
 
 /** Limite da consulta, como nas comunicações. */
@@ -102,6 +104,8 @@ export function intervencoesParaGeoJSON(lista: IntervencaoPublica[]): FeatureCol
       foto_url: i.foto_url ?? '',
       // Lista de imagens como texto JSON (propriedades do GeoJSON são planas).
       fotos: JSON.stringify((i.fotos_imagens ?? []).filter(Boolean)),
+      // Links do cartão, só https, como texto JSON.
+      links: JSON.stringify((i.links_publicos ?? []).filter((l) => /^https:\/\/\S+$/.test(l.url))),
       licenca_codigo: i.licenca_codigo ?? '',
       // Demais empresas, no texto do cartão: "Concessionária X · Terceirizada Y".
       outras_empresas: (i.executoras_adicionais ?? []).map((a) => `${a.nome} (${a.papel === 'concessionaria' ? 'concessionária' : 'terceirizada'})`).join(' · '),

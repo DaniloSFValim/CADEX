@@ -116,3 +116,12 @@ describe('demais empresas no cartão', () => {
     expect(fc.features[0].properties?.outras_empresas).toBe('');
   });
 });
+
+describe('links no cartão', () => {
+  it('leva só os links https para o cartão', () => {
+    const fc = intervencoesParaGeoJSON([{ ...base, links_publicos: [
+      { rotulo: 'Projeto', url: 'https://docs.example.test/p.pdf' }, { rotulo: 'Inseguro', url: 'http://x.example.test' },
+    ] }]);
+    expect(JSON.parse(String(fc.features[0].properties?.links))).toEqual([{ rotulo: 'Projeto', url: 'https://docs.example.test/p.pdf' }]);
+  });
+});

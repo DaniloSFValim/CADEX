@@ -150,3 +150,18 @@ describe('outras empresas envolvidas', () => {
       .toBe('O CNPJ de uma empresa adicional precisa ter 14 dígitos.');
   });
 });
+
+describe('links da obra', () => {
+  it('grava os links com https', () => {
+    const r = montarSemLicenca(base({ links: [{ rotulo: 'Projeto', url: 'https://docs.example.test/projeto.pdf' }] }));
+    if (!('linha' in r)) throw new Error('deveria passar');
+    expect(r.linha.links_publicos).toEqual([{ rotulo: 'Projeto', url: 'https://docs.example.test/projeto.pdf' }]);
+  });
+
+  it('recusa link sem https e link sem nome', () => {
+    expect(erro(montarSemLicenca(base({ links: [{ rotulo: 'Projeto', url: 'http://x.example.test' }] }))))
+      .toBe('O link "Projeto" precisa começar com https://.');
+    expect(erro(montarSemLicenca(base({ links: [{ rotulo: '', url: 'https://x.example.test' }] }))))
+      .toBe('Informe o nome de cada link (ex.: Projeto).');
+  });
+});
