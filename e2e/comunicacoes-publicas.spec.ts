@@ -30,7 +30,7 @@ test.describe('comunicações ao CISP na consulta pública', () => {
     await page.goto('/consulta/obras');
 
     const legenda = page.getByRole('list', { name: 'Legenda das comunicações ao CISP' });
-    await expect(legenda).toContainText('Emergência (comunicada depois do fato)');
+    await expect(legenda).toContainText('Emergência (ligação ao CISP antes de agir)');
     await expect(legenda).toContainText('Serviço programado (comunicado antes)');
     await expect(page.getByText('1 de 2', { exact: true })).toBeVisible();
 

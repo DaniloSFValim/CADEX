@@ -27,8 +27,8 @@ const CATEGORIAS: { valor: Categoria; rotulo: string; cor?: string }[] = [
   { valor: 'todas', rotulo: 'Todas' },
   { valor: 'licenciadas', rotulo: 'Licenciadas' },
   { valor: 'sem_licenca', rotulo: 'Obras públicas sem licença', cor: '#7c3aed' },
-  { valor: 'emergencia', rotulo: 'Emergências', cor: '#dc2626' },
-  { valor: 'manutencao', rotulo: 'Manutenção de rotina', cor: '#2563eb' },
+  { valor: 'emergencia', rotulo: 'Emergências', cor: '#b91c1c' },
+  { valor: 'manutencao', rotulo: 'Manutenção de rotina', cor: '#eab308' },
 ];
 /** Situações das licenciadas, pelas datas do cronograma no dia da consulta. */
 type SituacaoFiltro = 'todas' | 'aguardando_inicio' | 'vigente' | 'encerrada';
@@ -296,21 +296,16 @@ function FiltroComunicacoes({ ampliado, onMudar, visiveis, total }: {
 /** Comunicações ao CISP e obras sem licença: cada forma e cor do mapa. */
 function LegendaComunicacoes() {
   return (
-    <ul className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-tinta-600" aria-label="Legenda das comunicações ao CISP e obras sem licença">
+    <ul className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-tinta-600" aria-label="Legenda das comunicações ao CISP e das obras públicas sem licença">
       <li className="inline-flex items-center gap-1.5">
         <span className="inline-block h-0 w-4 border-t-[5px] border-[#b91c1c]" aria-hidden />
         <span className="inline-block h-2.5 w-2.5 bg-[#b91c1c]" style={{ clipPath: 'polygon(50% 0, 100% 100%, 0 100%)' }} aria-hidden />
-        Emergência (comunicada depois do fato)
+        Emergência (ligação ao CISP antes de agir)
       </li>
       <li className="inline-flex items-center gap-1.5">
         <span className="inline-block h-0 w-4 border-t-[5px] border-dashed border-[#eab308]" aria-hidden />
         <span className="inline-block h-2.5 w-2.5 bg-[#eab308]" aria-hidden />
         Serviço programado (comunicado antes)
-      </li>
-      <li className="inline-flex items-center gap-1.5">
-        <span className="inline-block h-0 w-4 border-t-[5px] border-[#eab308]" aria-hidden />
-        <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#eab308]" aria-hidden />
-        Obra ou serviço sem licença
       </li>
       <li className="inline-flex items-center gap-1.5">
         <span className="inline-block h-0 w-4 border-t-[5px] border-[#7c3aed]" aria-hidden />
