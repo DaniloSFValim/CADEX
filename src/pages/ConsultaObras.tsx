@@ -38,9 +38,13 @@ const SITUACOES_FILTRO: { valor: SituacaoFiltro; rotulo: string; cor?: string }[
   { valor: 'vigente', rotulo: 'Em execução', cor: '#16a34a' },
   { valor: 'encerrada', rotulo: 'Encerradas', cor: '#2563eb' },
 ];
-const ROTULO_CATEGORIA: Record<Categoria, string> = {
-  todas: 'Todas', licenciadas: 'Licenciadas', sem_licenca: 'Obras públicas sem licença',
-  emergencia: 'Emergências', manutencao: 'Manutenção de rotina',
+/** Texto do estado vazio: diz o que significa e o que fazer, sem repetir o rótulo. */
+const MENSAGEM_VAZIO: Record<Categoria, string> = {
+  todas: 'Nenhum registro no mapa agora.',
+  licenciadas: 'Nenhuma obra licenciada nesta situação. Escolha outra situação ou veja todas as obras.',
+  sem_licenca: 'Nenhuma obra pública sem licença registrada agora.',
+  emergencia: 'Nenhuma emergência registrada agora. Veja todas as obras para o restante do mapa.',
+  manutencao: 'Nenhum serviço de manutenção de rotina registrado agora. Veja todas as obras para o restante do mapa.',
 };
 
 /** Consulta pública: obras licenciadas pela SECONSER, no mapa e em lista. */
@@ -182,7 +186,7 @@ export default function ConsultaObras() {
               )}
               {semRegistro && (
                 <p role="status" className="mb-3 text-sm text-tinta-600">
-                  Nenhum registro em "{ROTULO_CATEGORIA[categoria]}" agora.
+                  {MENSAGEM_VAZIO[categoria]}
                 </p>
               )}
 
