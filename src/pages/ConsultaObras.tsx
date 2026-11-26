@@ -187,8 +187,9 @@ export default function ConsultaObras() {
               )}
 
               <Suspense fallback={<div className="h-[60vh] min-h-[360px] rounded-xl border border-tinta-200 bg-tinta-50" />}>
-                <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-tinta-600">
-                  <div role="group" aria-label="Visualização do mapa" className="inline-flex rounded-full border border-tinta-200 bg-white p-0.5 text-xs font-semibold">
+                <div ref={mapaRef} className="relative scroll-mt-4 overflow-hidden rounded-xl border border-tinta-200 shadow-xs">
+                  {/* Modo do mapa sobre o próprio mapa, para não ocupar uma linha acima dele. */}
+                  <div role="group" aria-label="Visualização do mapa" className="absolute left-3 top-3 z-10 inline-flex rounded-full border border-tinta-200 bg-white/95 p-0.5 text-xs font-semibold shadow-sm">
                     {(['pontos', 'calor'] as const).map((m) => (
                       <button key={m} type="button" aria-pressed={modo === m} onClick={() => setModo(m)}
                               className={`rounded-full px-3 py-1 ${modo === m ? 'bg-marca-700 text-white' : 'text-tinta-600 hover:text-tinta-900'}`}>
@@ -196,14 +197,6 @@ export default function ConsultaObras() {
                       </button>
                     ))}
                   </div>
-                  <p>
-                    <button type="button" className={linkTexto} disabled={baixando} onClick={() => void baixarGeojson()}>
-                      {baixando ? 'Preparando…' : 'Dados abertos: baixar GeoJSON'}
-                    </button>
-                    <span className="text-tinta-400">. Todas as obras licenciadas, para uso livre.</span>
-                  </p>
-                </div>
-                <div ref={mapaRef} className="relative scroll-mt-4 overflow-hidden rounded-xl border border-tinta-200 shadow-xs">
                   <MapaObras obras={obrasNoMapa} comunicacoes={comunicacoesNoMapa} intervencoes={intervencoesNoMapa}
                              foco={foco} destaque={destaque} modo={modo} bairro={bairro}
                              onSelecionar={(c) => { setIntervencaoSel(null); setFoco(c); }}
@@ -219,6 +212,12 @@ export default function ConsultaObras() {
                 </div>
               </Suspense>
               <Legenda />
+              <p className="mt-2 text-xs text-tinta-600">
+                <button type="button" className={linkTexto} disabled={baixando} onClick={() => void baixarGeojson()}>
+                  {baixando ? 'Preparando…' : 'Dados abertos: baixar GeoJSON'}
+                </button>
+                <span className="text-tinta-400">. Todas as obras licenciadas, para uso livre.</span>
+              </p>
               {comunicacoes.length > 0 && (
                 <FiltroComunicacoes ampliado={ampliarComunicacoes} onMudar={setAmpliarComunicacoes}
                                     visiveis={comunicacoesVisiveis.length} total={comunicacoes.length} />
