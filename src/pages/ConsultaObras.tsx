@@ -10,6 +10,7 @@ import { dataBR } from '../components/Situacao';
 import { DIAS_JANELA, buscarComunicacoesPublicas, filtrarComunicacoes, hojeNiteroi, type ComunicacaoPublica } from '../lib/comunicacoesPublicas';
 import { buscarIntervencoesPublicas, filtrarIntervencoes, type IntervencaoPublica } from '../lib/intervencoesPublicas';
 import { ORIGEM_LABEL, TIPO_INTERVENCAO_LABEL, origemPublica } from '../lib/licencas';
+import { ATRIBUICAO_REDES, REDES_SIGEO, ZOOM_MINIMO_REDES } from '../lib/redesSigeo';
 import { listarTipos, mapaRotulosTipos, rotuloDoTipo } from '../lib/tiposIntervencao';
 import {
   COR_SITUACAO, SITUACAO_PUBLICA_LABEL, SITUACOES_NO_MAPA, baixarObrasGeojson, buscarEstatisticasPublicas, buscarObrasPublicas, nomeLimpo, temLocalizacao,
@@ -58,6 +59,8 @@ export default function ConsultaObras() {
   const [destaqueIntervencao, setDestaqueIntervencao] = useState<string | null>(null);
   const [destaque, setDestaque] = useState<string | null>(null);
   const [modo, setModo] = useState<'pontos' | 'calor'>('pontos');
+  // Camadas de redes marcadas na caixa de camadas. Começa sem nenhuma: o mapa abre limpo.
+  const [redesAtivas, setRedesAtivas] = useState<string[]>([]);
   const [categoria, setCategoria] = useState<Categoria>('todas');
   const [situacaoFiltro, setSituacaoFiltro] = useState<SituacaoFiltro>('todas');
   // Por padrão, a consulta mostra todas as obras licenciadas, inclusive as encerradas.
@@ -199,8 +202,28 @@ export default function ConsultaObras() {
                       </button>
                     ))}
                   </div>
+                  {/* Caixa de camadas: fechada por padrão, para o mapa não ficar carregado de linhas. */}
+                  <details className="absolute bottom-3 left-3 z-10 max-w-[min(18rem,calc(100%-1.5rem))] rounded-lg border border-tinta-200 bg-white/95 text-xs text-tinta-800 shadow-sm">
+                    <summary className="cursor-pointer select-none px-3 py-2 font-semibold">
+                      Camadas de redes{redesAtivas.length > 0 ? ` (${redesAtivas.length})` : ''}
+                    </summary>
+                    <div className="space-y-1.5 border-t border-tinta-200 px-3 py-2">
+                      {REDES_SIGEO.map((r) => (
+                        <label key={r.id} className="flex cursor-pointer items-center gap-2">
+                          <input type="checkbox" className="accent-marca-700"
+                                 checked={redesAtivas.includes(r.id)}
+                                 onChange={(e) => setRedesAtivas((atual) => e.target.checked
+                                   ? [...atual, r.id]
+                                   : atual.filter((x) => x !== r.id))} />
+                          <span aria-hidden="true" className="h-2 w-2 rounded-full" style={{ background: r.cor }} />
+                          {r.rotulo}
+                        </label>
+                      ))}
+                      <p className="pt-1 text-tinta-500">As redes aparecem a partir do zoom {ZOOM_MINIMO_REDES}. {ATRIBUICAO_REDES}.</p>
+                    </div>
+                  </details>
                   <MapaObras obras={obrasNoMapa} comunicacoes={comunicacoesNoMapa} intervencoes={intervencoesNoMapa}
-                             foco={foco} destaque={destaque} modo={modo} bairro={bairro}
+                             foco={foco} destaque={destaque} modo={modo} bairro={bairro} redesAtivas={redesAtivas}
                              onSelecionar={(c) => { setIntervencaoSel(null); setFoco(c); }}
                              onIntervencao={(d) => { setFoco(null); setIntervencaoSel(d); setDestaqueIntervencao(d.id ?? null); }}
                              intervencaoFoco={destaqueIntervencao}
