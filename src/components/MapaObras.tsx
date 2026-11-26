@@ -42,7 +42,26 @@ const CORES_OSM = {
  * pelo próprio site. Enquanto ela não existir, usa os blocos públicos do
  * OpenStreetMap, sem garantia de disponibilidade: só para a fase piloto.
  */
+/**
+ * Mapa-base do SIGEO (ArcGIS World Topographic Map), usado pela Prefeitura na própria página pública.
+ * Os rótulos dos agrupamentos e os ícones continuam vindo dos glifos e sprites da CADEX.
+ */
+const TOPO_ESRI = 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}';
+const ATRIBUICAO_TOPO = 'Sources: Esri, HERE, Garmin, Intermap, increment P Corp., GEBCO, USGS, FAO, NPS, NRCAN, GeoBase, IGN, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), © OpenStreetMap contributors, and the GIS User Community';
+
 export async function estiloBase(): Promise<StyleSpecification> {
+  const origem = window.location.origin;
+  return {
+    version: 8,
+    glyphs: `${origem}/mapa/fontes/{fontstack}/{range}.pbf`,
+    sprite: `${origem}/mapa/sprites/light`,
+    sources: { base: { type: 'raster', tiles: [TOPO_ESRI], tileSize: 256, maxzoom: 19, attribution: ATRIBUICAO_TOPO } },
+    layers: [{ id: 'base', type: 'raster', source: 'base' }],
+  };
+}
+
+/** Mapa-base anterior (Protomaps/OpenStreetMap, pmtiles próprio). Mantido para voltar atrás se preciso. */
+export async function estiloBaseProtomaps(): Promise<StyleSpecification> {
   const origem = window.location.origin;
   const arquivo = `${origem}/mapa/niteroi.pmtiles`;
   let temBase = false;
