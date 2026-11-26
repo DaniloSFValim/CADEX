@@ -16,6 +16,7 @@ import { intervencoesParaGeoJSON, type IntervencaoPublica } from '../lib/interve
 import { carregarBairrosGeo, chaveBairro } from '../lib/bairros';
 import type { SituacaoPublica } from '../lib/licencas';
 import { MAPA_LOCALE } from '../lib/mapaLocale';
+import { REDES_SIGEO, ZOOM_MINIMO_REDES, urlConsultaRede } from '../lib/redesSigeo';
 
 /** Niterói, com folga. */
 const NITEROI: maplibregl.LngLatBoundsLike = [[-43.135, -22.995], [-42.955, -22.865]];
@@ -128,10 +129,13 @@ function desenhaMarca(forma: 'triangulo' | 'quadrado' | 'circulo', cor: string):
 
 /** Mapa das obras. Clicar numa obra avisa quem chamou (a ficha aparece ao lado), sem balão. */
 const SEM_COMUNICACOES: ComunicacaoPublica[] = [];
+const SEM_REDES: string[] = [];
 const SEM_INTERVENCOES: IntervencaoPublica[] = [];
 
-export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, intervencoes = SEM_INTERVENCOES, foco, destaque, modo = 'pontos', bairro, onSelecionar, onBairro, onDestacar, onGrupo, onIntervencao, intervencaoFoco = null }: {
+export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, intervencoes = SEM_INTERVENCOES, foco, destaque, modo = 'pontos', bairro, onSelecionar, onBairro, onDestacar, onGrupo, onIntervencao, intervencaoFoco = null, redesAtivas = SEM_REDES }: {
   obras: ObraPublica[]; comunicacoes?: ComunicacaoPublica[]; intervencoes?: IntervencaoPublica[]; foco?: string | null; destaque?: string | null; modo?: 'pontos' | 'calor';
+  /** Camadas de redes do SIGEO marcadas na caixa de camadas (ids de REDES_SIGEO). */
+  redesAtivas?: string[];
   bairro?: string | null; onSelecionar?: (codigo: string) => void; onBairro?: (bairro: string) => void;
   onDestacar?: (codigo: string | null) => void;
   /** Clique num agrupamento: códigos das obras dentro dele. Quem recebe destaca essas obras, sem esconder as outras. */
@@ -788,6 +792,49 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, inte
     const features = t ? [{ type: 'Feature' as const, properties: {}, geometry: { type: 'Point' as const, coordinates: t.inicio } }] : [];
     (m.getSource('foco-obra') as maplibregl.GeoJSONSource).setData({ type: 'FeatureCollection', features });
   }, [foco, obras, pronto]);
+
+  // Redes do SIGEO: cada camada é criada uma vez, escondida até ser marcada. Ao mover o mapa, as ativas
+  // são consultadas de novo pela área visível, a partir do zoom mínimo. Respostas antigas são descartadas.
+  const versaoRedes = useRef<Record<string, number>>({});
+  useEffect(() => {
+    if (!pronto || !mapa.current) return;
+    const m = mapa.current;
+    const antes = m.getLayer('bairros-area') ? 'bairros-area' : undefined;
+    for (const rede of REDES_SIGEO) {
+      if (!m.getSource(rede.id)) {
+        m.addSource(rede.id, { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+      }
+      if (!m.getLayer(rede.id)) {
+        const camada: maplibregl.LayerSpecification = rede.tipo === 'poligono'
+          ? { id: rede.id, type: 'fill', source: rede.id, paint: { 'fill-color': rede.cor, 'fill-opacity': 0.25 } }
+          : { id: rede.id, type: 'line', source: rede.id, layout: { 'line-cap': 'round', 'line-join': 'round' },
+              paint: { 'line-color': rede.cor, 'line-width': ['interpolate', ['linear'], ['zoom'], 13, 1, 17, 3] } };
+        m.addLayer(camada, antes);
+      }
+      m.setLayoutProperty(rede.id, 'visibility', redesAtivas.includes(rede.id) ? 'visible' : 'none');
+    }
+    const carregar = () => {
+      if (m.getZoom() < ZOOM_MINIMO_REDES) return;
+      const b = m.getBounds();
+      for (const rede of REDES_SIGEO) {
+        if (!redesAtivas.includes(rede.id)) continue;
+        const versao = (versaoRedes.current[rede.id] ?? 0) + 1;
+        versaoRedes.current[rede.id] = versao;
+        const src = m.getSource(rede.id) as maplibregl.GeoJSONSource | undefined;
+        if (!src) continue;
+        fetch(urlConsultaRede(rede, b.getWest(), b.getSouth(), b.getEast(), b.getNorth()))
+          .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+          .then((geo: GeoJSON.FeatureCollection) => {
+            if (versaoRedes.current[rede.id] !== versao) return;
+            (m.getSource(rede.id) as maplibregl.GeoJSONSource | undefined)?.setData(geo);
+          })
+          .catch(() => { /* a rede some; o mapa segue com as obras */ });
+      }
+    };
+    carregar();
+    m.on('moveend', carregar);
+    return () => { m.off('moveend', carregar); };
+  }, [redesAtivas, pronto]);
 
   // Leva o mapa até a obra escolhida na lista.
   useEffect(() => {
