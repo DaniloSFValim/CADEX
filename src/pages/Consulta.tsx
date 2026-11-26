@@ -3,7 +3,7 @@ import { Cabecalho } from '../components/Cabecalho';
 import { Rodape } from '../components/Rodape';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Empty, ErrorNote, Kpi, Spinner, Titulo, inputClass, linkTexto } from '../components/ui';
+import { Empty, ErrorNote, Spinner, Titulo, inputClass, linkTexto } from '../components/ui';
 import { atuacaoPorExecutora, buscarObrasPublicas, chaveNome, contratacaoPorContratante, nomeNoMapa, type AtuacaoExecutora } from '../lib/obras';
 import { BARRA, dataBR } from '../components/Situacao';
 import { SITUACAO_LABEL, type SituacaoEfetiva } from '../lib/empresas';
@@ -73,12 +73,6 @@ export default function Consulta() {
           descricao="Antes de uma obra na via pública, confira se a empresa está apta a atuar."
         />
 
-        {linhas && (
-          <div className="mt-8">
-            <Kpi rotulo="Cadastradas" valor={linhas.length} detalhe="empresas no cadastro" />
-          </div>
-        )}
-
         <AbasConsulta />
 
         <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_220px_220px]">
@@ -102,7 +96,7 @@ export default function Consulta() {
         <section className="mt-8" aria-live="polite">
           <ErrorNote error={error} />
           {!linhas && !error && <Spinner />}
-          {/* Sem filtro, o total já está no cartão "Cadastradas": a linha só aparece quando filtra. */}
+          {/* Sem filtro, a linha não aparece. */}
           {linhas && filtradas.length !== linhas.length && (
             <p className="mb-3 text-sm text-tinta-500">
               {filtradas.length} de {linhas.length} empresas
