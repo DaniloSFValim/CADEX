@@ -19,28 +19,30 @@ export type RedeSigeo = {
   url: string;
   tipo: 'linha' | 'poligono';
   cor: string;
+  /** Nome do campo de identificação da camada (varia entre os serviços). Único atributo pedido. */
+  campoId: string;
 };
 
 export const REDES_SIGEO: RedeSigeo[] = [
   { id: 'rede-agua', rotulo: 'Água', tipo: 'linha', cor: '#0284c7',
-    url: 'https://services8.arcgis.com/TpaOLI1HCh5AcRQB/arcgis/rest/services/Grouplayer_SECONSER_EQUIPDREN_AGOL/FeatureServer/30' },
+    url: 'https://services8.arcgis.com/TpaOLI1HCh5AcRQB/arcgis/rest/services/Grouplayer_SECONSER_EQUIPDREN_AGOL/FeatureServer/30', campoId: 'OBJECTID' },
   { id: 'rede-esgoto', rotulo: 'Esgoto', tipo: 'linha', cor: '#78716c',
-    url: 'https://services8.arcgis.com/TpaOLI1HCh5AcRQB/arcgis/rest/services/Grouplayer_SECONSER_EQUIPDREN_AGOL/FeatureServer/20' },
+    url: 'https://services8.arcgis.com/TpaOLI1HCh5AcRQB/arcgis/rest/services/Grouplayer_SECONSER_EQUIPDREN_AGOL/FeatureServer/20', campoId: 'OBJECTID' },
   { id: 'rede-oi', rotulo: 'Comunicação (OI)', tipo: 'linha', cor: '#db2777',
-    url: 'https://services8.arcgis.com/TpaOLI1HCh5AcRQB/arcgis/rest/services/Grouplayer_SECONSER_GESTAO_AGOL/FeatureServer/70' },
+    url: 'https://services8.arcgis.com/TpaOLI1HCh5AcRQB/arcgis/rest/services/Grouplayer_SECONSER_GESTAO_AGOL/FeatureServer/70', campoId: 'OBJECTID' },
   { id: 'rede-gas-bp', rotulo: 'Gás BP', tipo: 'linha', cor: '#c2410c',
-    url: 'https://services8.arcgis.com/TpaOLI1HCh5AcRQB/arcgis/rest/services/Grouplayer_SECONSER_GESTAO_AGOL/FeatureServer/40' },
+    url: 'https://services8.arcgis.com/TpaOLI1HCh5AcRQB/arcgis/rest/services/Grouplayer_SECONSER_GESTAO_AGOL/FeatureServer/40', campoId: 'OBJECTID_1' },
   { id: 'rede-gas-mp', rotulo: 'Gás MP', tipo: 'linha', cor: '#ea580c',
-    url: 'https://services8.arcgis.com/TpaOLI1HCh5AcRQB/arcgis/rest/services/Grouplayer_SECONSER_GESTAO_AGOL/FeatureServer/50' },
+    url: 'https://services8.arcgis.com/TpaOLI1HCh5AcRQB/arcgis/rest/services/Grouplayer_SECONSER_GESTAO_AGOL/FeatureServer/50', campoId: 'OBJECTID_1' },
   { id: 'rede-gas-ap', rotulo: 'Gás AP', tipo: 'linha', cor: '#fb923c',
-    url: 'https://services8.arcgis.com/TpaOLI1HCh5AcRQB/arcgis/rest/services/Grouplayer_SECONSER_GESTAO_AGOL/FeatureServer/30' },
-  { id: 'rede-drenagem', rotulo: 'Drenagem', tipo: 'poligono', cor: '#4f46e5',
-    url: 'https://sig.niteroi.rj.gov.br/server/rest/services/Hosted/Rede_de_Drenagem_(Visualiza%C3%A7%C3%A3o_P%C3%BAblica)/FeatureServer/3' },
+    url: 'https://services8.arcgis.com/TpaOLI1HCh5AcRQB/arcgis/rest/services/Grouplayer_SECONSER_GESTAO_AGOL/FeatureServer/30', campoId: 'OBJECTID_1' },
+  { id: 'rede-drenagem', rotulo: 'Drenagem', tipo: 'linha', cor: '#4f46e5',
+    url: 'https://sig.niteroi.rj.gov.br/server/rest/services/Hosted/Rede_de_Drenagem_(Visualiza%C3%A7%C3%A3o_P%C3%BAblica)/FeatureServer/3', campoId: 'objectid' },
 ];
 
 /**
  * Monta a consulta de feições dentro de uma área (oeste, sul, leste, norte, em graus).
- * Só pede a geometria e o OBJECTID: os demais atributos não saem do serviço.
+ * Só pede a geometria e o campo de identificação: os demais atributos não saem do serviço.
  */
 export function urlConsultaRede(rede: RedeSigeo, oeste: number, sul: number, leste: number, norte: number): string {
   const envelope = `${oeste},${sul},${leste},${norte}`;
@@ -50,7 +52,7 @@ export function urlConsultaRede(rede: RedeSigeo, oeste: number, sul: number, les
     geometryType: 'esriGeometryEnvelope',
     inSR: '4326',
     spatialRel: 'esriSpatialRelIntersects',
-    outFields: 'OBJECTID',
+    outFields: rede.campoId,
     outSR: '4326',
     returnGeometry: 'true',
     resultRecordCount: String(LIMITE_FEICOES),

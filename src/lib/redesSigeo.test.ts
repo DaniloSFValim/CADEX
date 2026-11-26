@@ -18,8 +18,15 @@ describe('urlConsultaRede', () => {
   it('nenhuma camada pede atributos operacionais', () => {
     for (const r of REDES_SIGEO) {
       const url = new URL(urlConsultaRede(r, 0, 0, 1, 1));
-      expect(url.searchParams.get('outFields')).toBe('OBJECTID');
+      expect(url.searchParams.get('outFields')).toBe(r.campoId);
+      expect(['OBJECTID', 'OBJECTID_1', 'objectid']).toContain(r.campoId);
     }
+  });
+
+  it('drenagem é linha, com o campo de id em minúsculas', () => {
+    const d = REDES_SIGEO.find((r) => r.id === 'rede-drenagem')!;
+    expect(d.tipo).toBe('linha');
+    expect(d.campoId).toBe('objectid');
   });
 
   it('ids das camadas são únicos', () => {
