@@ -5,7 +5,7 @@ import FichaObra, { type DetalheObra } from '../components/FichaObra';
 import FichaIntervencao from '../components/FichaIntervencao';
 import { Cabecalho } from '../components/Cabecalho';
 import { Rodape } from '../components/Rodape';
-import { ErrorNote, Kpi, Spinner, Titulo, linkTexto } from '../components/ui';
+import { ErrorNote, Spinner, Titulo, linkTexto } from '../components/ui';
 import { dataBR } from '../components/Situacao';
 import { DIAS_JANELA, buscarComunicacoesPublicas, filtrarComunicacoes, hojeNiteroi, type ComunicacaoPublica } from '../lib/comunicacoesPublicas';
 import { buscarIntervencoesPublicas, filtrarIntervencoes, type IntervencaoPublica } from '../lib/intervencoesPublicas';
@@ -142,14 +142,6 @@ export default function ConsultaObras() {
 
         <AbasConsulta />
 
-        {obras && estat && (
-          <div className="mt-8 grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-3">
-            <Kpi rotulo="Licenças autorizadas nos últimos 12 meses" valor={estat.autorizadas_12m} />
-            <Kpi rotulo="Obras concluídas nos últimos 5 anos" valor={estat.concluidas_5a} />
-            <Kpi rotulo={estat.executoras === 1 ? 'Empresa executora' : 'Empresas executoras'} valor={estat.executoras} />
-          </div>
-        )}
-
 
         <ErrorNote error={error} />
         {!obras && !error && <Spinner label="Carregando as obras…" />}
@@ -159,12 +151,29 @@ export default function ConsultaObras() {
             <div className="min-w-0">
             {/* Mapa em largura total; a ficha da obra selecionada fica sobre ele. */}
             <div>
+              {/* Painel: no celular fica acima do mapa; no desktop flutua sobre ele, à esquerda. */}
+              <div className="relative">
+                {/* taste-skill-ignore: painel flutuante sobre o mapa */}<div className="lg:absolute lg:left-4 lg:top-4 lg:z-20 lg:flex lg:w-[18rem] lg:flex-col lg:gap-4 lg:rounded-xl lg:border lg:border-tinta-200 lg:bg-white/95 lg:p-4 lg:shadow-md lg:backdrop-blur-sm">
+                  {obras && estat && (
+                    <dl className="mt-6 grid grid-cols-3 gap-3 sm:gap-8 lg:mt-0 lg:grid-cols-1 lg:gap-3">
+                      {[
+                        { rotulo: 'Licenças autorizadas nos últimos 12 meses', valor: estat.autorizadas_12m },
+                        { rotulo: 'Obras concluídas nos últimos 5 anos', valor: estat.concluidas_5a },
+                        { rotulo: estat.executoras === 1 ? 'Empresa executora' : 'Empresas executoras', valor: estat.executoras },
+                      ].map((k) => (
+                        <div key={k.rotulo} className="pt-2 sm:pt-3 lg:flex lg:items-baseline lg:justify-between lg:gap-3 lg:pt-0">
+                          <dt className="text-xs font-medium leading-snug text-tinta-600 sm:text-sm lg:text-sm">{k.rotulo}</dt>
+                          <dd className="tabular mt-1 text-xl font-semibold tracking-[-0.02em] text-tinta-900 sm:text-3xl lg:mt-0 lg:text-2xl">{k.valor}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  )}
               {/* Categoria primeiro; as situações das licenciadas aparecem só quando "Licenciadas" está escolhida. */}
-              <div role="group" aria-label="Categoria no mapa" className="mb-3 flex flex-wrap items-center gap-2">
+              <div role="group" aria-label="Categoria no mapa" className="-mx-4 mb-3 flex flex-nowrap items-center gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
                 {CATEGORIAS.map((c) => (
                   <button key={c.valor} type="button" aria-pressed={categoria === c.valor}
                           onClick={() => { setCategoria(c.valor); setSituacaoFiltro('todas'); }}
-                          className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-medium ${categoria === c.valor
+                          className={`inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border px-3.5 py-1.5 text-sm font-medium ${categoria === c.valor
                             ? 'border-tinta-900 bg-tinta-900 text-white'
                             : 'border-tinta-300 bg-white text-tinta-800 hover:border-tinta-500'}`}>
                     {c.cor && <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ background: c.cor }} />}
@@ -173,10 +182,10 @@ export default function ConsultaObras() {
                 ))}
               </div>
               {categoria === 'licenciadas' && (
-                <div role="group" aria-label="Situação das licenciadas" className="mb-4 flex flex-wrap items-center gap-2">
+                <div role="group" aria-label="Situação das licenciadas" className="-mx-4 mb-4 flex flex-nowrap items-center gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
                   {SITUACOES_FILTRO.map((t) => (
                     <button key={t.valor} type="button" aria-pressed={situacaoFiltro === t.valor} onClick={() => setSituacaoFiltro(t.valor)}
-                            className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${situacaoFiltro === t.valor
+                            className={`inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border px-3 py-1 text-xs font-medium ${situacaoFiltro === t.valor
                               ? 'border-tinta-700 bg-tinta-700 text-white'
                               : 'border-tinta-300 bg-white text-tinta-700 hover:border-tinta-500'}`}>
                       {t.cor && <span aria-hidden="true" className="h-2 w-2 rounded-full" style={{ background: t.cor }} />}
@@ -185,6 +194,21 @@ export default function ConsultaObras() {
                   ))}
                 </div>
               )}
+                                {categoria === 'licenciadas' && (
+                  <div role="group" aria-label="Situação das licenciadas" className="mb-4 flex flex-wrap items-center gap-2">
+                    {SITUACOES_FILTRO.map((t) => (
+                      <button key={t.valor} type="button" aria-pressed={situacaoFiltro === t.valor} onClick={() => setSituacaoFiltro(t.valor)}
+                              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${situacaoFiltro === t.valor
+                                ? 'border-tinta-700 bg-tinta-700 text-white'
+                                : 'border-tinta-300 bg-white text-tinta-700 hover:border-tinta-500'}`}>
+                        {t.cor && <span aria-hidden="true" className="h-2 w-2 rounded-full" style={{ background: t.cor }} />}
+                        {t.rotulo}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                </div>
+              </div>
               {semRegistro && (
                 <p role="status" className="mb-3 text-sm text-tinta-600">
                   {MENSAGEM_VAZIO[categoria]}
@@ -194,7 +218,7 @@ export default function ConsultaObras() {
               <Suspense fallback={<div className="h-[60vh] min-h-[360px] rounded-xl border border-tinta-200 bg-tinta-50" />}>
                 <div ref={mapaRef} className="relative scroll-mt-4 overflow-hidden rounded-xl border border-tinta-200 shadow-xs">
                   {/* Modo do mapa sobre o próprio mapa, para não ocupar uma linha acima dele. */}
-                  {/* taste-skill-ignore: controle flutuante sobre o mapa */}<div role="group" aria-label="Visualização do mapa" className="absolute left-3 top-3 z-10 inline-flex rounded-full border border-tinta-200 bg-white/95 p-0.5 text-xs font-semibold shadow-sm">
+                  {/* taste-skill-ignore: controle flutuante sobre o mapa */}<div role="group" aria-label="Visualização do mapa" className="absolute left-3 top-3 z-10 inline-flex lg:left-auto lg:right-16 rounded-full border border-tinta-200 bg-white/95 p-0.5 text-xs font-semibold shadow-sm">
                     {(['pontos', 'calor'] as const).map((m) => (
                       <button key={m} type="button" aria-pressed={modo === m} onClick={() => setModo(m)}
                               className={`rounded-full px-3 py-1 ${modo === m ? 'bg-marca-700 text-white' : 'text-tinta-600 hover:text-tinta-900'}`}>
@@ -236,13 +260,15 @@ export default function ConsultaObras() {
                   )}
                 </div>
               </Suspense>
-              <Legenda />
-              <p className="mt-2 text-xs text-tinta-600">
-                <button type="button" className={linkTexto} disabled={baixando} onClick={() => void baixarGeojson()}>
-                  {baixando ? 'Preparando…' : 'Dados abertos: baixar GeoJSON'}
-                </button>
-                <span className="text-tinta-400">. Todas as obras licenciadas, para uso livre.</span>
-              </p>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
+                <Legenda />
+                <p className="text-xs text-tinta-600">
+                  <button type="button" className={linkTexto} disabled={baixando} onClick={() => void baixarGeojson()}>
+                    {baixando ? 'Preparando…' : 'Dados abertos: baixar GeoJSON'}
+                  </button>
+                  <span className="text-tinta-400">. Todas as obras licenciadas, para uso livre.</span>
+                </p>
+              </div>
               {comunicacoes.length > 0 && (
                 <FiltroComunicacoes ampliado={ampliarComunicacoes} onMudar={setAmpliarComunicacoes}
                                     visiveis={comunicacoesVisiveis.length} total={comunicacoes.length} />
@@ -288,7 +314,7 @@ function Legenda() {
     { cor: COR_SITUACAO.encerrada, rotulo: SITUACAO_PUBLICA_LABEL.encerrada },
   ];
   return (
-    <ul className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm font-medium text-tinta-800" aria-label="Legenda">
+    <ul className="flex flex-wrap gap-x-6 gap-y-2 text-sm font-medium text-tinta-800" aria-label="Legenda">
       {itens.map((s) => (
         <li key={s.rotulo} className="inline-flex items-center gap-2">
           <span className="inline-block h-3 w-5 rounded-full" style={{ background: s.cor }} aria-hidden />
