@@ -15,7 +15,8 @@ export type SituacaoSemLicenca = 'em_execucao' | 'concluida' | 'cancelada';
 
 /** Link do cartão público: projeto, documento ou outro (https). */
 export interface LinkPublico { rotulo: string; url: string }
-export interface FormLinkPublico { rotulo: string; url: string }
+/** Link https: a mesma regra no formulário, na validação e no filtro do mapa. */
+export const LINK_HTTPS = /^https:\/\/\S+$/;
 
 /** Empresa que atua junto com a executora principal: concessionária ou terceirizada. */
 export type PapelEmpresa = 'concessionaria' | 'terceirizada';
@@ -129,7 +130,7 @@ export interface FormSemLicenca {
   /** Concessionária e terceirizadas que atuam junto. */
   adicionais: FormEmpresaAdicional[];
   /** Links do cartão público. */
-  links: FormLinkPublico[];
+  links: LinkPublico[];
 }
 
 export const FORM_SEM_LICENCA_VAZIO: FormSemLicenca = {
@@ -190,12 +191,13 @@ export function montarSemLicenca(f: FormSemLicenca): { linha: LinhaSemLicenca } 
   for (const a of f.adicionais) {
     if (a.modo === 'empresa' && !a.executora_id) return { erro: 'Escolha a empresa de cada linha adicional.' };
     if (!a.nome.trim()) return { erro: 'Informe o nome de cada empresa adicional.' };
-    if (a.modo === 'sem_cadastro' && a.cnpj.trim() && onlyDigits(a.cnpj).length !== 14) {
+    const cnpj = onlyDigits(a.cnpj);
+    if (a.modo === 'sem_cadastro' && a.cnpj.trim() && cnpj.length !== 14) {
       return { erro: 'O CNPJ de uma empresa adicional precisa ter 14 dígitos.' };
     }
     adicionais.push({
       papel: a.papel, modo: a.modo, executora_id: a.modo === 'empresa' ? a.executora_id : null,
-      nome: a.nome.trim(), cnpj: a.modo === 'sem_cadastro' && a.cnpj.trim() ? onlyDigits(a.cnpj) : null,
+      nome: a.nome.trim(), cnpj: a.modo === 'sem_cadastro' && a.cnpj.trim() ? cnpj : null,
     });
   }
 
@@ -206,7 +208,7 @@ export function montarSemLicenca(f: FormSemLicenca): { linha: LinhaSemLicenca } 
     const url = l.url.trim();
     if (!rotulo && !url) continue;
     if (!rotulo) return { erro: 'Informe o nome de cada link (ex.: Projeto).' };
-    if (!/^https:\/\/\S+$/.test(url)) return { erro: `O link "${rotulo}" precisa começar com https://.` };
+    if (!LINK_HTTPS.test(url)) return { erro: `O link "${rotulo}" precisa começar com https://.` };
     links.push({ rotulo, url });
   }
 

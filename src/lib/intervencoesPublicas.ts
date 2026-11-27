@@ -3,7 +3,7 @@ import { supabase } from './supabase';
 import { lerSegmentos, type Segmento } from './areaTrecho';
 import { SETOR_LABEL, type Setor } from './empresas';
 import { TIPO_INTERVENCAO_LABEL, type TipoIntervencao } from './licencas';
-import { SITUACAO_SEM_LICENCA_LABEL, type SituacaoSemLicenca } from './semLicenca';
+import { LINK_HTTPS, SITUACAO_SEM_LICENCA_LABEL, type SituacaoSemLicenca } from './semLicenca';
 
 /**
  * Obra ou serviço sem licença como aparece no mapa público (view intervencoes_publicas).
@@ -105,7 +105,7 @@ export function intervencoesParaGeoJSON(lista: IntervencaoPublica[]): FeatureCol
       // Lista de imagens como texto JSON (propriedades do GeoJSON são planas).
       fotos: JSON.stringify((i.fotos_imagens ?? []).filter(Boolean)),
       // Links do cartão, só https, como texto JSON.
-      links: JSON.stringify((i.links_publicos ?? []).filter((l) => /^https:\/\/\S+$/.test(l.url))),
+      links: JSON.stringify((i.links_publicos ?? []).filter((l) => LINK_HTTPS.test(l.url))),
       licenca_codigo: i.licenca_codigo ?? '',
       // Demais empresas, no texto do cartão: "Concessionária X · Terceirizada Y".
       outras_empresas: (i.executoras_adicionais ?? []).map((a) => `${a.nome} (${a.papel === 'concessionaria' ? 'concessionária' : 'terceirizada'})`).join(' · '),
