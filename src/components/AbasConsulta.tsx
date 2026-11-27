@@ -5,7 +5,7 @@ export function AbasConsulta() {
   // Controle segmentado: um trilho cinza com a opção ativa em cartão branco, sombreado e em destaque.
   const aba = ({ isActive }: { isActive: boolean }) =>
     `inline-flex min-h-11 flex-1 items-center justify-center whitespace-nowrap rounded-md px-3 text-sm font-semibold transition-colors sm:flex-none sm:px-5 sm:text-base ${
-      isActive ? 'bg-white text-tinta-900 shadow-sm ring-1 ring-tinta-200' : 'text-tinta-600 hover:text-tinta-900'}`;
+      isActive ? 'bg-white text-tinta-900 ring-1 ring-tinta-200' : 'text-tinta-600 hover:text-tinta-900'}`;
   return (
     <nav className="mt-5" aria-label="Consulta pública">
       <ul className="inline-flex w-full gap-1 rounded-lg bg-tinta-200/70 p-1 sm:w-auto">
