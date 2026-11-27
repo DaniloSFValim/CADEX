@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { rotuloProcesso } from '../lib/licencas';
 
 /** Cor das obras públicas sem licença no mapa (mesma do traço e do ponto). */
-export const COR_OBRA_PUBLICA = '#7c3aed';
+export const COR_OBRA_PUBLICA = '#db2777';
 
 /** Lista de imagens (JSON) do cadastro: só links https, até 12. */
 function lerFotos(texto: string | undefined): string[] {
