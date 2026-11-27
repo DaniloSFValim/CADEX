@@ -50,12 +50,12 @@ export default function AdminManutencao() {
       <HistoricoCorrecoes correcoes={correcoes} contas={contas} />
 
       <Card title={`Lixeira (${lixeira.length})`} semPadding>
-        <p className="border-b border-tinta-100 px-4 py-3 text-sm text-tinta-500">
+        <p className="bg-tinta-50 px-4 py-3 text-sm text-tinta-500">
           Licenças excluídas. Ficam fora das listas, do painel, do mapa e da consulta pública. Restaurar devolve a licença como estava;
           apagar de vez remove a licença e os trechos, e o registro de auditoria permanece.
         </p>
         {lixeira.length === 0 ? <Empty>A lixeira está vazia.</Empty> : (
-          <ul className="divide-y divide-tinta-100">
+          <ul className="divide-y divide-tinta-100"> {/* taste-skill-ignore: lista de registros */}
             {lixeira.map((l) => (
               <LinhaLixeira key={l.id} licenca={l} porId={porId} orgaos={orgaos} contas={contas} hoje={hoje} onMudou={mudou} />
             ))}
@@ -132,7 +132,7 @@ function HistoricoCorrecoes({ correcoes, contas }: { correcoes: RegistroCorrecao
   const nomePorId = useMemo(() => new Map(contas.map((c) => [c.user_id, c.nome ?? c.email])), [contas]);
   return (
     <Card title={`Histórico de correções (${correcoes.length})`} semPadding>
-      <p className="border-b border-tinta-100 px-4 py-3 text-sm text-tinta-500">
+      <p className="bg-tinta-50 px-4 py-3 text-sm text-tinta-500">
         As últimas 50 correções em lote, com o motivo informado. A auditoria guarda o mesmo registro linha a linha.
       </p>
       {correcoes.length === 0 ? <Empty>Nenhuma correção em lote registrada.</Empty> : (

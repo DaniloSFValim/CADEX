@@ -32,7 +32,7 @@ export default function AdminTipos() {
   return (
     <div className="flex flex-col gap-10">
       <Card title="Tipos cadastrados" semPadding>
-        <div className="flex flex-wrap items-end gap-3 border-b border-tinta-100 px-4 py-3">
+        <div className="flex flex-wrap items-end gap-3 bg-tinta-50 px-4 py-3">
           <Field label="Setor" className="min-w-56">
             <select className={inputClass} value={setorFiltro} onChange={(e) => setSetorFiltro(e.target.value as Setor | '')}>
               <option value="">Todos os setores</option>

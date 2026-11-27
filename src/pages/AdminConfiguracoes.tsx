@@ -41,7 +41,7 @@ export default function AdminConfiguracoes() {
   return (
     <div className="flex flex-col gap-10">
       <Card title="Perfis de acesso" semPadding>
-        <p className="border-b border-tinta-100 px-4 py-3 text-sm text-tinta-500">
+        <p className="bg-tinta-50 px-4 py-3 text-sm text-tinta-500">
           O perfil decide o que a pessoa faz no cadastro, e o banco aplica a mesma regra a cada leitura e gravação.
           Perfil e administração mudam em <Link to="/admin" className={linkTexto}>Contas e acessos</Link>.
         </p>
@@ -83,7 +83,7 @@ export default function AdminConfiguracoes() {
       </Card>
 
       <Card title="Prazos e parâmetros" semPadding>
-        <p className="border-b border-tinta-100 px-4 py-3 text-sm text-tinta-500">
+        <p className="bg-tinta-50 px-4 py-3 text-sm text-tinta-500">
           Estes valores vêm da Resolução e ficam fixos no código ou nas regras do banco, por isso aparecem aqui só para consulta.
           Mudar um deles é uma alteração versionada do sistema, não um campo de tela.
         </p>

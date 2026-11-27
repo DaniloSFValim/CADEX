@@ -106,7 +106,7 @@ export default function AdminLicencas() {
         {!lista ? <Spinner /> : lista.itens.length === 0
           ? <p className="mt-3 text-sm text-tinta-500">Nenhuma licença encontrada.</p>
           : (
-            <ul className="mt-3 divide-y divide-tinta-100">
+            <ul className="mt-3 divide-y divide-tinta-100"> {/* taste-skill-ignore: lista de registros */}
               {lista.itens.map((l) => <LinhaBusca key={l.id} licenca={l} porId={porId} orgaos={orgaos} hoje={hoje} onExcluida={mudou} />)}
             </ul>
           )}
@@ -130,7 +130,7 @@ export default function AdminLicencas() {
       </div>
 
       <Card title={`Registros a revisar (${revisar.length})`} semPadding>
-        <p className="border-b border-tinta-100 px-4 py-3 text-sm text-tinta-500">
+        <p className="bg-tinta-50 px-4 py-3 text-sm text-tinta-500">
           Dado faltando, prazo vencido, prazo de mais de um ano, número fora do padrão 000/AAAA ou empresa que deixou de poder atuar. É um aviso: a correção é feita na própria licença (botão Abrir). Se estiver certo, marque OK com o motivo.
           {contagens && Object.values(contagens.avisos).some((n) => n > 0) && (
             <> Avisos por tipo: {(Object.keys(rotuloAviso) as CategoriaProblema[]).filter((c) => contagens.avisos[c] > 0).map((c) => `${rotuloAviso[c].toLowerCase()} (${contagens.avisos[c]})`).join(', ')}.</>
@@ -198,7 +198,7 @@ export default function AdminLicencas() {
 
       {aceitos.length > 0 && (
         <div className="mt-6"><Card title={`Revisados e aceitos (${aceitos.length})`} semPadding>
-          <p className="border-b border-tinta-100 px-4 py-3 text-sm text-tinta-500">
+          <p className="bg-tinta-50 px-4 py-3 text-sm text-tinta-500">
             Avisos que a equipe confirmou como corretos, com o motivo. Saem da lista de revisão; se o dado mudar, o aviso volta sozinho.
           </p>
           <div className={tabela.moldura}>
