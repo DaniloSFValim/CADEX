@@ -254,7 +254,7 @@ function LinhaBusca({ licenca: l, porId, orgaos, hoje, onExcluida }: {
       <ProrrogarLinha licenca={l} onMudou={onExcluida} />
       <details className="relative">
         <summary className="cursor-pointer list-none rounded px-2 py-1 text-sm font-semibold text-tinta-600 hover:bg-tinta-100 hover:text-tinta-900">Mais ações</summary>
-        <div className="absolute right-0 z-10 mt-1 rounded-sm border border-tinta-200 bg-white p-2 shadow-md">
+        <div className="absolute right-0 z-10 mt-1 rounded-sm border border-tinta-200 bg-white p-2 shadow-md">{/* taste-skill-ignore: menu flutuante de ações */}
           <ExcluirLicenca licenca={l} empresas={porId} orgaos={orgaos} hoje={hoje} onExcluida={onExcluida} rotulo="Excluir" />
         </div>
       </details>
