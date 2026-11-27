@@ -17,23 +17,25 @@ export default function FichaObra({ obra, onFechar, detalhes }: {
   return (
     <article
       aria-label="Ficha da obra selecionada"
-      className="absolute inset-x-3 bottom-3 z-10 rounded-xl border border-tinta-200 bg-white p-4 shadow-lg sm:inset-x-auto sm:left-3 sm:w-96 lg:bottom-12 lg:left-1/2 lg:right-auto lg:-translate-x-1/2" /* taste-skill-ignore: ficha flutuante sobre o mapa */
+      className="absolute inset-x-3 bottom-3 z-10 rounded-xl border border-tinta-200 bg-white p-4 shadow-lg sm:inset-x-auto sm:left-3 sm:w-96 lg:bottom-12 lg:left-[19rem] lg:right-[19rem] lg:w-auto lg:p-3 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_auto] lg:items-start lg:gap-x-6" /* taste-skill-ignore: faixa flutuante sobre o mapa */
     >
-      <div className="flex items-start justify-between gap-3">
-        <span className="inline-flex items-center gap-1.5 text-xs font-semibold" style={{ color: cor }}>
-          <span className="h-2 w-2 rounded-full" style={{ background: cor }} aria-hidden />
-          {SITUACAO_PUBLICA_LABEL[obra.situacao]}
-        </span>
-        <button type="button" onClick={onFechar} className="text-sm font-semibold text-tinta-500 hover:text-tinta-900">
-          Fechar
-        </button>
+      <div className="min-w-0">
+        <div className="flex items-start justify-between gap-3">
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold" style={{ color: cor }}>
+            <span className="h-2 w-2 rounded-full" style={{ background: cor }} aria-hidden />
+            {SITUACAO_PUBLICA_LABEL[obra.situacao]}
+          </span>
+          <button type="button" onClick={onFechar} className="text-sm font-semibold text-tinta-500 hover:text-tinta-900">
+            Fechar
+          </button>
+        </div>
+        <h3 className="mt-2 font-display text-lg font-bold leading-snug text-tinta-900">
+          {t?.logradouro ?? 'Local não informado'}
+        </h3>
+        {extras > 0 && <p className="text-xs text-tinta-500">e mais {extras} {extras === 1 ? 'trecho' : 'trechos'}</p>}
+        <p className="mt-1 line-clamp-2 text-sm text-tinta-700">{obra.escopo}</p>
       </div>
-      <h3 className="mt-2 font-display text-lg font-bold leading-snug text-tinta-900">
-        {t?.logradouro ?? 'Local não informado'}
-      </h3>
-      {extras > 0 && <p className="text-xs text-tinta-500">e mais {extras} {extras === 1 ? 'trecho' : 'trechos'}</p>}
-      <p className="mt-1 line-clamp-2 text-sm text-tinta-700">{obra.escopo}</p>
-      <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+      <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm lg:mt-0">
         {detalhes.map((d) => (
           <Fragment key={d.rotulo}>
             <dt className="text-tinta-500">{d.rotulo}</dt>
@@ -41,7 +43,7 @@ export default function FichaObra({ obra, onFechar, detalhes }: {
           </Fragment>
         ))}
       </dl>
-      <div className="mt-3 flex flex-wrap items-center gap-4 text-sm font-semibold">
+      <div className="mt-3 flex flex-wrap items-center gap-4 text-sm font-semibold lg:mt-0 lg:self-center">
         <Link to={`/licenca/${obra.codigo}`} className="text-marca-600 hover:underline">
           Ver licença <span className="font-normal text-tinta-500">nº {obra.numero}</span>
         </Link>
