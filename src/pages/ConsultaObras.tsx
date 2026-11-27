@@ -27,7 +27,7 @@ type Categoria = 'todas' | 'licenciadas' | 'sem_licenca' | 'emergencia' | 'manut
 const CATEGORIAS: { valor: Categoria; rotulo: string; cor?: string }[] = [
   { valor: 'todas', rotulo: 'Todas' },
   { valor: 'licenciadas', rotulo: 'Licenciadas' },
-  { valor: 'sem_licenca', rotulo: 'Obras públicas sem licença', cor: '#7c3aed' }, // taste-skill-ignore: cor de dado do mapa, única para esta categoria
+  { valor: 'sem_licenca', rotulo: 'Obras públicas sem licença', cor: '#db2777' },
   { valor: 'emergencia', rotulo: 'Emergências', cor: '#b91c1c' },
   { valor: 'manutencao', rotulo: 'Manutenção de rotina', cor: '#eab308' },
 ];
@@ -358,8 +358,8 @@ function LegendaComunicacoes() {
         Serviço programado (comunicado antes)
       </li>
       <li className="inline-flex items-center gap-1.5">
-        <span className="inline-block h-0 w-4 border-t-[5px] border-[#7c3aed]" aria-hidden /> {/* taste-skill-ignore: cor de dado */}
-        <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#7c3aed]" aria-hidden /> {/* taste-skill-ignore: cor de dado */}
+        <span className="inline-block h-0 w-4 border-t-[5px] border-[#db2777]" aria-hidden />
+        <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#db2777]" aria-hidden />
         Obra pública sem licença
       </li>
     </ul>

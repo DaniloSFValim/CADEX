@@ -28,7 +28,7 @@ export const REDES_SIGEO: RedeSigeo[] = [
     url: 'https://services8.arcgis.com/TpaOLI1HCh5AcRQB/arcgis/rest/services/Grouplayer_SECONSER_EQUIPDREN_AGOL/FeatureServer/30', campoId: 'OBJECTID' },
   { id: 'rede-esgoto', rotulo: 'Esgoto', tipo: 'linha', cor: '#78716c',
     url: 'https://services8.arcgis.com/TpaOLI1HCh5AcRQB/arcgis/rest/services/Grouplayer_SECONSER_EQUIPDREN_AGOL/FeatureServer/20', campoId: 'OBJECTID' },
-  { id: 'rede-oi', rotulo: 'Comunicação (OI)', tipo: 'linha', cor: '#db2777',
+  { id: 'rede-oi', rotulo: 'Comunicação (OI)', tipo: 'linha', cor: '#854d0e',
     url: 'https://services8.arcgis.com/TpaOLI1HCh5AcRQB/arcgis/rest/services/Grouplayer_SECONSER_GESTAO_AGOL/FeatureServer/70', campoId: 'OBJECTID' },
   { id: 'rede-gas-bp', rotulo: 'Gás BP', tipo: 'linha', cor: '#c2410c',
     url: 'https://services8.arcgis.com/TpaOLI1HCh5AcRQB/arcgis/rest/services/Grouplayer_SECONSER_GESTAO_AGOL/FeatureServer/40', campoId: 'OBJECTID_1' },

@@ -314,7 +314,7 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, inte
             id: 'intervencao-foco-trecho', type: 'line', source: 'intervencao-foco',
             filter: ['match', ['geometry-type'], ['LineString', 'MultiLineString'], true, false],
             layout: { 'line-cap': 'round', 'line-join': 'round' },
-            paint: { 'line-color': ['match', ['get', 'categoria'], 'publica', '#7c3aed', '#eab308'], 'line-width': 6 },
+            paint: { 'line-color': ['match', ['get', 'categoria'], 'publica', '#db2777', '#eab308'], 'line-width': 6 },
           },
           // Obras em execução ou programadas: anel que pisca, para chamar a atenção. Fica abaixo dos pontos.
           {
@@ -360,7 +360,7 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, inte
           {
             id: 'intervencoes-publicas-halo', type: 'circle', source: 'intervencoes',
             filter: ['all', ['==', ['geometry-type'], 'Point'], ['==', ['get', 'categoria'], 'publica'], ['==', ['get', 'em_execucao'], 1]],
-            paint: { 'circle-color': 'rgba(0,0,0,0)', 'circle-radius': 12, 'circle-stroke-color': '#7c3aed',
+            paint: { 'circle-color': 'rgba(0,0,0,0)', 'circle-radius': 12, 'circle-stroke-color': '#db2777',
               'circle-stroke-width': 3, 'circle-stroke-opacity': 0.8 },
           },
           {
@@ -377,7 +377,7 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, inte
             filter: ['==', ['geometry-type'], 'Point'],
             paint: {
               'circle-radius': 12,
-              'circle-color': ['match', ['get', 'categoria'], 'publica', '#7c3aed', '#eab308'],
+              'circle-color': ['match', ['get', 'categoria'], 'publica', '#db2777', '#eab308'],
               'circle-stroke-color': '#ffffff', 'circle-stroke-width': 3,
             },
           },
@@ -575,7 +575,7 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, inte
     if (!m.hasImage('marca-emergencia')) m.addImage('marca-emergencia', desenhaMarca('triangulo', '#b91c1c'));
     if (!m.hasImage('marca-programado')) m.addImage('marca-programado', desenhaMarca('quadrado', '#eab308'));
     if (!m.hasImage('marca-obra')) m.addImage('marca-obra', desenhaMarca('circulo', '#eab308'));
-    if (!m.hasImage('marca-publica')) m.addImage('marca-publica', desenhaMarca('circulo', '#7c3aed'));
+    if (!m.hasImage('marca-publica')) m.addImage('marca-publica', desenhaMarca('circulo', '#db2777'));
     (m.getSource('comunicacoes') as maplibregl.GeoJSONSource | undefined)?.setData(comunicacoesParaGeoJSON(comunicacoes));
     (m.getSource('intervencoes') as maplibregl.GeoJSONSource | undefined)?.setData(intervencoesParaGeoJSON(intervencoes));
   }, [comunicacoes, intervencoes, pronto]);
