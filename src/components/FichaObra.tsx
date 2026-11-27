@@ -17,7 +17,7 @@ export default function FichaObra({ obra, onFechar, detalhes }: {
   return (
     <article
       aria-label="Ficha da obra selecionada"
-      className="absolute inset-x-3 bottom-3 z-10 rounded-xl border border-tinta-200 bg-white p-4 shadow-lg sm:inset-x-auto sm:left-3 sm:w-96 lg:bottom-12 lg:left-auto lg:right-3" /* taste-skill-ignore: ficha flutuante sobre o mapa */
+      className="absolute inset-x-3 bottom-3 z-10 rounded-xl border border-tinta-200 bg-white p-4 shadow-lg sm:inset-x-auto sm:left-3 sm:w-96 lg:bottom-12 lg:left-1/2 lg:right-auto lg:-translate-x-1/2" /* taste-skill-ignore: ficha flutuante sobre o mapa */
     >
       <div className="flex items-start justify-between gap-3">
         <span className="inline-flex items-center gap-1.5 text-xs font-semibold" style={{ color: cor }}>
