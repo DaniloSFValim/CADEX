@@ -155,14 +155,14 @@ export default function ConsultaObras() {
               <div className="relative">
                 {/* taste-skill-ignore: painel flutuante sobre o mapa */}<div className="lg:absolute lg:left-4 lg:top-4 lg:z-20 lg:flex lg:w-[18rem] lg:flex-col lg:gap-4 lg:rounded-xl lg:border lg:border-tinta-200 lg:bg-white/95 lg:p-4 lg:shadow-md lg:backdrop-blur-sm">
                   {obras && estat && (
-                    <dl className="mt-6 grid grid-cols-3 gap-3 sm:gap-8 lg:mt-0 lg:grid-cols-1 lg:gap-3">
+                    <dl className="mb-4 mt-6 grid grid-cols-3 gap-3 sm:gap-8 lg:mb-0 lg:mt-0 lg:grid-cols-1 lg:gap-3">
                       {[
                         { rotulo: 'Licenças autorizadas nos últimos 12 meses', valor: estat.autorizadas_12m },
                         { rotulo: 'Obras concluídas nos últimos 5 anos', valor: estat.concluidas_5a },
                         { rotulo: estat.executoras === 1 ? 'Empresa executora' : 'Empresas executoras', valor: estat.executoras },
                       ].map((k) => (
                         <div key={k.rotulo} className="pt-2 sm:pt-3 lg:flex lg:items-baseline lg:justify-between lg:gap-3 lg:pt-0">
-                          <dt className="text-xs font-medium leading-snug text-tinta-600 sm:text-sm lg:text-sm">{k.rotulo}</dt>
+                          <dt className="flex min-h-[3lh] items-start text-xs font-medium leading-snug text-tinta-600 sm:min-h-0 sm:text-sm lg:min-h-0">{k.rotulo}</dt>
                           <dd className="tabular mt-1 text-xl font-semibold tracking-[-0.02em] text-tinta-900 sm:text-3xl lg:mt-0 lg:text-2xl">{k.valor}</dd>
                         </div>
                       ))}
@@ -227,7 +227,7 @@ export default function ConsultaObras() {
                     ))}
                   </div>
                   {/* Caixa de camadas: fechada por padrão, para o mapa não ficar carregado de linhas. */}
-                  {/* taste-skill-ignore: caixa flutuante sobre o mapa */}<details className="absolute bottom-3 left-3 z-10 max-w-[min(18rem,calc(100%-1.5rem))] rounded-lg border border-tinta-200 bg-white/95 text-xs text-tinta-800 shadow-sm">
+                  {/* taste-skill-ignore: caixa flutuante sobre o mapa */}<details className="absolute bottom-3 left-3 z-10 max-w-[min(18rem,calc(100%-1.5rem))] lg:bottom-auto lg:left-auto lg:right-3 lg:top-16 lg:max-w-[16rem] lg:max-h-[calc(100%-5rem)] lg:overflow-y-auto rounded-lg border border-tinta-200 bg-white/95 text-xs text-tinta-800 shadow-sm">
                     <summary className="cursor-pointer select-none px-3 py-2 font-semibold">
                       Camadas de redes{redesAtivas.length > 0 ? ` (${redesAtivas.length})` : ''}
                     </summary>
