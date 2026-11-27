@@ -106,7 +106,7 @@ function LinhaTipo({ tipo, aoSalvar }: { tipo: TipoIntervencao; aoSalvar: () => 
           <input className={inputClass} value={rotulo} onChange={(e) => setRotulo(e.target.value)} aria-label="Nome do tipo" />
         ) : tipo.rotulo}
       </td>
-      <td className={`${tabela.td} font-mono text-xs text-tinta-600`}>{tipo.codigo}</td>
+      <td className={`${tabela.td} font-mono text-xs text-tinta-600`}>{/* taste-skill-ignore: código literal */}{tipo.codigo}</td>
       <td className={`${tabela.td} text-xs text-tinta-600`}>
         {editando ? (
           <input className={inputClass} value={fonte} onChange={(e) => setFonte(e.target.value)} aria-label="Fonte do tipo" />

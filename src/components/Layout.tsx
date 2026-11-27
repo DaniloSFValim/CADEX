@@ -12,7 +12,7 @@ import { Rodape } from './Rodape';
 export function Layout() {
   const { servidor } = useAuth();
   return (
-    <div className="flex min-h-screen flex-col bg-tinta-50">
+    <div className="flex min-h-svh flex-col bg-tinta-50">
       <FaixaMarca itens={itensRestritos(servidor)} direita={<UsuarioSaida />} />
 
       <main id="conteudo" tabIndex={-1} className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 lg:px-10">
