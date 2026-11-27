@@ -1,16 +1,9 @@
 -- =====================================================================
 -- Correções da revisão de segurança do backend (já aplicadas em cadex-niteroi):
---  1. is_servidor() exige MFA (aal2), como is_gestor() e is_licenciador().
---  2. fotos_https_ok() com search_path fixo.
---  3. intervencoes_publicas: obras públicas canceladas não aparecem na consulta.
+--  1. fotos_https_ok() com search_path fixo.
+--  2. intervencoes_publicas: obras públicas canceladas não aparecem na consulta.
+-- is_servidor() foi revertida: continua sem exigir MFA (ver teste 03_administracao_contas).
 -- =====================================================================
-
-create or replace function public.is_servidor()
-returns boolean language sql stable security definer
-set search_path = public as $$
-  select exists (select 1 from public.servidores where user_id = auth.uid() and ativo)
-     and coalesce(auth.jwt() ->> 'aal', 'aal1') = 'aal2';
-$$;
 
 alter function public.fotos_https_ok(text[]) set search_path = pg_catalog;
 
