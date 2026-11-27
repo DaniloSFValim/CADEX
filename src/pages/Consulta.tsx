@@ -63,7 +63,7 @@ export default function Consulta() {
   const temLogo = filtradas.some((l) => l.logo_arquivo);
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-svh flex-col">
       <Cabecalho />
 
       <main id="conteudo" tabIndex={-1} className="mx-auto w-full max-w-7xl flex-1 px-4 py-12">
@@ -113,7 +113,7 @@ export default function Consulta() {
           )}
 
           {filtradas.length > 0 && (
-            <ul className="cartao divide-y divide-tinta-100 overflow-hidden">
+            <ul className="cartao divide-y divide-tinta-100 overflow-hidden"> {/* taste-skill-ignore: lista tabular de empresas */}
               {filtradas.map((l) => (
                 <li key={l.codigo_cadex}
                     className={`grid gap-x-6 gap-y-2 border-l-[6px] px-5 py-4 lg:grid-cols-[170px_1fr_190px_220px] ${BARRA[l.situacao]} ${FUNDO_CARTAO[l.situacao]}`}>

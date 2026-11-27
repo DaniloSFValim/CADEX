@@ -27,7 +27,7 @@ type Categoria = 'todas' | 'licenciadas' | 'sem_licenca' | 'emergencia' | 'manut
 const CATEGORIAS: { valor: Categoria; rotulo: string; cor?: string }[] = [
   { valor: 'todas', rotulo: 'Todas' },
   { valor: 'licenciadas', rotulo: 'Licenciadas' },
-  { valor: 'sem_licenca', rotulo: 'Obras públicas sem licença', cor: '#7c3aed' },
+  { valor: 'sem_licenca', rotulo: 'Obras públicas sem licença', cor: '#7c3aed' }, // taste-skill-ignore: cor de dado do mapa, única para esta categoria
   { valor: 'emergencia', rotulo: 'Emergências', cor: '#b91c1c' },
   { valor: 'manutencao', rotulo: 'Manutenção de rotina', cor: '#eab308' },
 ];
@@ -130,7 +130,7 @@ export default function ConsultaObras() {
   const semRegistro = obrasNoMapa.length + comunicacoesNoMapa.length + intervencoesNoMapa.length === 0;
 
   return (
-    <div className="flex min-h-screen flex-col bg-tinta-50">
+    <div className="flex min-h-svh flex-col bg-tinta-50">
       <Cabecalho />
 
       <main id="conteudo" tabIndex={-1} className="mx-auto w-full max-w-7xl flex-1 px-4 py-12">
@@ -194,7 +194,7 @@ export default function ConsultaObras() {
               <Suspense fallback={<div className="h-[60vh] min-h-[360px] rounded-xl border border-tinta-200 bg-tinta-50" />}>
                 <div ref={mapaRef} className="relative scroll-mt-4 overflow-hidden rounded-xl border border-tinta-200 shadow-xs">
                   {/* Modo do mapa sobre o próprio mapa, para não ocupar uma linha acima dele. */}
-                  <div role="group" aria-label="Visualização do mapa" className="absolute left-3 top-3 z-10 inline-flex rounded-full border border-tinta-200 bg-white/95 p-0.5 text-xs font-semibold shadow-sm">
+                  {/* taste-skill-ignore: controle flutuante sobre o mapa */}<div role="group" aria-label="Visualização do mapa" className="absolute left-3 top-3 z-10 inline-flex rounded-full border border-tinta-200 bg-white/95 p-0.5 text-xs font-semibold shadow-sm">
                     {(['pontos', 'calor'] as const).map((m) => (
                       <button key={m} type="button" aria-pressed={modo === m} onClick={() => setModo(m)}
                               className={`rounded-full px-3 py-1 ${modo === m ? 'bg-marca-700 text-white' : 'text-tinta-600 hover:text-tinta-900'}`}>
@@ -203,7 +203,7 @@ export default function ConsultaObras() {
                     ))}
                   </div>
                   {/* Caixa de camadas: fechada por padrão, para o mapa não ficar carregado de linhas. */}
-                  <details className="absolute bottom-3 left-3 z-10 max-w-[min(18rem,calc(100%-1.5rem))] rounded-lg border border-tinta-200 bg-white/95 text-xs text-tinta-800 shadow-sm">
+                  {/* taste-skill-ignore: caixa flutuante sobre o mapa */}<details className="absolute bottom-3 left-3 z-10 max-w-[min(18rem,calc(100%-1.5rem))] rounded-lg border border-tinta-200 bg-white/95 text-xs text-tinta-800 shadow-sm">
                     <summary className="cursor-pointer select-none px-3 py-2 font-semibold">
                       Camadas de redes{redesAtivas.length > 0 ? ` (${redesAtivas.length})` : ''}
                     </summary>
@@ -332,8 +332,8 @@ function LegendaComunicacoes() {
         Serviço programado (comunicado antes)
       </li>
       <li className="inline-flex items-center gap-1.5">
-        <span className="inline-block h-0 w-4 border-t-[5px] border-[#7c3aed]" aria-hidden />
-        <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#7c3aed]" aria-hidden />
+        <span className="inline-block h-0 w-4 border-t-[5px] border-[#7c3aed]" aria-hidden /> {/* taste-skill-ignore: cor de dado */}
+        <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#7c3aed]" aria-hidden /> {/* taste-skill-ignore: cor de dado */}
         Obra pública sem licença
       </li>
     </ul>

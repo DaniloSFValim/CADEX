@@ -15,7 +15,7 @@ export function FaixaMarca({ itens, direita }: { itens: ItemMenu[]; direita?: Re
   useAbaAtivaVisivel(menu);
   return (
     <>
-    <a href="#conteudo" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-sm focus:bg-white focus:px-4 focus:py-2 focus:font-semibold focus:text-marca-800 focus:shadow-md">
+    {/* taste-skill-ignore: link de pular, sombra só no foco */}<a href="#conteudo" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-sm focus:bg-white focus:px-4 focus:py-2 focus:font-semibold focus:text-marca-800 focus:shadow-md">
       Pular para o conteúdo
     </a>
     <header className="relative overflow-hidden bg-gradient-to-br from-marca-900 to-marca-600 text-white">
