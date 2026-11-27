@@ -112,7 +112,7 @@ export default function AdminAuditoria() {
             </table>
           </div>
           {eventos.length < total && (
-            <div className="border-t border-tinta-100 p-3 text-center">
+            <div className="bg-tinta-50 p-3 text-center">
               <Button variant="secondary" disabled={carregando} onClick={() => void buscar(filtro, eventos.length, true)}>
                 Mostrar mais ({total - eventos.length} restantes)
               </Button>

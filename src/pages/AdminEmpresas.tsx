@@ -62,7 +62,7 @@ export default function AdminEmpresas() {
       <ErrorNote error={erro} />
 
       <Card title={`Empresas (${filtradas.length}${filtradas.length !== empresas.length ? ` de ${empresas.length}` : ''})`} semPadding>
-        <div className="grid gap-3 border-b border-tinta-200 p-4 sm:grid-cols-[1fr_220px_200px]">
+        <div className="grid gap-3 bg-tinta-50 p-4 sm:grid-cols-[1fr_220px_200px]">
           <input className={inputClass} value={busca} onChange={(e) => { setBusca(e.target.value); setMostrar(POR_PAGINA); }} aria-label="Buscar empresa"
                  placeholder="Nome, CNPJ ou código CADEX" />
           <select className={inputClass} value={tipo} onChange={(e) => { setTipo(e.target.value as Tipo | ''); setMostrar(POR_PAGINA); }} aria-label="Tipo de empresa">
@@ -97,7 +97,7 @@ export default function AdminEmpresas() {
           </div>
         )}
         {filtradas.length > mostrar && (
-          <div className="border-t border-tinta-100 p-3 text-center">
+          <div className="bg-tinta-50 p-3 text-center">
             <Button variant="secondary" onClick={() => setMostrar((m) => m + POR_PAGINA)}>Mostrar mais ({filtradas.length - mostrar} restantes)</Button>
           </div>
         )}
