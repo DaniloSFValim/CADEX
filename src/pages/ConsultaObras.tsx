@@ -194,19 +194,6 @@ export default function ConsultaObras() {
                   ))}
                 </div>
               )}
-                                {categoria === 'licenciadas' && (
-                  <div role="group" aria-label="Situação das licenciadas" className="mb-4 flex flex-wrap items-center gap-2">
-                    {SITUACOES_FILTRO.map((t) => (
-                      <button key={t.valor} type="button" aria-pressed={situacaoFiltro === t.valor} onClick={() => setSituacaoFiltro(t.valor)}
-                              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${situacaoFiltro === t.valor
-                                ? 'border-tinta-700 bg-tinta-700 text-white'
-                                : 'border-tinta-300 bg-white text-tinta-700 hover:border-tinta-500'}`}>
-                        {t.cor && <span aria-hidden="true" className="h-2 w-2 rounded-full" style={{ background: t.cor }} />}
-                        {t.rotulo}
-                      </button>
-                    ))}
-                  </div>
-                )}
                 </div>
               </div>
               {semRegistro && (
@@ -227,7 +214,7 @@ export default function ConsultaObras() {
                     ))}
                   </div>
                   {/* Caixa de camadas: fechada por padrão, para o mapa não ficar carregado de linhas. */}
-                  {/* taste-skill-ignore: caixa flutuante sobre o mapa */}<details className="absolute bottom-3 left-3 z-10 max-w-[min(18rem,calc(100%-1.5rem))] lg:bottom-auto lg:left-auto lg:right-3 lg:top-16 lg:max-w-[16rem] lg:max-h-[calc(100%-5rem)] lg:overflow-y-auto rounded-lg border border-tinta-200 bg-white/95 text-xs text-tinta-800 shadow-sm">
+                  {/* taste-skill-ignore: caixa flutuante sobre o mapa */}<details className="absolute left-3 top-16 z-10 max-h-[calc(100%-5rem)] max-w-[min(18rem,calc(100%-1.5rem))] overflow-y-auto lg:left-auto lg:right-3 lg:top-16 lg:max-w-[16rem] lg:max-h-[calc(100%-5rem)] lg:overflow-y-auto rounded-lg border border-tinta-200 bg-white/95 text-xs text-tinta-800 shadow-sm">
                     <summary className="cursor-pointer select-none px-3 py-2 font-semibold">
                       Camadas de redes{redesAtivas.length > 0 ? ` (${redesAtivas.length})` : ''}
                     </summary>
