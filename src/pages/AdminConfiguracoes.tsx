@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Card, ErrorNote, Spinner, linkTexto, tabela } from '../components/ui';
+import { Button, Card, ErrorNote, Spinner, inputClass, linkTexto, tabela } from '../components/ui';
 import { PERFIS, listarContas, type Conta } from '../lib/contas';
 import { DIAS_AVISO } from '../lib/empresas';
 import { listarOrgaos, type Orgao } from '../lib/orgaos';
+import { CAMADAS_BASE, MAPAS_BASE, definirMapaBase, lerMapaBase, type CamadaBase } from '../lib/mapaBase';
 
 /**
  * Parâmetros que o sistema usa de fato, e onde cada um mora. Ficam fixos em
@@ -19,6 +20,54 @@ const PARAMETROS: { rotulo: string; valor: string; onde: string }[] = [
   { rotulo: 'Garantia da recomposição do pavimento', valor: '24 meses a partir da recomposição', onde: 'Banco (conflitos_de_licenca), art. 26' },
   { rotulo: 'Conflito entre obras', valor: 'trechos a até 15 metros', onde: 'Banco (conflitos_de_licenca)' },
 ];
+
+/** Escolha do mapa-base do mapa público. Só troca a camada; o dado e as regras não mudam. */
+function MapaPublico() {
+  const [atual, setAtual] = useState<CamadaBase | null>(null);
+  const [escolhida, setEscolhida] = useState<CamadaBase>('topo');
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<unknown>(null);
+  const [ok, setOk] = useState(false);
+
+  useEffect(() => {
+    lerMapaBase().then((c) => { setAtual(c); setEscolhida(c); });
+  }, []);
+
+  async function salvar() {
+    setSalvando(true); setErro(null); setOk(false);
+    try {
+      await definirMapaBase(escolhida);
+      setAtual(escolhida); setOk(true);
+    } catch (e) {
+      setErro(e);
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <Card title="Mapa público" semPadding>
+      <div className="flex flex-col gap-3 p-4">
+        <p className="text-sm text-tinta-600">
+          Mapa-base da consulta pública de obras. A rede de água e esgoto e as obras não mudam com essa escolha.
+        </p>
+        <label className="flex flex-col gap-1 text-sm font-medium text-tinta-800">
+          Camada do mapa
+          <select className={inputClass} value={escolhida} onChange={(e) => { setEscolhida(e.target.value as CamadaBase); setOk(false); }} disabled={atual === null || salvando}>
+            {CAMADAS_BASE.map((c) => <option key={c} value={c}>{MAPAS_BASE[c].rotulo}</option>)}
+          </select>
+        </label>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button onClick={() => void salvar()} disabled={atual === null || salvando || escolhida === atual}>
+            {salvando ? 'Salvando…' : 'Salvar mapa'}
+          </Button>
+          {ok && <span className="text-sm text-tinta-600">Mapa atualizado.</span>}
+        </div>
+        {erro ? <ErrorNote error={erro} /> : null}
+      </div>
+    </Card>
+  );
+}
 
 /** Configurações na Administração: perfis, órgãos e parâmetros. Só o que existe e vale de verdade. */
 export default function AdminConfiguracoes() {
@@ -40,6 +89,7 @@ export default function AdminConfiguracoes() {
 
   return (
     <div className="flex flex-col gap-10">
+      <MapaPublico />
       <Card title="Perfis de acesso" semPadding>
         <p className="bg-tinta-50 px-4 py-3 text-sm text-tinta-500">
           O perfil decide o que a pessoa faz no cadastro, e o banco aplica a mesma regra a cada leitura e gravação.
