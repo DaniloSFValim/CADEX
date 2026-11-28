@@ -17,6 +17,7 @@ import { carregarBairrosGeo, chaveBairro } from '../lib/bairros';
 import type { SituacaoPublica } from '../lib/licencas';
 import { MAPA_LOCALE } from '../lib/mapaLocale';
 import { REDES_SIGEO, ZOOM_MINIMO_REDES, urlConsultaRede } from '../lib/redesSigeo';
+import { MAPAS_BASE, lerMapaBase, type CamadaBase } from '../lib/mapaBase';
 
 /** Niterói, com folga. */
 const NITEROI: maplibregl.LngLatBoundsLike = [[-43.135, -22.995], [-42.955, -22.865]];
@@ -46,16 +47,15 @@ const CORES_OSM = {
  * Mapa-base do SIGEO (ArcGIS World Topographic Map), usado pela Prefeitura na própria página pública.
  * Os rótulos dos agrupamentos e os ícones continuam vindo dos glifos e sprites da CADEX.
  */
-const TOPO_ESRI = 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}';
 const ATRIBUICAO_TOPO = 'Sources: Esri, HERE, Garmin, Intermap, increment P Corp., GEBCO, USGS, FAO, NPS, NRCAN, GeoBase, IGN, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), © OpenStreetMap contributors, and the GIS User Community';
 
-export async function estiloBase(): Promise<StyleSpecification> {
+export async function estiloBase(camada: CamadaBase = 'topo'): Promise<StyleSpecification> {
   const origem = window.location.origin;
   return {
     version: 8,
     glyphs: `${origem}/mapa/fontes/{fontstack}/{range}.pbf`,
     sprite: `${origem}/mapa/sprites/light`,
-    sources: { base: { type: 'raster', tiles: [TOPO_ESRI], tileSize: 256, maxzoom: 19, attribution: ATRIBUICAO_TOPO } },
+    sources: { base: { type: 'raster', tiles: [MAPAS_BASE[camada].url], tileSize: 256, maxzoom: 19, attribution: ATRIBUICAO_TOPO } },
     layers: [{ id: 'base', type: 'raster', source: 'base' }],
   };
 }
@@ -191,7 +191,7 @@ export default function MapaObras({ obras, comunicacoes = SEM_COMUNICACOES, inte
 
   useEffect(() => {
     let vivo = true;
-    estiloBase().then((base) => {
+    lerMapaBase().then((camada) => estiloBase(camada)).then((base) => {
       if (!vivo || !caixa.current) return;
       // As obras já entram no estilo inicial: não dependem do evento "load",
       // que espera todos os blocos do mapa-base e pode não chegar se algum falhar.
